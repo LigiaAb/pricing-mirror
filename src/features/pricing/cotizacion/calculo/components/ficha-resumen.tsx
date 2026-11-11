@@ -12,7 +12,7 @@ import { useCatalogosTarifas } from "../../../tarifas/hooks/use-catalogos-tarifa
 import type { RubroDueAgent } from "../lib/due-agent";
 import type { RubroDueCarrier } from "../lib/due-carrier";
 import { ResumenItem } from "./resumen-item";
-import { getEstadoMetodo } from "../lib/utils";
+import { getEstadoMetodo } from "../../../shared/lib/vigencia-metodo";
 
 type Props = {
   item: RubroDueCarrier | RubroDueAgent | null;
