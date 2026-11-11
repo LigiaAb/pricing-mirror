@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
+import { useActualizarMetodo, useInsertarMetodo } from "@/features/pricing/shared";
 import { useContextoOperativoStore } from "@/features/shell";
 import { Loader } from "@/shared/components/ui/loader";
-import { useActualizarMetodo, useInsertarMetodo } from "../api/metodos";
 import { useActualizarServicio, useInsertarServicio, useReplicarServicio } from "../api/servicios";
 import type { FilaServicioMetodo } from "../api/types-api";
 import { useCatalogosTarifas } from "../hooks/use-catalogos-tarifas";

@@ -9,10 +9,10 @@ import {
   useCalcularTarifaRubros,
   useCalcularTarifaScalling,
 } from "../api/calculo-cotizacion";
-
-import type { Id } from "../lib/tipos";
-import { crearKeyCriterios } from "../lib/utils";
 import { COD_ENTIDAD_DUE_AGENT, RUBRO, TIPO_CALCULO } from "../lib/constantes";
+import { obtenerCriteriosParaFlete } from "../lib/criterios-cotizacion";
+import type { Id } from "../lib/tipos";
+import { buscarMoneda, crearKeyCriterios } from "../lib/utils";
 import { useCatalogosCotizacion } from "./use-catalogos-cotizacion";
 
 type Criterios = Record<string, unknown>;
@@ -105,28 +105,7 @@ function flattenRubrosServicios(rubros: RubroCalculo[]) {
   );
 }
 
-/* ==========================================================================
- * CRITERIOS PARA FLETE
- * ========================================================================== */
-
-function quitarValorFlete(criterios: Criterios) {
-  const {
-    valor_flete: _valorFlete,
-    flete_fuente: _fleteFuente,
-    express: _express,
-    categoria_transporte: _categoriaTransporte,
-    ...rest
-  } = criterios;
-
-  return rest;
-}
-
-export function useCalculoCotizacion({
-  filtros,
-  criterios,
-  plantilla,
-  isReadOnly = false,
-}: Props) {
+export function useCalculoCotizacion({ filtros, criterios, plantilla, isReadOnly = false }: Props) {
   const {
     codigosFletes,
     calculo: { monedas },
@@ -383,7 +362,7 @@ export function useCalculoCotizacion({
     [plantilla, codigosFletes, filtros, calcularFleteMutation, actualizarFletesCalculados],
   );
 
-  const criteriosParaFlete = React.useMemo(() => quitarValorFlete(criterios), [criterios]);
+  const criteriosParaFlete = React.useMemo(() => obtenerCriteriosParaFlete(criterios), [criterios]);
 
   const criteriosParaFleteKey = React.useMemo(
     () => crearKeyCriterios(criteriosParaFlete),
@@ -544,7 +523,7 @@ export function useCalculoCotizacion({
         return null;
       }
 
-      return monedas.find((moneda) => String(moneda.cod_moneda) === String(codMoneda)) ?? null;
+      return buscarMoneda(monedas, codMoneda);
     },
     [monedas],
   );

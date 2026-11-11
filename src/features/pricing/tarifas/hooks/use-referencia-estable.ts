@@ -32,7 +32,7 @@ export function sonIguales(a: unknown, b: unknown): boolean {
   if (esObjetoPlano(a) && esObjetoPlano(b)) {
     const llavesA = Object.keys(a);
     if (llavesA.length !== Object.keys(b).length) return false;
-    return llavesA.every((llave) => Object.prototype.hasOwnProperty.call(b, llave) && sonIguales(a[llave], b[llave]));
+    return llavesA.every((llave) => Object.hasOwn(b, llave) && sonIguales(a[llave], b[llave]));
   }
 
   return false;

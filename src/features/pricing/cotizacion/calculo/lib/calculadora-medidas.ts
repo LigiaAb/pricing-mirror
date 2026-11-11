@@ -1,15 +1,27 @@
+import { TIPO_TRANSPORTE, UNIDAD_DEFAULT } from "./constantes";
 import type { Id, Unidad } from "./tipos";
 import { numero } from "./utils";
-import { UNIDAD_DEFAULT } from "./constantes";
 
 /* ==========================================================================
  * TRANSPORTE
  * ========================================================================== */
 
 export const TIPOS_TRANSPORTE = {
-  49: "AEREO",
-  50: "MARITIMO",
-  51: "TERRESTRE",
+  [TIPO_TRANSPORTE.AEREO]: "AEREO",
+  [TIPO_TRANSPORTE.MARITIMO]: "MARITIMO",
+  [TIPO_TRANSPORTE.TERRESTRE]: "TERRESTRE",
+} as const;
+
+/**
+ * Textos de la calculadora. Hoy son iguales para los tres transportes; si alguno
+ * necesita textos propios, convertir esto en un mapa por cod_tipo_transporte.
+ */
+export const ETIQUETAS_CALCULADORA = {
+  volumen: "Kilos volumétricos",
+  peso: "Kilos",
+  cw: "CW",
+  tipoVolumen: "KILOS VOLUMETRICOS",
+  tipoPeso: "KILOGRAMOS",
 } as const;
 
 export type TipoTransporte = (typeof TIPOS_TRANSPORTE)[keyof typeof TIPOS_TRANSPORTE];

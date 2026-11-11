@@ -8,9 +8,8 @@ import {
   recuperarArchivoPdf,
   type TipoDocumentoPdfCotizacion,
 } from "../api/cotizacion-detalle";
-
-import type { Id } from "../lib/tipos";
 import { COD_TIPO_SERVICIO_ESTACION } from "../lib/constantes";
+import type { Id } from "../lib/tipos";
 
 type VersionPdf = {
   cod_cotizaciondetalle: Id;

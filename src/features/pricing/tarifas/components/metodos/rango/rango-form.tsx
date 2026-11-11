@@ -7,9 +7,8 @@ import { Button } from "@/shared/components/ui/button";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
 import { crearIdLocal } from "@/shared/lib/id";
-
-import type { FilaMetodoRango, MonedaRangoOption } from "./rango-columns";
 import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
+import type { FilaMetodoRango, MonedaRangoOption } from "./rango-columns";
 
 type Props = {
   value?: FilaMetodoRango | null;

@@ -30,9 +30,9 @@ export type FiltrosTarifaCobertura = FiltrosMetodo;
 
 // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
 export {
+  type MonedaOperativa as MonedaCobertura,
   monedaOperativaSchema as monedaCoberturaSchema,
   monedasOperativasOptions as monedasCoberturaOptions,
-  type MonedaOperativa as MonedaCobertura,
   useMonedasOperativas as useMonedasCobertura,
 } from "./monedas";
 
@@ -60,7 +60,11 @@ export type TarifaCoberturaMutationPayload = {
 const api = crearCatalogoMetodo<typeof tarifaCoberturaSchema, TarifaCoberturaMutationPayload>({
   nombre: "tarifas-cobertura",
   schema: tarifaCoberturaSchema,
-  endpoints: { lista: "lista-tarifa-cobertura", insertar: "insertar-tarifa-cobertura", actualizar: "actualizar-tarifa-cobertura" },
+  endpoints: {
+    lista: "lista-tarifa-cobertura",
+    insertar: "insertar-tarifa-cobertura",
+    actualizar: "actualizar-tarifa-cobertura",
+  },
 });
 
 export const TARIFA_COBERTURA_QUERY_KEY = api.keys.all;

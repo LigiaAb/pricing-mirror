@@ -52,7 +52,11 @@ export type TarifaRutaMutationPayload = {
 const api = crearCatalogoMetodo<typeof tarifaRutaSchema, TarifaRutaMutationPayload>({
   nombre: "tarifas-rutas",
   schema: tarifaRutaSchema,
-  endpoints: { lista: "lista-tarifa-ruta", insertar: "insertar-tarifa-ruta", actualizar: "actualizar-tarifa-ruta" },
+  endpoints: {
+    lista: "lista-tarifa-ruta",
+    insertar: "insertar-tarifa-ruta",
+    actualizar: "actualizar-tarifa-ruta",
+  },
   enviarEstado: true,
   habilitado: () => true,
 });

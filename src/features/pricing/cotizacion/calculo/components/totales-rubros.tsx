@@ -29,7 +29,9 @@ function NombreServicio({
     <div>
       <div className="font-medium break-normal">{nombre ?? ""}</div>
 
-      {proveedor ? <div className="text-xs text-muted-foreground">{shortCell({value: proveedor})}</div> : null}
+      {proveedor ? (
+        <div className="text-xs text-muted-foreground">{shortCell({ value: proveedor })}</div>
+      ) : null}
     </div>
   );
 }

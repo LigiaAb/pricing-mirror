@@ -11,15 +11,13 @@ import {
   useVersiones,
   type VersionCotizacion,
 } from "../api/versiones";
-
+import type { Id } from "../lib/tipos";
 import {
   type CotizacionParaVersion,
   construirCriteriosVersion,
   type EstadosVersion,
   extraerEntidadVersion,
 } from "../lib/versiones";
-
-import type { Id } from "../lib/tipos";
 import { useCatalogosCotizacion } from "./use-catalogos-cotizacion";
 
 type Props = {
@@ -32,7 +30,6 @@ type Props = {
   filtros: Record<string, unknown>;
 
   estados: EstadosVersion;
-
 };
 
 type DatosVersion = {
@@ -74,7 +71,10 @@ export function useVersionCotizacion({
 
   const [detalleVersion, setDetalleVersion] = React.useState(crearDetalleVacio);
   const setLegs = React.useCallback((legs: React.SetStateAction<LegVersion[]>) => {
-    setDetalleVersion((prev) => ({ ...prev, legs: typeof legs === "function" ? legs(prev.legs) : legs }));
+    setDetalleVersion((prev) => ({
+      ...prev,
+      legs: typeof legs === "function" ? legs(prev.legs) : legs,
+    }));
   }, []);
 
   const [cargandoDetalle, setCargandoDetalle] = React.useState(false);
@@ -83,10 +83,11 @@ export function useVersionCotizacion({
 
   // Marca cuál fila está activa en la lista; versionActual es la fila abierta en pantalla.
   const versiones = React.useMemo(
-    () => (versionesQuery.data ?? []).map((version) => ({
-      ...version,
-      isActive: estados.ACTIVO != null && String(version.cod_estado) === String(estados.ACTIVO),
-    })),
+    () =>
+      (versionesQuery.data ?? []).map((version) => ({
+        ...version,
+        isActive: estados.ACTIVO != null && String(version.cod_estado) === String(estados.ACTIVO),
+      })),
     [versionesQuery.data, estados.ACTIVO],
   );
 
@@ -249,8 +250,10 @@ export function useVersionCotizacion({
     }
 
     const versionDefault =
-      versiones.find((version) => estados.ACTIVO != null && String(version.cod_estado) === String(estados.ACTIVO)) ??
-      versiones[0];
+      versiones.find(
+        (version) =>
+          estados.ACTIVO != null && String(version.cod_estado) === String(estados.ACTIVO),
+      ) ?? versiones[0];
 
     if (versionDefault) {
       void abrirVersion(versionDefault);
@@ -321,11 +324,16 @@ export function useVersionCotizacion({
     });
   }, []);
 
-  const abrirVersionGuardada = React.useCallback(async (codCotizacionDetalle: Id) => {
-    const { data } = await versionesQuery.refetch();
-    const guardada = data?.find((version) => String(version.cod_cotizaciondetalle) === String(codCotizacionDetalle));
-    if (guardada) await abrirVersion(guardada);
-  }, [versionesQuery.refetch, abrirVersion]);
+  const abrirVersionGuardada = React.useCallback(
+    async (codCotizacionDetalle: Id) => {
+      const { data } = await versionesQuery.refetch();
+      const guardada = data?.find(
+        (version) => String(version.cod_cotizaciondetalle) === String(codCotizacionDetalle),
+      );
+      if (guardada) await abrirVersion(guardada);
+    },
+    [versionesQuery.refetch, abrirVersion],
+  );
 
   return {
     versiones,

@@ -1,8 +1,14 @@
 import type { MonedaFlete } from "./carrier-flete";
-import { calcularVentaCostoPorcentaje, esMetodoCostoPorcentaje } from "./costo-porcentaje";
-
-import type { Id } from "./tipos";
 import { TIPO_CALCULO } from "./constantes";
+import {
+  aplicarCostoPorcentaje,
+  esMetodoCostoPorcentaje,
+  getCodMonedaVenta,
+  getCodTipoCalculo,
+  primeraMonedaDefinida,
+} from "./rubros-manuales";
+import type { Id } from "./tipos";
+import { buscarMoneda, numero } from "./utils";
 
 export type RubroDueCarrier = {
   value?: string | null;
@@ -82,12 +88,7 @@ export function getEntidadIdDueCarrier(item: RubroDueCarrier) {
 }
 
 export function getCodMonedaDueCarrier(item: RubroDueCarrier) {
-  return (
-    item.servicio?.metodo?.cod_moneda_venta ??
-    item.servicio?.cod_moneda_venta ??
-    item.cod_moneda_venta ??
-    null
-  );
+  return getCodMonedaVenta(item);
 }
 
 export function getMetodoDueCarrier(item: RubroDueCarrier) {
@@ -95,12 +96,9 @@ export function getMetodoDueCarrier(item: RubroDueCarrier) {
 }
 
 export function esDueCarrierManual(item: RubroDueCarrier) {
-  const codTipo =
-    item.servicio?.metodo?.cod_tipo_calculo ??
-    item.servicio?.cod_tipo_calculo ??
-    item.cod_tipo_calculo;
-
-  return esMetodoCostoPorcentaje(item) || Number(codTipo) === TIPO_CALCULO.ABIERTO;
+  return (
+    esMetodoCostoPorcentaje(item) || Number(getCodTipoCalculo(item)) === TIPO_CALCULO.ABIERTO
+  );
 }
 export function crearKeyRubroDueCarrier(item: RubroDueCarrier) {
   const codRubro = item.cod_rubro ?? "";
@@ -157,11 +155,7 @@ export function filtrarFleteActivoDueCarrier(rubros: RubroDueCarrier[]) {
   });
 }
 export function obtenerCodMonedaDefaultDueCarrier(rubros: RubroDueCarrier[]) {
-  return (
-    rubros
-      .map(getCodMonedaDueCarrier)
-      .find((codMoneda) => codMoneda != null && String(codMoneda).trim() !== "") ?? null
-  );
+  return primeraMonedaDefinida(rubros);
 }
 
 export function obtenerCodMonedaEfectivaDueCarrier({
@@ -201,19 +195,7 @@ export function aplicarValoresManualDueCarrier({
     }
 
     if (esMetodoCostoPorcentaje(item)) {
-      const valorCosto = valores[String(item.value)];
-      const { costo, venta } =
-        valorCosto == null || valorCosto === ""
-          ? { costo: 0, venta: 0 }
-          : calcularVentaCostoPorcentaje(item, valorCosto);
-      const metodo = { ...(item.servicio?.metodo ?? item.metodo ?? {}), costo, venta };
-      return {
-        ...item,
-        costo,
-        venta,
-        metodo,
-        servicio: { ...(item.servicio ?? {}), metodo },
-      };
+      return aplicarCostoPorcentaje(item, valores[String(item.value)]);
     }
 
     const valor = Number(valores[String(item.value)]) || 0;
@@ -281,9 +263,7 @@ export function calcularTotalesDueCarrier({
       return resultado;
     }
 
-    const moneda = monedas.find(
-      (itemMoneda) => String(itemMoneda.cod_moneda) === String(codMoneda),
-    );
+    const moneda = buscarMoneda(monedas, codMoneda);
 
     if (!moneda) {
       return resultado;
@@ -291,12 +271,12 @@ export function calcularTotalesDueCarrier({
 
     const key = String(moneda.cod_moneda);
 
-    const venta = Number(item.servicio?.metodo?.venta ?? item.metodo?.venta ?? item.venta ?? 0);
+    const venta = numero(item.servicio?.metodo?.venta ?? item.metodo?.venta ?? item.venta);
 
     resultado[key] = {
       moneda,
 
-      total: (resultado[key]?.total ?? 0) + (Number.isFinite(venta) ? venta : 0),
+      total: (resultado[key]?.total ?? 0) + venta,
     };
 
     return resultado;

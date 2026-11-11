@@ -1,10 +1,9 @@
 import type { MetodoCalculo, RubroCalculo, ServicioCalculo } from "../api/calculo-cotizacion";
 import type { CatalogoTipo, MonedaFlete } from "./carrier-flete";
 import { esClasificacionDueAgent, esClasificacionDueCarrier } from "./clasificacion-rubros";
-
-import type { Id, ServicioCatalogo } from "./tipos";
 import { RUBRO } from "./constantes";
 import { construirDetalleFlete, esDetalleFlete, puedeConstruirDetalleFlete } from "./detalle-flete";
+import type { Id, ServicioCatalogo } from "./tipos";
 import { getSimboloMoneda } from "./utils";
 
 function esNoNulo<T>(value: T | null): value is T {
@@ -491,9 +490,13 @@ export function procesarRubrosCalculados({
    * El Grid considera Scalling como parte
    * de Due Carrier y lo separa por rubro 134.
    */
-  const rubrosScalling = carrierProcesado.filter((item) => Number(item.cod_rubro) === RUBRO.SCALLING);
+  const rubrosScalling = carrierProcesado.filter(
+    (item) => Number(item.cod_rubro) === RUBRO.SCALLING,
+  );
 
-  const rubrosDueCarrier = carrierProcesado.filter((item) => Number(item.cod_rubro) !== RUBRO.SCALLING);
+  const rubrosDueCarrier = carrierProcesado.filter(
+    (item) => Number(item.cod_rubro) !== RUBRO.SCALLING,
+  );
 
   return {
     rubrosDueCarrier,

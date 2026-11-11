@@ -10,7 +10,7 @@ tarifas/
 │  ├─ tarifa-*.ts           ← cada método: su esquema, su payload y sus endpoints
 │  └─ ...                   ← servicios, métodos, clientes, proveedores, incoterms
 ├─ hooks/
-│  ├─ use-catalogos-tarifas.ts   ← catálogos (también los usa Cotizaciones)
+│  ├─ use-catalogos-tarifas.ts   ← catálogos base de pricing/shared + opción "TODOS" + mapWithCatalogo
 │  ├─ use-opciones-tarifa.ts     ← monedas / rubros como opciones { value, label } y búsqueda local
 │  └─ use-formulario-tarifas.ts  ← formulario principal de tarifa
 ├─ lib/
@@ -19,6 +19,15 @@ tarifas/
 └─ components/
    └─ metodos/<metodo>/     ← cada método: -columns (tipos), -form (pantalla), -table (datos + guardar)
 ```
+
+## Compartido con Cotizaciones (`pricing/shared`)
+
+Tarifas no importa nada de Cotizaciones. Lo que usan ambos vive en `@/features/pricing/shared` y se re-exporta
+desde el barrel de Tarifas para no romper importaciones existentes:
+
+- `useCatalogosPricing` (carga y normalización de catálogos), `conAmbosFormatos`
+- APIs: métodos, proveedores, clientes y la **lectura** de rangos (las mutaciones de rangos siguen en `api/tarifa-rangos.ts`)
+- `FichaResumen` / `ResumenItem` y `getEstadoMetodo`
 
 ## Método nuevo (o endpoint nuevo)
 
@@ -46,7 +55,7 @@ export const TARIFA_MI_METODO_QUERY_KEY = api.keys.all;
 export const { listaOptions: ..., useLista: ..., useInsertar: ..., useActualizar: ..., useEliminar: ... } = api;
 ```
 
-Si un catálogo no necesita esas adaptaciones, usa `createCatalogo` directamente (ver `api/metodos.ts`, `api/monedas.ts`).
+Si un catálogo no necesita esas adaptaciones, usa `createCatalogo` directamente (ver `pricing/shared/api/metodos.ts`, `api/monedas.ts`).
 
 Comportamiento heredado de `createCatalogo`: las mutaciones validan la respuesta con `exigirExitoDeMutacion`,
 refrescan la lista al terminar (`onSettled`) y los toasts se controlan con `meta`.

@@ -1,5 +1,4 @@
-import type { Entidad } from "@/features/entidades";
-import type { Metodo } from "./metodos";
+import type { Metodo } from "@/features/pricing/shared";
 import type { Servicio } from "./servicios";
 
 export type SelectOptionBase = {
@@ -41,7 +40,4 @@ export type FilaServicioMetodo = Omit<Partial<Servicio>, "cod_servicio" | "cod_e
 
     ultimoUsuario?: string | undefined | null;
   };
-export type OptionEntidad = Partial<Entidad> & {
-  value?: string | number | null;
-  label?: string | number | null;
-};
+export type { OpcionEntidad as OptionEntidad } from "@/features/pricing/shared";

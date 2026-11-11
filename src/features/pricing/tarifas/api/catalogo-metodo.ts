@@ -51,7 +51,9 @@ const URL_BASE = "/api/appweb/";
 /** Mutación con el payload tipado del método. */
 type MutacionMetodo<Payload> = UseMutationResult<Record<string, unknown>, Error, Payload>;
 
-export function crearCatalogoMetodo<TSchema extends z.ZodType, Payload>(config: ConfigCatalogoMetodo<TSchema>) {
+export function crearCatalogoMetodo<TSchema extends z.ZodType, Payload>(
+  config: ConfigCatalogoMetodo<TSchema>,
+) {
   const { endpoints, enviarEstado = false } = config;
   const habilitado = config.habilitado ?? ((filtros: FiltrosMetodo) => filtros.codMetodo != null);
   const conBase = (endpoint?: string) => (endpoint ? `${URL_BASE}${endpoint}` : undefined);
@@ -82,8 +84,10 @@ export function crearCatalogoMetodo<TSchema extends z.ZodType, Payload>(config: 
 
   const listaOptions = (filtros: FiltrosMetodo = {}) => catalogo.listaOptions(aFiltrosApi(filtros));
 
-  const useLista = (filtros: FiltrosMetodo = {}, overrides?: Parameters<typeof catalogo.useLista>[1]) =>
-    catalogo.useLista(aFiltrosApi(filtros), overrides);
+  const useLista = (
+    filtros: FiltrosMetodo = {},
+    overrides?: Parameters<typeof catalogo.useLista>[1],
+  ) => catalogo.useLista(aFiltrosApi(filtros), overrides);
 
   const useInsertar = (...args: Parameters<typeof catalogo.useInsertar>) =>
     catalogo.useInsertar(...args) as unknown as MutacionMetodo<Payload>;
@@ -92,18 +96,21 @@ export function crearCatalogoMetodo<TSchema extends z.ZodType, Payload>(config: 
     catalogo.useActualizar(...args) as unknown as MutacionMetodo<Payload>;
 
   /** Eliminar = enviar el registro con cod_estado = 4. */
-  const useEliminar = (...args: Parameters<typeof catalogo.useEliminar>): MutacionMetodo<Payload> => {
+  const useEliminar = (
+    ...args: Parameters<typeof catalogo.useEliminar>
+  ): MutacionMetodo<Payload> => {
     const mutacion = catalogo.useEliminar(...args);
 
-    const conEstado = (payload: Payload) => ({
+    const conEstado = (payload: Payload | undefined) => ({
       ...(payload as Record<string, unknown>),
       cod_estado: COD_ESTADO_ELIMINADO,
     });
 
     return {
       ...mutacion,
-      mutate: (payload: Payload, opciones?: unknown) => mutacion.mutate(conEstado(payload), opciones as never),
-      mutateAsync: (payload: Payload, opciones?: unknown) => mutacion.mutateAsync(conEstado(payload), opciones as never),
+      mutate: (payload, opciones) => mutacion.mutate(conEstado(payload), opciones as never),
+      mutateAsync: (payload, opciones) =>
+        mutacion.mutateAsync(conEstado(payload), opciones as never),
     } as MutacionMetodo<Payload>;
   };
 

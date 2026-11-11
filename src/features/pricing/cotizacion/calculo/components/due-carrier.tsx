@@ -2,6 +2,7 @@
 
 import { AlertTriangle, Calculator, Info, X } from "lucide-react";
 import React from "react";
+import { FichaResumen, getEstadoMetodo } from "@/features/pricing/shared";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import {
@@ -15,8 +16,8 @@ import {
 } from "@/shared/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { cn } from "@/shared/lib/utils";
+import { useCatalogosCotizacion } from "../hooks/use-catalogos-cotizacion";
 import type { useRubrosDueCarrier } from "../hooks/use-rubros-due-carrier";
-import { esMetodoCostoPorcentaje } from "../lib/costo-porcentaje";
 import {
   esDueCarrierManual,
   getCodMonedaDueCarrier,
@@ -25,11 +26,9 @@ import {
   getMetodoDueCarrier,
   type RubroDueCarrier,
 } from "../lib/due-carrier";
+import { esMetodoCostoPorcentaje } from "../lib/rubros-manuales";
+import { formatNumero, getSimboloMoneda } from "../lib/utils";
 import { DialogoSpot } from "./dialogo-spot";
-import { FichaResumen } from "./ficha-resumen";
-
-import { formatNumero, getEstadoMetodo, getSimboloMoneda } from "../lib/utils";
-import { useCatalogosCotizacion } from "../hooks/use-catalogos-cotizacion";
 import { Detalles } from "./utils";
 
 type DueCarrierController = ReturnType<typeof useRubrosDueCarrier>;

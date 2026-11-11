@@ -6,8 +6,8 @@ import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combob
 import { Button } from "@/shared/components/ui/button";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
-import type { DetalleTipoOption, FilaMetodoDetalle } from "./detalle-columns";
 import { useFiltroOpciones } from "../../hooks/use-opciones-tarifa";
+import type { DetalleTipoOption, FilaMetodoDetalle } from "./detalle-columns";
 
 type Props = {
   value?: FilaMetodoDetalle | null;

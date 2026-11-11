@@ -1,5 +1,5 @@
 import { esRubroDueAgent, esRubroDueCarrier } from "./clasificacion-rubros";
-import { RUBRO, TIPO_CALCULO } from "./constantes";
+import { RUBRO, TIPO_CALCULO, TIPO_TRANSPORTE } from "./constantes";
 
 export type RubroAgrupable = {
   value?: string | number | null;
@@ -39,7 +39,7 @@ export const GRUPOS_RUBROS_DEFAULT: GrupoRubroDefault[] = [
     orden: 1,
 
     centrosCosto: [16],
-    tiposTransporte: [49],
+    tiposTransporte: [TIPO_TRANSPORTE.AEREO],
 
     validar: (item) => {
       return item?.es_flete === true || esRubroDueCarrier(item);
@@ -51,7 +51,7 @@ export const GRUPOS_RUBROS_DEFAULT: GrupoRubroDefault[] = [
     orden: 2,
 
     centrosCosto: [16],
-    tiposTransporte: [49],
+    tiposTransporte: [TIPO_TRANSPORTE.AEREO],
 
     validar: (item) => {
       const esCobertura = Number(item?.cod_tipo_calculo) === TIPO_CALCULO.COBERTURA_MERCADERIA;
@@ -65,7 +65,7 @@ export const GRUPOS_RUBROS_DEFAULT: GrupoRubroDefault[] = [
     orden: 3,
 
     centrosCosto: [16],
-    tiposTransporte: [49],
+    tiposTransporte: [TIPO_TRANSPORTE.AEREO],
 
     validar: (item) => {
       return Number(item?.cod_tipo_calculo) === TIPO_CALCULO.COBERTURA_MERCADERIA;
@@ -78,7 +78,7 @@ export const GRUPOS_RUBROS_DEFAULT: GrupoRubroDefault[] = [
     orden: 1,
 
     centrosCosto: [16],
-    tiposTransporte: [51],
+    tiposTransporte: [TIPO_TRANSPORTE.TERRESTRE],
 
     validar: (item) => {
       return item?.es_flete === true; // || esRubroDueCarrier(item);
@@ -89,7 +89,7 @@ export const GRUPOS_RUBROS_DEFAULT: GrupoRubroDefault[] = [
     orden: 2,
 
     centrosCosto: [16],
-    tiposTransporte: [51],
+    tiposTransporte: [TIPO_TRANSPORTE.TERRESTRE],
 
     validar: (item) => {
       return item?.cod_rubro === 17;
@@ -100,7 +100,7 @@ export const GRUPOS_RUBROS_DEFAULT: GrupoRubroDefault[] = [
     orden: 3,
 
     centrosCosto: [16],
-    tiposTransporte: [51],
+    tiposTransporte: [TIPO_TRANSPORTE.TERRESTRE],
 
     validar: (item) => {
       return item?.cod_rubro === 80;
@@ -111,7 +111,7 @@ export const GRUPOS_RUBROS_DEFAULT: GrupoRubroDefault[] = [
     orden: 3,
 
     centrosCosto: [16],
-    tiposTransporte: [51],
+    tiposTransporte: [TIPO_TRANSPORTE.TERRESTRE],
 
     validar: (item) => {
       return item?.cod_rubro === 79;
@@ -122,7 +122,7 @@ export const GRUPOS_RUBROS_DEFAULT: GrupoRubroDefault[] = [
     orden: 3,
 
     centrosCosto: [16],
-    tiposTransporte: [51],
+    tiposTransporte: [TIPO_TRANSPORTE.TERRESTRE],
 
     validar: (item) => {
       return item?.cod_rubro === 105;
@@ -135,7 +135,7 @@ export const GRUPOS_RUBROS_DEFAULT: GrupoRubroDefault[] = [
     orden: 1,
 
     centrosCosto: [16],
-    tiposTransporte: [50],
+    tiposTransporte: [TIPO_TRANSPORTE.MARITIMO],
 
     validar: (item) => {
       return item?.es_flete === true || esRubroDueCarrier(item);
@@ -151,7 +151,7 @@ export const GRUPOS_RUBROS_DEFAULT: GrupoRubroDefault[] = [
     siempreAlFinal: true,
 
     centrosCosto: [16],
-    tiposTransporte: [49, 50, 51],
+    tiposTransporte: [TIPO_TRANSPORTE.AEREO, TIPO_TRANSPORTE.MARITIMO, TIPO_TRANSPORTE.TERRESTRE],
 
     rubros: [RUBRO.IVA],
   },

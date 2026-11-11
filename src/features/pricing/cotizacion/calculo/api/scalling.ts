@@ -6,6 +6,7 @@ import { http } from "@/shared/api/client";
 import { parseEnvelope } from "@/shared/api/envelope";
 import { zId } from "@/shared/lib/zod-scalars";
 
+import { RUBRO } from "../lib/constantes";
 import type { Id } from "../lib/tipos";
 
 const numeroNullable = z.union([z.number(), z.string()]).nullable().optional();
@@ -69,7 +70,7 @@ export async function obtenerRutasScalling(entidadId: Id) {
       params: {
         entidad_id: entidadId,
 
-        cod_rubro: 134,
+        cod_rubro: RUBRO.SCALLING,
 
         cod_estado: 1,
       },

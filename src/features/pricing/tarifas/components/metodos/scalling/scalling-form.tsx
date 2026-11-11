@@ -10,14 +10,13 @@ import { Button } from "@/shared/components/ui/button";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 
 import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
-
+import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
 import type {
   FilaMetodoScalling,
   MonedaScallingOption,
   PuntoEnlaceScallingOption,
   TipoPuntoEnlaceScallingOption,
 } from "./scalling-columns";
-import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
 
 type Props = {
   value?: FilaMetodoScalling | null;

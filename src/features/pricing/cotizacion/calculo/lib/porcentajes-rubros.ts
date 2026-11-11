@@ -1,4 +1,18 @@
+/*
+ * ⚠️ PENDIENTE DE CONECTAR (revisado 2026-11-11)
+ *
+ * `calcularPorcentajesRubros` no se usa en ningún archivo. Su lógica (rubro cuyo
+ * costo/venta es un % de OTRO rubro de la cotización, `metodo.cod_rubro`, con
+ * mínimos) no está implementada en otro lugar del frontend: hoy
+ * `procesar-rubros-calculados.ts` solo copia `servicio.porcentaje` a `metodo` y
+ * se usa el costo/venta tal como llega del backend.
+ *
+ * Si el backend ya devuelve el importe calculado, este archivo se puede borrar.
+ * Si no, debe aplicarse sobre los rubros seleccionados (Due Agent + Due Carrier
+ * + flete) antes de calcular totales (hooks/use-totales-rubros.ts).
+ */
 import { numero, registro } from "./utils";
+
 type Registro = Record<string, unknown>;
 
 function obtenerMetodo(item: Registro): Registro {

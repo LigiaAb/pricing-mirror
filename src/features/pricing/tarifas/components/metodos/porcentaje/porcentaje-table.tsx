@@ -10,13 +10,13 @@ import {
   useMonedasPorcentaje,
   useTarifaPorcentaje,
 } from "../../../api/tarifa-porcentaje";
+import { useOpcionesMonedas, useOpcionesRubros } from "../../../hooks/use-opciones-tarifa";
 import type {
   FilaPorcentaje,
   MonedaPorcentajeOption,
   RubroPorcentajeOption,
 } from "./porcentaje-columns";
 import { PorcentajeForm } from "./porcentaje-form";
-import { useOpcionesMonedas, useOpcionesRubros } from "../../../hooks/use-opciones-tarifa";
 
 type Props = {
   codMetodo?: string | number | null;

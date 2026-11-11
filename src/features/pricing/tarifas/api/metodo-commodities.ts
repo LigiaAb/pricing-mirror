@@ -27,7 +27,12 @@ export type MetodoCommodityMutationPayload = {
 const api = crearCatalogoMetodo<typeof metodoCommoditySchema, MetodoCommodityMutationPayload>({
   nombre: "tarifas-metodo-commodities",
   schema: metodoCommoditySchema,
-  endpoints: { lista: "lista-metodo-commodity", insertar: "insertar-metodo-commodity", actualizar: "actualizar-metodo-commodity", eliminar: "eliminar-metodo-commodity" },
+  endpoints: {
+    lista: "lista-metodo-commodity",
+    insertar: "insertar-metodo-commodity",
+    actualizar: "actualizar-metodo-commodity",
+    eliminar: "eliminar-metodo-commodity",
+  },
 });
 
 export const METODO_COMMODITIES_QUERY_KEY = api.keys.all;

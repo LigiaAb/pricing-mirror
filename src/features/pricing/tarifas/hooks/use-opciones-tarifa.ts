@@ -113,5 +113,8 @@ export function filtrarOpciones<T extends { label: string }>(opciones: T[], sear
 
 /** `fetchOptions` para AsyncComboboxInput que busca dentro de opciones ya cargadas. */
 export function useFiltroOpciones<T extends { label: string }>(opciones: T[]) {
-  return React.useCallback(async (search: string): Promise<T[]> => filtrarOpciones(opciones, search), [opciones]);
+  return React.useCallback(
+    async (search: string): Promise<T[]> => filtrarOpciones(opciones, search),
+    [opciones],
+  );
 }

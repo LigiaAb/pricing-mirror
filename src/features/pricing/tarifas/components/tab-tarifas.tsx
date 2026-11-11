@@ -3,6 +3,7 @@
 import { addDays, format, parseISO } from "date-fns";
 import React from "react";
 import { tipos } from "@/features/catalogos";
+import { FichaResumen } from "@/features/pricing/shared";
 import { DynamicIcon } from "@/shared/components/dynamic-icon";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
@@ -10,7 +11,6 @@ import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { cn } from "@/shared/lib/utils";
-import FichaResumen from "../../cotizacion/calculo/components/ficha-resumen";
 import { useTarifaCobertura } from "../api/tarifa-cobertura";
 import { useTarifaCostoPorcentajeje } from "../api/tarifa-costo-porcentaje";
 import { useTarifaCostoVenta } from "../api/tarifa-costoventa";
@@ -18,6 +18,7 @@ import { useTarifaEquipo } from "../api/tarifa-equipo";
 import { useTarifaPorcentaje } from "../api/tarifa-porcentaje";
 import { useTarifaRangos } from "../api/tarifa-rangos";
 import type { FilaServicioMetodo } from "../api/types-api";
+import { formatDateForInput } from "../lib/tarifa-helpers";
 import { FormularioTarifa, type TarifaSubmitPayload } from "./formulario-tarifa";
 import { CommoditiesTable } from "./metodo-commodities/commodities-table";
 import { DetalleTable } from "./metodo-detalle/detalle-table";
@@ -30,7 +31,6 @@ import { EquipoTable } from "./metodos/equipo/equipo-table";
 import { PorcentajeTable } from "./metodos/porcentaje/porcentaje-table";
 import { RangoTable } from "./metodos/rango/rango-table";
 import { ScallingTable } from "./metodos/scalling/scalling-table";
-import { formatDateForInput } from "../lib/tarifa-helpers";
 
 type Props = {
   defaultValues?: Partial<FilaServicioMetodo> | undefined;

@@ -31,7 +31,11 @@ export type TarifaDetalleMutationPayload = {
 const api = crearCatalogoMetodo<typeof tarifaDetalleSchema, TarifaDetalleMutationPayload>({
   nombre: "tarifas-detalles",
   schema: tarifaDetalleSchema,
-  endpoints: { lista: "lista-tarifa-detalle", insertar: "insertar-tarifa-detalle", actualizar: "actualizar-tarifa-detalle" },
+  endpoints: {
+    lista: "lista-tarifa-detalle",
+    insertar: "insertar-tarifa-detalle",
+    actualizar: "actualizar-tarifa-detalle",
+  },
   enviarEstado: true,
 });
 

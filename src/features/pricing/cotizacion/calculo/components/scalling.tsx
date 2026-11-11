@@ -22,10 +22,7 @@ import {
 import { cn } from "@/shared/lib/utils";
 
 import type { useRubrosScalling } from "../hooks/use-rubros-scalling";
-import {
-  obtenerValorPuntoScalling,
-  type PuntoEnlaceScalling,
-} from "../lib/scalling";
+import { obtenerValorPuntoScalling, type PuntoEnlaceScalling } from "../lib/scalling";
 import { formatNumero, simboloDeMoneda } from "../lib/utils";
 
 type ScallingController = ReturnType<typeof useRubrosScalling>;

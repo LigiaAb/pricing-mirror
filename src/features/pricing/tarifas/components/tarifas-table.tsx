@@ -14,14 +14,19 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { Button } from "@/shared/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/shared/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/shared/components/ui/sheet";
 import { cn } from "@/shared/lib/utils";
 import type { FilaServicioMetodo } from "../api/types-api";
 import { useCatalogosTarifas } from "../hooks/use-catalogos-tarifas";
 import { useReferenciaEstable } from "../hooks/use-referencia-estable";
 import { FormularioTarifa, type TarifaSubmitPayload } from "./formulario-tarifa";
 import { crearTarifasColumns } from "./tarifas-columns";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 
 const gruposDeFiltro = ["alcance", "vigencia", "calculo"];
 
@@ -76,15 +81,21 @@ export function TarifasTable({
 
   const [tarifaAAnular, setTarifaAAnular] = React.useState<FilaServicioMetodo | null>(null);
 
-  const { mapWithCatalogo, catalogos, refetchMetodos, refetchServicios } = useCatalogosTarifas(CATALOGOS_TARIFAS);
+  const { mapWithCatalogo, catalogos, refetchMetodos, refetchServicios } =
+    useCatalogosTarifas(CATALOGOS_TARIFAS);
 
   const porVencer = React.useCallback(
     (item: FilaServicioMetodo, dias = 30) =>
-      item.fecha_final != null && isBefore(startOfDay(item.fecha_final), startOfDay(new Date().setDate(new Date().getDate() + dias))),
+      item.fecha_final != null &&
+      isBefore(
+        startOfDay(item.fecha_final),
+        startOfDay(new Date().setDate(new Date().getDate() + dias)),
+      ),
     [],
   );
   const vencidos = React.useCallback(
-    (item: FilaServicioMetodo) => item.fecha_final != null && isBefore(startOfDay(item.fecha_final), startOfDay(new Date())),
+    (item: FilaServicioMetodo) =>
+      item.fecha_final != null && isBefore(startOfDay(item.fecha_final), startOfDay(new Date())),
     [],
   );
 
@@ -93,7 +104,9 @@ export function TarifasTable({
       (catalogos?.servicios ?? [])
         .filter((servicio) => servicio.cod_estado === 1)
         ?.map((servicio) => {
-          const metodo = catalogos?.metodos?.find((metodo) => metodo.cod_servicio === servicio.cod_servicio);
+          const metodo = catalogos?.metodos?.find(
+            (metodo) => metodo.cod_servicio === servicio.cod_servicio,
+          );
 
           const item: FilaServicioMetodo = {
             ...servicio,
@@ -108,19 +121,25 @@ export function TarifasTable({
         })
         .map(mapWithCatalogo)
         .filter((item) => {
-          return mostrarVencidos ? item.vencido : mostrarPorVencer ? !item.vencido && item.porVencer : !item.vencido;
+          return mostrarVencidos
+            ? item.vencido
+            : mostrarPorVencer
+              ? !item.vencido && item.porVencer
+              : !item.vencido;
         })
         .filter((item) => {
-          const filtrosActivos = Object.entries({ ...filtros, ...filtrosIniciales }).filter(([key, value]) => {
-            const valor = obtenerValorFiltro(value);
+          const filtrosActivos = Object.entries({ ...filtros, ...filtrosIniciales }).filter(
+            ([key, value]) => {
+              const valor = obtenerValorFiltro(value);
 
-            if (valor === undefined || valor === null || valor === "") return false;
+              if (valor === undefined || valor === null || valor === "") return false;
 
-            if (key === "cod_tipo_pago" && String(valor) === "131") return false;
-            if (key === "cod_usuario") return false;
+              if (key === "cod_tipo_pago" && String(valor) === "131") return false;
+              if (key === "cod_usuario") return false;
 
-            return true;
-          });
+              return true;
+            },
+          );
 
           return filtrosActivos.every(([key, value]) => {
             const valorFiltro = obtenerValorFiltro(value);
@@ -138,7 +157,17 @@ export function TarifasTable({
             return String(valorItem) === String(valorFiltro);
           });
         }),
-    [catalogos?.servicios, catalogos?.metodos, mapWithCatalogo, mostrarVencidos, mostrarPorVencer, filtros, filtrosIniciales, porVencer, vencidos],
+    [
+      catalogos?.servicios,
+      catalogos?.metodos,
+      mapWithCatalogo,
+      mostrarVencidos,
+      mostrarPorVencer,
+      filtros,
+      filtrosIniciales,
+      porVencer,
+      vencidos,
+    ],
   );
 
   /*
@@ -252,10 +281,18 @@ export function TarifasTable({
               Limpiar
             </Button>
             <Sheet open={abrirFiltro} onOpenChange={setAbrirFiltro}>
-              <Button size="sm" variant="outline" className="border-teal-600 " onClick={() => setAbrirFiltro(true)}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-teal-600 "
+                onClick={() => setAbrirFiltro(true)}
+              >
                 Filtrar
               </Button>
-              <SheetContent side="right" className="modal-solicitud-hero w-full overflow-y-auto border-l bg-card p-0 sm:max-w-2xl">
+              <SheetContent
+                side="right"
+                className="modal-solicitud-hero w-full overflow-y-auto border-l bg-card p-0 sm:max-w-2xl"
+              >
                 <SheetHeader className="border-b bg-muted/40 px-4 py-5 pr-12 sm:px-6 sm:py-6 sm:pr-14">
                   <div className="flex items-start gap-3">
                     <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">

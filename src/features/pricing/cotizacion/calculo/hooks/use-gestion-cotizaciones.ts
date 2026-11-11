@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 
 import {
@@ -14,11 +15,11 @@ import {
   useRechazarCotizacionCabecera,
   useValidarElegibilidadCotizacion,
 } from "../api/cotizacion-cabecera";
+import { VERSIONES_QUERY_KEY } from "../api/versiones";
 import { CAMPOS_FILTRO, CAMPOS_FILTRO_API } from "../lib/cabecera";
-
+import { COD_ESTADO_OCULTO_LEGADO, TIPO_PAGO } from "../lib/constantes";
 import type { Id } from "../lib/tipos";
 import { mismoId } from "../lib/utils";
-import { COD_ESTADO_OCULTO_LEGADO, TIPO_PAGO } from "../lib/constantes";
 
 /**
  * Estado excluido explícitamente por la tabla legado además de RECHAZADO
@@ -161,7 +162,9 @@ export function useGestionCotizaciones({
   const filtrosConsulta = React.useMemo<FiltrosCotizacionesCabecera>(
     () => ({
       ...filtros,
-      cod_tipo_pago: mismoId(filtros.cod_tipo_pago, TIPO_PAGO.TODOS) ? null : (filtros.cod_tipo_pago ?? null),
+      cod_tipo_pago: mismoId(filtros.cod_tipo_pago, TIPO_PAGO.TODOS)
+        ? null
+        : (filtros.cod_tipo_pago ?? null),
     }),
     [filtros],
   );
@@ -252,14 +255,26 @@ export function useGestionCotizaciones({
     onLimpiarPlantillas?.();
   }, [onLimpiarPlantillas]);
 
+  const queryClient = useQueryClient();
+
   const seleccionarCotizacion = React.useCallback(
     (cotizacion: CotizacionCabecera) => {
       setIsNewCotizacion(false);
       setFormResetKey((prev) => prev + 1);
       limpiarPlantilla();
       setCotizacionSeleccionada(cotizacion);
+
+      /*
+       * Al seleccionar una cabecera siempre se reconsultan sus versiones:
+       * otro usuario (o Autorización Spot) pudo crear/activar versiones
+       * y la caché no debe mostrar una lista vieja. También aplica al
+       * volver a seleccionar la misma cabecera.
+       */
+      void queryClient.invalidateQueries({
+        queryKey: [...VERSIONES_QUERY_KEY, cotizacion.cod_cotizacion_cabecera],
+      });
     },
-    [limpiarPlantilla],
+    [limpiarPlantilla, queryClient],
   );
 
   const seleccionarCotizacionPorId = React.useCallback(

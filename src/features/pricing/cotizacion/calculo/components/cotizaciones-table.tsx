@@ -18,15 +18,6 @@ export type OpcionCatalogoCotizacion = {
   [key: string]: unknown;
 };
 
-export type CatalogosTablaCotizaciones = {
-  clientes?: OpcionCatalogoCotizacion[];
-  tiposTransporte?: OpcionCatalogoCotizacion[];
-  tiposServicio?: OpcionCatalogoCotizacion[];
-  tiposCarga?: OpcionCatalogoCotizacion[];
-  tiposPago?: OpcionCatalogoCotizacion[];
-  clasificacionesCarga?: OpcionCatalogoCotizacion[];
-};
-
 type CotizacionTabla = CotizacionCabecera & {
   entidad: string;
   tipoTransporte: string;

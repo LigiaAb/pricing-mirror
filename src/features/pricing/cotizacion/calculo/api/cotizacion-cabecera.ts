@@ -49,8 +49,6 @@ const accionCotizacionResponseSchema = z
   })
   .passthrough();
 
-export type AccionCotizacionResponse = z.infer<typeof accionCotizacionResponseSchema>;
-
 /* ==========================================================================
  * HELPERS DE RESPUESTA
  * ========================================================================== */

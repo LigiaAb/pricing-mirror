@@ -22,7 +22,7 @@
 
 import React from "react";
 
-import { useCatalogosTarifas } from "@/features/pricing/tarifas";
+import { type CatalogosPricing, useCatalogosPricing } from "@/features/pricing/shared";
 
 import { filtrarPorTipoTabla, normalizarOpciones } from "../lib/catalogos";
 import type {
@@ -40,7 +40,6 @@ import type {
 } from "../lib/tipos";
 import type { CatalogosFormularioCotizacion } from "./use-formulario-cotizacion";
 
-type CatalogosTarifas = ReturnType<typeof useCatalogosTarifas>["catalogos"];
 
 /* ==========================================================================
  * CATÁLOGOS DEL CÁLCULO (versiones, carrier, due agent/carrier, scalling...)
@@ -67,7 +66,7 @@ export type CatalogosCalculo = {
   reasonCodesSpot: ReasonCodeSpot[];
 };
 
-function normalizarUnidades(unidades: CatalogosTarifas["unidadesMedida"] | undefined): Unidad[] {
+function normalizarUnidades(unidades: CatalogosPricing["unidadesMedida"] | undefined): Unidad[] {
   return (unidades ?? []).flatMap((unidad) => {
     if (unidad.value == null) return [];
 
@@ -83,11 +82,11 @@ function normalizarUnidades(unidades: CatalogosTarifas["unidadesMedida"] | undef
   });
 }
 
-function construirCatalogosCalculo(tarifas: CatalogosTarifas): CatalogosCalculo {
+function construirCatalogosCalculo(base: CatalogosPricing): CatalogosCalculo {
   return {
-    rubros: tarifas.rubros,
-    servicios: tarifas.servicios,
-    metodos: tarifas.metodos.map((metodo) => ({
+    rubros: base.rubros,
+    servicios: base.servicios,
+    metodos: base.metodos.map((metodo) => ({
       ...metodo,
       cod_servicio: metodo.cod_servicio ?? null,
       fecha_final: metodo.fecha_final ?? null,
@@ -97,15 +96,15 @@ function construirCatalogosCalculo(tarifas: CatalogosTarifas): CatalogosCalculo 
      * Carrier/Flete solo usa estos registros para resolver
      * servicio.cod_tipo_carga y servicio.cod_clasificacion_carga.
      */
-    tipos: [...(tarifas.tiposCarga ?? []), ...(tarifas.clasificacionesCarga ?? [])],
-    categoriasTransporte: tarifas.categoriasTransporte,
-    proveedores: tarifas.proveedores,
+    tipos: [...(base.tiposCarga ?? []), ...(base.clasificacionesCarga ?? [])],
+    categoriasTransporte: base.categoriasTransporte,
+    proveedores: base.proveedores,
 
-    monedas: (tarifas.monedas ?? []).flatMap((moneda) =>
+    monedas: (base.monedas ?? []).flatMap((moneda) =>
       moneda.cod_moneda == null ? [] : [{ ...moneda, cod_moneda: moneda.cod_moneda }],
     ),
 
-    puntosEnlace: (tarifas.puntosEnlace ?? []).flatMap((punto) => {
+    puntosEnlace: (base.puntosEnlace ?? []).flatMap((punto) => {
       const value = punto.value ?? punto.cod_puntoenlace;
 
       if (value == null) return [];
@@ -113,13 +112,13 @@ function construirCatalogosCalculo(tarifas: CatalogosTarifas): CatalogosCalculo 
       return [{ ...punto, value, label: String(punto.label ?? punto.nombre ?? "") }];
     }),
 
-    unidadesMedida: normalizarUnidades(tarifas.unidadesMedida),
-    unidadesPeso: normalizarUnidades(tarifas.unidadesPeso),
+    unidadesMedida: normalizarUnidades(base.unidadesMedida),
+    unidadesPeso: normalizarUnidades(base.unidadesPeso),
 
     // TODO: conectar el catálogo real de criterios (hoy llega vacío, igual que antes).
     criterios: [],
 
-    reasonCodesSpot: normalizarOpciones(filtrarPorTipoTabla(tarifas.tipos, ["REASON_CODE_SPOT"])),
+    reasonCodesSpot: normalizarOpciones(filtrarPorTipoTabla(base.tipos, ["REASON_CODE_SPOT"])),
   };
 }
 
@@ -127,30 +126,30 @@ function construirCatalogosCalculo(tarifas: CatalogosTarifas): CatalogosCalculo 
  * CATÁLOGOS DEL FORMULARIO / TABLA DE CABECERAS ({ value, label })
  * ========================================================================== */
 
-function construirCatalogosFormulario(tarifas: CatalogosTarifas): CatalogosFormularioCotizacion {
+function construirCatalogosFormulario(base: CatalogosPricing): CatalogosFormularioCotizacion {
   return {
-    empresas: normalizarOpciones(tarifas.empresas),
-    centrosCosto: normalizarOpciones(tarifas.centrosCosto),
+    empresas: normalizarOpciones(base.empresas),
+    centrosCosto: normalizarOpciones(base.centrosCosto),
 
-    tiposTransporte: normalizarOpciones(tarifas.tiposTransporte),
-    tiposServicio: normalizarOpciones(tarifas.tiposServicio),
+    tiposTransporte: normalizarOpciones(base.tiposTransporte),
+    tiposServicio: normalizarOpciones(base.tiposServicio),
 
-    tiposCarga: normalizarOpciones(tarifas.tiposCarga),
-    clasificacionesCarga: normalizarOpciones(tarifas.clasificacionesCarga),
+    tiposCarga: normalizarOpciones(base.tiposCarga),
+    clasificacionesCarga: normalizarOpciones(base.clasificacionesCarga),
 
-    incoterms: normalizarOpciones(tarifas.incoterms),
-    tiposPago: normalizarOpciones(tarifas.tiposPago),
+    incoterms: normalizarOpciones(base.incoterms),
+    tiposPago: normalizarOpciones(base.tiposPago),
 
-    ciudades: normalizarOpciones(tarifas.ciudades),
+    ciudades: normalizarOpciones(base.ciudades),
 
-    paises: normalizarOpciones(tarifas.paises),
+    paises: normalizarOpciones(base.paises),
     tiposPuntoEnlace: normalizarOpciones(
-      filtrarPorTipoTabla(tarifas.tipos, ["PUNTO_ENLACE", "TIPO_PUNTOENLACE"]),
+      filtrarPorTipoTabla(base.tipos, ["PUNTO_ENLACE", "TIPO_PUNTOENLACE"]),
     ),
-    puntosEnlace: normalizarOpciones(tarifas.puntosEnlace),
+    puntosEnlace: normalizarOpciones(base.puntosEnlace),
 
-    proveedores: normalizarOpciones(tarifas.proveedores),
-    clientes: normalizarOpciones(tarifas.clientes),
+    proveedores: normalizarOpciones(base.proveedores),
+    clientes: normalizarOpciones(base.clientes),
   };
 }
 
@@ -181,20 +180,17 @@ function obtenerCodRubroIVA(rubros: RubroCatalogo[]) {
  * ========================================================================== */
 
 function useConstruirCatalogosCotizacion() {
-  const { catalogos: tarifas, isLoading } = useCatalogosTarifas({});
+  const { catalogos: base, isLoading } = useCatalogosPricing();
 
   // Cada parte se memoiza por separado para que solo cambie cuando cambia su fuente.
-  const calculo = React.useMemo(() => construirCatalogosCalculo(tarifas), [tarifas]);
-  const formulario = React.useMemo(() => construirCatalogosFormulario(tarifas), [tarifas]);
-  const codigosFletes = React.useMemo(() => obtenerCodigosFletes(tarifas.rubros), [tarifas.rubros]);
-  const codRubroIVA = React.useMemo(() => obtenerCodRubroIVA(tarifas.rubros), [tarifas.rubros]);
+  const calculo = React.useMemo(() => construirCatalogosCalculo(base), [base]);
+  const formulario = React.useMemo(() => construirCatalogosFormulario(base), [base]);
+  const codigosFletes = React.useMemo(() => obtenerCodigosFletes(base.rubros), [base.rubros]);
+  const codRubroIVA = React.useMemo(() => obtenerCodRubroIVA(base.rubros), [base.rubros]);
 
   return React.useMemo(
     () => ({
       isLoading,
-
-      /** Catálogos tal como los entrega Tarifas (sin normalizar). */
-      tarifas,
 
       /** Catálogos para el cálculo de la versión. */
       calculo,
@@ -214,7 +210,7 @@ function useConstruirCatalogosCotizacion() {
       /** cod_rubro del IVA (buscado por nombre). */
       codRubroIVA,
     }),
-    [isLoading, tarifas, calculo, formulario, codigosFletes, codRubroIVA],
+    [isLoading, calculo, formulario, codigosFletes, codRubroIVA],
   );
 }
 

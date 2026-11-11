@@ -1,4 +1,10 @@
-import { mutationOptions, queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  mutationOptions,
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { z } from "zod";
 
 import { CACHE_DYNAMIC } from "@/shared/api/cache";
@@ -43,8 +49,6 @@ export const spotVersionSchema = z
     cod_estado: zId.nullable().optional(),
   })
   .passthrough();
-
-export type SpotVersion = z.infer<typeof spotVersionSchema>;
 
 export const rubroVersionSchema = z
   .object({
@@ -302,34 +306,43 @@ export type CargarVersionParams = {
   filtros: Record<string, unknown>;
 };
 
-export async function cargarVersion({ codCotizacionCabecera, codCotizacionDetalle, filtros }: CargarVersionParams) {
+export async function cargarVersion({
+  codCotizacionCabecera,
+  codCotizacionDetalle,
+  filtros,
+}: CargarVersionParams) {
   const esNueva = codCotizacionDetalle == null || Number(codCotizacionDetalle) === 0;
 
   /*
    * Todas estas llamadas son
    * independientes.
    */
-  const [rubros, dimensiones, legs, criteriosGuardados, plantilla, serviciosInternos] = await Promise.all([
-    esNueva ? Promise.resolve([]) : listarRubrosVersion(codCotizacionDetalle),
+  const [rubros, dimensiones, legs, criteriosGuardados, plantilla, serviciosInternos] =
+    await Promise.all([
+      esNueva ? Promise.resolve([]) : listarRubrosVersion(codCotizacionDetalle),
 
-    esNueva ? Promise.resolve([]) : listarDimensionesVersion(codCotizacionDetalle),
+      esNueva ? Promise.resolve([]) : listarDimensionesVersion(codCotizacionDetalle),
 
-    esNueva ? Promise.resolve([]) : listarLegsVersion(codCotizacionDetalle),
+      esNueva ? Promise.resolve([]) : listarLegsVersion(codCotizacionDetalle),
 
-    esNueva
-      ? Promise.resolve([])
-      : listarCriteriosGuardados({
-          codCotizacionCabecera,
+      esNueva
+        ? Promise.resolve([])
+        : listarCriteriosGuardados({
+            codCotizacionCabecera,
 
-          codCotizacionDetalle,
-        }),
+            codCotizacionDetalle,
+          }),
 
-    obtenerPlantilla(filtros),
+      obtenerPlantilla(filtros),
 
-    listarServiciosInternos(filtros),
-  ]);
+      listarServiciosInternos(filtros),
+    ]);
 
-  const criteriosInternos = (await Promise.all(serviciosInternos.map((servicio) => listarCriteriosServicio(servicio.cod_servicio)))).flat();
+  const criteriosInternos = (
+    await Promise.all(
+      serviciosInternos.map((servicio) => listarCriteriosServicio(servicio.cod_servicio)),
+    )
+  ).flat();
 
   const criteriosDisponibles = [...(plantilla?.criterios ?? []), ...criteriosInternos];
 

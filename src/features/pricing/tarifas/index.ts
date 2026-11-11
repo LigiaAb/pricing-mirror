@@ -1,4 +1,27 @@
+// Métodos y proveedores viven en pricing/shared; se re-exportan aquí por compatibilidad.
+export {
+  consultarProveedoresTarifa,
+  type FiltrosMetodos,
+  METODOS_QUERY_KEY,
+  type Metodo,
+  type MetodoMutationPayload,
+  metodoSchema,
+  metodos,
+  metodosOptions,
+  PROVEEDORES_TARIFA_QUERY_KEY,
+  type ProveedorTarifa,
+  proveedoresTarifaOptions,
+  useActualizarMetodo,
+  useInsertarMetodo,
+  useMetodos,
+  useProveedoresTarifa,
+} from "@/features/pricing/shared";
 export { buscarClientesTarifa, type EntidadTarifaOption } from "./api/buscar-entidad";
+export {
+  COD_ESTADO_ELIMINADO,
+  crearCatalogoMetodo,
+  type FiltrosMetodo,
+} from "./api/catalogo-metodo";
 export { type Incoterm, incotermSchema, incotermsOptions, useIncoterms } from "./api/iconterms";
 export {
   type FiltrosMetodoCommodity,
@@ -13,24 +36,13 @@ export {
   useMetodoCommodities,
 } from "./api/metodo-commodities";
 export {
-  type FiltrosMetodos,
-  METODOS_QUERY_KEY,
-  type Metodo,
-  type MetodoMutationPayload,
-  metodoSchema,
-  metodos,
-  metodosOptions,
-  useActualizarMetodo,
-  useInsertarMetodo,
-  useMetodos,
-} from "./api/metodos";
-export {
-  consultarProveedoresTarifa,
-  PROVEEDORES_TARIFA_QUERY_KEY,
-  type ProveedorTarifa,
-  proveedoresTarifaOptions,
-  useProveedoresTarifa,
-} from "./api/proveedores";
+  MONEDAS_OPERATIVAS_QUERY_KEY,
+  type MonedaOperativa,
+  monedaOperativaSchema,
+  monedasOperativas,
+  monedasOperativasOptions,
+  useMonedasOperativas,
+} from "./api/monedas";
 export { type MetodoRaw, metodosSchema } from "./api/schemas";
 export {
   actualizarServicioOptions,
@@ -250,20 +262,8 @@ export { ScallingTable } from "./components/metodos/scalling/scalling-table";
 export { TarifasTabs } from "./components/tab-tarifas";
 export { crearTarifasColumns } from "./components/tarifas-columns";
 export { TarifasTable } from "./components/tarifas-table";
-export {
-  COD_ESTADO_ELIMINADO,
-  crearCatalogoMetodo,
-  type FiltrosMetodo,
-} from "./api/catalogo-metodo";
-export {
-  MONEDAS_OPERATIVAS_QUERY_KEY,
-  type MonedaOperativa,
-  monedaOperativaSchema,
-  monedasOperativas,
-  monedasOperativasOptions,
-  useMonedasOperativas,
-} from "./api/monedas";
 export { keysToLowerCase, useCatalogosTarifas } from "./hooks/use-catalogos-tarifas";
+export { useFormulario } from "./hooks/use-formulario-tarifas";
 export {
   filtrarOpciones,
   type MonedaOpcion,
@@ -273,7 +273,6 @@ export {
   useOpcionesMonedas,
   useOpcionesRubros,
 } from "./hooks/use-opciones-tarifa";
-export { useFormulario } from "./hooks/use-formulario-tarifas";
 export type {
   CatalogOption,
   CatalogosProcesados,

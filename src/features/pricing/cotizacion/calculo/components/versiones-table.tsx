@@ -1,16 +1,23 @@
 "use client";
 
-import { Check, CircleCheck, CircleSlashed, Eye, FileDown, Plus, TrashIcon } from "lucide-react";
+import { Check, CircleCheck, CircleSlashed, Eye, FileDown, Plus } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/shared/components/ui/table";
 import { cn } from "@/shared/lib/utils";
 import { useEstadosCalculo } from "../hooks/use-estados-cotizacion";
-import type { EstadosCalculoCotizacion } from "../lib/versiones";
+import { TIPO_PAGO } from "../lib/constantes";
 
 import type { Id } from "../lib/tipos";
-import { TIPO_PAGO } from "../lib/constantes";
 import { formatFecha } from "../lib/utils";
+import type { EstadosCalculoCotizacion } from "../lib/versiones";
 
 type Version = {
   cod_cotizaciondetalle: Id;
@@ -72,8 +79,17 @@ function nombresEstados(catalogo: unknown) {
     if (typeof fila !== "object" || fila === null) continue;
     const estado = fila as Record<string, unknown>;
     const codigo = estado.value ?? estado.cod_estado;
-    const texto = estado.label ?? estado.estado_desc ?? estado.descripcion ?? estado.nombre ?? estado.nom_estado;
-    if ((typeof codigo === "string" || typeof codigo === "number") && typeof texto === "string" && texto.trim()) {
+    const texto =
+      estado.label ??
+      estado.estado_desc ??
+      estado.descripcion ??
+      estado.nombre ??
+      estado.nom_estado;
+    if (
+      (typeof codigo === "string" || typeof codigo === "number") &&
+      typeof texto === "string" &&
+      texto.trim()
+    ) {
       if (!nombres.has(String(codigo))) nombres.set(String(codigo), texto.trim());
     }
   }
@@ -105,26 +121,47 @@ function getEstadoLabel({
   return codEstado == null ? "—" : (nombres.get(String(codEstado)) ?? String(codEstado));
 }
 
-function configurarVersion(version: Version, cotizacion: Props["cotizacion"], estados: EstadosCalculoCotizacion, nombres: ReadonlyMap<string, string>) {
+function configurarVersion(
+  version: Version,
+  cotizacion: Props["cotizacion"],
+  estados: EstadosCalculoCotizacion,
+  nombres: ReadonlyMap<string, string>,
+) {
   const codigo = String(version.cod_estado);
   const activa = estados.ACTIVO != null && codigo === String(estados.ACTIVO);
   const inactiva = estados.INACTIVO != null && codigo === String(estados.INACTIVO);
   // La autorización Spot se lee del detalle, no del estado de la fila ni de la cabecera.
-  const spotAutorizado = !version.es_spot || (estados.AUTORIZADO != null && String(version.cotizaciondetalle_json?.cod_estado) === String(estados.AUTORIZADO));
+  const spotAutorizado =
+    !version.es_spot ||
+    (estados.AUTORIZADO != null &&
+      String(version.cotizaciondetalle_json?.cod_estado) === String(estados.AUTORIZADO));
   const tipoPago = Number(cotizacion.cod_tipo_pago);
   const tieneEstacion = Boolean(cotizacion.entidad_id_estacion);
-  const versionValida = estados.ANULADO != null && !version.isNew && codigo !== String(estados.ANULADO);
+  const versionValida =
+    estados.ANULADO != null && !version.isNew && codigo !== String(estados.ANULADO);
 
   return {
     texto: getEstadoLabel({ codEstado: version.cod_estado ?? null, estados, nombres }),
     // Por defecto, Ver aparece en versiones activas e inactivas.
     ver: activa || inactiva,
     // Activar exige cabecera activa y autorización si la versión es Spot.
-    activar: !version.vencida && spotAutorizado && estados.ACTIVO != null && String(cotizacion.cod_estado) === String(estados.ACTIVO) && inactiva,
+    activar:
+      !version.vencida &&
+      spotAutorizado &&
+      estados.ACTIVO != null &&
+      String(cotizacion.cod_estado) === String(estados.ACTIVO) &&
+      inactiva,
     // Con pago 127 y estación, se oculta el PDF general. Los pagos 127/131 permiten el general sin exigir versionValida.
-    pdf: spotAutorizado && !(tipoPago === TIPO_PAGO.COLLECT && tieneEstacion) && (tipoPago === TIPO_PAGO.COLLECT || tipoPago === TIPO_PAGO.TODOS || versionValida),
+    pdf:
+      spotAutorizado &&
+      !(tipoPago === TIPO_PAGO.COLLECT && tieneEstacion) &&
+      (tipoPago === TIPO_PAGO.COLLECT || tipoPago === TIPO_PAGO.TODOS || versionValida),
     // El PDF de estación exige entidad de estación y pago 127/131. Por defecto, la versión debe existir y no estar anulada.
-    pdfEstacion: spotAutorizado && tieneEstacion && ([TIPO_PAGO.COLLECT, TIPO_PAGO.TODOS] as number[]).includes(tipoPago) && versionValida,
+    pdfEstacion:
+      spotAutorizado &&
+      tieneEstacion &&
+      ([TIPO_PAGO.COLLECT, TIPO_PAGO.TODOS] as number[]).includes(tipoPago) &&
+      versionValida,
 
     anular: (activa || inactiva) && !version.vencida,
 
@@ -179,7 +216,9 @@ export function VersionesTable({
     estados?.RECHAZADO != null &&
     versiones.length >= 1 &&
     Boolean(versiones[0]?.fecha_creacion) &&
-    ![estados.CONFIRMADO, estados.RECHAZADO].some((estado) => String(estado) === String(cotizacion.cod_estado));
+    ![estados.CONFIRMADO, estados.RECHAZADO].some(
+      (estado) => String(estado) === String(cotizacion.cod_estado),
+    );
 
   return (
     <section className="overflow-hidden rounded-lg border">
@@ -230,15 +269,29 @@ export function VersionesTable({
             ) : (
               versiones.map((version) => {
                 const estado = configurarVersion(version, cotizacion, estados, nombres);
-                const selected = String(version.cod_cotizaciondetalle) === String(versionActual?.cod_cotizaciondetalle);
+                const selected =
+                  String(version.cod_cotizaciondetalle) ===
+                  String(versionActual?.cod_cotizaciondetalle);
                 const vencida = version.vencida;
 
                 return (
                   <TableRow
                     key={String(version.cod_cotizaciondetalle)}
                     className={cn(
-                      selected ? (estado.activa ? "bg-success/30" : "bg-muted/80") : estado.activa ? "bg-success/10" : "",
-                      selected ? (estado.activa ? "hover:bg-success/20" : "hover:bg-muted/90") : estado.activa ? "hover:bg-success/5" : "hover:bg-muted",
+                      selected
+                        ? estado.activa
+                          ? "bg-success/30"
+                          : "bg-muted/80"
+                        : estado.activa
+                          ? "bg-success/10"
+                          : "",
+                      selected
+                        ? estado.activa
+                          ? "hover:bg-success/20"
+                          : "hover:bg-muted/90"
+                        : estado.activa
+                          ? "hover:bg-success/5"
+                          : "hover:bg-muted",
                     )}
                   >
                     <TableCell className="font-medium">{version.version ?? "—"}</TableCell>
@@ -256,14 +309,25 @@ export function VersionesTable({
                       })}
                     </TableCell>
 
-                    <TableCell className="p-0 m-0 text-center text-destructive">{vencida && "Vencida"}</TableCell>
+                    <TableCell className="p-0 m-0 text-center text-destructive">
+                      {vencida && "Vencida"}
+                    </TableCell>
 
-                    <TableCell className={cn("p-0 m-0 text-center font-bold", estado.texto !== "Activa" ? "text-destructive" : "text-success")}>
+                    <TableCell
+                      className={cn(
+                        "p-0 m-0 text-center font-bold",
+                        estado.texto !== "Activa" ? "text-destructive" : "text-success",
+                      )}
+                    >
                       {estado.texto}
                     </TableCell>
                     <TableCell className="p-0 m-0">
                       {estado.texto !== "Activa" ? (
-                        <CircleSlashed size={10} className="text-destructive p-0 m-0" strokeWidth={4} />
+                        <CircleSlashed
+                          size={10}
+                          className="text-destructive p-0 m-0"
+                          strokeWidth={4}
+                        />
                       ) : (
                         <CircleCheck size={10} className="text-success p-0 m-0" strokeWidth={4} />
                       )}
@@ -300,7 +364,14 @@ export function VersionesTable({
                         ) : null}
 
                         {estado.pdf && onPdf ? (
-                          <Button type="button" variant="ghost" size="icon" className="size-8" title="Descargar PDF" onClick={() => void onPdf(version)}>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            title="Descargar PDF"
+                            onClick={() => void onPdf(version)}
+                          >
                             <FileDown className="size-4  text-destructive" />
                           </Button>
                         ) : null}

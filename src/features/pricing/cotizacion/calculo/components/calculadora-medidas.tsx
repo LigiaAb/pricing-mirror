@@ -20,21 +20,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/components/ui/table";
-
+import { useCatalogosCotizacion } from "../hooks/use-catalogos-cotizacion";
 import {
   calcularTotalesMedidas,
   crearDimension,
   type DimensionCalculo,
+  ETIQUETAS_CALCULADORA,
   type TotalesMedidas,
   type Unidad,
 } from "../lib/calculadora-medidas";
-
-import { obtenerEtiquetasCalculadora } from "../lib/etiquetas-calculadora";
-
+import { UNIDAD_DEFAULT } from "../lib/constantes";
 import type { Id } from "../lib/tipos";
 import { numero } from "../lib/utils";
-import { UNIDAD_DEFAULT } from "../lib/constantes";
-import { useCatalogosCotizacion } from "../hooks/use-catalogos-cotizacion";
 
 type FormMedida = {
   cantidad: string;
@@ -105,7 +102,8 @@ function crearFormularioInicial({
      * 165 = unidad de volumen por defecto
      * 162 = unidad de peso por defecto
      */
-    unidadMedida: unidadesMedida.find((item) => Number(item.value) === UNIDAD_DEFAULT.MEDIDA) ?? null,
+    unidadMedida:
+      unidadesMedida.find((item) => Number(item.value) === UNIDAD_DEFAULT.MEDIDA) ?? null,
 
     unidadPeso: unidadesPeso.find((item) => Number(item.value) === UNIDAD_DEFAULT.PESO) ?? null,
   };
@@ -146,7 +144,7 @@ export function CalculadoraMedidas({
    * ESTADO
    * ========================================================================== */
 
-  const etiquetas = obtenerEtiquetasCalculadora(codTipoTransporte);
+  const etiquetas = ETIQUETAS_CALCULADORA;
 
   const [items, setItems] = React.useState<DimensionCalculo[]>([]);
 

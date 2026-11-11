@@ -1,6 +1,8 @@
 import type { CriterioDisponible, CriterioGuardado, RubroVersion } from "../api/versiones";
 
+import { getCatalogArray } from "./catalogos";
 import type { Id } from "./tipos";
+import { normalizarBoolean } from "./utils";
 
 export type EstadosVersion = {
   ACTIVO: Id;
@@ -39,16 +41,7 @@ export function resolverEstadosCatalogo<K extends string>(
   catalogo: unknown,
   nombres: readonly K[],
 ) {
-  const esRegistro = (valor: unknown): valor is Record<string, unknown> =>
-    typeof valor === "object" && valor !== null;
-  const lista = Array.isArray(catalogo)
-    ? catalogo
-    : esRegistro(catalogo)
-      ? Array.isArray(catalogo.items)
-        ? catalogo.items
-        : catalogo.data
-      : undefined;
-  const filas = Array.isArray(lista) ? lista.filter(esRegistro) : [];
+  const filas = getCatalogArray(catalogo);
   const estados: Partial<Record<K, Id>> = {};
   for (const nombre of nombres) {
     const fila = filas.find(
@@ -124,33 +117,6 @@ export type CotizacionParaVersion = {
 
   cod_continente_destino?: Id | null;
 };
-export function normalizarBooleanVersion(value: unknown) {
-  if (value === true || value === false) {
-    return value;
-  }
-
-  if (value == null) {
-    return false;
-  }
-
-  if (typeof value === "number") {
-    return value === 1;
-  }
-
-  if (typeof value === "string") {
-    const normalizado = value.trim().toLowerCase();
-
-    if (["true", "1", "si", "sí", "y", "yes"].includes(normalizado)) {
-      return true;
-    }
-
-    if (["false", "0", "no", "n"].includes(normalizado)) {
-      return false;
-    }
-  }
-
-  return Boolean(value);
-}
 export function extraerEntidadVersion({
   rubros,
   codigosFletes,
@@ -246,6 +212,6 @@ export function construirCriteriosVersion({
 
     ...valoresDefault,
 
-    express: normalizarBooleanVersion(valoresDefault.express),
+    express: normalizarBoolean(valoresDefault.express),
   };
 }

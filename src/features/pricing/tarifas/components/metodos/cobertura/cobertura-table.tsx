@@ -9,11 +9,9 @@ import {
   useMonedasCobertura,
   useTarifaCobertura,
 } from "../../../api/tarifa-cobertura";
-
-import type { FilaCobertura, MonedaCoberturaOption } from "./cobertura-columns";
-
-import { CoberturaForm } from "./cobertura-form";
 import { useOpcionesMonedas } from "../../../hooks/use-opciones-tarifa";
+import type { FilaCobertura, MonedaCoberturaOption } from "./cobertura-columns";
+import { CoberturaForm } from "./cobertura-form";
 
 type Props = {
   codMetodo?: string | number | null;

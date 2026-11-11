@@ -1,18 +1,18 @@
 "use client";
 import React from "react";
+import { useTarifaRangos } from "@/features/pricing/shared";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
-import { useTarifaRangos } from "../../../tarifas/api/tarifa-rangos";
+import { useCatalogosCotizacion } from "../hooks/use-catalogos-cotizacion";
 import {
   getCodServicioDueCarrier,
   getEntidadIdDueCarrier,
   getMetodoDueCarrier,
   type RubroDueCarrier,
 } from "../lib/due-carrier";
-
 import { formatNumero, getSimboloMoneda } from "../lib/utils";
-import { useCatalogosCotizacion } from "../hooks/use-catalogos-cotizacion";
+
 function buscarFleteBaseNormal(item: RubroDueCarrier, rubros: RubroDueCarrier[]) {
   if (!item.es_tarifa_spot) {
     return item;

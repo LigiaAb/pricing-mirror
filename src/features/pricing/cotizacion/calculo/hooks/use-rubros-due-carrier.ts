@@ -6,6 +6,7 @@ import {
   type RubroDueCarrier,
   type ValoresManualDueCarrier,
 } from "../lib/due-carrier";
+import { limpiarNumero } from "../lib/utils";
 import { useCatalogosCotizacion } from "./use-catalogos-cotizacion";
 
 type Props = {
@@ -126,7 +127,7 @@ export function useRubrosDueCarrier({
       /*
        * Mismo sanitizado actual.
        */
-      const valor = String(raw ?? "").replace(/[^0-9.]/g, "");
+      const valor = limpiarNumero(raw);
 
       setValoresManual((prev) => ({
         ...prev,
