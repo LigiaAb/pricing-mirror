@@ -55,7 +55,7 @@ export const TARIFA_MI_METODO_QUERY_KEY = api.keys.all;
 export const { listaOptions: ..., useLista: ..., useInsertar: ..., useActualizar: ..., useEliminar: ... } = api;
 ```
 
-Si un catálogo no necesita esas adaptaciones, usa `createCatalogo` directamente (ver `api/metodos.ts`, `api/monedas.ts`).
+Si un catálogo no necesita esas adaptaciones, usa `createCatalogo` directamente (ver `pricing/shared/api/metodos.ts`, `api/monedas.ts`).
 
 Comportamiento heredado de `createCatalogo`: las mutaciones validan la respuesta con `exigirExitoDeMutacion`,
 refrescan la lista al terminar (`onSettled`) y los toasts se controlan con `meta`.
