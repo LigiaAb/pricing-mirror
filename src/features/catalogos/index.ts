@@ -1,0 +1,34 @@
+/* STUB del repo espejo: solo tipos para verificar pricing. NO copiar al proyecto real. */
+/* createCatalogo es el código real del proyecto; los demás catálogos son any. */
+export { createCatalogo, createCatalogoMutation, type Filtros } from "./create-catalogo";
+export const centrosCosto: any = {};
+export const ciudades: any = {};
+export const commodities: any = {};
+export const continentes: any = {};
+export const empleadosUsuarios: any = {};
+export const empresas: any = {};
+export const estados: any = {};
+export const incoterms: any = {};
+export const monedas: any = {};
+export const paises: any = {};
+export const puntosEnlace: any = {};
+export const relacionTipo: any = {};
+export const rubros: any = {};
+export const servicios: any = {};
+export const tipos: any = {};
+export const usuarios: any = {};
+export type CentroCosto = any;
+export type Ciudad = any;
+export type Continente = any;
+export type EmpleadoUsuario = any;
+export type Empresa = any;
+export type Estado = any;
+export type Incoterm = any;
+export type Moneda = any;
+export type Pais = any;
+export type PuntoEnlace = any;
+export type RelacionTipo = any;
+export type Rubro = any;
+export type Servicio = any;
+export type Tipo = any;
+export type Usuario = any;

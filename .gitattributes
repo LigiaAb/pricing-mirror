@@ -1,0 +1,3 @@
+# Git NO modifica los finales de línea: cada archivo se guarda tal cual (CRLF o LF),
+# para que lo que se copie al proyecto real sea idéntico byte por byte.
+* -text
