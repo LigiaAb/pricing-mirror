@@ -90,3 +90,6 @@ Resumen:
 - Tarifas: agregar un campo a un método aún requiere tocar esquema, payload, formulario y tabla.
 - `tarifas/.../porcentaje-form.tsx` inicializa `minimo: 0` en vez de `minimo_costo` / `minimo_venta`.
 - `tarifas/api/monedas.ts` podría reutilizar el catálogo `monedas` de `@/features/catalogos`.
+
+
+usar la rama claude/work
