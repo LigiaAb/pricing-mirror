@@ -6,7 +6,8 @@
     "typecheck": "tsc --noEmit",
     "check": "tsc --noEmit",
     "check:nuevos": "node scripts/check-nuevos.mjs",
-    "check:actualizar-base": "node scripts/check-nuevos.mjs --actualizar"
+    "check:actualizar-base": "node scripts/check-nuevos.mjs --actualizar",
+    "diff:guardar": "node scripts/guardar-diff.mjs --amend"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.105.3",

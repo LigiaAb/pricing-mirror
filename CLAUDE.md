@@ -33,6 +33,7 @@ npm install
 npm run check:nuevos            # tsc y SOLO errores nuevos vs .tsc-baseline.txt (usar este)
 npm run check                   # tsc completo (incluye ~326 errores previos: stubs any + código existente)
 npm run check:actualizar-base   # tras resolver errores previos, guardar nueva línea base
+npm run diff:guardar            # tras cada commit: diff/[DDMMYY-HHmm]-[commit].diff y amend
 ```
 
 Regla: **ningún cambio debe dejar errores nuevos** en `check:nuevos`. Si se resuelven errores previos, actualizar la base.
@@ -48,8 +49,12 @@ Al editar, **conservar el final de línea que ya tiene el archivo** (no converti
 2. `npm run check:nuevos` antes de cada commit.
 3. Verificación proporcional al cambio: cambio chico → solo `check:nuevos`; cambio de lógica → además una prueba
    rápida en ejecución (esbuild + node) comparando contra el comportamiento anterior.
-4. El usuario copia `src/features/pricing` (o aplica `git diff` con `git apply`) en su proyecto.
-5. Actualizar el `ARQUITECTURA.md` del submódulo si cambia dónde vive algo.
+4. **Después de cada commit que cambie `src/features/pricing`: `npm run diff:guardar`.** Genera
+   `diff/[DDMMYY-HHmm]-[nombre-del-commit].diff` (hora de Guatemala, solo `src/features/pricing`, formato binario que
+   conserva CRLF/LF) y lo agrega al mismo commit (amend). Hacerlo antes del push.
+5. El usuario aplica ese archivo en la raíz de su proyecto con `git apply diff/<archivo>.diff`
+   (o copia `src/features/pricing`).
+6. Actualizar el `ARQUITECTURA.md` del submódulo si cambia dónde vive algo.
 
 ## Convenciones del módulo
 
