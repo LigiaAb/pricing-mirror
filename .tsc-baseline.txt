@@ -105,7 +105,51 @@ src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Param
 src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'open' implicitly has an 'any' type.
 src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/tarifas/api/types-api.ts: error TS2709: Cannot use namespace 'Entidad' as a type.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipo_padre_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipo_padre_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipo_padre_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipo_padre_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipo_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipo_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipo_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2709: Cannot use namespace 'Entidad' as a type.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS7006: Parameter 'r' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/creacion-tarifa.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/creacion-tarifa.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/creacion-tarifa.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
@@ -276,51 +320,7 @@ src/features/pricing/tarifas/components/tarifas-columns.tsx: error TS7031: Bindi
 src/features/pricing/tarifas/components/tarifas-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/tarifas-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/tarifas-table.tsx: error TS7006: Parameter 'ev' implicitly has an 'any' type.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipo_padre_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipo_padre_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipo_padre_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipo_padre_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipo_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipo_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2339: Property 'tipo_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
 src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2375: Type '{ cod_metodo?: string | number; cod_tipo?: string | number | null | undefined; cod_tipo_tarifa?: string | number | undefined; todos_los_paises?: boolean | null | undefined; todos_los_clientes?: boolean | ... 1 more ... | undefined; ... 75 more ...; ultimoUsuario: any; }' is not assignable to type 'FilaServicioMetodo' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS7006: Parameter 'i' implicitly has an 'any' type.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS7006: Parameter 'i' implicitly has an 'any' type.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS7006: Parameter 'r' implicitly has an 'any' type.
 src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts: error TS7006: Parameter 'state' implicitly has an 'any' type.
