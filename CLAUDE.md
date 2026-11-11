@@ -33,6 +33,8 @@ npm install
 npm run check:nuevos            # tsc y SOLO errores nuevos vs .tsc-baseline.txt (usar este)
 npm run check                   # tsc completo (incluye ~326 errores previos: stubs any + código existente)
 npm run check:actualizar-base   # tras resolver errores previos, guardar nueva línea base
+npm run parche                  # parches/<rama>.patch: cambios de src/features/pricing vs origin/main
+npm run parche -- <base>        # vs otra base (rama/commit), ej. HEAD~1
 ```
 
 Regla: **ningún cambio debe dejar errores nuevos** en `check:nuevos`. Si se resuelven errores previos, actualizar la base.
@@ -48,7 +50,10 @@ Al editar, **conservar el final de línea que ya tiene el archivo** (no converti
 2. `npm run check:nuevos` antes de cada commit.
 3. Verificación proporcional al cambio: cambio chico → solo `check:nuevos`; cambio de lógica → además una prueba
    rápida en ejecución (esbuild + node) comparando contra el comportamiento anterior.
-4. El usuario copia `src/features/pricing` (o aplica `git diff` con `git apply`) en su proyecto.
+4. Al terminar los cambios: `npm run parche` y **commitear `parches/<rama>.patch`** junto con el código
+   (incluye también lo no commiteado; regenerarlo si hay más cambios). Indicar al usuario el archivo.
+   El usuario lo aplica desde la raíz de erp-web: `git apply --check <archivo>.patch` y luego `git apply <archivo>.patch`.
+   El parche usa `--binary`, así conserva CRLF/LF exactos de cada archivo.
 5. Actualizar el `ARQUITECTURA.md` del submódulo si cambia dónde vive algo.
 
 ## Convenciones del módulo
