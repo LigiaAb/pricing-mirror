@@ -10,9 +10,9 @@ import {
   useMonedasRango,
   useTarifaRangos,
 } from "../../../api/tarifa-rangos";
+import { useOpcionesMonedas } from "../../../hooks/use-opciones-tarifa";
 import { crearRangoColumns, type FilaMetodoRango, type MonedaRangoOption } from "./rango-columns";
 import { RangoForm } from "./rango-form";
-import { useOpcionesMonedas } from "../../../hooks/use-opciones-tarifa";
 
 type Props = {
   codMetodo?: string | number | null;

@@ -7,7 +7,8 @@ cotizacion/calculo/
 ├─ lib/
 │  ├─ tipos.ts          ← TIPOS compartidos (Id, MonedaCatalogo, RubroCatalogo, ...)
 │  ├─ constantes.ts     ← CÓDIGOS de negocio (TIPO_PAGO.COLLECT = 127, RUBRO.SCALLING = 134, ...)
-│  ├─ utils.ts          ← FUNCIONES pequeñas compartidas (mismoId, numero, formatNumero, getSimboloMoneda, ...)
+│  ├─ utils.ts          ← FUNCIONES pequeñas compartidas (mismoId, numero, normalizarBoolean, limpiarNumero, buscarMoneda, ...)
+│  ├─ rubros-manuales.ts← rubros con valor manual (ABIERTO / COSTO_PORCENTAJE), compartido por Due Agent y Due Carrier
 │  ├─ catalogos.ts      ← normalización de catálogos a { value, label }
 │  ├─ cabecera.ts       ← CAMPOS DE LA CABECERA (definición única)
 │  ├─ detalle-flete.ts  ← TEXTO DEL DETALLE DE FLETE por tipo de transporte
@@ -23,32 +24,39 @@ cotizacion/calculo/
 **Reutilizables:** una función sin JSX que se usa en varios archivos va en `lib/utils.ts`; un componente visual que
 se repite va en `components/utils.tsx`. Antes de escribir un helper nuevo, revisa esos dos archivos.
 
-**Regla:** si cambia *cómo se calcula* algo, va en `lib/`. Si cambia *cuándo o con qué datos*, va en `hooks/`. Si cambia *cómo se ve*, va en `components/`.
+**Regla:** si cambia _cómo se calcula_ algo, va en `lib/`. Si cambia _cuándo o con qué datos_, va en `hooks/`. Si cambia _cómo se ve_, va en `components/`.
+
+## Dependencias con otros módulos
+
+Cotizaciones **no importa nada de Tarifas** (ni Tarifas de Cotizaciones). Lo que ambos usan está en
+`pricing/shared` (`@/features/pricing/shared`): catálogos base (`useCatalogosPricing`), APIs de métodos,
+proveedores, clientes y lectura de rangos de tarifa, y el componente `FichaResumen`.
 
 ## Catálogos
 
 `GestionCotizacion` monta `<CatalogosCotizacionProvider>`. Cualquier componente o hook que esté dentro de esa pantalla lee los catálogos así, sin recibirlos por props:
 
 ```ts
-const { calculo, formulario, criterios, codigosFletes, codRubroIVA, tarifas } = useCatalogosCotizacion();
+const { calculo, formulario, criterios, codigosFletes, codRubroIVA, tarifas } =
+  useCatalogosCotizacion();
 
 const { monedas, metodos } = useCatalogosCotizacion().calculo;
 ```
 
-| Campo         | Qué contiene                                                                 |
-|---------------|------------------------------------------------------------------------------|
-| `calculo`     | monedas, rubros, servicios, métodos, proveedores, tipos, categorías, puntos de enlace, unidades, reason codes |
-| `formulario`  | opciones `{ value, label }` del formulario y de la tabla de cabeceras        |
-| `criterios`   | opciones de los criterios dinámicos por campo (equipo, commodity...)         |
-| `tarifas`     | catálogos crudos de `useCatalogosTarifas` (sin normalizar)                   |
-| `codigosFletes`, `codRubroIVA` | valores derivados de los rubros                             |
+| Campo                          | Qué contiene                                                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `calculo`                      | monedas, rubros, servicios, métodos, proveedores, tipos, categorías, puntos de enlace, unidades, reason codes |
+| `formulario`                   | opciones `{ value, label }` del formulario y de la tabla de cabeceras                                         |
+| `criterios`                    | opciones de los criterios dinámicos por campo (equipo, commodity...)                                          |
+| `codigosFletes`, `codRubroIVA` | valores derivados de los rubros                                                                               |
 
 ### Agregar un catálogo nuevo
 
 1. Si el tipo es nuevo, decláralo en `lib/tipos.ts`.
-2. En `hooks/use-catalogos-cotizacion.tsx`, agrégalo al tipo `CatalogosCalculo` y en `construirCatalogosCalculo`
+2. Si el dato no existe en `useCatalogosPricing` (`pricing/shared/hooks`), agrégalo allí.
+3. En `hooks/use-catalogos-cotizacion.tsx`, agrégalo al tipo `CatalogosCalculo` y en `construirCatalogosCalculo`
    (o en `construirCatalogosFormulario` si es para el formulario).
-3. Úsalo donde lo necesites: `const { miCatalogo } = useCatalogosCotizacion().calculo;`
+4. Úsalo donde lo necesites: `const { miCatalogo } = useCatalogosCotizacion().calculo;`
 
 Ya no hace falta tocar `gestion-cotizacion`, `calculo-cotizacion-container`, `calculo-cotizacion` ni las Props de los hijos.
 
@@ -56,7 +64,7 @@ Ya no hace falta tocar `gestion-cotizacion`, `calculo-cotizacion-container`, `ca
 
 - `CotizacionForm`: también la usan **Autorización Spot** y **Plantillas de clientes**. Si recibe `catalogos` por prop, usa esos;
   si no, toma `formulario` del provider.
-- `FichaResumen`: también la usa **Tarifas** (fuera del provider), por eso lee `useCatalogosTarifas` directamente.
+- `FichaResumen` ya no está aquí: vive en `pricing/shared` y lee sus propios catálogos.
 
 ## Cabecera de la cotización
 
@@ -82,16 +90,16 @@ tipoCarga: {
 
 A partir de esa lista se generan solos:
 
-| Qué                                          | Antes estaba escrito a mano en                      |
-|----------------------------------------------|-----------------------------------------------------|
-| Esquema Zod y tipo `CotizacionCabecera`      | `api/cotizacion-cabecera.ts`                        |
-| Tipo `CotizacionCabeceraPayload`             | `api/cotizacion-cabecera.ts` (otra vez)             |
-| Reglas del formulario                        | `hooks/use-formulario-cotizacion.ts`                |
-| Lista de campos obligatorios                 | `hooks/use-formulario-cotizacion.ts`                |
-| Etiquetas del formulario                     | `components/cotizacion-form.tsx`                    |
-| Filtros del listado y parámetros al backend  | `api/cotizacion-cabecera.ts`, `hooks/use-gestion-cotizaciones.ts` (3 funciones de conversión) |
-| Datos que van al cálculo                     | `components/gestion-cotizacion.tsx` (`construirFiltrosCalculo`) |
-| Tipo de `cotizacion` en el cálculo           | `components/calculo-cotizacion.tsx`                 |
+| Qué                                         | Antes estaba escrito a mano en                                                                |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Esquema Zod y tipo `CotizacionCabecera`     | `api/cotizacion-cabecera.ts`                                                                  |
+| Tipo `CotizacionCabeceraPayload`            | `api/cotizacion-cabecera.ts` (otra vez)                                                       |
+| Reglas del formulario                       | `hooks/use-formulario-cotizacion.ts`                                                          |
+| Lista de campos obligatorios                | `hooks/use-formulario-cotizacion.ts`                                                          |
+| Etiquetas del formulario                    | `components/cotizacion-form.tsx`                                                              |
+| Filtros del listado y parámetros al backend | `api/cotizacion-cabecera.ts`, `hooks/use-gestion-cotizaciones.ts` (3 funciones de conversión) |
+| Datos que van al cálculo                    | `components/gestion-cotizacion.tsx` (`construirFiltrosCalculo`)                               |
+| Tipo de `cotizacion` en el cálculo          | `components/calculo-cotizacion.tsx`                                                           |
 
 ### Agregar un campo a la cabecera
 
@@ -134,18 +142,18 @@ el cálculo y muestra un aviso si faltan estados. Dentro del cálculo se usa `us
 
 ## Flujo del cálculo (`calculo-cotizacion.tsx`)
 
-| # | Sección          | Hook                             | Lógica (`lib/`)                                   | Componente                    |
-|---|------------------|----------------------------------|---------------------------------------------------|-------------------------------|
-| 1 | Versiones        | `use-version-cotizacion`         | `versiones.ts`                                    | `versiones-table`             |
-| 2 | Criterios        | `use-criterios-cotizacion`       | `criterios-cotizacion`, `calculadora-medidas`     | `criterios-form`              |
-| 3 | Cálculo (backend)| `use-calculo-cotizacion`         | —                                                 | —                             |
-| 4 | Carrier / Flete  | `use-carrier-flete`              | `carrier-flete.ts`                                | `carrier-selector`            |
-| 5 | Repartir rubros  | `use-rubros-cotizacion`          | `procesar-rubros-calculados`, `rubros-guardados`  | —                             |
-| 6 | Due Agent        | `use-rubros-due-agent`           | `due-agent.ts`                                    | `due-agent`                   |
-| 7 | Due Carrier/Spot | `use-rubros-due-carrier`         | `due-carrier.ts`                                  | `due-carrier`, `dialogo-spot` |
-| 8 | Scalling         | `use-rubros-scalling`            | `scalling.ts`                                     | `scalling`                    |
-| 9 | Totales          | `use-totales-rubros`             | `totales-rubros.ts`, `agrupacion-rubros.ts`       | `totales-rubros`              |
-|10 | Guardar          | `use-guardar-version-cotizacion` | `guardar-version.ts`                              | `spot-documento-dialog`       |
+| #   | Sección           | Hook                             | Lógica (`lib/`)                                  | Componente                    |
+| --- | ----------------- | -------------------------------- | ------------------------------------------------ | ----------------------------- |
+| 1   | Versiones         | `use-version-cotizacion`         | `versiones.ts`                                   | `versiones-table`             |
+| 2   | Criterios         | `use-criterios-cotizacion`       | `criterios-cotizacion`, `calculadora-medidas`    | `criterios-form`              |
+| 3   | Cálculo (backend) | `use-calculo-cotizacion`         | —                                                | —                             |
+| 4   | Carrier / Flete   | `use-carrier-flete`              | `carrier-flete.ts`                               | `carrier-selector`            |
+| 5   | Repartir rubros   | `use-rubros-cotizacion`          | `procesar-rubros-calculados`, `rubros-guardados` | —                             |
+| 6   | Due Agent         | `use-rubros-due-agent`           | `due-agent.ts`                                   | `due-agent`                   |
+| 7   | Due Carrier/Spot  | `use-rubros-due-carrier`         | `due-carrier.ts`                                 | `due-carrier`, `dialogo-spot` |
+| 8   | Scalling          | `use-rubros-scalling`            | `scalling.ts`                                    | `scalling`                    |
+| 9   | Totales           | `use-totales-rubros`             | `totales-rubros.ts`, `agrupacion-rubros.ts`      | `totales-rubros`              |
+| 10  | Guardar           | `use-guardar-version-cotizacion` | `guardar-version.ts`                             | `spot-documento-dialog`       |
 
 ## Pendientes conocidos
 
@@ -154,3 +162,8 @@ el cálculo y muestra un aviso si faltan estados. Dentro del cálculo se usa `us
 - Las reglas especiales del formulario que dependen de otros valores (por ejemplo: ciudad obligatoria solo si es
   TERRESTRE, países filtrados para terrestre) siguen en `hooks/use-formulario-cotizacion.ts`
   (`verificarSiEsRequerido`, `obtenerCatalogoById`).
+- `lib/porcentajes-rubros.ts` (`calcularPorcentajesRubros`: rubro cuyo importe es un % de otro rubro) no está
+  conectado a ningún flujo. Confirmar con backend si el importe ya llega calculado (entonces borrar el archivo)
+  o conectarlo antes de los totales.
+- `lib/totales-rubros.ts` busca la moneda con comparación estricta (`cod_moneda === codMoneda`); si el backend
+  manda el código como texto y el catálogo como número, el rubro no suma. Revisar si debe usar `buscarMoneda`.

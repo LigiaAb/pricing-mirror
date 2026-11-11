@@ -11,8 +11,8 @@ import {
   type RubroDueAgent,
   type ValoresManualDueAgent,
 } from "../lib/due-agent";
-
 import type { Id } from "../lib/tipos";
+import { limpiarNumero } from "../lib/utils";
 import { useCatalogosCotizacion } from "./use-catalogos-cotizacion";
 
 const EMPTY_SERVICIOS_AUTOSELECCION: Id[] = [];
@@ -277,7 +277,7 @@ export function useRubrosDueAgent({
    */
 
   const cambiarValorManual = React.useCallback((item: RubroDueAgent, raw: string) => {
-    const value = String(raw ?? "").replace(/[^0-9.]/g, "");
+    const value = limpiarNumero(raw);
 
     setValoresManual((prev) => ({
       ...prev,
@@ -288,7 +288,7 @@ export function useRubrosDueAgent({
 
   const cambiarValorFactura = React.useCallback(
     (item: RubroDueAgent, raw: string) => {
-      const value = String(raw ?? "").replace(/[^0-9.]/g, "");
+      const value = limpiarNumero(raw);
 
       const factura = Number(value);
 

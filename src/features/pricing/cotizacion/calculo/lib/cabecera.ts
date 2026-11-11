@@ -89,7 +89,12 @@ export const CAMPOS_CABECERA = {
     cod: "cod_empresa",
     esquema: id(),
     label: "Empresa",
-    formulario: { catalogo: "empresas", reset: ["centroCosto", "cod_cc"], readonly: true, requerido: true },
+    formulario: {
+      catalogo: "empresas",
+      reset: ["centroCosto", "cod_cc"],
+      readonly: true,
+      requerido: true,
+    },
     calculo: true,
     filtro: true,
     filtroApi: true,
@@ -128,7 +133,14 @@ export const CAMPOS_CABECERA = {
     label: "Tipo de transporte",
     formulario: {
       catalogo: "tiposTransporte",
-      reset: ["tipoServicio", "cod_tipo_servicio", "tipoCalculo", "cod_tipo_calculo", "tipoClasificacion", "clasificacion"],
+      reset: [
+        "tipoServicio",
+        "cod_tipo_servicio",
+        "tipoCalculo",
+        "cod_tipo_calculo",
+        "tipoClasificacion",
+        "clasificacion",
+      ],
       requerido: true,
     },
     calculo: true,
@@ -139,7 +151,11 @@ export const CAMPOS_CABECERA = {
     cod: "cod_tipo_servicio",
     esquema: id(),
     label: "Tipo de servicio",
-    formulario: { catalogo: "tiposServicio", reset: ["tipoAplicacion", "cod_tipo_aplicacion"], requerido: true },
+    formulario: {
+      catalogo: "tiposServicio",
+      reset: ["tipoAplicacion", "cod_tipo_aplicacion"],
+      requerido: true,
+    },
     calculo: true,
     filtro: true,
   },
@@ -173,7 +189,11 @@ export const CAMPOS_CABECERA = {
     cod: "cod_tipo_pago",
     esquema: id(),
     label: "Tipo de pago",
-    formulario: { catalogo: "tiposPago", reset: ["estacion", "entidad_id_estacion"], requerido: true },
+    formulario: {
+      catalogo: "tiposPago",
+      reset: ["estacion", "entidad_id_estacion"],
+      requerido: true,
+    },
     calculo: true,
     filtro: true,
     filtroApi: true,
@@ -181,7 +201,12 @@ export const CAMPOS_CABECERA = {
 
   estacion: { cod: "entidad_id_estacion", esquema: id(), label: "Estación DSV", formulario: {} },
 
-  contacto_estacion: { cod: "contacto_estacion", esquema: texto(), label: "Contacto estación", formulario: {} },
+  contacto_estacion: {
+    cod: "contacto_estacion",
+    esquema: texto(),
+    label: "Contacto estación",
+    formulario: {},
+  },
 
   paisOrigen: {
     cod: "cod_pais_origen",
@@ -271,19 +296,39 @@ export const CAMPOS_CABECERA = {
     calculo: true,
   },
 
-  direccion_destino: { cod: "direccion_destino", esquema: texto(), label: "Destino", formulario: {} },
+  direccion_destino: {
+    cod: "direccion_destino",
+    esquema: texto(),
+    label: "Destino",
+    formulario: {},
+  },
 
   estado: { cod: "cod_estado", esquema: id(), label: "Estado", formulario: {}, filtroApi: true },
 
   cod_usuario: { cod: "cod_usuario", esquema: id(), formulario: {} },
 
-  cod_continente_origen: { cod: "cod_continente_origen", esquema: id(), formulario: {}, calculo: true },
+  cod_continente_origen: {
+    cod: "cod_continente_origen",
+    esquema: id(),
+    formulario: {},
+    calculo: true,
+  },
 
-  cod_continente_destino: { cod: "cod_continente_destino", esquema: id(), formulario: {}, calculo: true },
+  cod_continente_destino: {
+    cod: "cod_continente_destino",
+    esquema: id(),
+    formulario: {},
+    calculo: true,
+  },
 
   descripcion: { cod: "descripcion", esquema: texto(), label: "Descripción", formulario: {} },
 
-  carrier: { cod: "carrier_id", esquema: id(), label: "Carrier", formulario: { catalogo: "proveedores" } },
+  carrier: {
+    cod: "carrier_id",
+    esquema: id(),
+    label: "Carrier",
+    formulario: { catalogo: "proveedores" },
+  },
 
   /* ----- Solo lectura: los devuelve el backend, no están en el formulario ----- */
 
@@ -416,7 +461,9 @@ export type CotizacionParaCalculo = Pick<CamposCabecera, "cod_cotizacion_cabecer
   };
 
 /** Datos de la cabecera que viajan al cálculo de tarifas. */
-export function construirFiltrosCalculo(cotizacion: Partial<CotizacionCabecera>): Record<string, unknown> {
+export function construirFiltrosCalculo(
+  cotizacion: Partial<CotizacionCabecera>,
+): Record<string, unknown> {
   const filtros: Record<string, unknown> = {};
 
   for (const cod of CAMPOS_CALCULO) {

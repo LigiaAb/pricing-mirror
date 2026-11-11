@@ -28,9 +28,9 @@ export type FiltrosTarifaCostoPorcentaje = FiltrosMetodo;
 
 // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
 export {
+  type MonedaOperativa as MonedaPorcentaje,
   monedaOperativaSchema as monedaPorcentajeSchema,
   monedasOperativasOptions as monedasPorcentajeOptions,
-  type MonedaOperativa as MonedaPorcentaje,
   useMonedasOperativas as useMonedasPorcentaje,
 } from "./monedas";
 
@@ -57,10 +57,17 @@ export type TarifaCostoPorcentajejeMutationPayload = {
 
 /* CONSULTA Y MUTACIONES (createCatalogo vía crearCatalogoMetodo) */
 
-const api = crearCatalogoMetodo<typeof tarifaCostoPorcentajejeSchema, TarifaCostoPorcentajejeMutationPayload>({
+const api = crearCatalogoMetodo<
+  typeof tarifaCostoPorcentajejeSchema,
+  TarifaCostoPorcentajejeMutationPayload
+>({
   nombre: "tarifas-costo-porcentaje",
   schema: tarifaCostoPorcentajejeSchema,
-  endpoints: { lista: "lista-tarifa-porcentaje-cotizacion", insertar: "insertar-tarifa-porcentaje-cotizacion", actualizar: "actualizar-tarifa-porcentaje-cotizacion" },
+  endpoints: {
+    lista: "lista-tarifa-porcentaje-cotizacion",
+    insertar: "insertar-tarifa-porcentaje-cotizacion",
+    actualizar: "actualizar-tarifa-porcentaje-cotizacion",
+  },
 });
 
 export const TARIFA_PORCENTAJE_QUERY_KEY = api.keys.all;

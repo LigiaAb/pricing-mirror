@@ -82,7 +82,7 @@ export const DETALLE_FLETE_POR_TRANSPORTE: Record<number, ConfigDetalleFlete | n
     //     : `${valorCw ?? ""} CBM / ${simbolo}${rate ?? ""} Por CBM`,
   } */,
 
-  [TIPO_TRANSPORTE.TERRESTRE]: null/* {
+  [TIPO_TRANSPORTE.TERRESTRE]: null /* {
     // TODO: pendiente de definir por el departamento. Mientras tanto, igual que aéreo.
     etiqueta: "CW",
     unidadTarifa: "Por KILO",
@@ -90,7 +90,9 @@ export const DETALLE_FLETE_POR_TRANSPORTE: Record<number, ConfigDetalleFlete | n
 };
 
 /** Configuración para un transporte; `null` si ese transporte no lleva detalle de flete. */
-export function obtenerConfigDetalleFlete(codTipoTransporte?: Id | null): ConfigDetalleFlete | null {
+export function obtenerConfigDetalleFlete(
+  codTipoTransporte?: Id | null,
+): ConfigDetalleFlete | null {
   return DETALLE_FLETE_POR_TRANSPORTE[Number(codTipoTransporte)] ?? null;
 }
 
@@ -103,13 +105,20 @@ function tieneValor(value: unknown) {
 }
 
 /** `true` si el detalle ya es el detalle de flete de ese transporte (para no duplicarlo). */
-export function esDetalleFlete(detalle: { tipo_desc?: unknown } | null | undefined, codTipoTransporte?: Id | null) {
+export function esDetalleFlete(
+  detalle: { tipo_desc?: unknown } | null | undefined,
+  codTipoTransporte?: Id | null,
+) {
   const config = obtenerConfigDetalleFlete(codTipoTransporte);
 
   // Sin configuración no hay detalle de flete que reconocer.
   if (!config) return false;
 
-  return String(detalle?.tipo_desc ?? "").trim().toUpperCase() === config.etiqueta.trim().toUpperCase();
+  return (
+    String(detalle?.tipo_desc ?? "")
+      .trim()
+      .toUpperCase() === config.etiqueta.trim().toUpperCase()
+  );
 }
 
 /** `true` si hay datos suficientes para armar el detalle (tarifa por unidad o monto fijo). */
@@ -122,7 +131,10 @@ export function puedeConstruirDetalleFlete(datos: Pick<DatosDetalleFlete, "rate"
  * `custom: true` lo marca como generado aquí (no viene de la tarifa).
  * Devuelve `null` si el transporte no lleva detalle: en ese caso no se agrega nada.
  */
-export function construirDetalleFlete(codTipoTransporte: Id | null | undefined, datos: DatosDetalleFlete) {
+export function construirDetalleFlete(
+  codTipoTransporte: Id | null | undefined,
+  datos: DatosDetalleFlete,
+) {
   const config = obtenerConfigDetalleFlete(codTipoTransporte);
 
   if (!config) return null;

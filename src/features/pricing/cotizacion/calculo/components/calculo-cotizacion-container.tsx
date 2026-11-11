@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import React from "react";
+import type React from "react";
 
 import { useCatalogosCotizacion } from "../hooks/use-catalogos-cotizacion";
 import { useEstadosCotizacion } from "../hooks/use-estados-cotizacion";
@@ -47,7 +47,8 @@ export function CalculoCotizacionContainer({ cotizacion, filtrosCalculo, ...prop
         <p className="font-semibold">Catálogo de estados incompleto</p>
 
         <p className="mt-1 text-muted-foreground">
-          No se puede iniciar el cálculo porque no se encontraron estos estados: {faltantes.join(", ")}.
+          No se puede iniciar el cálculo porque no se encontraron estos estados:{" "}
+          {faltantes.join(", ")}.
         </p>
       </div>
     );

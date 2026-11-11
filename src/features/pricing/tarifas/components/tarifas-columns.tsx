@@ -2,10 +2,10 @@ import { format, parseISO } from "date-fns";
 import { Eye, Trash } from "lucide-react";
 import { DataTableColumnHeader } from "@/shared/components/data-table/data-table";
 import { Button } from "@/shared/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 // import { formatearFecha } from "@/shared/lib/date";
 import type { ColumnDef } from "@/shared/lib/tanstack-table";
 import type { FilaServicioMetodo } from "../api/types-api";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 
 type props = {
   onVerDetalle: (tarifa: FilaServicioMetodo) => void;
@@ -14,11 +14,19 @@ type props = {
   onAnular: (row: FilaServicioMetodo) => void;
 };
 
-const LocalTooltip = ({ value, children }: { value: string | React.ReactNode; children: React.ReactNode }) => {
+const LocalTooltip = ({
+  value,
+  children,
+}: {
+  value: string | React.ReactNode;
+  children: React.ReactNode;
+}) => {
   return (
     <Tooltip>
       <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent className="bg-card text-card-foreground text-md border-2 border-card-foreground">{value}</TooltipContent>
+      <TooltipContent className="bg-card text-card-foreground text-md border-2 border-card-foreground">
+        {value}
+      </TooltipContent>
     </Tooltip>
   );
 };
@@ -36,8 +44,15 @@ const shortCell = ({ value, length = 10 }: { value: string; length?: number | un
   );
 };
 
-export function crearTarifasColumns(props: props): (ColumnDef<FilaServicioMetodo> & { accessorKey?: string })[] {
-  const { onVerDetalle = () => {}, mostrarVencidos = false, setAccion = () => {}, onAnular } = props;
+export function crearTarifasColumns(
+  props: props,
+): (ColumnDef<FilaServicioMetodo> & { accessorKey?: string })[] {
+  const {
+    onVerDetalle = () => {},
+    mostrarVencidos = false,
+    setAccion = () => {},
+    onAnular,
+  } = props;
   return [
     {
       id: "acciones",
@@ -88,12 +103,20 @@ export function crearTarifasColumns(props: props): (ColumnDef<FilaServicioMetodo
       accessorKey: "entidad_nombre",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Carrier" />,
       enableSorting: true,
-      cell: ({ row }) => <span className="text-nowrap">{shortCell({ value: row.original.entidad_nombre ?? "" })}</span>,
+      cell: ({ row }) => (
+        <span className="text-nowrap">
+          {shortCell({ value: row.original.entidad_nombre ?? "" })}
+        </span>
+      ),
     },
     {
       accessorKey: "nombre",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Nombre" />,
-      cell: ({ row }) => <span className="text-nowrap">{shortCell({ value: `${row.original.siglas ?? ""} - ${row.original.nombre ?? ""}` })}</span>,
+      cell: ({ row }) => (
+        <span className="text-nowrap">
+          {shortCell({ value: `${row.original.siglas ?? ""} - ${row.original.nombre ?? ""}` })}
+        </span>
+      ),
       enableSorting: true,
     },
     {
@@ -113,9 +136,19 @@ export function crearTarifasColumns(props: props): (ColumnDef<FilaServicioMetodo
     },
     {
       accessorKey: "fechaFin",
-      header: ({ column }) => <DataTableColumnHeader column={column} title={mostrarVencidos ? "Vencio el " : "Vencera el"} />,
+      header: ({ column }) => (
+        <DataTableColumnHeader
+          column={column}
+          title={mostrarVencidos ? "Vencio el " : "Vencera el"}
+        />
+      ),
       cell: ({ row }) =>
-        row.original.fecha_final ? format(parseISO(row.original.fecha_final.toISOString().split("T")[0] ?? ""), "dd/MM/yyyy") : "No definido",
+        row.original.fecha_final
+          ? format(
+              parseISO(row.original.fecha_final.toISOString().split("T")[0] ?? ""),
+              "dd/MM/yyyy",
+            )
+          : "No definido",
       enableSorting: true,
     },
   ];

@@ -20,9 +20,9 @@ export type FiltrosTarifaCostoVenta = FiltrosMetodo;
 
 // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
 export {
+  type MonedaOperativa as MonedaCostoVenta,
   monedaOperativaSchema as monedaCostoVentaSchema,
   monedasOperativasOptions as monedasCostoVentaOptions,
-  type MonedaOperativa as MonedaCostoVenta,
   useMonedasOperativas as useMonedasCostoVenta,
 } from "./monedas";
 
@@ -45,7 +45,11 @@ export type TarifaCostoVentaMutationPayload = {
 const api = crearCatalogoMetodo<typeof tarifaCostoVentaSchema, TarifaCostoVentaMutationPayload>({
   nombre: "tarifas-costoventa",
   schema: tarifaCostoVentaSchema,
-  endpoints: { lista: "lista-tarifa-costoventa", insertar: "insertar-tarifa-costoventa", actualizar: "actualizar-tarifa-costoventa" },
+  endpoints: {
+    lista: "lista-tarifa-costoventa",
+    insertar: "insertar-tarifa-costoventa",
+    actualizar: "actualizar-tarifa-costoventa",
+  },
 });
 
 export const TARIFA_COSTOVENTA_QUERY_KEY = api.keys.all;

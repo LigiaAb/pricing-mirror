@@ -3,8 +3,8 @@ import { getClasificacionServicio } from "./clasificacion-rubros";
 
 export const IVA_DEFAULT = 0.12;
 
-import type { Id, MonedaCatalogo } from "./tipos";
 import { TIPO_PAGO } from "./constantes";
+import type { Id, MonedaCatalogo } from "./tipos";
 
 export type { Id };
 
@@ -890,7 +890,8 @@ export function construirPayloadRubrosAgrupados({
 
     const letra = tipoPagoSeleccionado[rubroId] ?? item.letra_tipo_pago ?? letraTipoPagoDefault;
 
-    const codTipoPagoDB = Number(codTipoPago) === TIPO_PAGO.TODOS ? letraToCodTipoPago(letra) : codTipoPago;
+    const codTipoPagoDB =
+      Number(codTipoPago) === TIPO_PAGO.TODOS ? letraToCodTipoPago(letra) : codTipoPago;
 
     const ventaRubro = Number(metodo?.venta ?? 0);
 
@@ -1103,7 +1104,8 @@ export function construirPayloadRubrosAgrupados({
 
         clasificacion: null,
 
-        cod_tipo_pago: Number(codTipoPago) === TIPO_PAGO.TODOS ? TIPO_PAGO.PREPAID : (codTipoPago ?? null),
+        cod_tipo_pago:
+          Number(codTipoPago) === TIPO_PAGO.TODOS ? TIPO_PAGO.PREPAID : (codTipoPago ?? null),
 
         cod_tipo_facturacion: null,
 

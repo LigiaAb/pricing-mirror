@@ -1,7 +1,6 @@
 import { esRubroDueAgent, esRubroDueCarrier } from "./clasificacion-rubros";
-
-import type { EntidadCatalogo, Id, MonedaCatalogo, RubroCatalogo, ServicioCatalogo } from "./tipos";
 import { RUBRO } from "./constantes";
+import type { EntidadCatalogo, Id, MonedaCatalogo, RubroCatalogo, ServicioCatalogo } from "./tipos";
 
 export type RubroGuardado = {
   cod_detallerubro?: Id | null;

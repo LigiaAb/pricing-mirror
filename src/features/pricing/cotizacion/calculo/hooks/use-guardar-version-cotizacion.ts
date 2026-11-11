@@ -296,7 +296,9 @@ async function persistirVersion({
 }
 
 export function useGuardarVersionCotizacion(props: Props) {
-  const guardarMutation = useMutation(mutationOptions({ mutationFn: () => persistirVersion(props) }));
+  const guardarMutation = useMutation(
+    mutationOptions({ mutationFn: () => persistirVersion(props) }),
+  );
   return {
     guardarVersion: guardarMutation.mutateAsync,
     guardando: guardarMutation.isPending,

@@ -2,7 +2,7 @@
 
 import { AlertTriangle, Check, Info, Plus, X } from "lucide-react";
 import React from "react";
-
+import { FichaResumen, getEstadoMetodo } from "@/features/pricing/shared";
 import { Button } from "@/shared/components/ui/button";
 import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
 import { Input } from "@/shared/components/ui/input";
@@ -17,16 +17,14 @@ import {
 } from "@/shared/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { cn } from "@/shared/lib/utils";
+import { useCatalogosCotizacion } from "../hooks/use-catalogos-cotizacion";
 import type { useRubrosDueAgent } from "../hooks/use-rubros-due-agent";
 import type { MonedaFlete } from "../lib/carrier-flete";
-import { esMetodoCostoPorcentaje } from "../lib/costo-porcentaje";
+import { TIPO_CALCULO } from "../lib/constantes";
 import { esCoberturaMercaderia, esTipoCalculoManual, type RubroDueAgent } from "../lib/due-agent";
 import { getCodServicioDueCarrier } from "../lib/due-carrier";
-import FichaResumen from "./ficha-resumen";
-
-import { formatNumero, getEstadoMetodo, getSimboloMoneda } from "../lib/utils";
-import { TIPO_CALCULO } from "../lib/constantes";
-import { useCatalogosCotizacion } from "../hooks/use-catalogos-cotizacion";
+import { esMetodoCostoPorcentaje } from "../lib/rubros-manuales";
+import { buscarMoneda, formatNumero, getSimboloMoneda } from "../lib/utils";
 import { Detalles } from "./utils";
 
 type DueAgentController = ReturnType<typeof useRubrosDueAgent>;
@@ -133,11 +131,7 @@ function SelectorDueAgent({
  * COMPONENTE
  * ========================================================================== */
 
-export function DueAgent({
-  controller,
-  lectura = false,
-  entidadNombre,
-}: Props) {
+export function DueAgent({ controller, lectura = false, entidadNombre }: Props) {
   const { monedas, metodos } = useCatalogosCotizacion().calculo;
   const {
     rubros: rubrosDisponibles,
@@ -204,7 +198,7 @@ export function DueAgent({
         continue;
       }
 
-      const moneda = monedas.find((m) => String(m.cod_moneda) === String(codMoneda));
+      const moneda = buscarMoneda(monedas, codMoneda);
 
       if (!moneda) {
         continue;

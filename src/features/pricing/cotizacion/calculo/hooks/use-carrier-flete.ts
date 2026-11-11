@@ -12,7 +12,7 @@ import {
 } from "../lib/carrier-flete";
 
 import type { Id } from "../lib/tipos";
-import { crearKeyCriterios } from "../lib/utils";
+import { crearKeyCriterios, getSimboloMoneda } from "../lib/utils";
 import { useCatalogosCotizacion } from "./use-catalogos-cotizacion";
 
 type Props = {
@@ -302,11 +302,7 @@ export function useCarrierFlete({
 
       const metodo = rubroBase.servicio?.metodo ?? rubroBase.metodo;
 
-      const moneda = monedas.find(
-        (item) => String(item.cod_moneda) === String(metodo?.cod_moneda_venta),
-      );
-
-      const simbolo = moneda?.SIMBOLO_MONEDA ?? moneda?.simbolo_moneda ?? "";
+      const simbolo = getSimboloMoneda(monedas, metodo?.cod_moneda_venta as Id | null | undefined);
 
       const spot = crearTarifaSpotDueCarrier({
         rubroBase,

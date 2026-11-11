@@ -9,9 +9,9 @@ import {
   useMonedasCostoVenta,
   useTarifaCostoVenta,
 } from "../../../api/tarifa-costoventa";
+import { useOpcionesMonedas } from "../../../hooks/use-opciones-tarifa";
 import type { FilaCostoVenta, MonedaCostoVentaOption } from "./costo-venta-columns";
 import { CostoVentaForm } from "./costo-venta-form";
-import { useOpcionesMonedas } from "../../../hooks/use-opciones-tarifa";
 
 type Props = {
   codMetodo?: string | number | null;

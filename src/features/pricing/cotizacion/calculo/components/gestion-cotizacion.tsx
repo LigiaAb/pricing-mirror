@@ -5,7 +5,13 @@ import * as React from "react";
 
 import { useContextoOperativoStore } from "@/features/shell";
 import { Button } from "@/shared/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/shared/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/shared/components/ui/sheet";
 import { cn } from "@/shared/lib/utils";
 import { useAuthStore } from "@/shared/stores/auth-store";
 import type { CotizacionCabeceraPayload } from "../api/cotizacion-cabecera";
@@ -15,18 +21,25 @@ import {
   usePlantillasPosiblesCotizacion,
   useRubrosPlantillaCotizacion,
 } from "../api/plantillas-cotizacion";
-import { CatalogosCotizacionProvider, useCatalogosCotizacion } from "../hooks/use-catalogos-cotizacion";
-import { type EstadosGestionCotizacion, useGestionCotizaciones } from "../hooks/use-gestion-cotizaciones";
+import {
+  CatalogosCotizacionProvider,
+  useCatalogosCotizacion,
+} from "../hooks/use-catalogos-cotizacion";
+import { useEstadosCotizacion } from "../hooks/use-estados-cotizacion";
+import {
+  type EstadosGestionCotizacion,
+  useGestionCotizaciones,
+} from "../hooks/use-gestion-cotizaciones";
 import { construirFiltrosCalculo, etiquetaCampo } from "../lib/cabecera";
+import type { Id } from "../lib/tipos";
+import { esRegistro, mismoId } from "../lib/utils";
 import { resolverEstadosCatalogo } from "../lib/versiones";
 import { CalculoCotizacionContainer } from "./calculo-cotizacion-container";
 import { CotizacionForm } from "./cotizacion-form";
 import { CotizacionesTable, type CotizacionesTableProps } from "./cotizaciones-table";
 import { PlantillasPosiblesDialog } from "./plantillas-posibles-dialog";
-
-import type { Id } from "../lib/tipos";
-import { esRegistro, mismoId } from "../lib/utils";
 import { SectionHeader } from "./utils";
+
 type UnknownRecord = Record<string, unknown>;
 
 type EstadoGestionCompleto = EstadosGestionCotizacion & Record<NombreEstadoRequerido, Id>;
@@ -37,7 +50,15 @@ type EstadoGestionCompleto = EstadosGestionCotizacion & Record<NombreEstadoReque
 
 const GRUPOS_FILTRO = ["carga", "origen"] as const;
 
-const CAMPOS_FILTRO = ["contacto", "tipoCarga", "clasificacionCarga", "tipoPuntoEnlaceOrigen", "tipoPuntoEnlaceDestino", "descripcion", "carrier"] as const;
+const CAMPOS_FILTRO = [
+  "contacto",
+  "tipoCarga",
+  "clasificacionCarga",
+  "tipoPuntoEnlaceOrigen",
+  "tipoPuntoEnlaceDestino",
+  "descripcion",
+  "carrier",
+] as const;
 
 const CAMPOS_EDICION_NORMAL = ["cliente", "empresa", "contacto"] as const;
 
@@ -62,7 +83,15 @@ const CAMPOS_EDICION_CONFIRMADO = [
 
 const CAMPOS_FORMULARIO_INFORMACION = ["empresa", "centroCosto", "descripcion", "carrier"] as const;
 
-const ESTADOS_REQUERIDOS = ["ACTIVO", "CONFIRMADO", "RECHAZADO", "FINALIZADO", "VENCIDO", "INGRESADO", "SOLICITADO"] as const;
+const ESTADOS_REQUERIDOS = [
+  "ACTIVO",
+  "CONFIRMADO",
+  "RECHAZADO",
+  "FINALIZADO",
+  "VENCIDO",
+  "INGRESADO",
+  "SOLICITADO",
+] as const;
 
 type NombreEstadoRequerido = (typeof ESTADOS_REQUERIDOS)[number];
 
@@ -155,21 +184,37 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
 
   const currentEmpresaId = obtenerIdContexto(ctx?.empresaId, ["cod_empresa", "empresaId", "id"]);
 
-  const currentCentroCostoId = obtenerIdContexto(ctx?.centroCostoId, ["cod_cc", "centroCostoId", "id"]);
+  const currentCentroCostoId = obtenerIdContexto(ctx?.centroCostoId, [
+    "cod_cc",
+    "centroCostoId",
+    "id",
+  ]);
 
   const currentPaisId = obtenerIdContexto(ctx?.paisId, ["cod_pais", "paisId", "id"]);
 
-  const codUsuario = typeof auth?.cod_usuario === "string" || typeof auth?.cod_usuario === "number" ? auth.cod_usuario : null;
+  const codUsuario =
+    typeof auth?.cod_usuario === "string" || typeof auth?.cod_usuario === "number"
+      ? auth.cod_usuario
+      : null;
 
   /* ==========================================================================
    * CATÁLOGOS (centralizados en hooks/use-catalogos-cotizacion.tsx)
    * ========================================================================== */
 
-  const { tarifas: catalogosTarifas, isLoading: isLoadingCatalogosTarifas } = useCatalogosCotizacion();
+  const { isLoading: isLoadingCatalogos } = useCatalogosCotizacion();
 
-  const estadosResueltos = React.useMemo(() => resolverEstadosCatalogo(catalogosTarifas.estados, ESTADOS_REQUERIDOS), [catalogosTarifas.estados]);
+  // Mismo catálogo de estados que usa el cálculo (una sola consulta).
+  const { catalogo: catalogoEstados } = useEstadosCotizacion();
 
-  const faltanEstados = React.useMemo(() => ESTADOS_REQUERIDOS.filter((nombre) => estadosResueltos[nombre] == null), [estadosResueltos]);
+  const estadosResueltos = React.useMemo(
+    () => resolverEstadosCatalogo(catalogoEstados, ESTADOS_REQUERIDOS),
+    [catalogoEstados],
+  );
+
+  const faltanEstados = React.useMemo(
+    () => ESTADOS_REQUERIDOS.filter((nombre) => estadosResueltos[nombre] == null),
+    [estadosResueltos],
+  );
 
   /*
    * useGestionCotizaciones necesita el mapa desde el primer render.
@@ -177,7 +222,10 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
    * termina de cargar el catálogo; no se habilita la UI funcional
    * hasta que `faltanEstados` quede vacío.
    */
-  const estadosGestion = React.useMemo<EstadoGestionCompleto>(() => ({ ...ESTADOS_PENDIENTES, ...estadosResueltos }), [estadosResueltos]);
+  const estadosGestion = React.useMemo<EstadoGestionCompleto>(
+    () => ({ ...ESTADOS_PENDIENTES, ...estadosResueltos }),
+    [estadosResueltos],
+  );
 
   /* ==========================================================================
    * GESTIÓN DE CABECERAS
@@ -254,19 +302,30 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
    * PLANTILLAS POSIBLES DEL CLIENTE
    * ========================================================================== */
 
-  const [contextoPlantillas, setContextoPlantillas] = React.useState<ContextoPlantillasCotizacion | null>(null);
+  const [contextoPlantillas, setContextoPlantillas] =
+    React.useState<ContextoPlantillasCotizacion | null>(null);
 
   const [plantillasDialogOpen, setPlantillasDialogOpen] = React.useState(false);
 
   const contextoOmitidoRef = React.useRef<string | null>(null);
 
-  const plantillasQuery = usePlantillasPosiblesCotizacion(contextoPlantillas, estadosGestion.ACTIVO, isNewCotizacion);
+  const plantillasQuery = usePlantillasPosiblesCotizacion(
+    contextoPlantillas,
+    estadosGestion.ACTIVO,
+    isNewCotizacion,
+  );
 
-  const codPlantillaSeleccionada = plantillaSeleccionada?.cod_tarifaplantilla ?? plantillaSeleccionada?.value ?? null;
+  const codPlantillaSeleccionada =
+    plantillaSeleccionada?.cod_tarifaplantilla ?? plantillaSeleccionada?.value ?? null;
 
-  const rubrosPlantillaQuery = useRubrosPlantillaCotizacion(codPlantillaSeleccionada, estadosGestion.ACTIVO);
+  const rubrosPlantillaQuery = useRubrosPlantillaCotizacion(
+    codPlantillaSeleccionada,
+    estadosGestion.ACTIVO,
+  );
 
-  const contextoPlantillasKey = contextoPlantillas ? `${contextoPlantillas.entidad_id}|${contextoPlantillas.cod_emp}|${contextoPlantillas.cod_cc}` : null;
+  const contextoPlantillasKey = contextoPlantillas
+    ? `${contextoPlantillas.entidad_id}|${contextoPlantillas.cod_emp}|${contextoPlantillas.cod_cc}`
+    : null;
 
   React.useEffect(() => {
     if (!isNewCotizacion) {
@@ -281,14 +340,19 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
     setPlantillasDialogOpen(true);
   }, [contextoPlantillasKey, isNewCotizacion, plantillasQuery.data]);
 
-  const handleClienteContextoChange = React.useCallback((contexto: ContextoPlantillasCotizacion | null) => {
-    setContextoPlantillas((prev) => {
-      const prevKey = prev ? `${prev.entidad_id}|${prev.cod_emp}|${prev.cod_cc}` : null;
-      const nextKey = contexto ? `${contexto.entidad_id}|${contexto.cod_emp}|${contexto.cod_cc}` : null;
+  const handleClienteContextoChange = React.useCallback(
+    (contexto: ContextoPlantillasCotizacion | null) => {
+      setContextoPlantillas((prev) => {
+        const prevKey = prev ? `${prev.entidad_id}|${prev.cod_emp}|${prev.cod_cc}` : null;
+        const nextKey = contexto
+          ? `${contexto.entidad_id}|${contexto.cod_emp}|${contexto.cod_cc}`
+          : null;
 
-      return prevKey === nextKey ? prev : contexto;
-    });
-  }, []);
+        return prevKey === nextKey ? prev : contexto;
+      });
+    },
+    [],
+  );
 
   const handleSeleccionarPlantilla = React.useCallback(
     (plantilla: PlantillaCotizacion) => {
@@ -341,7 +405,10 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
       return "lectura" as const;
     }
 
-    if ("cod_version_activa" in cotizacionSeleccionada && cotizacionSeleccionada.cod_version_activa) {
+    if (
+      "cod_version_activa" in cotizacionSeleccionada &&
+      cotizacionSeleccionada.cod_version_activa
+    ) {
       return "lectura" as const;
     }
 
@@ -374,7 +441,10 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
    * CÁLCULO
    * ========================================================================== */
 
-  const filtrosCalculo = React.useMemo(() => (cotizacionPersistida ? construirFiltrosCalculo(cotizacionPersistida) : null), [cotizacionPersistida]);
+  const filtrosCalculo = React.useMemo(
+    () => (cotizacionPersistida ? construirFiltrosCalculo(cotizacionPersistida) : null),
+    [cotizacionPersistida],
+  );
 
   const cotizacionesTableProps: Omit<CotizacionesTableProps, "filtro"> = {
     cotizacionesVisibles,
@@ -401,7 +471,7 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
    * CARGA / CONTRATOS BASE
    * ========================================================================== */
 
-  const isLoadingBase = isLoadingCatalogosTarifas;
+  const isLoadingBase = isLoadingCatalogos;
 
   if (isLoadingBase) {
     return (
@@ -421,7 +491,9 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
           <div>
             <p className="font-semibold">Catálogo de estados incompleto</p>
 
-            <p className="mt-1 text-sm text-muted-foreground">No se puede iniciar Gestión de Cotizaciones porque no se encontraron estos estados:</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              No se puede iniciar Gestión de Cotizaciones porque no se encontraron estos estados:
+            </p>
 
             <p className="mt-2 text-sm font-medium">{faltanEstados.join(", ")}</p>
           </div>
@@ -440,7 +512,10 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
           FILTROS
       ================================================================= */}
       <Sheet open={abrirFiltro} onOpenChange={() => setAbrirFiltro((prev) => !prev)}>
-        <SheetContent side="right" className="modal-solicitud-hero w-full overflow-y-auto border-l bg-card p-0 sm:max-w-2xl">
+        <SheetContent
+          side="right"
+          className="modal-solicitud-hero w-full overflow-y-auto border-l bg-card p-0 sm:max-w-2xl"
+        >
           <SheetHeader className="border-b bg-muted/40 px-4 py-5 pr-12 sm:px-6 sm:py-6 sm:pr-14">
             <div className="flex items-start gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
@@ -484,7 +559,12 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
         <CotizacionesTable
           {...cotizacionesTableProps}
           filtro={
-            <Button size="sm" variant="outline" className="border-teal-600 " onClick={() => setAbrirFiltro(true)}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-teal-600 "
+              onClick={() => setAbrirFiltro(true)}
+            >
               Filtrar
             </Button>
           }
@@ -499,9 +579,15 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
         <section ref={informacionRef} className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/40 bg-card px-4 py-3 shadow-sm">
             <div>
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Cotización</span>
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Cotización
+              </span>
 
-              <p className="text-lg font-semibold">{isNewCotizacion ? "NUEVA" : String(cotizacionSeleccionada.cod_cotizacion_cabecera ?? "")}</p>
+              <p className="text-lg font-semibold">
+                {isNewCotizacion
+                  ? "NUEVA"
+                  : String(cotizacionSeleccionada.cod_cotizacion_cabecera ?? "")}
+              </p>
             </div>
 
             <span className="text-sm text-muted-foreground">Modo {tipoFormularioInformacion}</span>
@@ -512,7 +598,11 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
           ============================================================= */}
 
           <section className="overflow-hidden rounded-lg border bg-card">
-            <SectionHeader title="Información" open={informacionOpen} onToggle={() => setInformacionOpen((prev) => !prev)} />
+            <SectionHeader
+              title="Información"
+              open={informacionOpen}
+              onToggle={() => setInformacionOpen((prev) => !prev)}
+            />
 
             {informacionOpen ? (
               <div className="p-4">
@@ -544,10 +634,16 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
           {cotizacionPersistida && filtrosCalculo ? (
             <section className="relative rounded-lg border bg-card p-4 shadow-sm">
               <CalculoCotizacionContainer
-                cotizacion={cotizacionPersistida as NonNullable<React.ComponentProps<typeof CalculoCotizacionContainer>["cotizacion"]>}
+                cotizacion={
+                  cotizacionPersistida as NonNullable<
+                    React.ComponentProps<typeof CalculoCotizacionContainer>["cotizacion"]
+                  >
+                }
                 codUsuario={codUsuario}
                 plantillaSeleccionada={plantillaSeleccionada}
-                serviciosAutoSeleccion={(rubrosPlantillaQuery.data ?? []).flatMap((rubro) => (rubro.cod_servicio == null ? [] : [rubro.cod_servicio]))}
+                serviciosAutoSeleccion={(rubrosPlantillaQuery.data ?? []).flatMap((rubro) =>
+                  rubro.cod_servicio == null ? [] : [rubro.cod_servicio],
+                )}
                 filtrosCalculo={filtrosCalculo}
               />
 
@@ -559,7 +655,10 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
                     <div>
                       <p className="font-semibold">Información incompleta</p>
 
-                      <p className="mt-1 text-sm">Para realizar el cálculo, favor de completar: {camposFaltantes.map(etiquetaCampo).join(", ")}.</p>
+                      <p className="mt-1 text-sm">
+                        Para realizar el cálculo, favor de completar:{" "}
+                        {camposFaltantes.map(etiquetaCampo).join(", ")}.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -587,7 +686,11 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
 
       {isMutating ? (
         <div
-          className={cn("fixed bottom-4 right-4 z-50", "flex items-center gap-2 rounded-md border bg-card", "px-4 py-3 text-sm shadow-lg")}
+          className={cn(
+            "fixed bottom-4 right-4 z-50",
+            "flex items-center gap-2 rounded-md border bg-card",
+            "px-4 py-3 text-sm shadow-lg",
+          )}
           role="status"
           aria-live="polite"
         >

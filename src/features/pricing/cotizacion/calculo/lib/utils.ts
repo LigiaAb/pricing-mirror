@@ -6,7 +6,7 @@
  * volver a escribirla.
  * ========================================================================== */
 
-import { endOfDay, format, isAfter, isValid, isWithinInterval, parseISO, startOfDay, subDays } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 
 import type { Id, MonedaCatalogo, Registro } from "./tipos";
 
@@ -31,8 +31,46 @@ export function registro(value: unknown): Registro {
 }
 
 /* ==========================================================================
+ * BOOLEANOS
+ * ========================================================================== */
+
+/** Convierte true/false, 1/0, "1"/"0", "si"/"no", "true"/"false", "y"/"n"... a boolean. */
+export function normalizarBoolean(value: unknown) {
+  if (value === true || value === false) {
+    return value;
+  }
+
+  if (value == null) {
+    return false;
+  }
+
+  if (typeof value === "number") {
+    return value === 1;
+  }
+
+  if (typeof value === "string") {
+    const normalizado = value.trim().toLowerCase();
+
+    if (["1", "true", "si", "sí", "y", "yes"].includes(normalizado)) {
+      return true;
+    }
+
+    if (["0", "false", "no", "n"].includes(normalizado)) {
+      return false;
+    }
+  }
+
+  return Boolean(value);
+}
+
+/* ==========================================================================
  * NÚMEROS
  * ========================================================================== */
+
+/** Deja solo dígitos y punto de lo que escribe el usuario en un input numérico. */
+export function limpiarNumero(raw: unknown) {
+  return String(raw ?? "").replace(/[^0-9.]/g, "");
+}
 
 /** Convierte a número; si no es un número válido devuelve 0. */
 export function numero(value: unknown): number {
@@ -64,7 +102,9 @@ export function buscarMoneda<T extends Pick<MonedaCatalogo, "cod_moneda">>(
 }
 
 /** Símbolo de una moneda ya encontrada ("Q", "$", ...). */
-export function simboloDeMoneda(moneda?: Pick<MonedaCatalogo, "SIMBOLO_MONEDA" | "simbolo_moneda"> | null) {
+export function simboloDeMoneda(
+  moneda?: Pick<MonedaCatalogo, "SIMBOLO_MONEDA" | "simbolo_moneda"> | null,
+) {
   return moneda?.SIMBOLO_MONEDA ?? moneda?.simbolo_moneda ?? "";
 }
 
@@ -90,33 +130,6 @@ export function formatFecha(value: string | Date | null | undefined) {
   }
 
   return format(fecha, "dd/MM/yyyy");
-}
-
-/**
- * Estado de vigencia de un método según su fecha final:
- * - vencida: la fecha ya pasó.
- * - proximaAVencer: vence en los próximos 15 días.
- */
-export function getEstadoMetodo(fecha?: Date | string | null) {
-  const sinEstado = { vencida: false, proximaAVencer: false };
-
-  if (!fecha) return sinEstado;
-
-  const fechaFinal = fecha instanceof Date ? fecha : new Date(fecha);
-
-  if (!isValid(fechaFinal)) return sinEstado;
-
-  const ahora = new Date();
-  const vencida = isAfter(ahora, fechaFinal);
-
-  const proximaAVencer =
-    !vencida &&
-    isWithinInterval(startOfDay(ahora), {
-      start: startOfDay(subDays(fechaFinal, 15)),
-      end: endOfDay(fechaFinal),
-    });
-
-  return { vencida, proximaAVencer };
 }
 
 /* ==========================================================================

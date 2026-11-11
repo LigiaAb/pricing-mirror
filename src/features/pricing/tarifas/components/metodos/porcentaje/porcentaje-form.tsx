@@ -6,13 +6,13 @@ import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combob
 import { Button } from "@/shared/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/shared/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/components/ui/input-group";
+import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
+import { obtenerCantidadDecimales } from "../../../lib/tarifa-helpers";
 import type {
   FilaPorcentaje,
   MonedaPorcentajeOption,
   RubroPorcentajeOption,
 } from "./porcentaje-columns";
-import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
-import { obtenerCantidadDecimales } from "../../../lib/tarifa-helpers";
 
 type Props = {
   value?: FilaPorcentaje | null;

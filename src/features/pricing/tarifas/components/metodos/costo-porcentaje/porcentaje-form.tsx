@@ -8,13 +8,13 @@ import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/components/ui/input-group";
 import { Label } from "@/shared/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/shared/components/ui/radio-group";
+import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
+import { obtenerCantidadDecimales } from "../../../lib/tarifa-helpers";
 import type {
   FilaPorcentaje,
   MonedaPorcentajeOption,
   RubroPorcentajeOption,
 } from "./porcentaje-columns";
-import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
-import { obtenerCantidadDecimales } from "../../../lib/tarifa-helpers";
 
 type Props = {
   value?: FilaPorcentaje | null;

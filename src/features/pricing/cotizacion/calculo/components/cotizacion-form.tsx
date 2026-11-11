@@ -5,7 +5,6 @@ import * as React from "react";
 
 import { NuevoContactoEntidad } from "@/features/entidades";
 import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
-import type { FieldOption } from "@/shared/components/form/types";
 import { Button } from "@/shared/components/ui/button";
 import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
 import {
@@ -27,14 +26,13 @@ import {
 } from "@/shared/components/ui/popover";
 import { cn } from "@/shared/lib/utils";
 import type { CotizacionCabeceraPayload } from "../api/cotizacion-cabecera";
+import { useCatalogosCotizacionOpcional } from "../hooks/use-catalogos-cotizacion";
 import {
   type CatalogosFormularioCotizacion,
   type OpcionFormularioCotizacion,
   type TipoFormularioCotizacion,
   useFormularioCotizacion,
 } from "../hooks/use-formulario-cotizacion";
-
-import { useCatalogosCotizacionOpcional } from "../hooks/use-catalogos-cotizacion";
 import { etiquetaCampo } from "../lib/cabecera";
 import type { Id } from "../lib/tipos";
 import { Grupo } from "./utils";
@@ -716,14 +714,12 @@ export function CotizacionForm({
           <Grupo id="origen" titulo="Origen" visible={verificarSiGrupoEsVisible("origen")}>
             {renderSelect("paisOrigen")}
 
-            {tipoTransporte?.nomTipo !== "TERRESTRE" &&
-              renderSelect("tipoPuntoEnlaceOrigen")}
+            {tipoTransporte?.nomTipo !== "TERRESTRE" && renderSelect("tipoPuntoEnlaceOrigen")}
 
             {tipoTransporte?.nomTipo !== "TERRESTRE" &&
               renderSelect("puntoEnlaceOrigen", "md:col-span-2")}
 
-            {tipoTransporte?.nomTipo === "TERRESTRE" &&
-              renderSelect("ciudadOrigen")}
+            {tipoTransporte?.nomTipo === "TERRESTRE" && renderSelect("ciudadOrigen")}
 
             {tipoTransporte?.nomTipo === "TERRESTRE" &&
               renderText("direccion_origen", "md:col-span-2")}
@@ -732,14 +728,12 @@ export function CotizacionForm({
           <Grupo id="destino" titulo="Destino" visible={verificarSiGrupoEsVisible("destino")}>
             {renderSelect("paisDestino")}
 
-            {tipoTransporte?.nomTipo !== "TERRESTRE" &&
-              renderSelect("tipoPuntoEnlaceDestino")}
+            {tipoTransporte?.nomTipo !== "TERRESTRE" && renderSelect("tipoPuntoEnlaceDestino")}
 
             {tipoTransporte?.nomTipo !== "TERRESTRE" &&
               renderSelect("puntoEnlaceDestino", "md:col-span-2")}
 
-            {tipoTransporte?.nomTipo === "TERRESTRE" &&
-              renderSelect("ciudadDestino")}
+            {tipoTransporte?.nomTipo === "TERRESTRE" && renderSelect("ciudadDestino")}
 
             {tipoTransporte?.nomTipo === "TERRESTRE" &&
               renderText("direccion_destino", "md:col-span-2")}

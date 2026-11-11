@@ -50,7 +50,6 @@ export const plantillaCotizacionRubroSchema = z
   .passthrough();
 
 export type PlantillaCotizacion = z.infer<typeof plantillaCotizacionSchema>;
-export type PlantillaCotizacionRubro = z.infer<typeof plantillaCotizacionRubroSchema>;
 
 export type ContextoPlantillasCotizacion = {
   entidad_id: Id;

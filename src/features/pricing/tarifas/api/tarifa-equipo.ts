@@ -30,9 +30,9 @@ export type FiltrosTarifaEquipo = FiltrosMetodo;
 
 // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
 export {
+  type MonedaOperativa as MonedaEquipo,
   monedaOperativaSchema as monedaEquipoSchema,
   monedasOperativasOptions as monedasEquipoOptions,
-  type MonedaOperativa as MonedaEquipo,
   useMonedasOperativas as useMonedasEquipo,
 } from "./monedas";
 
@@ -62,7 +62,11 @@ export type TarifaEquipoMutationPayload = {
 const api = crearCatalogoMetodo<typeof tarifaEquipoSchema, TarifaEquipoMutationPayload>({
   nombre: "tarifas-equipo",
   schema: tarifaEquipoSchema,
-  endpoints: { lista: "lista-tarifa-equipo", insertar: "insertar-tarifa-equipo", actualizar: "actualizar-tarifa-equipo" },
+  endpoints: {
+    lista: "lista-tarifa-equipo",
+    insertar: "insertar-tarifa-equipo",
+    actualizar: "actualizar-tarifa-equipo",
+  },
   enviarEstado: true,
   habilitado: (filtros) => filtros.codMetodo != null && Number(filtros.codMetodo) !== 0,
 });

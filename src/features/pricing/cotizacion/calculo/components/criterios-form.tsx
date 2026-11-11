@@ -5,16 +5,12 @@ import React from "react";
 
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-
-import type { DimensionCalculo, TotalesMedidas } from "../lib/calculadora-medidas";
-
-import type { ValoresCriterios } from "../lib/criterios-cotizacion";
-
-import { CalculadoraMedidas } from "./calculadora-medidas";
-
-import type { Id, OpcionCriterio } from "../lib/tipos";
-import { COD_CRITERIO_EXPRESS } from "../lib/constantes";
 import { useCatalogosCotizacion } from "../hooks/use-catalogos-cotizacion";
+import type { DimensionCalculo, TotalesMedidas } from "../lib/calculadora-medidas";
+import { COD_CRITERIO_EXPRESS } from "../lib/constantes";
+import type { ValoresCriterios } from "../lib/criterios-cotizacion";
+import type { Id, OpcionCriterio } from "../lib/tipos";
+import { CalculadoraMedidas } from "./calculadora-medidas";
 
 /* ==========================================================================
  * TIPOS

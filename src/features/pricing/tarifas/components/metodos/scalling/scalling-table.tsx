@@ -15,7 +15,7 @@ import {
   useInsertarTarifaScalling,
   useTarifaScalling,
 } from "../../../api/tarifa-scalling";
-
+import { useOpcionesMonedas } from "../../../hooks/use-opciones-tarifa";
 import {
   crearScallingColumns,
   type FilaMetodoScalling,
@@ -23,9 +23,7 @@ import {
   type PuntoEnlaceScallingOption,
   type TipoPuntoEnlaceScallingOption,
 } from "./scalling-columns";
-
 import { ScallingForm } from "./scalling-form";
-import { useOpcionesMonedas } from "../../../hooks/use-opciones-tarifa";
 
 const TIPO_PUNTO_SEGUN_TRANSPORTE: Record<string, string> = {
   AEREO: "AEROPUERTO",
@@ -112,7 +110,9 @@ export function ScallingTable({ codMetodo, codTipoTransporte }: Props) {
     [puntosEnlaceFetch.data],
   );
 
-  const monedas: MonedaScallingOption[] = useOpcionesMonedas(monedasFetch.data, { soloOperativas: true });
+  const monedas: MonedaScallingOption[] = useOpcionesMonedas(monedasFetch.data, {
+    soloOperativas: true,
+  });
 
   /*
    * =========================================================

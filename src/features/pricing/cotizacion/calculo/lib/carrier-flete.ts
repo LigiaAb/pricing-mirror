@@ -1,6 +1,6 @@
+import { construirDetalleFlete } from "./detalle-flete";
 import type { CatalogoTipo, Id, MonedaCatalogo } from "./tipos";
 import { buscarMoneda } from "./utils";
-import { construirDetalleFlete } from "./detalle-flete";
 
 export type MetodoFlete = {
   cod_metodo?: Id | null;

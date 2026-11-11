@@ -1,8 +1,14 @@
 import type { MonedaFlete } from "./carrier-flete";
-import { calcularVentaCostoPorcentaje, esMetodoCostoPorcentaje } from "./costo-porcentaje";
-
-import type { Id } from "./tipos";
 import { TIPO_CALCULO } from "./constantes";
+import {
+  aplicarCostoPorcentaje,
+  esMetodoCostoPorcentaje,
+  getCodMonedaVenta,
+  getCodTipoCalculo,
+  primeraMonedaDefinida,
+} from "./rubros-manuales";
+import type { Id } from "./tipos";
+import { buscarMoneda, normalizarBoolean, simboloDeMoneda } from "./utils";
 
 export type RubroDueAgent = {
   value: string;
@@ -90,34 +96,6 @@ export type RubroObligatorioPendiente = {
   nombre_rubro: string;
   items: RubroDueAgent[];
 };
-
-export function normalizarBoolean(value: unknown) {
-  if (value === true || value === false) {
-    return value;
-  }
-
-  if (value == null) {
-    return false;
-  }
-
-  if (typeof value === "number") {
-    return value === 1;
-  }
-
-  if (typeof value === "string") {
-    const normalizado = value.trim().toLowerCase();
-
-    if (["1", "true", "si", "sí", "y", "yes"].includes(normalizado)) {
-      return true;
-    }
-
-    if (["0", "false", "no", "n"].includes(normalizado)) {
-      return false;
-    }
-  }
-
-  return Boolean(value);
-}
 
 export function esServicioObligatorio(item: RubroDueAgent) {
   return (
@@ -249,21 +227,17 @@ export function agregarEstadoBloqueado({
 }
 
 export function esTipoCalculoManual(item: RubroDueAgent) {
-  const codTipo =
-    item.servicio?.metodo?.cod_tipo_calculo ??
-    item.servicio?.cod_tipo_calculo ??
-    item.cod_tipo_calculo;
+  const codTipo = getCodTipoCalculo(item);
 
-  return esMetodoCostoPorcentaje(item) || Number(codTipo) === TIPO_CALCULO.ABIERTO || Number(codTipo) === TIPO_CALCULO.COBERTURA_MERCADERIA;
+  return (
+    esMetodoCostoPorcentaje(item) ||
+    Number(codTipo) === TIPO_CALCULO.ABIERTO ||
+    Number(codTipo) === TIPO_CALCULO.COBERTURA_MERCADERIA
+  );
 }
 
 export function esCoberturaMercaderia(item: RubroDueAgent) {
-  const codTipo =
-    item.servicio?.metodo?.cod_tipo_calculo ??
-    item.servicio?.cod_tipo_calculo ??
-    item.cod_tipo_calculo;
-
-  return Number(codTipo) === TIPO_CALCULO.COBERTURA_MERCADERIA;
+  return Number(getCodTipoCalculo(item)) === TIPO_CALCULO.COBERTURA_MERCADERIA;
 }
 
 export function calcularCoberturaMercaderia({
@@ -300,15 +274,6 @@ export function calcularCoberturaMercaderia({
 
 export type ValoresManualDueAgent = Record<string, string | number>;
 
-export function getCodMonedaDueAgent(item: RubroDueAgent): Id | null {
-  return (
-    item.servicio?.metodo?.cod_moneda_venta ??
-    item.servicio?.cod_moneda_venta ??
-    item.cod_moneda_venta ??
-    null
-  );
-}
-
 export function obtenerCodMonedaEfectiva({
   item,
   codMonedaPadre,
@@ -320,7 +285,7 @@ export function obtenerCodMonedaEfectiva({
 
   codMonedaDefault?: Id | null;
 }) {
-  return getCodMonedaDueAgent(item) ?? codMonedaPadre ?? codMonedaDefault ?? null;
+  return getCodMonedaVenta(item) ?? codMonedaPadre ?? codMonedaDefault ?? null;
 }
 
 export function aplicarValoresManualDueAgent({
@@ -337,10 +302,7 @@ export function aplicarValoresManualDueAgent({
 
   monedas: MonedaFlete[];
 }) {
-  const codMonedaDefault =
-    seleccionados
-      .map(getCodMonedaDueAgent)
-      .find((value) => value != null && String(value).trim() !== "") ?? null;
+  const codMonedaDefault = primeraMonedaDefinida(seleccionados);
 
   return seleccionados.map((item) => {
     if (!esTipoCalculoManual(item)) {
@@ -348,19 +310,7 @@ export function aplicarValoresManualDueAgent({
     }
 
     if (esMetodoCostoPorcentaje(item)) {
-      const valorCosto = valores[item.value];
-      const { costo, venta } =
-        valorCosto == null || valorCosto === ""
-          ? { costo: 0, venta: 0 }
-          : calcularVentaCostoPorcentaje(item, valorCosto);
-      const metodo = { ...(item.servicio?.metodo ?? item.metodo ?? {}), costo, venta };
-      return {
-        ...item,
-        costo,
-        venta,
-        metodo,
-        servicio: { ...(item.servicio ?? {}), metodo },
-      };
+      return aplicarCostoPorcentaje(item, valores[item.value]);
     }
 
     const venta = Number(valores[item.value] ?? 0) || 0;
@@ -395,9 +345,7 @@ export function aplicarValoresManualDueAgent({
     if (esCoberturaMercaderia(item)) {
       const valorFactura = valores[`${item.value}_a_calcular`] ?? 0;
 
-      const moneda = monedas.find(
-        (monedaItem) => String(monedaItem.cod_moneda) === String(codMoneda),
-      );
+      const moneda = buscarMoneda(monedas, codMoneda);
 
       servicio.metodo.detalles = [
         ...(item.servicio?.metodo?.detalles ?? []),
@@ -405,7 +353,7 @@ export function aplicarValoresManualDueAgent({
         {
           tipo_desc: "",
 
-          tarifadetalle_descripcion: `Sobre valor de factura ${moneda?.simbolo_moneda ?? moneda?.SIMBOLO_MONEDA ?? ""} ${valorFactura}`,
+          tarifadetalle_descripcion: `Sobre valor de factura ${simboloDeMoneda(moneda)} ${valorFactura}`,
 
           tarifadetalle_valor: valorFactura,
         },

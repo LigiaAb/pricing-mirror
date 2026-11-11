@@ -9,9 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
-
-import type { ReasonCodeSpot } from "../lib/tipos";
 import { useCatalogosCotizacion } from "../hooks/use-catalogos-cotizacion";
+import type { ReasonCodeSpot } from "../lib/tipos";
 
 export type { ReasonCodeSpot };
 

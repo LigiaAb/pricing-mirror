@@ -11,9 +11,14 @@ import {
 import type { CotizacionCabeceraPayload } from "../api/cotizacion-cabecera";
 
 import { CAMPOS_REQUERIDOS, construirReglasFormulario } from "../lib/cabecera";
+import {
+  COD_PAIS_GUATEMALA,
+  COD_PUNTO_ENLACE_GUA,
+  COD_TIPO_SERVICIO_ESTACION,
+  TIPO_PAGO,
+} from "../lib/constantes";
 import type { Id } from "../lib/tipos";
 import { esRegistro, mismoId } from "../lib/utils";
-import { COD_PAIS_GUATEMALA, COD_PUNTO_ENLACE_GUA, COD_TIPO_SERVICIO_ESTACION, TIPO_PAGO } from "../lib/constantes";
 
 const PAISES_TERRESTRES = new Set(["GT", "SV", "HN", "NI", "CR", "PA", "BZ", "MX", "US"]);
 

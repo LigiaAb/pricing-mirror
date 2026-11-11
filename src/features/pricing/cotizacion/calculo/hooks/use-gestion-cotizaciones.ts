@@ -15,10 +15,9 @@ import {
   useValidarElegibilidadCotizacion,
 } from "../api/cotizacion-cabecera";
 import { CAMPOS_FILTRO, CAMPOS_FILTRO_API } from "../lib/cabecera";
-
+import { COD_ESTADO_OCULTO_LEGADO, TIPO_PAGO } from "../lib/constantes";
 import type { Id } from "../lib/tipos";
 import { mismoId } from "../lib/utils";
-import { COD_ESTADO_OCULTO_LEGADO, TIPO_PAGO } from "../lib/constantes";
 
 /**
  * Estado excluido explícitamente por la tabla legado además de RECHAZADO
@@ -161,7 +160,9 @@ export function useGestionCotizaciones({
   const filtrosConsulta = React.useMemo<FiltrosCotizacionesCabecera>(
     () => ({
       ...filtros,
-      cod_tipo_pago: mismoId(filtros.cod_tipo_pago, TIPO_PAGO.TODOS) ? null : (filtros.cod_tipo_pago ?? null),
+      cod_tipo_pago: mismoId(filtros.cod_tipo_pago, TIPO_PAGO.TODOS)
+        ? null
+        : (filtros.cod_tipo_pago ?? null),
     }),
     [filtros],
   );

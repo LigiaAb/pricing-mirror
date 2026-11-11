@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-
+import { TIPO_PAGO } from "../lib/constantes";
 import {
   calcularTotalesPorMoneda,
   construirElementosAgrupados,
@@ -18,7 +18,6 @@ import {
   separarRubrosParaTotales,
   type TipoPagoPorRubro,
 } from "../lib/totales-rubros";
-import { TIPO_PAGO } from "../lib/constantes";
 import { useCatalogosCotizacion } from "./use-catalogos-cotizacion";
 
 type Props = {

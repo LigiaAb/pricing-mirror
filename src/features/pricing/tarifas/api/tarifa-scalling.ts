@@ -21,9 +21,9 @@ export type FiltrosTarifaScalling = FiltrosMetodo;
 
 // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
 export {
+  type MonedaOperativa as MonedaScalling,
   monedaOperativaSchema as monedaScallingSchema,
   monedasOperativasOptions as monedasScallingOptions,
-  type MonedaOperativa as MonedaScalling,
   useMonedasOperativas as useMonedasScalling,
 } from "./monedas";
 
@@ -43,7 +43,11 @@ export type TarifaScallingMutationPayload = {
 const api = crearCatalogoMetodo<typeof tarifaScallingSchema, TarifaScallingMutationPayload>({
   nombre: "tarifas-scalling",
   schema: tarifaScallingSchema,
-  endpoints: { lista: "lista-tarifa-scalling", insertar: "insertar-tarifa-scalling", actualizar: "actualizar-tarifa-scalling" },
+  endpoints: {
+    lista: "lista-tarifa-scalling",
+    insertar: "insertar-tarifa-scalling",
+    actualizar: "actualizar-tarifa-scalling",
+  },
   enviarEstado: true,
 });
 

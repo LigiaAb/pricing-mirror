@@ -42,7 +42,13 @@ export const LocalTooltip = ({
 };
 
 /** Texto recortado a `length` caracteres; el texto completo se ve en un tooltip. */
-export const shortCell = ({ value, length = 11 }: { value: string; length?: number | undefined }) => {
+export const shortCell = ({
+  value,
+  length = 11,
+}: {
+  value: string;
+  length?: number | undefined;
+}) => {
   if (value.length <= length) return <span>{value}</span>;
 
   return (
@@ -139,7 +145,15 @@ export function SeccionConLoader({
 }
 
 /** Encabezado de sección colapsable (barra con título y flecha). */
-export function SectionHeader({ title, open, onToggle }: { title: string; open: boolean; onToggle: () => void }) {
+export function SectionHeader({
+  title,
+  open,
+  onToggle,
+}: {
+  title: string;
+  open: boolean;
+  onToggle: () => void;
+}) {
   return (
     <Button
       type="button"
@@ -149,7 +163,11 @@ export function SectionHeader({ title, open, onToggle }: { title: string; open: 
     >
       <span className="text-base font-semibold">{title}</span>
 
-      {open ? <ChevronUp className="size-4" aria-hidden="true" /> : <ChevronDown className="size-4" aria-hidden="true" />}
+      {open ? (
+        <ChevronUp className="size-4" aria-hidden="true" />
+      ) : (
+        <ChevronDown className="size-4" aria-hidden="true" />
+      )}
     </Button>
   );
 }
