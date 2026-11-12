@@ -87,9 +87,14 @@ export function CostoPorcentajeForm({
 
   const advertenciaDecimalesVenta = obtenerCantidadDecimales(row.porcentaje_venta) > 9;
 
-  const porcentajeCostoFueraRango = porcentajeCosto < 0 || porcentajeCosto > 100;
+  // Si es porcentaje se guarda en enteros con decimales (25.26 = 25.26 %), no como 0.2526.
+  // Cotizaciones lo convierte a factor (÷ 100) al calcular la venta.
+  const fueraDeRango = (valor: number) =>
+    valor < 0 || (Boolean(row.es_porcentaje) && valor > 100);
 
-  const porcentajeVentaFueraRango = porcentajeVenta < 0 || porcentajeVenta > 100;
+  const porcentajeCostoFueraRango = fueraDeRango(porcentajeCosto);
+
+  const porcentajeVentaFueraRango = fueraDeRango(porcentajeVenta);
 
   const puedeGuardar =
     !readonly &&
@@ -147,21 +152,27 @@ export function CostoPorcentajeForm({
         </Field>
 
         <Field>
-          <FieldLabel>Porcentaje venta</FieldLabel>
+          <FieldLabel>{row.es_porcentaje ? "Porcentaje venta" : "Valor venta"}</FieldLabel>
 
           <InputGroup>
             <InputGroupInput
               type="number"
               min={0}
-              max={100}
+              {...(row.es_porcentaje ? { max: 100 } : {})}
               step={row.es_porcentaje ? 0.01 : 1}
               readOnly={readonly}
               value={row.porcentaje_venta ?? ""}
               onChange={(event) => setNumero("porcentaje_venta", event.target.value)}
             />
 
-            <InputGroupAddon align="inline-end">%</InputGroupAddon>
+            {row.es_porcentaje && <InputGroupAddon align="inline-end">%</InputGroupAddon>}
           </InputGroup>
+
+          {row.es_porcentaje && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Ingrese el porcentaje en enteros con decimales (ej. 25.26 para 25.26 %).
+            </p>
+          )}
 
           {errorPorcentaje && (
             <p className="mt-1 text-sm text-destructive">
@@ -170,7 +181,11 @@ export function CostoPorcentajeForm({
           )}
 
           {porcentajeVentaFueraRango && (
-            <p className="mt-1 text-sm text-destructive">El porcentaje debe estar entre 0 y 100.</p>
+            <p className="mt-1 text-sm text-destructive">
+              {row.es_porcentaje
+                ? "El porcentaje debe estar entre 0 y 100."
+                : "El valor no puede ser negativo."}
+            </p>
           )}
         </Field>
 
