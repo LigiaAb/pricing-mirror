@@ -16,6 +16,7 @@ import {
   useRechazarCotizacionCabecera,
   useValidarElegibilidadCotizacion,
 } from "../api/cotizacion-cabecera";
+import { VERSIONES_QUERY_KEY } from "../api/versiones";
 import { CAMPOS_CABECERA, CAMPOS_FILTRO, CAMPOS_FILTRO_API } from "../lib/cabecera";
 import { COD_ESTADO_OCULTO_LEGADO, TIPO_PAGO } from "../lib/constantes";
 import type { Id } from "../lib/tipos";
@@ -138,8 +139,11 @@ function obtenerEstadoVisual(payload: CotizacionCabeceraPayload): Id | null {
   return null;
 }
 
-/** Campos de la cabecera que el esquema exige (aunque sea null) y el formulario no envía. */
-const CAMPOS_SOLO_LECTURA_NULOS = Object.fromEntries(
+/**
+ * Todos los campos de la cabecera en null. El payload los sobrescribe; así los que
+ * el formulario no envía (estado_nombre, usuario, peso, volumen) cumplen el esquema.
+ */
+const CAMPOS_CABECERA_NULOS = Object.fromEntries(
   Object.values(CAMPOS_CABECERA).map((campo) => [campo.cod, null]),
 );
 
@@ -153,7 +157,7 @@ function construirCotizacionLocal(
   codCotizacionCabecera: Id,
 ): CotizacionCabecera {
   const candidato = {
-    ...CAMPOS_SOLO_LECTURA_NULOS,
+    ...CAMPOS_CABECERA_NULOS,
     ...payload,
     cod_cotizacion_cabecera: codCotizacionCabecera,
   };
@@ -280,14 +284,26 @@ export function useGestionCotizaciones({
     onLimpiarPlantillas?.();
   }, [onLimpiarPlantillas]);
 
+  const queryClient = useQueryClient();
+
   const seleccionarCotizacion = React.useCallback(
     (cotizacion: CotizacionCabecera) => {
       setIsNewCotizacion(false);
       setFormResetKey((prev) => prev + 1);
       limpiarPlantilla();
       setCotizacionSeleccionada(cotizacion);
+
+      /*
+       * Al seleccionar una cabecera siempre se reconsultan sus versiones:
+       * otro usuario (o Autorización Spot) pudo crear/activar versiones
+       * y la caché no debe mostrar una lista vieja. También aplica al
+       * volver a seleccionar la misma cabecera.
+       */
+      void queryClient.invalidateQueries({
+        queryKey: [...VERSIONES_QUERY_KEY, cotizacion.cod_cotizacion_cabecera],
+      });
     },
-    [limpiarPlantilla],
+    [limpiarPlantilla, queryClient],
   );
 
   const seleccionarCotizacionPorId = React.useCallback(
@@ -351,8 +367,6 @@ export function useGestionCotizaciones({
   const validarElegibilidadMutateAsync = validarElegibilidadMutation.mutateAsync;
   const confirmarMutateAsync = confirmarMutation.mutateAsync;
 
-  const queryClient = useQueryClient();
-
   /**
    * Consulta una cotización recién guardada.
    *
@@ -409,8 +423,10 @@ export function useGestionCotizaciones({
        * de cualquier otra cosa. Así, aunque la consulta posterior falle, el
        * siguiente guardado actualiza en vez de insertar otra cotización.
        */
+      const cotizacionLocal = construirCotizacionLocal(payload, codInsertado);
+
       setIsNewCotizacion(false);
-      setCotizacionSeleccionada(construirCotizacionLocal(payload, codInsertado));
+      setCotizacionSeleccionada(cotizacionLocal);
 
       const cotizacionConsultada = await consultarCotizacion(codInsertado, payload);
 
@@ -420,7 +436,7 @@ export function useGestionCotizaciones({
         setFormResetKey((prev) => prev + 1);
       }
 
-      return cotizacionConsultada ?? construirCotizacionLocal(payload, codInsertado);
+      return cotizacionConsultada ?? cotizacionLocal;
     },
     [estados.ACTIVO, insertarMutation, consultarCotizacion],
   );

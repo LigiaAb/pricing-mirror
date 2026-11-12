@@ -5,12 +5,12 @@ al proyecto completo. Responder siempre en **español**.
 
 ## Qué es real y qué no
 
-| Ruta | Qué es | ¿Se copia al proyecto real? |
-|---|---|---|
-| `src/features/pricing/` | Código real del módulo | **Sí**, es lo único que se copia |
-| `src/shared/**`, `src/features/catalogos/**` | STUBS: solo tipos de lo que pricing usa | **No** |
-| `src/types/stubs-modulos.d.ts` | Todo lo demás de `@/shared` / `@/features` como `any` | **No** |
-| `tsconfig.json` | Copia exacta del proyecto real | No (ya existe allá) |
+| Ruta                                         | Qué es                                                | ¿Se copia al proyecto real?      |
+| -------------------------------------------- | ----------------------------------------------------- | -------------------------------- |
+| `src/features/pricing/`                      | Código real del módulo                                | **Sí**, es lo único que se copia |
+| `src/shared/**`, `src/features/catalogos/**` | STUBS: solo tipos de lo que pricing usa               | **No**                           |
+| `src/types/stubs-modulos.d.ts`               | Todo lo demás de `@/shared` / `@/features` como `any` | **No**                           |
+| `tsconfig.json`                              | Copia exacta del proyecto real                        | No (ya existe allá)              |
 
 - `src/features/catalogos/create-catalogo.ts` contiene el **código real** de `createCatalogo` del proyecto.
 - Si un cambio necesita un tipo de `@/shared` que no está en los stubs, se agrega al stub (solo tipos) y se avisa.
@@ -21,6 +21,7 @@ al proyecto completo. Responder siempre en **español**.
 TypeScript 7 · React 19 · zod 4 · @tanstack/react-query 5.105 · react-table 9 · date-fns 4 · Next 16 (no instalado: `next/link` es stub).
 
 `tsconfig` estricto — lo que más impacta al escribir código:
+
 - `exactOptionalPropertyTypes`: si se asigna un valor que puede ser `undefined` a una prop opcional, tiparla `?: T | undefined`
   o usar spread condicional `...(x == null ? {} : { x })`.
 - `noUncheckedIndexedAccess`: `arr[0]` y `obj[clave]` pueden ser `undefined`.
@@ -33,6 +34,7 @@ npm install
 npm run check:nuevos            # tsc y SOLO errores nuevos vs .tsc-baseline.txt (usar este)
 npm run check                   # tsc completo (incluye ~326 errores previos: stubs any + código existente)
 npm run check:actualizar-base   # tras resolver errores previos, guardar nueva línea base
+npm run diff:guardar            # tras cada commit: diff/[DDMMYY-HHmm]-[commit].diff y amend
 ```
 
 Regla: **ningún cambio debe dejar errores nuevos** en `check:nuevos`. Si se resuelven errores previos, actualizar la base.
@@ -48,16 +50,22 @@ Al editar, **conservar el final de línea que ya tiene el archivo** (no converti
 2. `npm run check:nuevos` antes de cada commit.
 3. Verificación proporcional al cambio: cambio chico → solo `check:nuevos`; cambio de lógica → además una prueba
    rápida en ejecución (esbuild + node) comparando contra el comportamiento anterior.
-4. El usuario copia `src/features/pricing` (o aplica `git diff` con `git apply`) en su proyecto.
-5. Actualizar el `ARQUITECTURA.md` del submódulo si cambia dónde vive algo.
+4. **Después de cada commit que cambie `src/features/pricing`: `npm run diff:guardar`.** Genera
+   `diff/[DDMMYY-HHmm]-[nombre-del-commit].diff` (hora de Guatemala, solo `src/features/pricing`, formato binario que
+   conserva CRLF/LF) y lo agrega al mismo commit (amend). Hacerlo antes del push.
+5. El usuario aplica ese archivo en la raíz de su proyecto con `git apply diff/<archivo>.diff`
+   (o copia `src/features/pricing`).
+6. Actualizar el `ARQUITECTURA.md` del submódulo si cambia dónde vive algo.
 
 ## Convenciones del módulo
 
 Leer primero la guía del submódulo:
+
 - `src/features/pricing/cotizacion/calculo/ARQUITECTURA.md`
 - `src/features/pricing/tarifas/ARQUITECTURA.md`
 
 Resumen:
+
 - **APIs**: usar `createCatalogo` de `@/features/catalogos` (estándar del proyecto). En Tarifas, los métodos usan
   `crearCatalogoMetodo` (`tarifas/api/catalogo-metodo.ts`), un adaptador delgado (filtros camelCase, eliminar = `cod_estado: 4`, payload tipado).
 - **Cotizaciones**
@@ -90,3 +98,7 @@ Resumen:
 - Tarifas: agregar un campo a un método aún requiere tocar esquema, payload, formulario y tabla.
 - `tarifas/.../porcentaje-form.tsx` inicializa `minimo: 0` en vez de `minimo_costo` / `minimo_venta`.
 - `tarifas/api/monedas.ts` podría reutilizar el catálogo `monedas` de `@/features/catalogos`.
+
+usar la rama con formato claude/[fecha con formato DDMMYYYY]-work-[modulo]-[submodulo]
+
+en commits agregar titulo CL[fecha en formato DDMMYYY] ACCION
