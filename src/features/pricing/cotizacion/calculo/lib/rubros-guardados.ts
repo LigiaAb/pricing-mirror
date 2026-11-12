@@ -387,7 +387,15 @@ export function normalizarRubrosGuardados({
 
   return Array.from(agrupados.values());
 }
-export function separarRubrosGuardados(rubros: RubroGuardadoProcesado[]) {
+export function separarRubrosGuardados(rubrosGuardados: RubroGuardadoProcesado[]) {
+  /*
+   * El IVA guardado no tiene servicio ni clasificación; por la regla
+   * "clasificación null => Due Carrier" terminaba listado como rubro de
+   * Due Carrier. No pertenece a ninguna sección: Totales lo calcula
+   * sobre la base PREPAID, igual que en el cálculo vivo.
+   */
+  const rubros = rubrosGuardados.filter((item) => Number(item.cod_rubro) !== RUBRO.IVA);
+
   const rubrosDueAgent = rubros.filter(esRubroDueAgent);
 
   const dueCarrier = rubros.filter(esRubroDueCarrier);
