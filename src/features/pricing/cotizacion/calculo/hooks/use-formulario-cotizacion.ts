@@ -227,6 +227,25 @@ function entidadAOption(entidadOrigen: object): OpcionFormularioCotizacion | nul
   } satisfies OpcionFormularioCotizacion;
 }
 
+/** Convierte entidades a opciones descartando las que repiten `value` (la key del combobox). */
+function entidadesAOpcionesUnicas(entidades: readonly object[]): OpcionFormularioCotizacion[] {
+  const vistos = new Set<string>();
+  const opciones: OpcionFormularioCotizacion[] = [];
+
+  for (const entidad of entidades) {
+    const opcion = entidadAOption(entidad);
+    if (!opcion) continue;
+
+    const clave = String(opcion.value).trim();
+    if (vistos.has(clave)) continue;
+
+    vistos.add(clave);
+    opciones.push(opcion);
+  }
+
+  return opciones;
+}
+
 function contactoAOption(contactoOrigen: object): OpcionFormularioCotizacion | null {
   const contacto = contactoOrigen as Record<string, unknown>;
   const contactoId = contacto.entidadcontacto_id;
@@ -450,14 +469,7 @@ export function useFormularioCotizacion({
 
     // 2. Usamos los datos devueltos por esa solicitud,
     //    en lugar de clientes.data, que puede pertenecer al render anterior
-    return (resultado.data?.entidades ?? []).reduce((acc, item) => {
-      const opcion = entidadAOption(item);
-      if (opcion && !acc.some((a) => String(a.value).trim() === String(opcion.value).trim())) {
-        acc.push(opcion);
-      }
-
-      return acc;
-    }, [] as OpcionFormularioCotizacion[]);
+    return entidadesAOpcionesUnicas(resultado.data?.entidades ?? []);
   }, []);
 
   const entidadIdActual =
@@ -486,10 +498,9 @@ export function useFormularioCotizacion({
   );
 
   const clientesEncontrados = React.useMemo<OpcionFormularioCotizacion[]>(
-    () =>
-      (clientesQuery.data?.entidades ?? [])
-        .map(entidadAOption)
-        .filter((item): item is OpcionFormularioCotizacion => item != null),
+    // Sin duplicados: el backend puede devolver la misma entidad más de una vez
+    // (ej. como CLIENTE y PRE-CLIENTE) y el combobox usa el value como key.
+    () => entidadesAOpcionesUnicas(clientesQuery.data?.entidades ?? []),
     [clientesQuery.data],
   );
 

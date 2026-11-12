@@ -77,10 +77,6 @@ src/features/pricing/cotizacion/calculo/components/scalling.tsx: error TS7006: P
 src/features/pricing/cotizacion/calculo/components/scalling.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/scalling.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/scalling.tsx: error TS7006: Parameter 'selected' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts: error TS7006: Parameter 'a' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts: error TS7006: Parameter 'acc' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
