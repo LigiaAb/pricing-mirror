@@ -1,0 +1,36 @@
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-gestion-cotizaciones.ts b/src/features/pricing/cotizacion/calculo/hooks/use-gestion-cotizaciones.ts
+index 47c7210dca5c8df04b25374ac664f404ff48dddf..051acde22be5366ac7d298637feaa61b00500297 100644
+GIT binary patch
+delta 2482
+zcmb7G-*4Mg6jl+FSOf^sf#}e-(~bu_HI6p%0Ij+z%QjT0YfHOLn!3{6*f+)C*qN^#
+z$Y>Sb_rQ<)S0FJ}D1SmEgaqRMKs@n^gv595wUaQ72Q0;oudmOK?|k1m{^9ud@8-Vw
+z_3a?dqsJnM(nPA3Xv;umV!M~)Uj6v<{kgNP=JlJco4ZYKwD3an<zb^<uTh=uq+zNk
+z#xD@v9xkDzSm4GQAem57#Ia8|W9o@PoQlxwR%ttvD#)U?TqU8#PtEG1Lb6dAQzy;3
+zMJ%!?r6h%w{`jdNN2*+e>0y#~cksGLg(`T9M?I-<?x%6lm5ED1(e1@>4MS4FXjk~K
+z+o%OdCZ|^O_RjX+VU^I~*4@qRJ-y{G47b~#${_dqA}*wIp4sR6UD0zKlc!5-*J$7T
+z^@B9@Op*t#S94cuwGx^NL}V6-nDR_0iV`KWTx1-&2nBT`nV1K0ERV#HoRm~V9TCUE
+zH8>*RBF+V)0vl}+d?u67r>&F?(8Hd{lzg~CMPl(MB>SK60mx9c4Z=~kC&MTsC1RXI
+z;M7GS-=n1{IYM31C5u<5NCIX68Q`)a%32eaY;smkjr0@u@{3-LNPm6xjh9wvBLoU7
+zTAZ2xkiNvS#XJy67=<EFY0az>`M&=Qz_t)<$~-OU;??wN{Q?_*iyxf;;L51UKBTp8
+zPZw_cN_6B7!+{EwzPK1fnaqnU0sHVQ^i>fAQYl)m77&!66`H;UI&$=L?&$8TKb^Nk
+zC*a>IYXPu9@DhjdD1n0@8h@YA5y%*#s=yBW&55q~biGi4U?BkII5G?-5#$Bx>7>bC
+z84uUMvV#T!l)(*X7=^>}hz9IJWJlwXYi-k2pY|eFhCo`7Dmg5{P88=EuCN~UafJ}&
+z7eQPMpb5_ug1Iykhm8@@qDV%7l?AA{<l4|sDhE%EuzOkBi~g1VY_>OKzmRcX8aXhN
+z5upMhlb|p>Cqr-U4;7Y%>efU9(UfE<pEBEY|4MVtW0L8CJO5gn!OTD+$3SU#c4_~B
+zj!~6RcA`XvtW8eL9K21(i;Mcn;;kW(OY7?<IKvFyk!ORFkbGzT%Ve{x(;8Wa;Q8bb
+zpNlAGRI))UX8rmdnFpVI#0yTvi|2GvCn(WvmFc<Y7nM~@ReKk8(CMlW+={=Gl}YGT
+zxTV=0E{*=`toy*4K??<|;VVa4A*G$F@!i_kytBJ~*xcE0XHu`MndS$8OZn~N-GdpI
+z`p;Kx0LapXC7kh`Dzg=D8VjqF)S%hP{}UFZJxW=Y`2H_Yy_wnM%x0e|*9DT+!3kO-
+z>Z1Qxr1yE{#G<`FQ#r4aOjVKt-eYTFkkif8d3|!_vcBj3ecqa#Ai80Dd5D&#f2m&@
+zPC#lH?ep$BZO+WX`%TCZ#9~3P2up>nutd;^<)jZ!+c1eFm#V_7&eJtO<9Jj=GNTle
+z1Ep2Mr=}VYpL!&Uga^Q^z%Y|@i5Z!hse+j)<Ec3n9l;V@RJ{ug#dIco32=~o`Iuc+
+zQ>*f5KNQgVjBrh&jheo;_~r*@D1ZV6r030xs;M(2CjbI)?JY0q-`*wt*TvcyV@2=O
+z&xciAFe=x`a)eED8=DzLVENP-J_hV}##B-)sHrfgHZA=tw?{J%Dh?4f8ni3fXP%*t
+za@l4+O|Z_bnlTS0zCQX9y7jcO<nUA_Oj-<xQDU1n>5t!8*5?+^=?BZT3saxmnWjNn
+V2-0Q$?4)t)<E4wE)8&)b{{i#-D*FHc
+
+delta 156
+zcmaDkiE&NMgfkmohca#sWU}Ph%q?_KYO}DB1>@vK6LD_OyyDcNlEjom1>1@1C6)CG
+z5{rscHLAH3pg>O#C{&q~pO~Tp6`Q<)Rg%+6p(wSuG^a#wvah;0FHEXd)0&HG@&Z#W
+dgt3~|lP{VmO-?eC;DlQ>dAgb2=38d{LI6^iF)jcA
+
