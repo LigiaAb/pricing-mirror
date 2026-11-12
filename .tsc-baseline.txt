@@ -96,7 +96,6 @@ src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.
 src/features/pricing/plantillas-clientes/components/rubros-plantilla.tsx: error TS7006: Parameter 'value' implicitly has an 'any' type.
 src/features/pricing/reportes/components/lista-reportes.tsx: error TS2709: Cannot use namespace 'ComboboxOption' as a type.
 src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'date' implicitly has an 'any' type.
-src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'i' implicitly has an 'any' type.
 src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'nextValue' implicitly has an 'any' type.
 src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'open' implicitly has an 'any' type.
 src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
