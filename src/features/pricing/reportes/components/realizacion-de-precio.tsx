@@ -13,21 +13,23 @@ import {
   TableRow,
 } from "@/shared/components/ui/table";
 import { cn } from "@/shared/lib/utils";
-import { useRealizacionDePrecio } from "../api/realizacion-de-precio";
+import {
+  type ReporteRealizacionDePrecio,
+  useRealizacionDePrecio,
+} from "../api/realizacion-de-precio";
 import { usePdfReporte } from "../hooks/use-pdf-reporte";
 import type { Filtros } from "../lib/filtros-types";
 
 const COLORES = ["#2563eb", "#16a34a", "#ea580c", "#9333ea", "#0891b2", "#dc2626"];
 const color = (indice: number) => COLORES[indice % COLORES.length] ?? "#2563eb";
 const clase = "bg-card border rounded-md p-2";
-const formatNumber = (valor: number, decimal: number) => valor.toFixed(decimal);
 
 type BarCharObj = {
   seccion: string;
   [nombre: string]: string | number;
 };
 
-function GenerarTabla({ data, visible = true }: { data: BarCharObj[]; visible?: boolean }) {
+function GenerarTabla({ data }: { data: BarCharObj[] }) {
   const columnas = [
     {
       accessorKey: "name",
@@ -54,21 +56,7 @@ function GenerarTabla({ data, visible = true }: { data: BarCharObj[]; visible?: 
   );
 
   return (
-    <div
-      className="px-5 w-full"
-      aria-hidden={!visible}
-      style={
-        visible
-          ? undefined
-          : {
-              position: "absolute",
-              left: "-100000px",
-              top: 0,
-              width: "1200px",
-              pointerEvents: "none",
-            }
-      }
-    >
+    <div className="px-5 w-full">
       <Table>
         <TableHeader className="rounded-lg bg-transparent">
           <TableRow className="rounded-lg bg-transparent">
@@ -113,17 +101,13 @@ const SimpleBarChart = ({
   titulo,
   ref,
   isAnimationActive = true,
-  visible = true,
   maxHeight = "20rem",
   maxWidth = "50rem",
 }: {
   data: BarCharObj[];
-  clave?: string;
   isAnimationActive?: boolean;
-  objetivo?: number;
   titulo: string;
   ref?: React.Ref<HTMLDivElement>;
-  visible?: boolean;
   maxHeight?: number | string;
   maxWidth?: number | string;
 }) => {
@@ -141,18 +125,8 @@ const SimpleBarChart = ({
         aspectRatio: 1.618,
         maxHeight,
         maxWidth,
-        ...(visible
-          ? {}
-          : {
-              position: "absolute",
-              left: "-100000px",
-              top: 0,
-              width: "1200px",
-              pointerEvents: "none",
-            }),
       }}
       className="mx-auto"
-      aria-hidden={!visible}
       ref={ref}
     >
       <h2 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "10px" }}>{titulo}</h2>
@@ -204,32 +178,16 @@ const SimpleBarChart = ({
   );
 };
 
-function RealizacionDePrecio({
-  filtros,
-  reconsultar,
-  descargar = 0,
-  onErrorPdf,
-  onGenerandoPdf,
-  tipo,
-}: {
-  filtros: Filtros;
-  tipo: string;
-  reconsultar: number;
-  descargar?: number;
-  onErrorPdf?: (mensaje: string | null) => void;
-  onGenerandoPdf?: (generando: boolean) => void;
-}) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const ultimaDescarga = React.useRef(descargar);
+/** Vistas que monta ListaReportes; "descarga" es la única que genera el PDF. */
+export type TipoVistaRealizacionDePrecio =
+  | "descarga"
+  | "tablas"
+  | "grafica-usuario"
+  | "grafica-transporte"
+  | "grafica-otros";
 
-  const {
-    generar,
-    generando: generandoPdf,
-    error: errorPdf,
-  } = usePdfReporte({ onError: onErrorPdf, onGenerando: onGenerandoPdf });
-
-  const { data, isLoading, error, refetch } = useRealizacionDePrecio(filtros);
-
+/** Proporción por usuario de cada grupo (RdPs, RdPd, RdPp) respecto a su total global. */
+function formatearRealizacionDePrecio(data: ReporteRealizacionDePrecio | undefined): BarCharObj[] {
   const totalesPorUsuario = new Map(
     (data?.global_by_user ?? []).map((item) => [item.usuario, Number(item.total)]),
   );
@@ -240,25 +198,53 @@ function RealizacionDePrecio({
     RdPp: data?.by_user_original ?? [],
   };
 
-  const resultado = Object.entries(grupos).map(([tipo, registros]) => ({
-    [tipo]: registros.map((item) => {
-      const totalUsuario = totalesPorUsuario.get(item.usuario) ?? 0;
-      const total = totalUsuario > 0 ? Number(item.total) / totalUsuario : 0;
-
-      return {
-        name: `${item.nombres ?? ""} ${item.apellidos ?? ""}`.trim(),
-        total: formatNumber(total, 4),
-        resto: formatNumber(1 - total, 4),
-      };
-    }),
+  return Object.entries(grupos).map(([seccion, registros]) => ({
+    seccion,
+    ...Object.fromEntries(
+      registros.map((item) => {
+        const totalUsuario = totalesPorUsuario.get(item.usuario) ?? 0;
+        const proporcion = totalUsuario > 0 ? Number(item.total) / totalUsuario : 0;
+        return [
+          `${item.nombres ?? ""} ${item.apellidos ?? ""}`.trim(),
+          Number(proporcion.toFixed(4)),
+        ];
+      }),
+    ),
   }));
+}
 
-  const datosFormateados: BarCharObj[] = resultado.flatMap((grupo) =>
-    Object.entries(grupo).map(([seccion, usuarios]) => ({
-      seccion,
-      ...Object.fromEntries(usuarios.map(({ name, total }) => [name, total])),
-    })),
-  );
+/** Consulta y transforma el reporte una vez por cambio de data. */
+function useDatosRealizacionDePrecio(filtros: Filtros) {
+  const consulta = useRealizacionDePrecio(filtros);
+  const { data } = consulta;
+  const datosFormateados = React.useMemo(() => formatearRealizacionDePrecio(data), [data]);
+  return { consulta, datosFormateados };
+}
+
+/** Instancia oculta: monta la gráfica sin animación y genera el PDF al cambiar descargar. */
+function RealizacionDePrecioDescarga({
+  filtros,
+  descargar,
+  onErrorPdf,
+  onGenerandoPdf,
+}: {
+  filtros: Filtros;
+  descargar: number;
+  onErrorPdf?: ((mensaje: string | null) => void) | undefined;
+  onGenerandoPdf?: ((generando: boolean) => void) | undefined;
+}) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const ultimaDescarga = React.useRef(descargar);
+
+  const { generar, generando: generandoPdf } = usePdfReporte({
+    onError: onErrorPdf,
+    onGenerando: onGenerandoPdf,
+  });
+
+  const {
+    consulta: { data, isLoading, error },
+    datosFormateados,
+  } = useDatosRealizacionDePrecio(filtros);
 
   const generarPdf = React.useCallback(() => {
     if (generandoPdf) return;
@@ -271,7 +257,7 @@ function RealizacionDePrecio({
     ];
     generar({
       titulo: "Realizacion de Precio (RdP)",
-      archivo: `realizacion-de-precio-${format(new Date(), "ddMMyyyyhhmmss")}.pdf`,
+      archivo: `realizacion-de-precio-${format(new Date(), "ddMMyyyyHHmmss")}.pdf`,
       horizontal: true,
       header: {
         Período: `${format(filtros.fecha_inicio, "dd-MM-yyyy")} al ${format(filtros.fecha_fin, "dd-MM-yyyy")}`,
@@ -303,67 +289,86 @@ function RealizacionDePrecio({
   }, [filtros, data, datosFormateados, generandoPdf, onErrorPdf, generar]);
 
   React.useEffect(() => {
-    const a = { reconsultar, filtros };
-    if (!a) return;
-    refetch();
-  }, [reconsultar, filtros, refetch]);
-
-  React.useEffect(() => {
     if (descargar === ultimaDescarga.current || !data) return;
     ultimaDescarga.current = descargar;
     generarPdf();
   }, [descargar, data, generarPdf]);
 
-  if (isLoading) return tipo === "descarga" ? null : <Loader />;
+  if (isLoading || error) return null;
 
-  if (error) return tipo === "descarga" ? null : <div>Error</div>;
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        left: "-100000px",
+        top: 0,
+        width: "1200px",
+        pointerEvents: "none",
+      }}
+    >
+      <SimpleBarChart data={datosFormateados} titulo="" ref={ref} isAnimationActive={false} />
+    </div>
+  );
+}
 
-  // La instancia de descarga solo monta las gráficas necesarias para capturar el PDF.
-  if (tipo === "descarga")
-    return (
-      <div
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          left: "-100000px",
-          top: 0,
-          width: "1200px",
-          pointerEvents: "none",
-        }}
-      >
-        <SimpleBarChart data={datosFormateados} titulo="" ref={ref} isAnimationActive={false} />
-      </div>
-    );
+/** Vistas en pantalla: solo renderizan lo visible (el PDF lo genera la instancia de descarga). */
+function RealizacionDePrecioVista({
+  filtros,
+  tipo,
+}: {
+  filtros: Filtros;
+  tipo: TipoVistaRealizacionDePrecio;
+}) {
+  const {
+    consulta: { isLoading, error },
+    datosFormateados,
+  } = useDatosRealizacionDePrecio(filtros);
+
+  if (isLoading) return <Loader />;
+
+  if (error) return <div>Error</div>;
 
   return (
     <div className="flex flex-1 flex-col bg-background">
-      {errorPdf ? (
-        <p role="alert" className="text-sm text-destructive">
-          {errorPdf}
-        </p>
-      ) : null}
-      {/* Igual que Hit Rate: la vista de tablas mantiene la gráfica montada para exportar el PDF. */}
-
       <div className="flex flex-1 flex-col bg-background gap-5">
         {tipo === "tablas" && (
           <div className={cn(clase, "flex size-full")}>
             <GenerarTabla data={datosFormateados} />
           </div>
         )}
-        {tipo.split("-")[0] === "grafica" && (
+        {tipo.startsWith("grafica") && (
           <div className={cn(clase, "flex size-full")}>
-            {tipo.split("-")[1] === "usuario" && (
-              <SimpleBarChart
-                data={datosFormateados}
-                titulo=""
-                ref={ref}
-                isAnimationActive={!generandoPdf}
-              />
-            )}
+            {tipo === "grafica-usuario" && <SimpleBarChart data={datosFormateados} titulo="" />}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+function RealizacionDePrecio({
+  filtros,
+  tipo,
+  descargar = 0,
+  onErrorPdf,
+  onGenerandoPdf,
+}: {
+  filtros: Filtros;
+  tipo: TipoVistaRealizacionDePrecio;
+  descargar?: number;
+  onErrorPdf?: (mensaje: string | null) => void;
+  onGenerandoPdf?: (generando: boolean) => void;
+}) {
+  return tipo === "descarga" ? (
+    <RealizacionDePrecioDescarga
+      filtros={filtros}
+      descargar={descargar}
+      onErrorPdf={onErrorPdf}
+      onGenerandoPdf={onGenerandoPdf}
+    />
+  ) : (
+    <RealizacionDePrecioVista filtros={filtros} tipo={tipo} />
   );
 }
 

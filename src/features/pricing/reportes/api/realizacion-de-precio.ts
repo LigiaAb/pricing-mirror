@@ -5,6 +5,7 @@ import { CACHE_DYNAMIC } from "@/shared/api/cache";
 import { http } from "@/shared/api/client";
 import { zId } from "@/shared/lib/zod-scalars";
 import type { Filtros } from "../lib/filtros-types";
+import { paramsReporte, validarRespuestaReporte } from "./params-reporte";
 
 /** Keys en minúsculas, como las entrega el cliente de API. */
 export const realizacionDePrecioUsuarioSchema = z
@@ -46,24 +47,10 @@ export async function consultarRealizacionDePrecio(
   filtros: Filtros,
 ): Promise<ReporteRealizacionDePrecio> {
   const respuesta = await http.get<unknown>("/api/appweb/report_realizacion_de_precio", {
-    params: {
-      fecha_inicio: filtros.fecha_inicio,
-      fecha_fin: filtros.fecha_fin,
-      ...(filtros.cod_empresa ? { cod_empresa: filtros.cod_empresa?.codigo } : {}),
-      ...(filtros.cod_cc ? { cod_cc: filtros.cod_cc?.codigo } : {}),
-      ...(filtros.cod_tipo_pago ? { cod_tipo_pago: filtros.cod_tipo_pago?.value } : {}),
-      ...(filtros.cod_usuario ? { cod_usuario: filtros.cod_usuario?.value } : {}),
-      ...(filtros.cod_cliente ? { cod_cliente: filtros.cod_cliente?.value } : {}),
-    },
+    params: paramsReporte(filtros),
   });
 
-  const errorApi = z
-    .object({ data: z.object({ success: z.literal(false), mensaje: z.string() }) })
-    .safeParse(respuesta);
-
-  if (errorApi.success) {
-    throw new Error(errorApi.data.data.mensaje);
-  }
+  validarRespuestaReporte(respuesta);
 
   return respuestaRealizacionDePrecioSchema.parse(respuesta).data;
 }
@@ -71,7 +58,7 @@ export async function consultarRealizacionDePrecio(
 export const realizacionDePrecioOptions = (filtros: Filtros) =>
   queryOptions({
     ...CACHE_DYNAMIC,
-    queryKey: [...REALIZACION_DE_PRECIO_QUERY_KEY, filtros],
+    queryKey: [...REALIZACION_DE_PRECIO_QUERY_KEY, paramsReporte(filtros)],
     queryFn: () => consultarRealizacionDePrecio(filtros),
     enabled: Boolean(
       filtros.fecha_inicio &&

@@ -24,12 +24,7 @@ import {
   TableRow,
 } from "@/shared/components/ui/table";
 import { cn } from "@/shared/lib/utils";
-import {
-  type HitRateCentroCosto,
-  type HitRateTransporte,
-  type HitRateUsuario,
-  useHitRate,
-} from "../api/hit-rate";
+import { type HitRateCentroCosto, type HitRateUsuario, useHitRate } from "../api/hit-rate";
 import { usePdfReporte } from "../hooks/use-pdf-reporte";
 import type { Filtros } from "../lib/filtros-types";
 import type { BloquePdf } from "../lib/pdf-reporte";
@@ -38,8 +33,6 @@ const COLORES = ["#2563eb", "#16a34a", "#ea580c", "#9333ea", "#0891b2", "#dc2626
 const color = (indice: number) => COLORES[indice % COLORES.length] ?? "#2563eb";
 const objetivo = 0.85;
 const clase = "flex flex-col w-full bg-card border rounded-md p-2";
-
-type formatArray = HitRateUsuario[] | HitRateTransporte[] | HitRateCentroCosto[];
 
 export type BarCharObj = {
   id?: string;
@@ -50,6 +43,8 @@ export type BarCharObj = {
   valor?: string | number;
   total?: number;
   total_individual?: number;
+  /** Complemento de Alcance: barra transparente apilada hasta 100%. */
+  resto?: number;
 };
 
 const formatNumber = (valor: number, decimal: number) => valor.toFixed(decimal);
@@ -57,12 +52,10 @@ const formatNumber = (valor: number, decimal: number) => valor.toFixed(decimal);
 function GenerarTabla({
   data,
   objetivo,
-  visible = true,
   diferencial = false,
 }: {
   data: BarCharObj[];
   objetivo?: number;
-  visible?: boolean;
   diferencial?: boolean;
 }) {
   const style = {};
@@ -71,21 +64,7 @@ function GenerarTabla({
   const classBase = "bg-primary text-primary-foreground";
 
   return (
-    <div
-      className="px-5 w-full"
-      aria-hidden={!visible}
-      style={
-        visible
-          ? undefined
-          : {
-              position: "absolute",
-              left: "-100000px",
-              top: 0,
-              width: "1200px",
-              pointerEvents: "none",
-            }
-      }
-    >
+    <div className="px-5 w-full">
       <Table className="w-full">
         <TableHeader className="rounded-lg bg-transparent">
           <TableRow className="rounded-lg bg-transparent">
@@ -160,13 +139,11 @@ function SimplePieChart({
   isAnimationActive = true,
   titulo,
   ref,
-  visible = true,
 }: {
   data: BarCharObj[];
   isAnimationActive?: boolean;
   titulo: string;
   ref?: React.Ref<HTMLDivElement>;
-  visible?: boolean;
 }) {
   return (
     <div
@@ -175,18 +152,8 @@ function SimplePieChart({
         width: "100%",
         maxHeight: "300px",
         maxWidth: "600px",
-        ...(visible
-          ? {}
-          : {
-              position: "absolute",
-              left: "-100000px",
-              top: 0,
-              width: "1200px",
-              pointerEvents: "none",
-            }),
       }}
       className="mx-auto"
-      aria-hidden={!visible}
       ref={ref}
     >
       <h2 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "10px" }}>{titulo}</h2>
@@ -241,7 +208,6 @@ const SimpleBarChart = ({
   titulo,
   ref,
   isAnimationActive = true,
-  visible = true,
 }: {
   data: BarCharObj[];
   clave?: string;
@@ -249,7 +215,6 @@ const SimpleBarChart = ({
   objetivo?: number;
   titulo: string;
   ref?: React.Ref<HTMLDivElement>;
-  visible?: boolean;
 }) => {
   const ticks = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
   return (
@@ -260,18 +225,8 @@ const SimpleBarChart = ({
         aspectRatio: 1.618,
         maxHeight: "300px",
         maxWidth: "600px",
-        ...(visible
-          ? {}
-          : {
-              position: "absolute",
-              left: "-100000px",
-              top: 0,
-              width: "1200px",
-              pointerEvents: "none",
-            }),
       }}
       className="mx-auto"
-      aria-hidden={!visible}
       ref={ref}
     >
       <h2 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "10px" }}>{titulo}</h2>
@@ -368,20 +323,125 @@ const SimpleBarChart = ({
   );
 };
 
-export function HitRate({
+/** Vistas que monta ListaReportes; "descarga" es la única que genera el PDF. */
+export type TipoVistaHitRate =
+  | "descarga"
+  | "tablas"
+  | "grafica-usuario"
+  | "grafica-transporte"
+  | "grafica-otros";
+
+type SeccionCentroCosto = { id: string; name: string; data: BarCharObj[] };
+
+function alcanceRedondeado(generadas: number, confirmadas: number): number {
+  const alcance = generadas > 0 ? confirmadas / generadas : 0;
+  return Number(alcance.toFixed(4));
+}
+
+/** Indexa por clave conservando el primer registro, igual que el .find anterior. */
+function indexar<T>(registros: T[], clave: (registro: T) => string | number) {
+  const mapa = new Map<string | number, T>();
+  for (const registro of registros) {
+    const llave = clave(registro);
+    if (!mapa.has(llave)) mapa.set(llave, registro);
+  }
+  return mapa;
+}
+
+function barrasPorUsuario(
+  generadas: HitRateUsuario[],
+  confirmadas: HitRateUsuario[],
+): BarCharObj[] {
+  const confirmadasPorUsuario = indexar(confirmadas, (registro) => registro.usuario);
+  return generadas.map((registro) => {
+    const totalConfirmadas = confirmadasPorUsuario.get(registro.usuario)?.total ?? 0;
+    const alcance = alcanceRedondeado(registro.total, totalConfirmadas);
+    return {
+      id: String(registro.usuario),
+      name: `${registro.nombres ?? ""} ${registro.apellidos ?? ""}`.trim(),
+      Alcance: alcance,
+      resto: 1 - alcance,
+      valor: Number((alcance * 100).toFixed(2)),
+      total: registro.total,
+      total_individual: totalConfirmadas,
+    };
+  });
+}
+
+function seccionesPorCentroCosto(
+  generadas: HitRateCentroCosto[],
+  confirmadas: HitRateCentroCosto[],
+): SeccionCentroCosto[] {
+  const confirmadasPorCc = indexar(confirmadas, (registro) => registro.cc);
+  return generadas.map((registro) => {
+    const totalConfirmadas = confirmadasPorCc.get(registro.cc)?.total ?? 0;
+    const alcance = alcanceRedondeado(registro.total, totalConfirmadas);
+    return {
+      id: String(registro.cc),
+      name: registro.nombres ?? "",
+      data: [
+        {
+          name: "Alcance",
+          value: alcance,
+          fill: color(0),
+          valor: (alcance * 100).toFixed(2),
+          total: registro.total,
+          total_individual: totalConfirmadas,
+        },
+        {
+          name: "Diferencial",
+          value: 1 - alcance,
+          fill: color(5),
+          valor: ((1 - alcance) * 100).toFixed(2),
+        },
+      ],
+    };
+  });
+}
+
+/** Fila "Alcance" de un centro de costo, nombrada con el centro de costo. */
+const filasAlcanceCc = (seccion: SeccionCentroCosto): BarCharObj[] =>
+  seccion.data
+    .filter((fila) => fila.name === "Alcance")
+    .map((fila) => ({ ...fila, name: seccion.name }));
+
+/** Consulta y transforma el reporte una vez por cambio de data. */
+function useDatosHitRate(filtros: Filtros) {
+  const consulta = useHitRate(filtros);
+  const { data } = consulta;
+  const datos = React.useMemo(
+    () => ({
+      hrpp: barrasPorUsuario(data?.global_by_user ?? [], data?.confirmadas_by_user ?? []),
+      hrse_terrestre: barrasPorUsuario(
+        data?.tipo_transporte_terrestre ?? [],
+        data?.confirmadas_tipo_transporte_terrestre ?? [],
+      ),
+      hrse_aereo: barrasPorUsuario(
+        data?.tipo_transporte_aereo ?? [],
+        data?.confirmadas_tipo_transporte_aereo ?? [],
+      ),
+      hrse_maritimo: barrasPorUsuario(
+        data?.tipo_transporte_maritimo ?? [],
+        data?.confirmadas_tipo_transporte_maritimo ?? [],
+      ),
+      hrse_cc: seccionesPorCentroCosto(data?.cc ?? [], data?.confirmadas_cc ?? []),
+    }),
+    [data],
+  );
+  return { consulta, datos };
+}
+
+/** Instancia oculta: monta las gráficas sin animación y genera el PDF al cambiar descargar. */
+function HitRateDescarga({
   filtros,
-  reconsultar,
-  tipo,
-  descargar = 0,
+  descargar,
   onErrorPdf,
   onGenerandoPdf,
 }: {
   filtros: Filtros;
-  reconsultar: number;
-  tipo: string;
-  descargar?: number;
-  onErrorPdf?: (mensaje: string | null) => void;
-  onGenerandoPdf?: (generando: boolean) => void;
+  descargar: number;
+  onErrorPdf?: ((mensaje: string | null) => void) | undefined;
+  onGenerandoPdf?: ((generando: boolean) => void) | undefined;
 }) {
   const hrpp_ref = React.useRef<HTMLDivElement>(null);
   const hrse_terrestre_ref = React.useRef<HTMLDivElement>(null);
@@ -389,90 +449,18 @@ export function HitRate({
   const hrse_maritimo_ref = React.useRef<HTMLDivElement>(null);
   const pieRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const ultimaDescarga = React.useRef(descargar);
-  const [errorPreparacionPdf, setErrorPreparacionPdf] = React.useState<string | null>(null);
+  const { generar, generando: generandoPdf } = usePdfReporte({
+    onError: onErrorPdf,
+    onGenerando: onGenerandoPdf,
+  });
+
   const {
-    generar,
-    generando: generandoPdf,
-    error: errorPdf,
-  } = usePdfReporte({ onError: onErrorPdf, onGenerando: onGenerandoPdf });
-
-  const tipoTransporte = React.useMemo(
-    () => filtros.cod_tipo_transporte?.label ?? "AEREO",
-    [filtros.cod_tipo_transporte],
-  );
-
-  const { data, isLoading, error, refetch } = useHitRate(filtros);
-
-  const barFormatArray = (arr1: formatArray, arr2: formatArray) =>
-    arr1.map<BarCharObj>((i) => {
-      const confirmadas = arr2?.find((c) => (c.usuario ? c.usuario === i.usuario : c.cc === i.cc));
-
-      const alcance = i.total > 0 ? (confirmadas?.total ?? 0) / i.total : 0;
-      const alcanceRounded = Number(alcance.toFixed(4));
-      return {
-        id: String(i.usuario ?? i.cc),
-        name: `${i.nombres ?? ""} ${i.apellidos ?? ""}`.trim(),
-        Alcance: alcanceRounded,
-        resto: 1 - alcanceRounded,
-        valor: Number((alcanceRounded * 100).toFixed(2)),
-        extra: 0.2,
-        total: i.total,
-        total_individual: confirmadas?.total ?? 0,
-      };
-    });
-  const pieFormatArray = (arr1: formatArray, arr2: formatArray) =>
-    arr1.map<{ id: string; name: string; data: BarCharObj[] }>((i) => {
-      const confirmadas = arr2?.find((c) => (c.usuario ? c.usuario === i.usuario : c.cc === i.cc));
-
-      const alcance = i.total > 0 ? (confirmadas?.total ?? 0) / i.total : 0;
-      const alcanceRounded = Number(alcance.toFixed(4));
-
-      return {
-        id: String(i.cc ?? i.usuario),
-        name: i.nombres ?? "",
-        data: [
-          {
-            name: "Alcance",
-            value: alcanceRounded,
-            fill: color(0),
-            valor: (alcanceRounded * 100).toFixed(2),
-            total: i.total,
-            total_individual: confirmadas?.total ?? 0,
-          },
-          {
-            name: "Diferencial",
-            value: 1 - alcanceRounded,
-            fill: color(5),
-            valor: ((1 - alcanceRounded) * 100).toFixed(2),
-          },
-        ],
-      };
-    });
-
-  const hrpp = barFormatArray(
-    (data?.global_by_user ?? []) as formatArray,
-    (data?.confirmadas_by_user ?? []) as formatArray,
-  );
-  const hrse_terrestre = barFormatArray(
-    (data?.tipo_transporte_terrestre ?? []) as formatArray,
-    (data?.confirmadas_tipo_transporte_terrestre ?? []) as formatArray,
-  );
-  const hrse_aereo = barFormatArray(
-    (data?.tipo_transporte_aereo ?? []) as formatArray,
-    (data?.confirmadas_tipo_transporte_aereo ?? []) as formatArray,
-  );
-  const hrse_maritimo = barFormatArray(
-    (data?.tipo_transporte_maritimo ?? []) as formatArray,
-    (data?.confirmadas_tipo_transporte_maritimo ?? []) as formatArray,
-  );
-  const hrse_cc = pieFormatArray(
-    (data?.cc ?? []) as formatArray,
-    (data?.confirmadas_cc ?? []) as formatArray,
-  );
+    consulta: { data, isLoading, error },
+    datos: { hrpp, hrse_terrestre, hrse_aereo, hrse_maritimo, hrse_cc },
+  } = useDatosHitRate(filtros);
 
   const generarPdf = React.useCallback(() => {
     if (generandoPdf) return;
-    setErrorPreparacionPdf(null);
     try {
       if (!data) throw new Error("Espera a que termine la consulta antes de descargar.");
       const seccionBarras = (
@@ -523,7 +511,7 @@ export function HitRate({
       ];
       generar({
         titulo: "Hit Rate",
-        archivo: `hit-rate-${format(new Date(), "ddMMyyyyhhmmss")}.pdf`,
+        archivo: `hit-rate-${format(new Date(), "ddMMyyyyHHmmss")}.pdf`,
         horizontal: true,
         header: {
           Período: `${format(filtros.fecha_inicio, "dd-MM-yyyy")} al ${format(filtros.fecha_fin, "dd-MM-yyyy")}`,
@@ -563,7 +551,7 @@ export function HitRate({
                         dato: `${Number(fila.valor ?? 0).toFixed(2)}%`,
                         alignFormat: { horizontal: "right" },
                       },
-                      Direfencial: {
+                      Diferencial: {
                         dato: `${(100 - Number(fila.valor ?? 0)).toFixed(2)}%`,
                         alignFormat: { horizontal: "right" },
                       },
@@ -586,9 +574,7 @@ export function HitRate({
       });
     } catch (causa) {
       // También informa errores previos al hook: fechas, encabezado o construcción del contenido.
-      const mensaje = causa instanceof Error ? causa.message : "No se pudo preparar el PDF.";
-      setErrorPreparacionPdf(mensaje);
-      onErrorPdf?.(mensaje);
+      onErrorPdf?.(causa instanceof Error ? causa.message : "No se pudo preparar el PDF.");
       onGenerandoPdf?.(false);
     }
   }, [
@@ -606,202 +592,150 @@ export function HitRate({
   ]);
 
   React.useEffect(() => {
-    const a = { filtros, reconsultar };
-    if (!a) return;
-    refetch();
-  }, [refetch, filtros, reconsultar]);
-
-  React.useEffect(() => {
     if (descargar === ultimaDescarga.current || !data) return;
     ultimaDescarga.current = descargar;
     generarPdf();
   }, [descargar, data, generarPdf]);
 
-  if (isLoading) return tipo === "descarga" ? null : <Loader />;
+  if (isLoading || error) return null;
 
-  if (error) return tipo === "descarga" ? null : <div>Error</div>;
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        left: "-100000px",
+        top: 0,
+        width: "1200px",
+        pointerEvents: "none",
+      }}
+    >
+      <SimpleBarChart
+        titulo="HRpp"
+        objetivo={objetivo}
+        data={hrpp}
+        ref={hrpp_ref}
+        isAnimationActive={false}
+      />
+      <SimpleBarChart
+        titulo="HRse Aereo"
+        objetivo={objetivo}
+        data={hrse_aereo}
+        ref={hrse_aereo_ref}
+        isAnimationActive={false}
+      />
+      <SimpleBarChart
+        titulo="HRse Terrestre"
+        objetivo={objetivo}
+        data={hrse_terrestre}
+        ref={hrse_terrestre_ref}
+        isAnimationActive={false}
+      />
+      <SimpleBarChart
+        titulo="HRse Maritimo"
+        objetivo={objetivo}
+        data={hrse_maritimo}
+        ref={hrse_maritimo_ref}
+        isAnimationActive={false}
+      />
+      {hrse_cc.map((item) => (
+        <SimplePieChart
+          key={item.id}
+          titulo={`HR ${item.name}`}
+          data={item.data}
+          isAnimationActive={false}
+          ref={(element) => {
+            pieRefs.current[item.id] = element;
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
-  // La instancia de descarga solo monta las gráficas necesarias para capturar el PDF.
-  if (tipo === "descarga")
-    return (
-      <div
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          left: "-100000px",
-          top: 0,
-          width: "1200px",
-          pointerEvents: "none",
-        }}
-      >
-        <SimpleBarChart
-          titulo="HRpp"
-          objetivo={objetivo}
-          data={hrpp}
-          ref={hrpp_ref}
-          isAnimationActive={false}
-        />
-        <SimpleBarChart
-          titulo="HRse Aereo"
-          objetivo={objetivo}
-          data={hrse_aereo}
-          ref={hrse_aereo_ref}
-          isAnimationActive={false}
-        />
-        <SimpleBarChart
-          titulo="HRse Terrestre"
-          objetivo={objetivo}
-          data={hrse_terrestre}
-          ref={hrse_terrestre_ref}
-          isAnimationActive={false}
-        />
-        <SimpleBarChart
-          titulo="HRse Maritimo"
-          objetivo={objetivo}
-          data={hrse_maritimo}
-          ref={hrse_maritimo_ref}
-          isAnimationActive={false}
-        />
-        {hrse_cc.map((item) => (
-          <SimplePieChart
-            key={item.id}
-            titulo={`HR ${item.name}`}
-            data={item.data}
-            isAnimationActive={false}
-            ref={(element) => {
-              pieRefs.current[item.id] = element;
-            }}
-          />
-        ))}
-      </div>
-    );
+/** Vistas en pantalla: solo renderizan lo visible (el PDF lo genera HitRateDescarga). */
+function HitRateVista({ filtros, tipo }: { filtros: Filtros; tipo: TipoVistaHitRate }) {
+  const {
+    consulta: { isLoading, error },
+    datos: { hrpp, hrse_terrestre, hrse_aereo, hrse_maritimo, hrse_cc },
+  } = useDatosHitRate(filtros);
+
+  const tipoTransporte = filtros.cod_tipo_transporte?.label ?? "AEREO";
+  const transporte =
+    tipoTransporte === "TERRESTRE"
+      ? { titulo: "HRse Terrestre", data: hrse_terrestre }
+      : tipoTransporte === "AEREO"
+        ? { titulo: "HRse Aereo", data: hrse_aereo }
+        : tipoTransporte === "MARITIMO"
+          ? { titulo: "HRse Maritimo", data: hrse_maritimo }
+          : null;
+
+  if (isLoading) return <Loader />;
+
+  if (error) return <div>Error</div>;
 
   return (
     <div className="flex flex-col gap-4 bg-background w-full">
-      {errorPreparacionPdf || errorPdf ? (
-        <p role="alert" className="text-sm text-destructive">
-          {errorPreparacionPdf ?? errorPdf}
-        </p>
-      ) : null}
-
       <div className={clase}>
-        {tipo.split("-")[0] === "tablas" && (
-          <div className={cn("w-full")}>
+        {tipo === "tablas" && (
+          <div className="w-full">
             <GenerarTabla objetivo={objetivo * 100} data={hrpp} />
-            <GenerarTabla
-              visible={tipoTransporte === "TERRESTRE"}
-              objetivo={objetivo * 100}
-              data={hrse_terrestre}
-            />
-            <GenerarTabla
-              visible={tipoTransporte === "AEREO"}
-              objetivo={objetivo * 100}
-              data={hrse_aereo}
-            />
-            <GenerarTabla
-              visible={tipoTransporte === "MARITIMO"}
-              objetivo={objetivo * 100}
-              data={hrse_maritimo}
-            />
-            {hrse_cc.map((i) => (
-              <div className="flex flex-col" key={i.id}>
-                <GenerarTabla
-                  diferencial
-                  data={i.data
-                    .filter((i) => i.name === "Alcance")
-                    .map((a) => ({ ...a, name: i.name }))}
-                />
+            {transporte && <GenerarTabla objetivo={objetivo * 100} data={transporte.data} />}
+            {hrse_cc.map((seccion) => (
+              <div className="flex flex-col" key={seccion.id}>
+                <GenerarTabla diferencial data={filasAlcanceCc(seccion)} />
               </div>
             ))}
           </div>
         )}
-        {tipo.split("-")[0] === "grafica" && (
-          <div className={cn("w-full")}>
-            {tipo.split("-")[1] === "usuario" && (
-              <>
-                <SimpleBarChart
-                  titulo="HRpp"
-                  objetivo={objetivo}
-                  data={hrpp}
-                  ref={hrpp_ref}
-                  isAnimationActive={!generandoPdf}
-                />
-                <GenerarTabla objetivo={objetivo * 100} data={hrpp} />
-              </>
-            )}
-            {tipo.split("-")[1] === "transporte" && (
-              <>
-                <SimpleBarChart
-                  visible={tipoTransporte === "TERRESTRE"}
-                  titulo="HRse Terrestre"
-                  objetivo={objetivo}
-                  data={hrse_terrestre}
-                  ref={hrse_terrestre_ref}
-                  isAnimationActive={!generandoPdf}
-                />
-                <GenerarTabla
-                  visible={tipoTransporte === "TERRESTRE"}
-                  objetivo={objetivo * 100}
-                  data={hrse_terrestre}
-                />
-              </>
-            )}
-            {tipo.split("-")[1] === "transporte" && (
-              <>
-                <SimpleBarChart
-                  visible={tipoTransporte === "AEREO"}
-                  titulo="HRse Aereo"
-                  objetivo={objetivo}
-                  data={hrse_aereo}
-                  ref={hrse_aereo_ref}
-                  isAnimationActive={!generandoPdf}
-                />
-                <GenerarTabla
-                  visible={tipoTransporte === "AEREO"}
-                  objetivo={objetivo * 100}
-                  data={hrse_aereo}
-                />
-              </>
-            )}
-            {tipo.split("-")[1] === "transporte" && (
-              <>
-                <SimpleBarChart
-                  visible={tipoTransporte === "MARITIMO"}
-                  titulo="HRse Maritimo"
-                  objetivo={objetivo}
-                  data={hrse_maritimo}
-                  ref={hrse_maritimo_ref}
-                  isAnimationActive={!generandoPdf}
-                />
-                <GenerarTabla
-                  visible={tipoTransporte === "MARITIMO"}
-                  objetivo={objetivo * 100}
-                  data={hrse_maritimo}
-                />
-              </>
-            )}
-            {tipo.split("-")[1] === "otros" &&
-              hrse_cc.map((i) => (
-                <div className="mb-5 w-full grid grid-cols-2" key={i.id}>
-                  <GenerarTabla
-                    diferencial
-                    data={i.data
-                      .filter((i) => i.name === "Alcance")
-                      .map((a) => ({ ...a, name: i.name }))}
-                  />
-                  <SimplePieChart
-                    titulo={`HR ${i.name}`}
-                    data={i.data}
-                    isAnimationActive={!generandoPdf}
-                    ref={(element) => {
-                      pieRefs.current[i.id] = element;
-                    }}
-                  />
-                </div>
-              ))}
+        {tipo === "grafica-usuario" && (
+          <div className="w-full">
+            <SimpleBarChart titulo="HRpp" objetivo={objetivo} data={hrpp} />
+            <GenerarTabla objetivo={objetivo * 100} data={hrpp} />
+          </div>
+        )}
+        {tipo === "grafica-transporte" && transporte && (
+          <div className="w-full">
+            <SimpleBarChart titulo={transporte.titulo} objetivo={objetivo} data={transporte.data} />
+            <GenerarTabla objetivo={objetivo * 100} data={transporte.data} />
+          </div>
+        )}
+        {tipo === "grafica-otros" && (
+          <div className="w-full">
+            {hrse_cc.map((seccion) => (
+              <div className="mb-5 w-full grid grid-cols-2" key={seccion.id}>
+                <GenerarTabla diferencial data={filasAlcanceCc(seccion)} />
+                <SimplePieChart titulo={`HR ${seccion.name}`} data={seccion.data} />
+              </div>
+            ))}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+export function HitRate({
+  filtros,
+  tipo,
+  descargar = 0,
+  onErrorPdf,
+  onGenerandoPdf,
+}: {
+  filtros: Filtros;
+  tipo: TipoVistaHitRate;
+  descargar?: number;
+  onErrorPdf?: (mensaje: string | null) => void;
+  onGenerandoPdf?: (generando: boolean) => void;
+}) {
+  return tipo === "descarga" ? (
+    <HitRateDescarga
+      filtros={filtros}
+      descargar={descargar}
+      onErrorPdf={onErrorPdf}
+      onGenerandoPdf={onGenerandoPdf}
+    />
+  ) : (
+    <HitRateVista filtros={filtros} tipo={tipo} />
   );
 }

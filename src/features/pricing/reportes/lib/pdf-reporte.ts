@@ -4,6 +4,13 @@ import { capturarGrafica } from "./capturar-grafica";
 
 // Recurso público insertado directamente por jsPDF; no se importa ni se carga con Promise.
 const LOGO_URL = "/images/logo-cropa-dsv-1024x205.png";
+// Con una ruta, addImage hace un XHR síncrono en cada llamada (cada página) antes de
+// revisar el alias. Se descarga una sola vez y se reutiliza en todos los PDF.
+let logo: string | undefined;
+function datosLogo(doc: jsPDF): string {
+  logo ??= doc.loadFile(LOGO_URL, true) || undefined;
+  return logo ?? LOGO_URL;
+}
 type ValorTexto = string | number | boolean | null | undefined;
 /** Formato de celdas del legacy: conserva dato, moneda, alineación y color ARGB. */
 export type CeldaReporte = {
@@ -145,7 +152,7 @@ export function generarPdfReporte(
         doc.setTextColor("#000000");
         doc.setDrawColor("#000000");
         // Logo de 195 x 39 puntos; las coordenadas siguientes pertenecen a esta plantilla.
-        doc.addImage(LOGO_URL, "PNG", margen - 19.6, 20, 195, 39);
+        doc.addImage(datosLogo(doc), "PNG", margen - 19.6, 20, 195, 39, "logo-reporte");
         const xTitulo = margen - 19.6 + 202.8;
         doc.line(xTitulo, 56.4, anchoPagina - margen, 56.4);
         doc.setFont("Helvetica", "bold");
