@@ -429,6 +429,12 @@ export function useFormulario({
 
   // ── onInput: cambiar un campo ──────────────────────────────────────────────
 
+  // Ref a la versión más reciente para no recrear onInput en cada cambio de valores.
+  const obtenerCatalogoByIdRef = React.useRef(obtenerCatalogoById);
+  React.useEffect(() => {
+    obtenerCatalogoByIdRef.current = obtenerCatalogoById;
+  }, [obtenerCatalogoById]);
+
   const onInput = React.useCallback(
     ({ id, val }: { id: string; val: unknown }) => {
       setValues((prev) => {
@@ -474,53 +480,32 @@ export function useFormulario({
             next.cod_tipo = getPlainValue(metodoCalculoSeleccionado);
           }
 
-          const normalizarTexto = (texto: unknown) =>
-            String(texto ?? "")
-              .trim()
-              .toLowerCase();
+          // Solo los rubros con clasificaciones preestablecidas (flete / express) restringen la
+          // clasificación; para los demás se conserva la que ya estaba seleccionada.
+          const rubroConClasificacion = val as { label?: string; es_flete?: boolean } | null;
+          const rubroTieneClasificacionPreestablecida =
+            rubroConClasificacion?.es_flete === true ||
+            String(rubroConClasificacion?.label ?? "")
+              .toLowerCase()
+              .includes("express");
 
-          const rubroLabel = normalizarTexto(rubroSeleccionado?.label);
+          const tipoClasificacionActual = prev.tipoClasificacion as { value?: unknown } | null;
 
-          const rubroEsFlete = rubroLabel.includes("flete");
-          const rubroEsExpress = rubroLabel.includes("express");
+          if (rubroTieneClasificacionPreestablecida && tipoClasificacionActual != null) {
+            // Mismo filtro que las opciones que muestra el select con el nuevo rubro.
+            const clasificacionesDisponibles = obtenerCatalogoByIdRef.current("tipoClasificacion", {
+              ...prev,
+              rubro: val,
+            }) as readonly TipoOption[];
 
-          const tipoTransporteSeleccionado = prev.tipoTransporte as TipoOption | null;
+            const sigueDisponible = clasificacionesDisponibles.some(
+              (ct) => ct.value === tipoClasificacionActual.value,
+            );
 
-          const clasificacionesDisponibles = (
-            (catalogosProcesados?.tiposClasificacion || []) as readonly TipoRelacionadoOption[]
-          ).filter((ct) => {
-            const esDelTipoTransporte =
-              ct.cod_tipo_padre === tipoTransporteSeleccionado?.value &&
-              ct.tipo_padre_tabla === "TRANSPORTE" &&
-              ct.tipo_tabla === "CLASIFICACION_SERVICIO";
-
-            if (!esDelTipoTransporte) return false;
-
-            const clasificacionLabel = normalizarTexto(ct.label);
-
-            const clasificacionEsFlete = clasificacionLabel === "flete";
-            const clasificacionEsFleteExpress = clasificacionLabel === "flete express";
-
-            if (rubroEsFlete && rubroEsExpress) {
-              return clasificacionEsFleteExpress;
+            if (!sigueDisponible) {
+              next.tipoClasificacion = null;
+              next.clasificacion = null;
             }
-
-            if (rubroEsFlete) {
-              return clasificacionEsFlete;
-            }
-
-            return !clasificacionEsFlete && !clasificacionEsFleteExpress;
-          });
-
-          const tipoClasificacionActual = prev.tipoClasificacion as { value?: number } | null;
-
-          const tipoClasificacionActualSigueDisponible = clasificacionesDisponibles.some(
-            (ct) => ct.value === tipoClasificacionActual?.value,
-          );
-
-          if (!tipoClasificacionActualSigueDisponible) {
-            next.tipoClasificacion = null;
-            next.clasificacion = null;
           }
         }
 
