@@ -1,0 +1,754 @@
+diff --git a/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md b/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md
+index 90c0909587725d2578a8a1e20880fd12f26ef5c8..b25e57eb1847cf9ec357d44b0546f81a208c215f 100644
+--- a/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md
++++ b/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md
+@@ -9,6 +9,7 @@ cotizacion/calculo/
+ │  ├─ constantes.ts     ← CÓDIGOS de negocio (TIPO_PAGO.COLLECT = 127, RUBRO.SCALLING = 134, ...)
+ │  ├─ utils.ts          ← FUNCIONES pequeñas compartidas (mismoId, numero, normalizarBoolean, limpiarNumero, buscarMoneda, ...)
+ │  ├─ rubros-manuales.ts← rubros con valor manual (ABIERTO / COSTO_PORCENTAJE), compartido por Due Agent y Due Carrier
++│  ├─ porcentajes-rubros.ts ← método PORCENTAJE: rubro = % (entero) de otro rubro (cod_rubro), con mínimos
+ │  ├─ catalogos.ts      ← normalización de catálogos a { value, label }
+ │  ├─ cabecera.ts       ← CAMPOS DE LA CABECERA (definición única)
+ │  ├─ detalle-flete.ts  ← TEXTO DEL DETALLE DE FLETE por tipo de transporte
+@@ -152,6 +153,7 @@ el cálculo y muestra un aviso si faltan estados. Dentro del cálculo se usa `us
+ | 6   | Due Agent         | `use-rubros-due-agent`           | `due-agent.ts`                                   | `due-agent`                   |
+ | 7   | Due Carrier/Spot  | `use-rubros-due-carrier`         | `due-carrier.ts`                                 | `due-carrier`, `dialogo-spot` |
+ | 8   | Scalling          | `use-rubros-scalling`            | `scalling.ts`                                    | `scalling`                    |
++| 8b  | Método Porcentaje | `use-porcentajes-rubros`         | `porcentajes-rubros.ts`                          | (Due Carrier / Due Agent)     |
+ | 9   | Totales           | `use-totales-rubros`             | `totales-rubros.ts`, `agrupacion-rubros.ts`      | `totales-rubros`              |
+ | 10  | Guardar           | `use-guardar-version-cotizacion` | `guardar-version.ts`                             | `spot-documento-dialog`       |
+ 
+@@ -162,8 +164,5 @@ el cálculo y muestra un aviso si faltan estados. Dentro del cálculo se usa `us
+ - Las reglas especiales del formulario que dependen de otros valores (por ejemplo: ciudad obligatoria solo si es
+   TERRESTRE, países filtrados para terrestre) siguen en `hooks/use-formulario-cotizacion.ts`
+   (`verificarSiEsRequerido`, `obtenerCatalogoById`).
+-- `lib/porcentajes-rubros.ts` (`calcularPorcentajesRubros`: rubro cuyo importe es un % de otro rubro) no está
+-  conectado a ningún flujo. Confirmar con backend si el importe ya llega calculado (entonces borrar el archivo)
+-  o conectarlo antes de los totales.
+ - `lib/totales-rubros.ts` busca la moneda con comparación estricta (`cod_moneda === codMoneda`); si el backend
+   manda el código como texto y el catálogo como número, el rubro no suma. Revisar si debe usar `buscarMoneda`.
+diff --git a/src/features/pricing/cotizacion/calculo/components/calculo-cotizacion.tsx b/src/features/pricing/cotizacion/calculo/components/calculo-cotizacion.tsx
+index 212bed4679bbcc35ceb5e2614001c5d6aa160c17..3a438b0ab7c2f5a67ad4652ec2f3a9928bb26ddb 100644
+--- a/src/features/pricing/cotizacion/calculo/components/calculo-cotizacion.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/calculo-cotizacion.tsx
+@@ -12,6 +12,7 @@ import { useCriteriosCotizacion } from "../hooks/use-criterios-cotizacion";
+ import { useEstadosCalculo } from "../hooks/use-estados-cotizacion";
+ import { useGuardarVersionCotizacion } from "../hooks/use-guardar-version-cotizacion";
+ import { usePdfCotizacion } from "../hooks/use-pdf-cotizacion";
++import { usePorcentajesRubros } from "../hooks/use-porcentajes-rubros";
+ import { useRubrosCotizacion } from "../hooks/use-rubros-cotizacion";
+ import { useRubrosDueAgent } from "../hooks/use-rubros-due-agent";
+ import { useRubrosDueCarrier } from "../hooks/use-rubros-due-carrier";
+@@ -33,6 +34,9 @@ import { TotalesRubros } from "./totales-rubros";
+ import { SeccionConLoader } from "./utils";
+ import { VersionesTable } from "./versiones-table";
+ 
++/** Arreglo vacío estable (evita recalcular memos en cada render). */
++const SIN_RUBROS: Record<string, unknown>[] = [];
++
+ type Props = {
+   /** Cabecera de la cotización (campos definidos en lib/cabecera.ts). */
+   cotizacion: CotizacionParaCalculo;
+@@ -407,7 +411,7 @@ function DetalleCalculoCotizacion({
+     [calculo.calcularDueCarrierBasadoEnDueAgent, entidadEfectivaId],
+   );
+ 
+-  const dueAgent = useRubrosDueAgent({
++  const dueAgentBase = useRubrosDueAgent({
+     rubros: rubros.rubrosDueAgent as Parameters<typeof useRubrosDueAgent>[0]["rubros"],
+ 
+     lectura: isReadOnly,
+@@ -450,13 +454,13 @@ function DetalleCalculoCotizacion({
+     [rubros.rubrosDueCarrier, carrier.tarifasSpot],
+   );
+ 
+-  const dueCarrier = useRubrosDueCarrier({
++  const dueCarrierBase = useRubrosDueCarrier({
+     rubros: rubrosDueCarrierConSpot as Parameters<typeof useRubrosDueCarrier>[0]["rubros"],
+ 
+     lectura: isReadOnly,
+   });
+ 
+-  const dueCarrierDesdeAgent = useRubrosDueCarrier({
++  const dueCarrierDesdeAgentBase = useRubrosDueCarrier({
+     rubros: calculo.dueCarrierBasadoEnDueAgent as Parameters<
+       typeof useRubrosDueCarrier
+     >[0]["rubros"],
+@@ -523,6 +527,22 @@ function DetalleCalculoCotizacion({
+     calculoContextKey: calculo.calculoContextKey,
+   });
+ 
++  /* ==========================================================================
++   * MÉTODO PORCENTAJE (rubro = % de otro rubro, de cualquier sección)
++   * ========================================================================== */
++
++  const rubrosScallingAplicados = tieneScalling ? scalling.rutasProcesadas : SIN_RUBROS;
++
++  const { dueCarrier, dueAgent, dueCarrierDesdeAgent } = usePorcentajesRubros({
++    dueCarrier: dueCarrierBase,
++    dueAgent: dueAgentBase,
++    dueCarrierDesdeAgent: dueCarrierDesdeAgentBase,
++    rubrosScalling: rubrosScallingAplicados as Parameters<
++      typeof usePorcentajesRubros
++    >[0]["rubrosScalling"],
++    lectura: isReadOnly,
++  });
++
+   /* ==========================================================================
+    * TOTAL
+    * ========================================================================== */
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts b/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts
+index b51a03a8ee011b85c6030783687a09f6939c4ecf..badc6978cb08a5b140bc6c693988cad5bdaf46b1 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts
+@@ -227,6 +227,25 @@ function entidadAOption(entidadOrigen: object): OpcionFormularioCotizacion | nul
+   } satisfies OpcionFormularioCotizacion;
+ }
+ 
++/** Convierte entidades a opciones descartando las que repiten `value` (la key del combobox). */
++function entidadesAOpcionesUnicas(entidades: readonly object[]): OpcionFormularioCotizacion[] {
++  const vistos = new Set<string>();
++  const opciones: OpcionFormularioCotizacion[] = [];
++
++  for (const entidad of entidades) {
++    const opcion = entidadAOption(entidad);
++    if (!opcion) continue;
++
++    const clave = String(opcion.value).trim();
++    if (vistos.has(clave)) continue;
++
++    vistos.add(clave);
++    opciones.push(opcion);
++  }
++
++  return opciones;
++}
++
+ function contactoAOption(contactoOrigen: object): OpcionFormularioCotizacion | null {
+   const contacto = contactoOrigen as Record<string, unknown>;
+   const contactoId = contacto.entidadcontacto_id;
+@@ -450,14 +469,7 @@ export function useFormularioCotizacion({
+ 
+     // 2. Usamos los datos devueltos por esa solicitud,
+     //    en lugar de clientes.data, que puede pertenecer al render anterior
+-    return (resultado.data?.entidades ?? []).reduce((acc, item) => {
+-      const opcion = entidadAOption(item);
+-      if (opcion && !acc.some((a) => String(a.value).trim() === String(opcion.value).trim())) {
+-        acc.push(opcion);
+-      }
+-
+-      return acc;
+-    }, [] as OpcionFormularioCotizacion[]);
++    return entidadesAOpcionesUnicas(resultado.data?.entidades ?? []);
+   }, []);
+ 
+   const entidadIdActual =
+@@ -486,10 +498,9 @@ export function useFormularioCotizacion({
+   );
+ 
+   const clientesEncontrados = React.useMemo<OpcionFormularioCotizacion[]>(
+-    () =>
+-      (clientesQuery.data?.entidades ?? [])
+-        .map(entidadAOption)
+-        .filter((item): item is OpcionFormularioCotizacion => item != null),
++    // Sin duplicados: el backend puede devolver la misma entidad más de una vez
++    // (ej. como CLIENTE y PRE-CLIENTE) y el combobox usa el value como key.
++    () => entidadesAOpcionesUnicas(clientesQuery.data?.entidades ?? []),
+     [clientesQuery.data],
+   );
+ 
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-gestion-cotizaciones.ts b/src/features/pricing/cotizacion/calculo/hooks/use-gestion-cotizaciones.ts
+index 47c7210dca5c8df04b25374ac664f404ff48dddf..051acde22be5366ac7d298637feaa61b00500297 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-gestion-cotizaciones.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-gestion-cotizaciones.ts
+@@ -7,6 +7,7 @@ import {
+   type CotizacionCabecera,
+   type CotizacionCabeceraPayload,
+   cotizacionCabeceraSchema,
++  cotizacionesCabeceraOptions,
+   type FiltrosCotizacionesCabecera,
+   useActualizarCotizacionCabecera,
+   useConfirmarCotizacionCabecera,
+@@ -16,7 +17,7 @@ import {
+   useValidarElegibilidadCotizacion,
+ } from "../api/cotizacion-cabecera";
+ import { VERSIONES_QUERY_KEY } from "../api/versiones";
+-import { CAMPOS_FILTRO, CAMPOS_FILTRO_API } from "../lib/cabecera";
++import { CAMPOS_CABECERA, CAMPOS_FILTRO, CAMPOS_FILTRO_API } from "../lib/cabecera";
+ import { COD_ESTADO_OCULTO_LEGADO, TIPO_PAGO } from "../lib/constantes";
+ import type { Id } from "../lib/tipos";
+ import { mismoId } from "../lib/utils";
+@@ -138,6 +139,34 @@ function obtenerEstadoVisual(payload: CotizacionCabeceraPayload): Id | null {
+   return null;
+ }
+ 
++/**
++ * Todos los campos de la cabecera en null. El payload los sobrescribe; así los que
++ * el formulario no envía (estado_nombre, usuario, peso, volumen) cumplen el esquema.
++ */
++const CAMPOS_CABECERA_NULOS = Object.fromEntries(
++  Object.values(CAMPOS_CABECERA).map((campo) => [campo.cod, null]),
++);
++
++/**
++ * Cabecera local tras insertar, usada mientras llega (o si falla) la consulta
++ * al backend. No usa `parse`: un campo que el formulario no envía no debe
++ * impedir salir del modo "ingreso".
++ */
++function construirCotizacionLocal(
++  payload: CotizacionCabeceraPayload,
++  codCotizacionCabecera: Id,
++): CotizacionCabecera {
++  const candidato = {
++    ...CAMPOS_CABECERA_NULOS,
++    ...payload,
++    cod_cotizacion_cabecera: codCotizacionCabecera,
++  };
++
++  const parsed = cotizacionCabeceraSchema.safeParse(candidato);
++
++  return parsed.success ? parsed.data : (candidato as CotizacionCabecera);
++}
++
+ export function useGestionCotizaciones({
+   filtrosIniciales = {},
+   estados,
+@@ -338,6 +367,47 @@ export function useGestionCotizaciones({
+   const validarElegibilidadMutateAsync = validarElegibilidadMutation.mutateAsync;
+   const confirmarMutateAsync = confirmarMutation.mutateAsync;
+ 
++  /**
++   * Consulta una cotización recién guardada.
++   *
++   * 1. Busca en el listado actual (onSuccess del insert ya lo invalidó y recargó).
++   * 2. Si no aparece (los filtros activos la excluyen), consulta el listado
++   *    con los filtros de backend que tiene la propia cotización.
++   *
++   * Devuelve null si no se encuentra o si la consulta falla.
++   */
++  const consultarCotizacion = React.useCallback(
++    async (codCotizacionCabecera: Id, payload: CotizacionCabeceraPayload) => {
++      const buscar = (lista: CotizacionCabecera[] | undefined) =>
++        (lista ?? []).find((item) =>
++          mismoId(item.cod_cotizacion_cabecera, codCotizacionCabecera),
++        ) ?? null;
++
++      try {
++        const enListado = buscar(
++          await queryClient.fetchQuery(cotizacionesCabeceraOptions(filtrosConsulta)),
++        );
++
++        if (enListado) return enListado;
++
++        const filtrosPropios: FiltrosCotizacionesCabecera = {};
++
++        for (const cod of CAMPOS_FILTRO_API) {
++          const value = payload[cod];
++
++          if (typeof value === "string" || typeof value === "number") {
++            filtrosPropios[cod] = value;
++          }
++        }
++
++        return buscar(await queryClient.fetchQuery(cotizacionesCabeceraOptions(filtrosPropios)));
++      } catch {
++        return null;
++      }
++    },
++    [queryClient, filtrosConsulta],
++  );
++
+   const insertarCotizacion = React.useCallback(
+     async (cotizacion: CotizacionCabeceraPayload) => {
+       const payload: CotizacionCabeceraPayload = {
+@@ -346,18 +416,29 @@ export function useGestionCotizaciones({
+       };
+ 
+       const result = await insertarMutation.mutateAsync(payload);
++      const codInsertado = result.cod_cotizacion_cabecera;
+ 
+-      const cotizacionInsertada = cotizacionCabeceraSchema.parse({
+-        ...payload,
+-        cod_cotizacion_cabecera: result.cod_cotizacion_cabecera,
+-      });
++      /*
++       * La cabecera YA existe en el backend: se sale del modo "ingreso" antes
++       * de cualquier otra cosa. Así, aunque la consulta posterior falle, el
++       * siguiente guardado actualiza en vez de insertar otra cotización.
++       */
++      const cotizacionLocal = construirCotizacionLocal(payload, codInsertado);
+ 
+-      setCotizacionSeleccionada(cotizacionInsertada);
+       setIsNewCotizacion(false);
++      setCotizacionSeleccionada(cotizacionLocal);
++
++      const cotizacionConsultada = await consultarCotizacion(codInsertado, payload);
++
++      if (cotizacionConsultada) {
++        setCotizacionSeleccionada(cotizacionConsultada);
++        // Reconstruye el formulario con lo que devolvió el backend (modo edición).
++        setFormResetKey((prev) => prev + 1);
++      }
+ 
+-      return cotizacionInsertada;
++      return cotizacionConsultada ?? cotizacionLocal;
+     },
+-    [estados.ACTIVO, insertarMutation],
++    [estados.ACTIVO, insertarMutation, consultarCotizacion],
+   );
+ 
+   const actualizarCotizacion = React.useCallback(
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-porcentajes-rubros.ts b/src/features/pricing/cotizacion/calculo/hooks/use-porcentajes-rubros.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..e1e8993060364def386aa37479bc742fd21e5cee
+--- /dev/null
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-porcentajes-rubros.ts
+@@ -0,0 +1,131 @@
++import React from "react";
++import { calcularTotalDueAgent } from "../lib/due-agent";
++import { calcularTotalesDueCarrier } from "../lib/due-carrier";
++import { calcularPorcentajesRubros } from "../lib/porcentajes-rubros";
++import type { Registro } from "../lib/tipos";
++import { useCatalogosCotizacion } from "./use-catalogos-cotizacion";
++import type { useRubrosDueAgent } from "./use-rubros-due-agent";
++import type { useRubrosDueCarrier } from "./use-rubros-due-carrier";
++
++type ControllerDueCarrier = ReturnType<typeof useRubrosDueCarrier>;
++type ControllerDueAgent = ReturnType<typeof useRubrosDueAgent>;
++
++type Props = {
++  dueCarrier: ControllerDueCarrier;
++  dueAgent: ControllerDueAgent;
++  dueCarrierDesdeAgent: ControllerDueCarrier;
++  /** Rutas Scalling aplicadas: solo sirven de base, no se recalculan aquí. */
++  rubrosScalling: Registro[];
++  lectura: boolean;
++};
++
++/**
++ * Aplica el método Porcentaje (rubro = % de otro rubro, ver
++ * lib/porcentajes-rubros.ts) a Due Carrier, Due Agent y Carrier basado en Agent.
++ *
++ * El rubro base puede estar en otra sección, por eso se calcula aquí, con todos
++ * los rubros aplicados, y no dentro de cada hook. Devuelve los mismos
++ * controllers con `rubros` / `seleccionados` y totales actualizados.
++ *
++ * En lectura no se recalcula: los importes guardados ya vienen calculados.
++ */
++export function usePorcentajesRubros({
++  dueCarrier,
++  dueAgent,
++  dueCarrierDesdeAgent,
++  rubrosScalling,
++  lectura,
++}: Props) {
++  const { monedas } = useCatalogosCotizacion().calculo;
++
++  /*
++   * Las dependencias son los arreglos (estables entre renders), no los
++   * controllers, que son objetos nuevos en cada render. Si ningún rubro es
++   * Porcentaje se devuelven los mismos arreglos.
++   */
++  const calculado = React.useMemo(() => {
++    if (lectura) {
++      return {
++        carrier: dueCarrier.rubros,
++        agent: dueAgent.seleccionados,
++        desdeAgent: dueCarrierDesdeAgent.rubros,
++      };
++    }
++
++    const bases: Registro[] = [
++      ...dueCarrier.rubros,
++      ...dueAgent.seleccionados,
++      ...dueCarrierDesdeAgent.rubros,
++      ...rubrosScalling,
++    ];
++
++    return {
++      carrier: mismoArregloSiNoCambia(
++        dueCarrier.rubros,
++        calcularPorcentajesRubros(dueCarrier.rubros, bases),
++      ),
++      agent: mismoArregloSiNoCambia(
++        dueAgent.seleccionados,
++        calcularPorcentajesRubros(dueAgent.seleccionados, bases),
++      ),
++      desdeAgent: mismoArregloSiNoCambia(
++        dueCarrierDesdeAgent.rubros,
++        calcularPorcentajesRubros(dueCarrierDesdeAgent.rubros, bases),
++      ),
++    };
++  }, [
++    lectura,
++    dueCarrier.rubros,
++    dueAgent.seleccionados,
++    dueCarrierDesdeAgent.rubros,
++    rubrosScalling,
++  ]);
++
++  const totalesCarrier = React.useMemo(
++    () => totalesDueCarrier(calculado.carrier, dueCarrier.rubros, monedas),
++    [calculado.carrier, dueCarrier.rubros, monedas],
++  );
++
++  const totalesDesdeAgent = React.useMemo(
++    () => totalesDueCarrier(calculado.desdeAgent, dueCarrierDesdeAgent.rubros, monedas),
++    [calculado.desdeAgent, dueCarrierDesdeAgent.rubros, monedas],
++  );
++
++  const totalDueAgent = React.useMemo(
++    () =>
++      calculado.agent === dueAgent.seleccionados ? null : calcularTotalDueAgent(calculado.agent),
++    [calculado.agent, dueAgent.seleccionados],
++  );
++
++  return {
++    dueCarrier: totalesCarrier
++      ? { ...dueCarrier, rubros: calculado.carrier, ...totalesCarrier }
++      : dueCarrier,
++    dueAgent:
++      totalDueAgent == null
++        ? dueAgent
++        : { ...dueAgent, seleccionados: calculado.agent, totalDueAgent },
++    dueCarrierDesdeAgent: totalesDesdeAgent
++      ? { ...dueCarrierDesdeAgent, rubros: calculado.desdeAgent, ...totalesDesdeAgent }
++      : dueCarrierDesdeAgent,
++  };
++}
++
++function mismoArregloSiNoCambia<T>(original: T[], calculado: T[]): T[] {
++  return calculado.every((item, index) => item === original[index]) ? original : calculado;
++}
++
++/** Totales de Due Carrier solo si el método Porcentaje cambió algún rubro. */
++function totalesDueCarrier(
++  rubros: ControllerDueCarrier["rubros"],
++  original: ControllerDueCarrier["rubros"],
++  monedas: Parameters<typeof calcularTotalesDueCarrier>[0]["monedas"],
++) {
++  if (rubros === original) return null;
++  const totalPorMoneda = calcularTotalesDueCarrier({ rubros, monedas });
++  const total = Object.values(totalPorMoneda).reduce(
++    (acumulado, item) => acumulado + item.total,
++    0,
++  );
++  return { totalPorMoneda, total };
++}
+diff --git a/src/features/pricing/cotizacion/calculo/lib/costo-porcentaje.ts b/src/features/pricing/cotizacion/calculo/lib/costo-porcentaje.ts
+index 497e6ab76b8a20f184c4ca4fcfa527198f3a2598..de5ee86ed8103b030d0884eb7eb171f274d318e3 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/costo-porcentaje.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/costo-porcentaje.ts
+@@ -14,13 +14,16 @@ export function calcularVentaCostoPorcentaje(item: Registro, valorCosto: string
+   const servicio = registro(item.servicio);
+   const metodo = registro(servicio.metodo ?? item.metodo);
+   const costo = Number(valorCosto);
+-  const factor = Number(metodo.porcentaje_venta ?? 0);
+   const minimo = Number(metodo.minimo_venta ?? 0);
+   const tipo = metodo.es_porcentaje;
+   const esPorcentaje =
+     tipo === true ||
+     tipo === 1 ||
+     (typeof tipo === "string" && ["1", "true"].includes(tipo.trim().toLowerCase()));
++  // Tarifas guarda el porcentaje en enteros (25.26 = 25.26 %) → factor 0.2526.
++  // Si es valor fijo se usa tal cual.
++  const valorTarifa = Number(metodo.porcentaje_venta ?? 0);
++  const factor = esPorcentaje ? valorTarifa / 100 : valorTarifa;
+ 
+   if (!Number.isFinite(costo) || !Number.isFinite(factor) || !Number.isFinite(minimo)) {
+     return { costo: 0, venta: 0 };
+diff --git a/src/features/pricing/cotizacion/calculo/lib/porcentajes-rubros.ts b/src/features/pricing/cotizacion/calculo/lib/porcentajes-rubros.ts
+index 49593e5adb56ab1f8ace9ed3562d0a93e16bb943..94dba8b44e4d422e7298134ed4024401e1123b69 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/porcentajes-rubros.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/porcentajes-rubros.ts
+@@ -1,19 +1,20 @@
+-/*
+- * ⚠️ PENDIENTE DE CONECTAR (revisado 2026-11-11)
++/* ==========================================================================
++ * MÉTODO PORCENTAJE (rubro cuyo importe es un % de OTRO rubro)
+  *
+- * `calcularPorcentajesRubros` no se usa en ningún archivo. Su lógica (rubro cuyo
+- * costo/venta es un % de OTRO rubro de la cotización, `metodo.cod_rubro`, con
+- * mínimos) no está implementada en otro lugar del frontend: hoy
+- * `procesar-rubros-calculados.ts` solo copia `servicio.porcentaje` a `metodo` y
+- * se usa el costo/venta tal como llega del backend.
++ * La tarifa "Porcentaje" trae `cod_rubro` (rubro base), `porcentaje_costo`,
++ * `porcentaje_venta` y mínimos. El backend devuelve el método sin calcular, así
++ * que el importe se calcula aquí sobre los rubros aplicados a la cotización
++ * (Due Carrier + flete, Due Agent seleccionados, Carrier basado en Agent y
++ * Scalling). Se conecta en hooks/use-porcentajes-rubros.ts.
+  *
+- * Si el backend ya devuelve el importe calculado, este archivo se puede borrar.
+- * Si no, debe aplicarse sobre los rubros seleccionados (Due Agent + Due Carrier
+- * + flete) antes de calcular totales (hooks/use-totales-rubros.ts).
+- */
+-import { numero, registro } from "./utils";
++ * No confundir con COSTO_PORCENTAJE (lib/rubros-manuales.ts), donde el usuario
++ * escribe el costo y la venta se calcula con un % sobre ese costo.
++ * ========================================================================== */
+ 
+-type Registro = Record<string, unknown>;
++import { TIPO_CALCULO } from "./constantes";
++import { esMetodoCostoPorcentaje } from "./rubros-manuales";
++import type { Registro } from "./tipos";
++import { numero, registro } from "./utils";
+ 
+ function obtenerMetodo(item: Registro): Registro {
+   const servicio = registro(item.servicio);
+@@ -21,9 +22,35 @@ function obtenerMetodo(item: Registro): Registro {
+ }
+ 
+ /**
+- * Los factores porcentaje_costo/porcentaje_venta ya vienen en 0.xx.
+- * metodo.cod_rubro identifica el rubro base, no el rubro de esta fila.
+- * Las bases son únicamente los rubros aplicados a la cotización.
++ * Rubro con método Porcentaje: tiene rubro base y algún porcentaje.
++ * Cobertura de mercadería y Costo por porcentaje también traen
++ * `porcentaje_venta` (y cobertura puede traer `cod_rubro`), por eso se excluyen.
++ */
++export function esMetodoPorcentajeRubro(item: Registro): boolean {
++  const servicio = registro(item.servicio);
++  const metodo = obtenerMetodo(item);
++
++  if (metodo.cod_rubro == null || String(metodo.cod_rubro).trim() === "") return false;
++  if (metodo.porcentaje_costo == null && metodo.porcentaje_venta == null) return false;
++  if (esMetodoCostoPorcentaje(item) || metodo.es_porcentaje != null) return false;
++  if (servicio.cobertura != null || item.cobertura != null) return false;
++
++  const codTipoCalculo =
++    metodo.cod_tipo_calculo ?? servicio.cod_tipo_calculo ?? item.cod_tipo_calculo;
++  return Number(codTipoCalculo) !== TIPO_CALCULO.COBERTURA_MERCADERIA;
++}
++
++/**
++ * Calcula costo/venta de los rubros con método Porcentaje.
++ *
++ * - Tarifas guarda el porcentaje en enteros (15 = 15 %) → factor 0.15.
++ * - `metodo.cod_rubro` identifica el rubro base, no el rubro de esta fila. Si hay
++ *   varios rubros base con ese código, se suman.
++ * - Costo y venta respetan su mínimo (`minimo_costo` / `minimo_venta`).
++ * - `bases`: rubros aplicados a la cotización que pueden servir de base
++ *   (pueden ser de otra sección; si una base también es Porcentaje, se resuelve
++ *   primero).
++ * - Los rubros que no son Porcentaje se devuelven sin cambios (misma referencia).
+  */
+ export function calcularPorcentajesRubros<T extends Registro>(
+   rubros: T[],
+@@ -36,16 +63,13 @@ export function calcularPorcentajesRubros<T extends Registro>(
+     const previo = calculados.get(item);
+     if (previo) return previo;
+ 
+-    const metodo = obtenerMetodo(item);
+-    const esPorcentaje =
+-      metodo.cod_rubro != null &&
+-      (metodo.porcentaje_costo != null || metodo.porcentaje_venta != null);
+-    if (!esPorcentaje) return item;
++    if (!esMetodoPorcentajeRubro(item)) return item;
+ 
+     // Una referencia circular no aporta importes como base de cálculo.
+     if (pendientes.has(item)) return {};
+     pendientes.add(item);
+ 
++    const metodo = obtenerMetodo(item);
+     const referencia = String(metodo.cod_rubro);
+     const rubrosBase = bases.filter(
+       (base) => base !== item && String(base.cod_rubro) === referencia,
+@@ -59,11 +83,10 @@ export function calcularPorcentajesRubros<T extends Registro>(
+       ventaBase += numero(metodoBase.venta ?? resultado.venta);
+     }
+ 
+-    const costoCalculado = costoBase * numero(metodo.porcentaje_costo);
+-    const ventaCalculada = ventaBase * numero(metodo.porcentaje_venta);
+-    // El mínimo aplica únicamente a venta; costo conserva su cálculo.
+-    const costo = Math.max(costoCalculado, numero(metodo.minimo_costo ?? 0));
+-    const venta = Math.max(ventaCalculada, numero(metodo.minimo_venta ?? 0));
++    const costoCalculado = (costoBase * numero(metodo.porcentaje_costo)) / 100;
++    const ventaCalculada = (ventaBase * numero(metodo.porcentaje_venta)) / 100;
++    const costo = Math.max(costoCalculado, numero(metodo.minimo_costo));
++    const venta = Math.max(ventaCalculada, numero(metodo.minimo_venta));
+     const metodoCalculado = { ...metodo, costo, venta };
+     const resultado = {
+       ...item,
+diff --git a/src/features/pricing/cotizacion/calculo/lib/rubros-manuales.ts b/src/features/pricing/cotizacion/calculo/lib/rubros-manuales.ts
+index 803576c4339d6664cc645f0ae2a60c8c69a49f9a..0c676646b26f51a530e3a2f38ff3fdef7323e473 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/rubros-manuales.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/rubros-manuales.ts
+@@ -63,13 +63,16 @@ export function calcularVentaCostoPorcentaje(item: Registro, valorCosto: string
+   const servicio = registro(item.servicio);
+   const metodo = registro(servicio.metodo ?? item.metodo);
+   const costo = Number(valorCosto);
+-  const factor = Number(metodo.porcentaje_venta ?? 0);
+   const minimo = Number(metodo.minimo_venta ?? 0);
+   const tipo = metodo.es_porcentaje;
+   const esPorcentaje =
+     tipo === true ||
+     tipo === 1 ||
+     (typeof tipo === "string" && ["1", "true"].includes(tipo.trim().toLowerCase()));
++  // Tarifas guarda el porcentaje en enteros (25.26 = 25.26 %) → factor 0.2526.
++  // Si es valor fijo se usa tal cual.
++  const valorTarifa = Number(metodo.porcentaje_venta ?? 0);
++  const factor = esPorcentaje ? valorTarifa / 100 : valorTarifa;
+ 
+   if (!Number.isFinite(costo) || !Number.isFinite(factor) || !Number.isFinite(minimo)) {
+     return { costo: 0, venta: 0 };
+diff --git a/src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-form.tsx b/src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-form.tsx
+index 75bf811bcd5f47812ddfe63d78f76631beb1a48a..ef3382d7f8d5afbc69afc23fcd717ca63058c758 100644
+--- a/src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-form.tsx
++++ b/src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-form.tsx
+@@ -87,9 +87,14 @@ export function CostoPorcentajeForm({
+ 
+   const advertenciaDecimalesVenta = obtenerCantidadDecimales(row.porcentaje_venta) > 9;
+ 
+-  const porcentajeCostoFueraRango = porcentajeCosto < 0 || porcentajeCosto > 100;
++  // Si es porcentaje se guarda en enteros con decimales (25.26 = 25.26 %), no como 0.2526.
++  // Cotizaciones lo convierte a factor (÷ 100) al calcular la venta.
++  const fueraDeRango = (valor: number) =>
++    valor < 0 || (Boolean(row.es_porcentaje) && valor > 100);
+ 
+-  const porcentajeVentaFueraRango = porcentajeVenta < 0 || porcentajeVenta > 100;
++  const porcentajeCostoFueraRango = fueraDeRango(porcentajeCosto);
++
++  const porcentajeVentaFueraRango = fueraDeRango(porcentajeVenta);
+ 
+   const puedeGuardar =
+     !readonly &&
+@@ -147,22 +152,28 @@ export function CostoPorcentajeForm({
+         </Field>
+ 
+         <Field>
+-          <FieldLabel>Porcentaje venta</FieldLabel>
++          <FieldLabel>{row.es_porcentaje ? "Porcentaje venta" : "Valor venta"}</FieldLabel>
+ 
+           <InputGroup>
+             <InputGroupInput
+               type="number"
+               min={0}
+-              max={100}
++              {...(row.es_porcentaje ? { max: 100 } : {})}
+               step={row.es_porcentaje ? 0.01 : 1}
+               readOnly={readonly}
+               value={row.porcentaje_venta ?? ""}
+               onChange={(event) => setNumero("porcentaje_venta", event.target.value)}
+             />
+ 
+-            <InputGroupAddon align="inline-end">%</InputGroupAddon>
++            {row.es_porcentaje && <InputGroupAddon align="inline-end">%</InputGroupAddon>}
+           </InputGroup>
+ 
++          {row.es_porcentaje && (
++            <p className="mt-1 text-xs text-muted-foreground">
++              Ingrese el porcentaje en enteros con decimales (ej. 25.26 para 25.26 %).
++            </p>
++          )}
++
+           {errorPorcentaje && (
+             <p className="mt-1 text-sm text-destructive">
+               El valor de venta debe ser mayor al de costo
+@@ -170,7 +181,11 @@ export function CostoPorcentajeForm({
+           )}
+ 
+           {porcentajeVentaFueraRango && (
+-            <p className="mt-1 text-sm text-destructive">El porcentaje debe estar entre 0 y 100.</p>
++            <p className="mt-1 text-sm text-destructive">
++              {row.es_porcentaje
++                ? "El porcentaje debe estar entre 0 y 100."
++                : "El valor no puede ser negativo."}
++            </p>
+           )}
+         </Field>
+ 
+diff --git a/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts b/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
+index ec24badf8dabbc51a1d3fbcf33f94ddbd7781590..b92b8fa1a5dbe3fad53e1b43f3b19a2bf9b5f1ee 100644
+--- a/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
++++ b/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
+@@ -429,6 +429,12 @@ export function useFormulario({
+ 
+   // ── onInput: cambiar un campo ──────────────────────────────────────────────
+ 
++  // Ref a la versión más reciente para no recrear onInput en cada cambio de valores.
++  const obtenerCatalogoByIdRef = React.useRef(obtenerCatalogoById);
++  React.useEffect(() => {
++    obtenerCatalogoByIdRef.current = obtenerCatalogoById;
++  }, [obtenerCatalogoById]);
++
+   const onInput = React.useCallback(
+     ({ id, val }: { id: string; val: unknown }) => {
+       setValues((prev) => {
+@@ -474,53 +480,32 @@ export function useFormulario({
+             next.cod_tipo = getPlainValue(metodoCalculoSeleccionado);
+           }
+ 
+-          const normalizarTexto = (texto: unknown) =>
+-            String(texto ?? "")
+-              .trim()
+-              .toLowerCase();
+-
+-          const rubroLabel = normalizarTexto(rubroSeleccionado?.label);
+-
+-          const rubroEsFlete = rubroLabel.includes("flete");
+-          const rubroEsExpress = rubroLabel.includes("express");
+-
+-          const tipoTransporteSeleccionado = prev.tipoTransporte as TipoOption | null;
+-
+-          const clasificacionesDisponibles = (
+-            (catalogosProcesados?.tiposClasificacion || []) as readonly TipoRelacionadoOption[]
+-          ).filter((ct) => {
+-            const esDelTipoTransporte =
+-              ct.cod_tipo_padre === tipoTransporteSeleccionado?.value &&
+-              ct.tipo_padre_tabla === "TRANSPORTE" &&
+-              ct.tipo_tabla === "CLASIFICACION_SERVICIO";
+-
+-            if (!esDelTipoTransporte) return false;
+-
+-            const clasificacionLabel = normalizarTexto(ct.label);
+-
+-            const clasificacionEsFlete = clasificacionLabel === "flete";
+-            const clasificacionEsFleteExpress = clasificacionLabel === "flete express";
+-
+-            if (rubroEsFlete && rubroEsExpress) {
+-              return clasificacionEsFleteExpress;
+-            }
++          // Solo los rubros con clasificaciones preestablecidas (flete / express) restringen la
++          // clasificación; para los demás se conserva la que ya estaba seleccionada.
++          const rubroConClasificacion = val as { label?: string; es_flete?: boolean } | null;
++          const rubroTieneClasificacionPreestablecida =
++            rubroConClasificacion?.es_flete === true ||
++            String(rubroConClasificacion?.label ?? "")
++              .toLowerCase()
++              .includes("express");
++
++          const tipoClasificacionActual = prev.tipoClasificacion as { value?: unknown } | null;
++
++          if (rubroTieneClasificacionPreestablecida && tipoClasificacionActual != null) {
++            // Mismo filtro que las opciones que muestra el select con el nuevo rubro.
++            const clasificacionesDisponibles = obtenerCatalogoByIdRef.current("tipoClasificacion", {
++              ...prev,
++              rubro: val,
++            }) as readonly TipoOption[];
++
++            const sigueDisponible = clasificacionesDisponibles.some(
++              (ct) => ct.value === tipoClasificacionActual.value,
++            );
+ 
+-            if (rubroEsFlete) {
+-              return clasificacionEsFlete;
++            if (!sigueDisponible) {
++              next.tipoClasificacion = null;
++              next.clasificacion = null;
+             }
+-
+-            return !clasificacionEsFlete && !clasificacionEsFleteExpress;
+-          });
+-
+-          const tipoClasificacionActual = prev.tipoClasificacion as { value?: number } | null;
+-
+-          const tipoClasificacionActualSigueDisponible = clasificacionesDisponibles.some(
+-            (ct) => ct.value === tipoClasificacionActual?.value,
+-          );
+-
+-          if (!tipoClasificacionActualSigueDisponible) {
+-            next.tipoClasificacion = null;
+-            next.clasificacion = null;
+           }
+         }
+ 
