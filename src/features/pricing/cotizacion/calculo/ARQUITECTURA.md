@@ -9,6 +9,7 @@ cotizacion/calculo/
 │  ├─ constantes.ts     ← CÓDIGOS de negocio (TIPO_PAGO.COLLECT = 127, RUBRO.SCALLING = 134, ...)
 │  ├─ utils.ts          ← FUNCIONES pequeñas compartidas (mismoId, numero, normalizarBoolean, limpiarNumero, buscarMoneda, ...)
 │  ├─ rubros-manuales.ts← rubros con valor manual (ABIERTO / COSTO_PORCENTAJE), compartido por Due Agent y Due Carrier
+│  ├─ porcentajes-rubros.ts ← método PORCENTAJE: rubro = % (entero) de otro rubro (cod_rubro), con mínimos
 │  ├─ catalogos.ts      ← normalización de catálogos a { value, label }
 │  ├─ cabecera.ts       ← CAMPOS DE LA CABECERA (definición única)
 │  ├─ detalle-flete.ts  ← TEXTO DEL DETALLE DE FLETE por tipo de transporte
@@ -152,6 +153,7 @@ el cálculo y muestra un aviso si faltan estados. Dentro del cálculo se usa `us
 | 6   | Due Agent         | `use-rubros-due-agent`           | `due-agent.ts`                                   | `due-agent`                   |
 | 7   | Due Carrier/Spot  | `use-rubros-due-carrier`         | `due-carrier.ts`                                 | `due-carrier`, `dialogo-spot` |
 | 8   | Scalling          | `use-rubros-scalling`            | `scalling.ts`                                    | `scalling`                    |
+| 8b  | Método Porcentaje | `use-porcentajes-rubros`         | `porcentajes-rubros.ts`                          | (Due Carrier / Due Agent)     |
 | 9   | Totales           | `use-totales-rubros`             | `totales-rubros.ts`, `agrupacion-rubros.ts`      | `totales-rubros`              |
 | 10  | Guardar           | `use-guardar-version-cotizacion` | `guardar-version.ts`                             | `spot-documento-dialog`       |
 
@@ -162,8 +164,5 @@ el cálculo y muestra un aviso si faltan estados. Dentro del cálculo se usa `us
 - Las reglas especiales del formulario que dependen de otros valores (por ejemplo: ciudad obligatoria solo si es
   TERRESTRE, países filtrados para terrestre) siguen en `hooks/use-formulario-cotizacion.ts`
   (`verificarSiEsRequerido`, `obtenerCatalogoById`).
-- `lib/porcentajes-rubros.ts` (`calcularPorcentajesRubros`: rubro cuyo importe es un % de otro rubro) no está
-  conectado a ningún flujo. Confirmar con backend si el importe ya llega calculado (entonces borrar el archivo)
-  o conectarlo antes de los totales.
 - `lib/totales-rubros.ts` busca la moneda con comparación estricta (`cod_moneda === codMoneda`); si el backend
   manda el código como texto y el catálogo como número, el rubro no suma. Revisar si debe usar `buscarMoneda`.
