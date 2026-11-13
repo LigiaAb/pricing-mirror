@@ -8,8 +8,7 @@
  *                lectura de rangos de tarifa.
  *   components/  FichaResumen (resumen de un servicio/método de tarifa).
  *   hooks/       catálogos generales (useCatalogosPricing).
- *   lib/         funciones puras: formatos y vigencia de métodos; motor de
- *                definición única de campos de métodos de tarifa (y rango).
+ *   lib/         funciones puras: formatos y vigencia de métodos.
  *   calculadora-embarque/  calculadora de embarques corporativa, con sus
  *                propias components/, hooks/ y lib/ (volumen, peso y CW
  *                por transporte, sin datos de cotización).
