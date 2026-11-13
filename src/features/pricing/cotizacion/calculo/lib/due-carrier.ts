@@ -96,9 +96,7 @@ export function getMetodoDueCarrier(item: RubroDueCarrier) {
 }
 
 export function esDueCarrierManual(item: RubroDueCarrier) {
-  return (
-    esMetodoCostoPorcentaje(item) || Number(getCodTipoCalculo(item)) === TIPO_CALCULO.ABIERTO
-  );
+  return esMetodoCostoPorcentaje(item) || Number(getCodTipoCalculo(item)) === TIPO_CALCULO.ABIERTO;
 }
 export function crearKeyRubroDueCarrier(item: RubroDueCarrier) {
   const codRubro = item.cod_rubro ?? "";

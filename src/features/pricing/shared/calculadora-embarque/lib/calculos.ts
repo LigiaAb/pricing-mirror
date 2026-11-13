@@ -1,36 +1,36 @@
-import { TIPO_TRANSPORTE, UNIDAD_DEFAULT } from "./constantes";
-import type { Id, Unidad } from "./tipos";
-import { numero } from "./utils";
+import { TIPOS_TRANSPORTE, type TipoTransporte } from "./constantes";
 
 /* ==========================================================================
- * TRANSPORTE
+ * CÁLCULOS DE EMBARQUE (corporativos)
+ *
+ * Reglas de volumen, peso, peso volumétrico y CW (chargeable weight) por tipo
+ * de transporte. Funciones puras: no conocen cotizaciones, tarifas ni la BD.
+ * Cada módulo traduce sus datos guardados a `DimensionCalculo` (ver, por
+ * ejemplo, cotizacion/calculo/lib/dimensiones-cotizacion.ts).
  * ========================================================================== */
 
-export const TIPOS_TRANSPORTE = {
-  [TIPO_TRANSPORTE.AEREO]: "AEREO",
-  [TIPO_TRANSPORTE.MARITIMO]: "MARITIMO",
-  [TIPO_TRANSPORTE.TERRESTRE]: "TERRESTRE",
-} as const;
+export type Id = string | number;
 
-/**
- * Textos de la calculadora. Hoy son iguales para los tres transportes; si alguno
- * necesita textos propios, convertir esto en un mapa por cod_tipo_transporte.
- */
-export const ETIQUETAS_CALCULADORA = {
-  volumen: "Kilos volumétricos",
-  peso: "Kilos",
-  cw: "CW",
-  tipoVolumen: "KILOS VOLUMETRICOS",
-  tipoPeso: "KILOGRAMOS",
-} as const;
-
-export type TipoTransporte = (typeof TIPOS_TRANSPORTE)[keyof typeof TIPOS_TRANSPORTE];
+/** Convierte a número; lo que no es número válido cuenta como 0. */
+export function numero(value: unknown): number {
+  const result = Number(value ?? 0);
+  return Number.isFinite(result) ? result : 0;
+}
 
 /* ==========================================================================
  * TIPOS
  * ========================================================================== */
 
-export type { Unidad };
+/** Unidad de medida o de peso (relación de tipos COORDINACION_CARGA / TIPO_MEDIDA). */
+export type Unidad = {
+  value: Id;
+
+  label?: string | null;
+  tipo_desc?: string | null;
+  tipo_padre_desc?: string | null;
+
+  [key: string]: unknown;
+};
 
 export type DimensionCalculo = {
   id: Id;
@@ -62,8 +62,8 @@ export type DimensionCalculo = {
   pesoTotalKg: number;
 
   /*
-   * Estos campos pueden venir desde BD
-   * o utilizarse posteriormente al guardar.
+   * Totales de la fila (alias de pesoTotalKg / volumenTotalKg / CW).
+   * El módulo que guarda puede sobrescribirlos con los totales globales.
    */
   total_peso?: number;
 
@@ -71,6 +71,7 @@ export type DimensionCalculo = {
 
   total_cw?: number;
 
+  /** Cada módulo puede conservar aquí sus campos propios (ej. columnas de BD). */
   [key: string]: unknown;
 };
 
@@ -561,132 +562,38 @@ export function calcularTotalesMedidas(
     tipo: "KILOS VOLUMETRICOS",
   };
 }
+
 /* ==========================================================================
- * DIMENSIONES GUARDADAS
+ * TOTALES CON ENTRADA DIRECTA
  * ========================================================================== */
 
 /**
- * Migra mapDimensionesApiToCalcItems del componente legado.
- *
- * IMPORTANTE:
- * No recalculamos aquí pesoTotalKg ni volumenTotalKg.
- *
- * La calculadora los vuelve a obtener usando las unidades
- * cuando procesa las filas.
+ * Totales finales de la calculadora: los de las filas tienen prioridad; si un
+ * total de filas es 0 se usa el escrito directamente (peso o volumétrico).
+ * El CW es el mayor de ambos.
  */
-export function reconstruirDimensiones({
-  dimensiones,
-  unidadesMedida,
-  unidadesPeso,
-  codTipoTransporte,
-}: {
-  dimensiones: Array<Record<string, unknown>>;
+export function combinarTotales(
+  totalesFilas: TotalesMedidas,
+  pesoDirecto: unknown,
+  volumenDirecto: unknown,
+): TotalesMedidas {
+  const pesoTotal = totalesFilas.pesoTotal > 0 ? totalesFilas.pesoTotal : numero(pesoDirecto);
 
-  unidadesMedida: Unidad[];
+  const volumenTotal =
+    totalesFilas.volumenTotal > 0 ? totalesFilas.volumenTotal : numero(volumenDirecto);
 
-  unidadesPeso: Unidad[];
+  const valorCw = Math.max(pesoTotal, volumenTotal);
 
-  codTipoTransporte?: Id | null;
-}): DimensionCalculo[] {
-  /*
-   * El guardado sin medidas representa los totales directos con una fila:
-   * cantidad 1, largo = volumétrico, ancho/alto 1, unidades 165/162.
-   * No es una medida física. Los totales globales se recuperan desde
-   * dimensionesIniciales en useCriteriosCotizacion para las entradas directas.
-   */
-  const primera = dimensiones[0];
-  if (
-    dimensiones.length === 1 &&
-    primera != null &&
-    numero(primera.cotdetdim_cantidad) === 1 &&
-    numero(primera.cotdetdim_ancho) === 1 &&
-    numero(primera.cotdetdim_alto) === 1 &&
-    Number(primera.cotdetdim_unidad_medida) === UNIDAD_DEFAULT.MEDIDA &&
-    Number(primera.cotdetdim_unidad_peso) === UNIDAD_DEFAULT.PESO &&
-    primera.total_volumen != null &&
-    Math.ceil(numero(primera.cotdetdim_largo)) === numero(primera.total_volumen) &&
-    (numero(primera.total_volumen) > 0 || numero(primera.total_peso) > 0)
-  ) {
-    return [];
-  }
-
-  return dimensiones.map((dimension, index) => {
-    const codMedida =
-      dimension.cotdetdim_unidad_medida != null ? String(dimension.cotdetdim_unidad_medida) : null;
-
-    const codPeso =
-      dimension.cotdetdim_unidad_peso != null ? String(dimension.cotdetdim_unidad_peso) : null;
-
-    const cantidad = numero(dimension.cotdetdim_cantidad);
-
-    const largo = numero(dimension.cotdetdim_largo);
-
-    const ancho = numero(dimension.cotdetdim_ancho);
-
-    const alto = numero(dimension.cotdetdim_alto);
-
-    /*
-     * Se conserva tal cual el comportamiento actual.
-     */
-    // Sin unidad de peso, este campo contiene volumétrico, no peso real.
-    const pesoUnitario = codPeso ? numero(dimension.cotdetdim_peso_unitario) : 0;
-
-    const volumenUnitario = largo * ancho * alto;
-
-    const volumenTotal = volumenUnitario * cantidad;
-
-    const pesoTotal = pesoUnitario * cantidad;
-
-    const unidadMedida = codMedida
-      ? (unidadesMedida.find((unidad) => String(unidad.value) === codMedida) ?? null)
-      : null;
-
-    const unidadPeso = codPeso
-      ? (unidadesPeso.find((unidad) => String(unidad.value) === codPeso) ?? null)
-      : null;
-
-    return {
-      ...dimension,
-
-      id: (dimension.cod_cotdetdim as Id | undefined) ?? index + 1,
-
-      cantidad,
-
-      largo,
-
-      ancho,
-
-      alto,
-
-      pesoUnitario,
-
-      formulaVolumen: `${largo || 0}x${ancho || 0}x${alto || 0}`,
-
-      volumenUnitario,
-
-      volumenTotal,
-
-      /*
-       * Estos dos se recalculan usando
-       * unidades reales para mantener
-       * el comportamiento de la calculadora.
-       */
-      volumenTotalKg:
-        convertirVolumetrico(volumenUnitario, unidadMedida?.tipo_desc, codTipoTransporte) *
-        cantidad,
-
-      pesoTotal,
-
-      pesoTotalKg:
-        convertirPesoAKg(
-          pesoUnitario,
-
-          unidadPeso?.tipo_desc,
-        ) * cantidad,
-
-      unidadMedida,
-
-      unidadPeso,
-    };
-  });
+  return {
+    pesoTotal,
+    volumenTotal,
+    cantidadTotal: totalesFilas.cantidadTotal,
+    valorCw,
+    tipo:
+      valorCw <= 0
+        ? "AUN NO SE HA CALCULADO"
+        : pesoTotal >= volumenTotal
+          ? "KILOGRAMOS"
+          : "KILOS VOLUMETRICOS",
+  };
 }

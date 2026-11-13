@@ -22,7 +22,11 @@
 
 import React from "react";
 
-import { type CatalogosPricing, useCatalogosPricing } from "@/features/pricing/shared";
+import {
+  type CatalogosPricing,
+  normalizarUnidades,
+  useCatalogosPricing,
+} from "@/features/pricing/shared";
 
 import { filtrarPorTipoTabla, normalizarOpciones } from "../lib/catalogos";
 import type {
@@ -65,22 +69,6 @@ export type CatalogosCalculo = {
   criterios: CriterioCatalogo[];
   reasonCodesSpot: ReasonCodeSpot[];
 };
-
-function normalizarUnidades(unidades: CatalogosPricing["unidadesMedida"] | undefined): Unidad[] {
-  return (unidades ?? []).flatMap((unidad) => {
-    if (unidad.value == null) return [];
-
-    return [
-      {
-        ...unidad,
-        value: unidad.value,
-        label: unidad.label == null ? null : String(unidad.label),
-        tipo_desc: unidad.tipo_desc ?? null,
-        tipo_padre_desc: unidad.tipo_padre_desc ?? null,
-      },
-    ];
-  });
-}
 
 function construirCatalogosCalculo(base: CatalogosPricing): CatalogosCalculo {
   return {

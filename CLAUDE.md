@@ -75,6 +75,8 @@ Resumen:
     componentes reutilizables `components/utils.tsx`.
   - Detalle de flete por transporte: `lib/detalle-flete.ts` (`null` = ese transporte no lleva detalle).
   - Estados: `useEstadosCalculo()` dentro del cálculo (el container valida que existan).
+- **Calculadora de embarques** (`pricing/shared/calculadora-embarque/`, con sus propias `components/`, `hooks/`, `lib/`): corporativa, lee sus unidades sola
+  (`useUnidadesEmbarque`); cada módulo solo adapta sus filas guardadas y decide qué hacer en `onAplicar`.
 - **Tarifas**
   - Campos de los métodos: definición única en `lib/metodos/<metodo>.ts` (`definirMetodo`; rango en
     `pricing/shared/lib/metodos/rango.ts`). Agregar un campo = 1 línea en `campos` + `<CampoMetodo>` en su

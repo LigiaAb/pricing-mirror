@@ -5,12 +5,15 @@ import React from "react";
 
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
+import {
+  CalculadoraMedidas,
+  type DimensionCalculo,
+  type TotalesMedidas,
+} from "@/features/pricing/shared";
 import { useCatalogosCotizacion } from "../hooks/use-catalogos-cotizacion";
-import type { DimensionCalculo, TotalesMedidas } from "../lib/calculadora-medidas";
 import { COD_CRITERIO_EXPRESS } from "../lib/constantes";
 import type { ValoresCriterios } from "../lib/criterios-cotizacion";
 import type { Id, OpcionCriterio } from "../lib/tipos";
-import { CalculadoraMedidas } from "./calculadora-medidas";
 
 /* ==========================================================================
  * TIPOS
@@ -302,8 +305,6 @@ export function CriteriosForm({
    */
   const { criterios: catalogos } = useCatalogosCotizacion();
 
-  const [calculadoraOpen, setCalculadoraOpen] = React.useState(false);
-
   /* ==========================================================================
    * CRITERIOS VISIBLES
    * ========================================================================== */
@@ -396,14 +397,23 @@ export function CriteriosForm({
         ================================================================= */}
 
         <div className="flex flex-wrap justify-end gap-2 border-t p-3">
-          <Button
-            type="button"
-            variant={lectura ? "outline" : "secondary"}
-            onClick={() => setCalculadoraOpen(true)}
-          >
-            <Ruler className="size-4" />
-            Abrir calculadora
-          </Button>
+          {/* La calculadora es corporativa (pricing/shared); aquí solo se elige el botón. */}
+          <CalculadoraMedidas
+            trigger={
+              <Button type="button" variant={lectura ? "outline" : "secondary"}>
+                <Ruler className="size-4" />
+                Abrir calculadora
+              </Button>
+            }
+            dimensiones={dimensiones}
+            pesoInicial={obtenerValorInicialCalculadora(
+              valores.total_peso ?? valores.valor_por_peso ?? 0,
+            )}
+            volumenInicial={obtenerValorInicialCalculadora(valores.total_volumen ?? 0)}
+            codTipoTransporte={codTipoTransporte}
+            lectura={lectura}
+            onAplicar={onAplicarMedidas}
+          />
 
           {!lectura ? (
             <Button type="button" onClick={() => void onCalcular()}>
@@ -413,23 +423,6 @@ export function CriteriosForm({
           ) : null}
         </div>
       </section>
-
-      {/* ==================================================================
-          CALCULADORA
-      =================================================================== */}
-
-      <CalculadoraMedidas
-        open={calculadoraOpen}
-        onOpenChange={setCalculadoraOpen}
-        dimensiones={dimensiones}
-        pesoInicial={obtenerValorInicialCalculadora(
-          valores.total_peso ?? valores.valor_por_peso ?? 0,
-        )}
-        volumenInicial={obtenerValorInicialCalculadora(valores.total_volumen ?? 0)}
-        codTipoTransporte={codTipoTransporte}
-        lectura={lectura}
-        onAplicar={onAplicarMedidas}
-      />
     </>
   );
 }
