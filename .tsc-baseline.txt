@@ -129,12 +129,6 @@ src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2709: Cannot
 src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS7006: Parameter 'i' implicitly has an 'any' type.
 src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS7006: Parameter 'i' implicitly has an 'any' type.
 src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS7006: Parameter 'r' implicitly has an 'any' type.
-src/features/pricing/shared/index.ts: error TS2307: Cannot find module './calculadora-embarque/calculadora-medidas' or its corresponding type declarations.
-src/features/pricing/shared/index.ts: error TS2307: Cannot find module './calculadora-embarque/calculos' or its corresponding type declarations.
-src/features/pricing/shared/index.ts: error TS2307: Cannot find module './calculadora-embarque/constantes' or its corresponding type declarations.
-src/features/pricing/shared/index.ts: error TS2307: Cannot find module './calculadora-embarque/etiquetas' or its corresponding type declarations.
-src/features/pricing/shared/index.ts: error TS2307: Cannot find module './calculadora-embarque/unidades' or its corresponding type declarations.
-src/features/pricing/shared/index.ts: error TS2307: Cannot find module './calculadora-embarque/use-unidades-embarque' or its corresponding type declarations.
 src/features/pricing/tarifas/components/creacion-tarifa.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/creacion-tarifa.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/creacion-tarifa.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
