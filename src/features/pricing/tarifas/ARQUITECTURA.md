@@ -14,10 +14,15 @@ tarifas/
 │  ├─ use-opciones-tarifa.ts     ← monedas / rubros como opciones { value, label } y búsqueda local
 │  └─ use-formulario-tarifas.ts  ← formulario principal de tarifa
 ├─ lib/
+│  ├─ campos-metodo.ts      ← DEFINICIÓN ÚNICA de campos de métodos: tipos de campo y definirMetodo
+│  ├─ metodos/<metodo>.ts   ← campos de cada método (migrados: costo-venta)
 │  ├─ tarifa-field-rules.ts ← reglas de campos del formulario principal
 │  └─ tarifa-helpers.ts     ← funciones compartidas (decimales, fechas, ...)
 └─ components/
-   └─ metodos/<metodo>/     ← cada método: -columns (tipos), -form (pantalla), -table (datos + guardar)
+   └─ metodos/
+      ├─ campo-metodo.tsx   ← dibuja un campo (etiqueta + input) desde su definición
+      └─ <metodo>/          ← sin tabla: <metodo>.tsx (componente padre: datos + guardar) y -form.tsx
+                              con tabla (rango, scalling): -columns, -form, -table
 ```
 
 ## Compartido con Cotizaciones (`pricing/shared`)
@@ -67,6 +72,13 @@ refrescan la lista al terminar (`onSettled`) y los toasts se controlan con `meta
 - Búsqueda local en un `AsyncComboboxInput`: `const fetchX = useFiltroOpciones(opciones);`
 
 Excepción: **equipo** convierte monedas con `value` numérico porque ese valor se envía tal cual al backend.
+
+## Campos de un método (definición única) — en migración
+
+Migrado: **costoVenta** (`lib/metodos/costo-venta.ts`). De `METODO_COSTO_VENTA` salen el esquema, los tipos
+(`TarifaCostoVenta`, `FilaCostoVenta`, `TarifaCostoVentaMutationPayload`), `aFila`, `aPayload` y `validar`;
+el formulario usa `<CampoMetodo>` con el mismo layout. Componente padre reutilizable: `MetodoCostoVenta`
+(alias viejo `CostoVentaTable` en el barrel). Los demás métodos se migran uno por uno.
 
 ## Pendiente (no es centralización)
 

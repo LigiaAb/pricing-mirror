@@ -1,20 +1,14 @@
-import { z } from "zod";
-import { zId } from "@/shared/lib/zod-scalars";
+import {
+  METODO_COSTO_VENTA,
+  type TarifaCostoVenta,
+  type TarifaCostoVentaMutationPayload,
+} from "../lib/metodos/costo-venta";
 import { crearCatalogoMetodo, type FiltrosMetodo } from "./catalogo-metodo";
 
-export const tarifaCostoVentaSchema = z
-  .object({
-    cod_tarifa_costoventa: zId,
-    cod_metodo: zId.nullable(),
-    costo: z.union([z.string(), z.number()]).nullable(),
-    venta: z.union([z.string(), z.number()]).nullable(),
-    cod_moneda_costo: zId.nullable(),
-    cod_moneda_venta: zId.nullable(),
-    cod_estado: zId,
-  })
-  .passthrough();
+// Campos, tipos y payload: definición única en lib/metodos/costo-venta.ts.
+export const tarifaCostoVentaSchema = METODO_COSTO_VENTA.esquema;
 
-export type TarifaCostoVenta = z.infer<typeof tarifaCostoVentaSchema>;
+export type { TarifaCostoVenta, TarifaCostoVentaMutationPayload };
 
 export type FiltrosTarifaCostoVenta = FiltrosMetodo;
 
@@ -25,20 +19,6 @@ export {
   monedasOperativasOptions as monedasCostoVentaOptions,
   useMonedasOperativas as useMonedasCostoVenta,
 } from "./monedas";
-
-export type TarifaCostoVentaMutationPayload = {
-  cod_tarifa_costoventa?: string | number | null;
-  cod_metodo: string | number;
-  cod_servicio?: string | number | null;
-
-  costo: number;
-  venta: number;
-
-  cod_moneda_costo: string | number | null;
-  cod_moneda_venta: string | number | null;
-
-  cod_estado: string | number;
-};
 
 /* CONSULTA Y MUTACIONES (createCatalogo vía crearCatalogoMetodo) */
 

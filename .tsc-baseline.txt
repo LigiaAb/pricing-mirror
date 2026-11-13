@@ -226,14 +226,6 @@ src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-form
 src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-form.tsx: error TS7006: Parameter 'value' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta-form.tsx: error TS7006: Parameter 'moneda_costo' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta-form.tsx: error TS7006: Parameter 'moneda_venta' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx: error TS7006: Parameter 'cod_equipo' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx: error TS7006: Parameter 'cod_moneda_costo' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx: error TS7006: Parameter 'cod_moneda_venta' implicitly has an 'any' type.

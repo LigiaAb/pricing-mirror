@@ -10,7 +10,11 @@ import {
   useTarifaCostoVenta,
 } from "../../../api/tarifa-costoventa";
 import { useOpcionesMonedas } from "../../../hooks/use-opciones-tarifa";
-import type { FilaCostoVenta, MonedaCostoVentaOption } from "./costo-venta-columns";
+import {
+  type FilaCostoVenta,
+  METODO_COSTO_VENTA,
+  type MonedaCostoVentaOption,
+} from "../../../lib/metodos/costo-venta";
 import { CostoVentaForm } from "./costo-venta-form";
 
 type Props = {
@@ -23,7 +27,11 @@ type Props = {
   onTarifaCreada?: () => void;
 };
 
-export function CostoVentaTable({
+/**
+ * Tarifa de método Costo / Venta de un método de cálculo: consulta, formulario y guardado.
+ * Componente padre reutilizable: basta con `<MetodoCostoVenta codMetodo={...} />`.
+ */
+export function MetodoCostoVenta({
   codMetodo,
   codServicio,
   readonly = false,
@@ -45,45 +53,16 @@ export function CostoVentaTable({
 
   const esNuevo = costoVenta == null;
 
-  const value = React.useMemo<FilaCostoVenta | null>(() => {
-    if (!costoVenta) return null;
-
-    return {
-      ...costoVenta,
-
-      moneda_costo:
-        monedas.find(
-          (moneda) => String(moneda.cod_moneda) === String(costoVenta.cod_moneda_costo),
-        ) ?? null,
-
-      moneda_venta:
-        monedas.find(
-          (moneda) => String(moneda.cod_moneda) === String(costoVenta.cod_moneda_venta),
-        ) ?? null,
-    };
-  }, [costoVenta, monedas]);
+  const value = React.useMemo<FilaCostoVenta | null>(
+    () => (costoVenta ? METODO_COSTO_VENTA.aFila(costoVenta, { monedas }) : null),
+    [costoVenta, monedas],
+  );
 
   const formatearFilaApi = React.useCallback(
     (fila: FilaCostoVenta): TarifaCostoVentaMutationPayload | null => {
       if (codMetodo == null) return null;
 
-      return {
-        cod_tarifa_costoventa: fila.cod_tarifa_costoventa ?? null,
-
-        cod_metodo: codMetodo,
-
-        cod_servicio: codServicio ?? null,
-
-        costo: Number(fila.costo),
-
-        venta: Number(fila.venta),
-
-        cod_moneda_costo: fila.moneda_costo?.cod_moneda ?? null,
-
-        cod_moneda_venta: fila.moneda_venta?.cod_moneda ?? null,
-
-        cod_estado: 1,
-      };
+      return METODO_COSTO_VENTA.aPayload(fila, { codMetodo, codServicio });
     },
     [codMetodo, codServicio],
   );
