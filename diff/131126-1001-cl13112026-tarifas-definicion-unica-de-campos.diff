@@ -1,0 +1,4564 @@
+diff --git a/src/features/pricing/shared/api/tarifa-rangos.ts b/src/features/pricing/shared/api/tarifa-rangos.ts
+index 45fcc065ed593ea5a9ce78a27d2f7940fd2c10e4..df303b77190aaed0593a1f63f086809568e845ea 100644
+--- a/src/features/pricing/shared/api/tarifa-rangos.ts
++++ b/src/features/pricing/shared/api/tarifa-rangos.ts
+@@ -5,36 +5,17 @@
+  * ========================================================================== */
+ 
+ import { queryOptions, useQuery } from "@tanstack/react-query";
+-import { z } from "zod";
+ import { CACHE_DYNAMIC } from "@/shared/api/cache";
+ import { http } from "@/shared/api/client";
+ import { parseEnvelope } from "@/shared/api/envelope";
+-import { zId } from "@/shared/lib/zod-scalars";
++import { METODO_RANGO, type TarifaRango } from "../lib/metodos/rango";
+ 
+ export const TARIFA_RANGOS_QUERY_KEY = ["tarifas", "rangos"] as const;
+ 
+-export const tarifaRangoSchema = z
+-  .object({
+-    cod_tarifa_rango: zId,
+-    cod_metodo: zId.nullable(),
++// Campos, tipos y payload: definición única en ../lib/metodos/rango.ts.
++export const tarifaRangoSchema = METODO_RANGO.esquema;
+ 
+-    inicio: z.union([z.string(), z.number()]).nullable(),
+-    final: z.union([z.string(), z.number()]).nullable(),
+-
+-    costo_minimo: z.union([z.string(), z.number()]).nullable(),
+-    venta_minimo: z.union([z.string(), z.number()]).nullable(),
+-
+-    costo: z.union([z.string(), z.number()]).nullable(),
+-    cod_moneda_costo: zId.nullable(),
+-
+-    venta: z.union([z.string(), z.number()]).nullable(),
+-    cod_moneda_venta: zId.nullable(),
+-
+-    cod_estado: zId,
+-  })
+-  .passthrough();
+-
+-export type TarifaRango = z.infer<typeof tarifaRangoSchema>;
++export type { TarifaRango };
+ 
+ export interface FiltrosTarifaRango {
+   codEstado?: string | number;
+diff --git a/src/features/pricing/shared/index.ts b/src/features/pricing/shared/index.ts
+index bfdedd998b871f1cfeb0fe736d9841b45f7ef338..e22a8c0eacc7a9d3885a94c849514a92090b860a 100644
+--- a/src/features/pricing/shared/index.ts
++++ b/src/features/pricing/shared/index.ts
+@@ -109,5 +109,43 @@ export {
+   type UsuariosCatalog,
+   useCatalogosPricing,
+ } from "./hooks/use-catalogos-pricing";
++export {
++  booleano,
++  type CampoBooleano,
++  type CampoContexto,
++  type CampoFijo,
++  type CampoMoneda,
++  type CampoMonto,
++  type CampoOpcion,
++  type CampoPropio,
++  type CampoRubro,
++  type CatalogosMetodo,
++  type ContextoMetodo,
++  type DefCampo,
++  definirMetodo,
++  delContexto,
++  type ErrorRegla,
++  esquemaMonto,
++  fijo,
++  type FormularioCampo,
++  moneda,
++  type MonedaOpcion,
++  monto,
++  opcion,
++  type PayloadMetodo,
++  propio,
++  rangoPermitido,
++  type ReglaMetodo,
++  type ResultadoValidacion,
++  rubro,
++  type RubroOpcion,
++  sinEsquema,
++  ventaNoMenorQueCosto,
++} from "./lib/campos-metodo";
+ export { type ConAmbosFormatos, conAmbosFormatos } from "./lib/formatos";
++export {
++  type FilaRango,
++  METODO_RANGO,
++  type TarifaRangoMutationPayload,
++} from "./lib/metodos/rango";
+ export { getEstadoMetodo } from "./lib/vigencia-metodo";
+diff --git a/src/features/pricing/shared/lib/campos-metodo.ts b/src/features/pricing/shared/lib/campos-metodo.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..ccbed69c2ffda5c6331a87b77ee1c9516d05d7e2
+--- /dev/null
++++ b/src/features/pricing/shared/lib/campos-metodo.ts
+@@ -0,0 +1,516 @@
++/* ==========================================================================
++ * MÉTODOS DE TARIFA: DEFINICIÓN ÚNICA DE CAMPOS
++ *
++ * Vive en pricing/shared porque la definición de rango (lib/metodos/rango.ts)
++ * también la lee Cotizaciones. Tarifas lo importa desde tarifas/lib/campos-metodo.ts.
++ *
++ * Cada campo de un método (costo, venta, moneda, ...) se declara UNA vez en
++ * la definición del método (lib/metodos/<metodo>.ts). A partir de ella se
++ * obtienen:
++ *
++ *   - el esquema Zod de la lista y el tipo del registro   (tarifas/api/tarifa-<metodo>.ts)
++ *   - el tipo del payload y la función que lo arma        (aPayload)
++ *   - la fila del formulario desde el registro del API    (aFila: busca las opciones)
++ *   - la validación del formulario                        (validar)
++ *   - la fila inicial de un registro nuevo                (filaNueva)
++ *   - la etiqueta y el input de cada campo                (tarifas/components/metodos/campo-metodo.tsx)
++ *
++ * Tipos de campo: monto, moneda, rubro, opcion, booleano, fijo, delContexto y
++ * propio (lógica a mano).
++ * Si un campo no se comporta como su tipo, se sobrescribe SOLO esa parte en
++ * la definición (aPayload, deApi, esquema, ...) en lugar de forzar el tipo.
++ *
++ * ¿Cómo agrego un campo a un método?
++ *   1. Agrégalo en `campos` de tarifas/lib/metodos/<metodo>.ts (rango: shared/lib/metodos/rango.ts).
++ *   2. Si se ve en el formulario: <CampoMetodo {...campo} campo="mi_campo" /> en su -form.tsx.
++ *   3. Si va en la tabla (rango, scalling): su código en columnasMetodo de -columns.tsx.
++ *   El orden de `campos` es el orden del payload. Guía completa: tarifas/ARQUITECTURA.md.
++ * ========================================================================== */
++
++import { z } from "zod";
++
++import { zId } from "@/shared/lib/zod-scalars";
++
++type Id = string | number;
++
++/** Opción de moneda para los selects de tarifas (ver tarifas/hooks/use-opciones-tarifa.ts). */
++export type MonedaOpcion = {
++  value: string;
++  label: string;
++
++  cod_moneda: Id;
++  simbolo?: string | undefined;
++
++  [key: string]: unknown;
++};
++
++/** Opción de rubro para los selects de tarifas. */
++export type RubroOpcion = {
++  value: string;
++  label: string;
++
++  cod_rubro: Id;
++
++  [key: string]: unknown;
++};
++
++type Simplificar<T> = { [K in keyof T]: T[K] } & {};
++
++/** Omit que conserva las llaves conocidas cuando T tiene índice (passthrough). */
++type SinLlaves<T, K extends PropertyKey> = { [P in keyof T as P extends K ? never : P]: T[P] };
++
++/** Valores de una fila tal como los maneja el formulario. */
++type Valores = Record<string, unknown>;
++
++/** Datos que no vienen de la fila sino del componente (props). */
++export type ContextoMetodo = {
++  codMetodo: Id;
++  codServicio?: Id | null | undefined;
++};
++
++/** Catálogos con los que se convierten códigos del API en opciones de select. */
++export type CatalogosMetodo = {
++  monedas?: readonly MonedaOpcion[] | undefined;
++  rubros?: readonly RubroOpcion[] | undefined;
++  /** Otros catálogos para campos `opcion` (ej. equipos). */
++  [catalogo: string]: readonly unknown[] | undefined;
++};
++
++/** Cómo se dibuja el campo en el formulario. */
++export type FormularioCampo = {
++  /** `min` / `max` / `step` del input numérico. */
++  min?: number;
++  max?: number;
++  step?: string | number;
++  /** Campo de moneda cuyo símbolo se muestra al final del input. */
++  simboloDe?: string;
++  /** Texto fijo al final del input (ej. "%"). */
++  sufijo?: string;
++};
++
++export type DefCampo<TPayload = unknown> = {
++  tipo: "monto" | "moneda" | "rubro" | "opcion" | "booleano" | "fijo" | "contexto" | "propio";
++  /** Texto que ve el usuario (formulario, columnas y mensajes). */
++  label?: string;
++  /** Texto en la lista de faltantes de `validar`, si no es `label` (ej. rango: "Mínimo de Costo"). */
++  labelFaltante?: string;
++  /** Validación al leer del API. Sin esquema, el campo no forma parte del registro. */
++  esquema?: z.ZodType;
++  /** Clave en la fila del formulario cuando no es la del API (ej. la opción de moneda). */
++  en?: string;
++  /** Obligatorio para poder guardar. */
++  requerido?: boolean;
++  /**
++   * Valor con el que empieza un registro nuevo (filaNueva), en `en` si el campo lo tiene.
++   * Sin `inicial`, el campo empieza vacío.
++   */
++  inicial?: unknown;
++  /** Valor que se envía al backend. */
++  aPayload: (valores: Valores, cod: string, ctx: ContextoMetodo) => TPayload;
++  /** Valor de la fila (en `en`) a partir del registro del API. */
++  deApi?: (registro: Valores, cod: string, catalogos: CatalogosMetodo) => unknown;
++  /** Si el campo está vacío (para `requerido`). */
++  falta?: (valores: Valores, cod: string) => boolean;
++  formulario?: FormularioCampo;
++};
++
++/** Error de una regla: se muestra debajo de `campo` (CampoMetodo lo dibuja solo). */
++export type ErrorRegla = { campo: string; mensaje: string };
++
++export type ReglaMetodo = (valores: Valores) => ErrorRegla | null;
++
++/* ==========================================================================
++ * TIPOS DE CAMPO
++ * ========================================================================== */
++
++const vacio = (valor: unknown) => valor == null || valor === "";
++
++/** Esquema de un número del API (puede venir como texto). */
++export const esquemaMonto = z.union([z.string(), z.number()]).nullable();
++
++type AlPayload<P> = DefCampo<P>["aPayload"];
++
++/** Lo que cualquier campo visible puede sobrescribir. */
++type Sobrescribir<P> = {
++  label?: string;
++  labelFaltante?: string;
++  requerido?: boolean;
++  aPayload?: AlPayload<P>;
++  /** Cuándo cuenta como vacío para `requerido` (por defecto: null, undefined o ""). */
++  falta?: DefCampo["falta"];
++};
++
++type Campo<Tipo extends DefCampo["tipo"], P> = Omit<DefCampo<P>, "tipo" | "aPayload"> & {
++  tipo: Tipo;
++  aPayload: AlPayload<P>;
++};
++
++export type CampoMonto<P = number> = Campo<"monto", P> & { esquema: typeof esquemaMonto };
++
++type OpcionesMonto<P> = Sobrescribir<P> & {
++  inicial?: number | string | null;
++  formulario?: FormularioCampo;
++};
++
++/** Número (costo, venta, mínimos, porcentajes). Se envía con Number(valor). */
++export function monto(opciones?: OpcionesMonto<number> & { aPayload?: never }): CampoMonto;
++export function monto<P>(opciones: OpcionesMonto<P> & { aPayload: AlPayload<P> }): CampoMonto<P>;
++export function monto<P>(opciones: OpcionesMonto<P> = {}): CampoMonto<P> {
++  const { aPayload, falta, ...resto } = opciones;
++
++  return {
++    tipo: "monto",
++    esquema: esquemaMonto,
++    falta: falta ?? ((valores, cod) => vacio(valores[cod])),
++    aPayload: aPayload ?? ((valores, cod) => Number(valores[cod]) as unknown as P),
++    ...resto,
++  };
++}
++
++export type CampoMoneda<En extends string, P = Id | null> = Campo<"moneda", P> & {
++  esquema: z.ZodNullable<typeof zId>;
++  en: En;
++  deApi: (registro: Valores, cod: string, catalogos: CatalogosMetodo) => MonedaOpcion | null;
++};
++
++/**
++ * Moneda: en el API es un código (cod_moneda_costo); en el formulario es la
++ * opción completa, guardada en `en` (moneda_costo). Se envía opcion.cod_moneda.
++ */
++export function moneda<const En extends string>(
++  opciones: Sobrescribir<Id | null> & { en: En; inicial?: null; aPayload?: never },
++): CampoMoneda<En>;
++export function moneda<const En extends string, P>(
++  opciones: Sobrescribir<P> & { en: En; inicial?: null; aPayload: AlPayload<P> },
++): CampoMoneda<En, P>;
++export function moneda<const En extends string, P>(
++  opciones: Sobrescribir<P> & { en: En; inicial?: null },
++): CampoMoneda<En, P> {
++  const { aPayload, falta, ...resto } = opciones;
++  const opcionDe = (valores: Valores) => valores[resto.en] as MonedaOpcion | null | undefined;
++
++  return {
++    tipo: "moneda",
++    esquema: zId.nullable(),
++    falta: falta ?? ((valores) => !opcionDe(valores)),
++    aPayload: aPayload ?? ((valores) => (opcionDe(valores)?.cod_moneda ?? null) as unknown as P),
++    deApi: (registro, cod, catalogos) =>
++      catalogos.monedas?.find((item) => String(item.cod_moneda) === String(registro[cod])) ?? null,
++    ...resto,
++  };
++}
++
++export type CampoRubro<En extends string, P = Id | null> = Campo<"rubro", P> & {
++  esquema: z.ZodNullable<typeof zId>;
++  en: En;
++  deApi: (registro: Valores, cod: string, catalogos: CatalogosMetodo) => RubroOpcion | null;
++};
++
++/** Rubro: como `moneda`, pero con el catálogo de rubros (código cod_rubro ?? value). */
++export function rubro<const En extends string>(
++  opciones: Sobrescribir<Id | null> & { en: En; inicial?: null },
++): CampoRubro<En> {
++  const { aPayload, falta, ...resto } = opciones;
++  const opcionDe = (valores: Valores) => valores[resto.en] as RubroOpcion | null | undefined;
++  const codigo = (opcion: RubroOpcion | null | undefined) => opcion?.cod_rubro ?? opcion?.value;
++
++  return {
++    tipo: "rubro",
++    esquema: zId.nullable(),
++    falta: falta ?? ((valores) => !opcionDe(valores)),
++    aPayload: aPayload ?? ((valores) => codigo(opcionDe(valores)) ?? null),
++    deApi: (registro, cod, catalogos) =>
++      catalogos.rubros?.find((item) => String(codigo(item)) === String(registro[cod])) ?? null,
++    ...resto,
++  };
++}
++
++type OpcionCatalogo = { value: Id; label: string };
++
++export type CampoOpcion<En extends string, O, P = Id | null> = Campo<"opcion", P> & {
++  esquema: z.ZodNullable<typeof zId>;
++  en: En;
++  deApi: (registro: Valores, cod: string, catalogos: CatalogosMetodo) => O | null;
++};
++
++/**
++ * Select de cualquier catálogo de opciones { value, label } (ej. equipos), con el
++ * tipo de opción explícito: `opcion<EquipoOption>()({ en: "cod_equipo", catalogo: "equipos" })`.
++ * La opción se busca en `catalogos[catalogo]` comparando `buscarPor(opcion)` (por defecto
++ * opcion.value) con el código del API, y se envía opcion.value.
++ * CampoMetodo no lo dibuja: el select se escribe en el formulario.
++ */
++export function opcion<O extends OpcionCatalogo>() {
++  return <const En extends string>(
++    opciones: Sobrescribir<Id | null> & {
++      en: En;
++      catalogo: string;
++      buscarPor?: (opcion: O) => unknown;
++      inicial?: null;
++    },
++  ): CampoOpcion<En, O> => {
++    const { aPayload, falta, catalogo, buscarPor = (item: O) => item.value, ...resto } = opciones;
++    const opcionDe = (valores: Valores) => valores[resto.en] as O | null | undefined;
++
++    return {
++      tipo: "opcion",
++      esquema: zId.nullable(),
++      falta: falta ?? ((valores) => !opcionDe(valores)),
++      aPayload: aPayload ?? ((valores) => opcionDe(valores)?.value ?? null),
++      deApi: (registro, cod, catalogos) =>
++        ((catalogos[catalogo] ?? []) as readonly O[]).find(
++          (item) => String(buscarPor(item)) === String(registro[cod]),
++        ) ?? null,
++      ...resto,
++    };
++  };
++}
++
++export type CampoBooleano = Campo<"booleano", boolean> & { esquema: z.ZodBoolean };
++
++/** Sí / no (ej. es_porcentaje). Se envía Boolean(valor). El input se escribe en el formulario. */
++export function booleano(opciones: { label?: string; inicial?: boolean } = {}): CampoBooleano {
++  return {
++    tipo: "booleano",
++    esquema: z.boolean(),
++    aPayload: (valores, cod) => Boolean(valores[cod]),
++    ...opciones,
++  };
++}
++
++export type CampoFijo<V> = Campo<"fijo", V>;
++
++/** Valor que siempre se envía igual (ej. cod_estado: 1). Con `esquema`, también se lee del API. */
++export function fijo<const V>(valor: V): CampoFijo<V>;
++export function fijo<const V, E extends z.ZodType>(
++  valor: V,
++  opciones: { esquema: E; inicial?: unknown },
++): CampoFijo<V> & { esquema: E };
++export function fijo<const V>(
++  valor: V,
++  opciones: { esquema?: z.ZodType; inicial?: unknown } = {},
++): CampoFijo<V> {
++  return { tipo: "fijo", aPayload: () => valor, ...opciones };
++}
++
++export type CampoPropio<P> = Campo<"propio", P>;
++
++/**
++ * Salida a mano: un campo cuyo payload no sigue a ningún tipo (ej. rango:
++ * cod_estado ?? 1). Con `esquema`, también se lee del API. No se dibuja.
++ */
++export function propio<P>(opciones: {
++  aPayload: AlPayload<P>;
++  label?: string;
++  inicial?: unknown;
++}): CampoPropio<P>;
++export function propio<P, E extends z.ZodType>(opciones: {
++  aPayload: AlPayload<P>;
++  esquema: E;
++  label?: string;
++  inicial?: unknown;
++}): CampoPropio<P> & { esquema: E };
++export function propio<P>(opciones: {
++  aPayload: AlPayload<P>;
++  esquema?: z.ZodType;
++  label?: string;
++  inicial?: unknown;
++}): CampoPropio<P> {
++  return { tipo: "propio", ...opciones };
++}
++
++export type CampoContexto = Campo<"contexto", Id | null>;
++
++/** Valor que viene de las props del componente (ej. cod_servicio). Se envía `?? null`. */
++export function delContexto(clave: Exclude<keyof ContextoMetodo, "codMetodo">): CampoContexto {
++  return { tipo: "contexto", aPayload: (_valores, _cod, ctx) => ctx[clave] ?? null };
++}
++
++/**
++ * El campo se envía pero no se declara en el esquema de la lista (llega por
++ * passthrough, si llega). Ej. cod_rubro en costo-porcentaje.
++ */
++export function sinEsquema<T extends DefCampo>(campo: T): Omit<T, "esquema"> {
++  const { esquema: _esquema, ...resto } = campo;
++
++  return resto;
++}
++
++/* ==========================================================================
++ * REGLAS REUTILIZABLES
++ * ========================================================================== */
++
++/**
++ * Error en `venta` cuando costo > venta.
++ * Por defecto solo compara si ambos tienen valor; con `vaciosComoCero` un
++ * vacío cuenta como 0 (ej. cobertura: costo 5 y venta vacía es error).
++ */
++export const ventaNoMenorQueCosto =
++  (
++    costo: string,
++    venta: string,
++    mensaje: string,
++    opciones: { vaciosComoCero?: boolean } = {},
++  ): ReglaMetodo =>
++  (valores) => {
++    if (opciones.vaciosComoCero) {
++      return Number(valores[costo] ?? 0) > Number(valores[venta] ?? 0)
++        ? { campo: venta, mensaje }
++        : null;
++    }
++
++    if (vacio(valores[costo]) || vacio(valores[venta])) return null;
++
++    return Number(valores[costo]) > Number(valores[venta]) ? { campo: venta, mensaje } : null;
++  };
++
++/** Error en `campo` si Number(valor ?? 0) queda fuera de [min, max] (ej. porcentajes 0–100). */
++export const rangoPermitido =
++  (campo: string, min: number, max: number, mensaje: string): ReglaMetodo =>
++  (valores) => {
++    const valor = Number(valores[campo] ?? 0);
++
++    return valor < min || valor > max ? { campo, mensaje } : null;
++  };
++
++/* ==========================================================================
++ * DEFINICIÓN DEL MÉTODO
++ * ========================================================================== */
++
++type CamposMetodo = Record<string, DefCampo>;
++
++type ShapeMetodo<IdCod extends string, C extends CamposMetodo> = Simplificar<
++  { [K in IdCod]: typeof zId } & { cod_metodo: z.ZodNullable<typeof zId> } & {
++    [K in keyof C as C[K] extends { esquema: z.ZodType } ? K : never]: C[K] extends {
++      esquema: infer E;
++    }
++      ? E
++      : never;
++  }
++>;
++
++export type PayloadMetodo<IdCod extends string, C extends CamposMetodo> = Simplificar<
++  { [K in IdCod]?: Id | null } & { cod_metodo: Id } & {
++    [K in keyof C]: ReturnType<C[K]["aPayload"]>;
++  }
++>;
++
++type OpcionesFila<C extends CamposMetodo> = {
++  -readonly [K in keyof C as C[K] extends { en: infer E extends string } ? E : never]?: C[K] extends {
++    deApi: (...args: never[]) => infer O;
++  }
++    ? O
++    : never;
++};
++
++type ConfigMetodo<IdCod extends string, C extends CamposMetodo> = {
++  /** Llave del registro y valor que se envía si la fila aún no la tiene (nuevo). */
++  id: { cod: IdCod; siFalta: null | 0 };
++  campos: C;
++  /** Validaciones entre campos (ej. venta >= costo). */
++  reglas?: readonly ReglaMetodo[];
++};
++
++export type ResultadoValidacion = {
++  /** No falta ningún requerido y ninguna regla falla. */
++  valido: boolean;
++  /** Etiquetas de los requeridos vacíos, en el orden de `campos`. */
++  faltantes: string[];
++  /** Mensajes de error por campo, en el orden de `reglas`. */
++  errores: Partial<Record<string, string[]>>;
++};
++
++export function definirMetodo<const IdCod extends string, const C extends CamposMetodo>(
++  config: ConfigMetodo<IdCod, C>,
++) {
++  const { id, campos, reglas = [] } = config;
++  const entradas = Object.entries(campos) as [string, DefCampo][];
++
++  const shape: Record<string, z.ZodType> = { [id.cod]: zId, cod_metodo: zId.nullable() };
++
++  for (const [cod, campo] of entradas) {
++    if (campo.esquema) shape[cod] = campo.esquema;
++  }
++
++  const esquema = z.object(shape as ShapeMetodo<IdCod, C>).passthrough();
++
++  type Registro = z.infer<typeof esquema>;
++  // El id es null mientras el registro es nuevo. Si la opción se guarda en la misma llave
++  // del API (ej. equipo: cod_moneda_costo), manda la opción.
++  type Fila = Simplificar<
++    SinLlaves<Partial<Registro>, IdCod | keyof OpcionesFila<C>> & {
++      [K in IdCod]?: Id | null;
++    } & OpcionesFila<C>
++  >;
++  type Payload = PayloadMetodo<IdCod, C>;
++
++  /** Registro del API (o fila) → fila del formulario (agrega las opciones de select). */
++  const aFila = (registro: Registro | Fila, catalogos: CatalogosMetodo): Fila => {
++    const fila: Valores = { ...registro };
++
++    for (const [cod, campo] of entradas) {
++      if (campo.en && campo.deApi) fila[campo.en] = campo.deApi(registro as Valores, cod, catalogos);
++    }
++
++    return fila as Fila;
++  };
++
++  /** Fila del formulario → payload del backend. */
++  const aPayload = (fila: Fila, ctx: ContextoMetodo): Payload => {
++    const valores = fila as Valores;
++    const payload: Valores = {
++      [id.cod]: valores[id.cod] ?? id.siFalta,
++      cod_metodo: ctx.codMetodo,
++    };
++
++    for (const [cod, campo] of entradas) {
++      payload[cod] = campo.aPayload(valores, cod, ctx);
++    }
++
++    return payload as Payload;
++  };
++
++  /** Fila de un registro nuevo: solo los campos con `inicial`, en el orden de `campos`. */
++  const filaNueva = (): Fila => {
++    const fila: Valores = {};
++
++    for (const [cod, campo] of entradas) {
++      if (campo.inicial !== undefined) fila[campo.en ?? cod] = campo.inicial;
++    }
++
++    return fila as Fila;
++  };
++
++  const validar = (fila: Fila): ResultadoValidacion => {
++    const valores = fila as Valores;
++
++    const faltantes = entradas
++      .filter(([cod, campo]) => campo.requerido && campo.falta?.(valores, cod))
++      .map(([cod, campo]) => campo.labelFaltante ?? campo.label ?? cod);
++
++    const errores: Partial<Record<string, string[]>> = {};
++
++    for (const regla of reglas) {
++      const error = regla(valores);
++      if (error) errores[error.campo] = [...(errores[error.campo] ?? []), error.mensaje];
++    }
++
++    return {
++      valido: faltantes.length === 0 && Object.keys(errores).length === 0,
++      faltantes,
++      errores,
++    };
++  };
++
++  return {
++    id,
++    campos,
++    esquema,
++    aFila,
++    aPayload,
++    filaNueva,
++    validar,
++    /** Solo para tipos: `typeof METODO.tipos.fila`. */
++    tipos: undefined as unknown as { registro: Registro; fila: Fila; payload: Payload },
++  };
++}
+diff --git a/src/features/pricing/shared/lib/metodos/rango.ts b/src/features/pricing/shared/lib/metodos/rango.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..b60a4c60454c0815a084b625fc836e09e8cf33dc
+--- /dev/null
++++ b/src/features/pricing/shared/lib/metodos/rango.ts
+@@ -0,0 +1,109 @@
++/* ==========================================================================
++ * MÉTODO RANGO: DEFINICIÓN ÚNICA DE CAMPOS
++ *
++ * Vive en pricing/shared porque Cotizaciones también lee la lista de rangos
++ * (tarifaRangoSchema sale de aquí). Ver shared/lib/campos-metodo.ts.
++ *
++ * Para agregar un campo: agrégalo en `campos`; si se ve, colócalo en
++ * tarifas/components/metodos/rango/rango-form.tsx y, si va en la tabla, su
++ * código en la lista de rango-columns.tsx.
++ *
++ * Se conserva del código viejo:
++ *   - Los montos se envían tal cual (sin Number) y `inicio || 0`; `final` siempre null.
++ *   - Un campo requerido falta si es falso (`!valor`): 0 cuenta como vacío.
++ *   - El formulario (grilla de 7 columnas, "" en lugar de null) se escribe a mano.
++ * ========================================================================== */
++
++import { zId } from "@/shared/lib/zod-scalars";
++
++import {
++  definirMetodo,
++  delContexto,
++  esquemaMonto,
++  fijo,
++  moneda,
++  monto,
++  propio,
++  type ReglaMetodo,
++} from "../campos-metodo";
++
++type Id = string | number;
++type Valores = Record<string, unknown>;
++
++/** El valor tal cual o null (sin Number). */
++const crudoONull = (valores: Valores, cod: string) => (valores[cod] ?? null) as Id | null;
++
++/** Requerido: falta si es falso (incluye 0). */
++const faltaSiFalso = (valores: Valores, cod: string) => !valores[cod];
++
++/** Solo compara si costo y venta tienen valor (no 0). */
++const ventaNoMenorQueCosto: ReglaMetodo = (valores) =>
++  valores.costo && valores.venta && Number(valores.costo) > Number(valores.venta)
++    ? { campo: "venta", mensaje: "El valor de venta debe ser igual o mayor al valor del costo" }
++    : null;
++
++const montoRequerido = (label: string, labelFaltante: string) =>
++  monto({
++    label,
++    labelFaltante,
++    requerido: true,
++    falta: faltaSiFalso,
++    inicial: "",
++    aPayload: crudoONull,
++  });
++
++export const METODO_RANGO = definirMetodo({
++  id: { cod: "cod_tarifa_rango", siFalta: null },
++
++  // El orden de los requeridos es el de la lista de faltantes del formulario.
++  campos: {
++    cod_servicio: delContexto("codServicio"),
++
++    inicio: monto({
++      label: "A partir de...",
++      inicial: "",
++      aPayload: (valores, cod) => (valores[cod] || 0) as Id,
++    }),
++
++    final: fijo(null, { esquema: esquemaMonto }),
++
++    costo_minimo: montoRequerido("Mínimo costo", "Mínimo de Costo"),
++
++    venta_minimo: montoRequerido("Mínimo venta", "Mínimo de Venta"),
++
++    costo: montoRequerido("Costo", "Costo"),
++
++    venta: montoRequerido("Venta", "Venta"),
++
++    cod_moneda_costo: moneda({
++      label: "Moneda costo",
++      labelFaltante: "Moneda de Costo",
++      en: "moneda_costo",
++      requerido: true,
++      inicial: null,
++    }),
++
++    cod_moneda_venta: moneda({
++      label: "Moneda venta",
++      labelFaltante: "Moneda de Venta",
++      en: "moneda_venta",
++      requerido: true,
++      inicial: null,
++    }),
++
++    cod_estado: propio({ esquema: zId, aPayload: (valores, cod) => (valores[cod] ?? 1) as Id }),
++  },
++
++  reglas: [ventaNoMenorQueCosto],
++});
++
++type Tipos = typeof METODO_RANGO.tipos;
++
++/** Registro de la lista (lo que devuelve el API). */
++export type TarifaRango = Tipos["registro"];
++
++/** Fila del formulario (sin localId; ver tarifas/.../rango-columns.tsx). */
++export type FilaRango = Tipos["fila"];
++
++/** Lo que se envía al guardar cada rango. */
++export type TarifaRangoMutationPayload = Tipos["payload"];
+diff --git a/src/features/pricing/tarifas/ARQUITECTURA.md b/src/features/pricing/tarifas/ARQUITECTURA.md
+index 1c614c86d4d5d41134510633a6b2c9cdf375298b..086c6cbe6ad8ad16eef9952ef39c4fade8cf112d 100644
+--- a/src/features/pricing/tarifas/ARQUITECTURA.md
++++ b/src/features/pricing/tarifas/ARQUITECTURA.md
+@@ -7,20 +7,21 @@ tarifas/
+ ├─ api/
+ │  ├─ catalogo-metodo.ts    ← ADAPTADOR de métodos sobre createCatalogo (@/features/catalogos)
+ │  ├─ monedas.ts            ← consulta ÚNICA de monedas operativas (createCatalogo)
+-│  ├─ tarifa-*.ts           ← cada método: su esquema, su payload y sus endpoints
++│  ├─ tarifa-*.ts           ← cada método: sus endpoints (esquema y payload salen de lib/metodos/)
+ │  └─ ...                   ← servicios, métodos, clientes, proveedores, incoterms
+ ├─ hooks/
+ │  ├─ use-catalogos-tarifas.ts   ← catálogos base de pricing/shared + opción "TODOS" + mapWithCatalogo
+ │  ├─ use-opciones-tarifa.ts     ← monedas / rubros como opciones { value, label } y búsqueda local
+ │  └─ use-formulario-tarifas.ts  ← formulario principal de tarifa
+ ├─ lib/
+-│  ├─ campos-metodo.ts      ← DEFINICIÓN ÚNICA de campos de métodos: tipos de campo y definirMetodo
+-│  ├─ metodos/<metodo>.ts   ← campos de cada método (migrados: costo-venta)
++│  ├─ campos-metodo.ts      ← reexporta el motor de definición única (vive en pricing/shared/lib/campos-metodo.ts)
++│  ├─ metodos/<metodo>.ts   ← DEFINICIÓN ÚNICA de los campos de cada método (rango: pricing/shared/lib/metodos/rango.ts)
+ │  ├─ tarifa-field-rules.ts ← reglas de campos del formulario principal
+ │  └─ tarifa-helpers.ts     ← funciones compartidas (decimales, fechas, ...)
+ └─ components/
+    └─ metodos/
+-      ├─ campo-metodo.tsx   ← dibuja un campo (etiqueta + input) desde su definición
++      ├─ campo-metodo.tsx   ← dibuja un campo (etiqueta + input + errores) desde su definición
++      ├─ columnas-metodo.ts ← columnas de tabla desde la definición (rango, scalling)
+       └─ <metodo>/          ← sin tabla: <metodo>.tsx (componente padre: datos + guardar) y -form.tsx
+                               con tabla (rango, scalling): -columns, -form, -table
+ ```
+@@ -32,6 +33,7 @@ desde el barrel de Tarifas para no romper importaciones existentes:
+ 
+ - `useCatalogosPricing` (carga y normalización de catálogos), `conAmbosFormatos`
+ - APIs: métodos, proveedores, clientes y la **lectura** de rangos (las mutaciones de rangos siguen en `api/tarifa-rangos.ts`)
++- El motor de definición única de campos (`lib/campos-metodo.ts`) y la definición de rango (`lib/metodos/rango.ts`)
+ - `FichaResumen` / `ResumenItem` y `getEstadoMetodo`
+ 
+ ## Método nuevo (o endpoint nuevo)
+@@ -44,8 +46,9 @@ módulos. `crearCatalogoMetodo` es solo un adaptador delgado que agrega lo propi
+ - el tipo del payload de cada método en las mutaciones.
+ 
+ ```ts
+-export const tarifaMiMetodoSchema = z.object({ ... }).passthrough();
+-export type TarifaMiMetodoMutationPayload = { ... };
++// Campos: lib/metodos/mi-metodo.ts (ver "Campos de un método")
++export const tarifaMiMetodoSchema = METODO_MI_METODO.esquema;
++export type TarifaMiMetodoMutationPayload = typeof METODO_MI_METODO.tipos.payload;
+ 
+ const api = crearCatalogoMetodo<typeof tarifaMiMetodoSchema, TarifaMiMetodoMutationPayload>({
+   nombre: "tarifas-mi-metodo",              // único: raíz de las query keys
+@@ -73,15 +76,78 @@ refrescan la lista al terminar (`onSettled`) y los toasts se controlan con `meta
+ 
+ Excepción: **equipo** convierte monedas con `value` numérico porque ese valor se envía tal cual al backend.
+ 
+-## Campos de un método (definición única) — en migración
++## Campos de un método (definición única)
+ 
+-Migrado: **costoVenta** (`lib/metodos/costo-venta.ts`). De `METODO_COSTO_VENTA` salen el esquema, los tipos
+-(`TarifaCostoVenta`, `FilaCostoVenta`, `TarifaCostoVentaMutationPayload`), `aFila`, `aPayload` y `validar`;
+-el formulario usa `<CampoMetodo>` con el mismo layout. Componente padre reutilizable: `MetodoCostoVenta`
+-(alias viejo `CostoVentaTable` en el barrel). Los demás métodos se migran uno por uno.
++Cada método declara sus campos **una sola vez** en `lib/metodos/<metodo>.ts` (rango:
++`pricing/shared/lib/metodos/rango.ts`, porque Cotizaciones lee su esquema). El motor es
++`pricing/shared/lib/campos-metodo.ts` (reexportado en `lib/campos-metodo.ts`):
++
++```ts
++export const METODO_COSTO_VENTA = definirMetodo({
++  id: { cod: "cod_tarifa_costoventa", siFalta: null },   // siFalta: lo que se envía si es nuevo
++  campos: {                                              // el orden es el del payload
++    cod_servicio: delContexto("codServicio"),
++    costo: monto({ label: "Costo", requerido: true, formulario: { step: "0.1", simboloDe: "moneda_costo" } }),
++    cod_moneda_costo: moneda({ label: "Moneda de costo", en: "moneda_costo", requerido: true }),
++    cod_estado: fijo(1, { esquema: zId }),
++    ...
++  },
++  reglas: [ventaNoMenorQueCosto("costo", "venta", "El valor de venta debe ser ...")],
++});
++```
++
++De `METODO_<X>` sale todo lo demás:
++
++| Qué | Dónde se usa |
++| --- | --- |
++| `esquema` (Zod de la lista) y `tipos.registro` | `api/tarifa-<metodo>.ts` |
++| `tipos.payload` y `aPayload(fila, { codMetodo, codServicio })` | componente padre / tabla (insertar, actualizar) |
++| `tipos.fila` y `aFila(registro, { monedas, rubros, ... })` (busca las opciones de los selects) | componente padre / tabla |
++| `filaNueva()` (campos con `inicial`) | formulario, al crear |
++| `validar(fila)` → `{ valido, faltantes, errores }` (requeridos + reglas) | formulario (botón y mensajes) |
++| `<CampoMetodo {...campo} campo="costo" />` (etiqueta, input y errores del campo) | formulario |
++| `columnasMetodo(METODO_X, ["costo", "cod_moneda_costo"])` | `-columns.tsx` (rango, scalling) |
++
++Tipos de campo: `monto`, `moneda`, `rubro`, `opcion` (cualquier catálogo `{ value, label }`), `booleano`,
++`fijo`, `delContexto` y `propio` (salida a mano). Si un campo no se comporta como su tipo, se sobrescribe solo
++esa parte (`aPayload`, `falta`, `labelFaltante`, `buscarPor`, ...) o se usa `sinEsquema` / `propio`, en lugar de
++forzar la abstracción.
++
++### ¿Cómo agrego un campo a un método?
++
++1. **Una línea en `lib/metodos/<metodo>.ts`**, en `campos` (en el orden en que debe ir en el payload), por ejemplo
++   `minimo: monto({ label: "Mínimo", inicial: 0 })`. Con eso ya quedan el esquema, los tipos, el payload, la
++   fila nueva y la validación (si es `requerido` o tiene reglas).
++2. Si se ve en pantalla: `<CampoMetodo {...campo} campo="minimo" />` en su `-form.tsx`, donde va en la grilla
++   (equipo, rango y scalling tienen el formulario a mano: ahí se agrega el input con su markup).
++3. Si va en la tabla (rango, scalling): su código en la lista de `columnasMetodo` de `-columns.tsx`.
++
++### Componentes padre reutilizables
++
++`MetodoCostoVenta`, `MetodoCobertura`, `MetodoPorcentaje`, `MetodoCostoPorcentaje`, `MetodoEquipo`
++(consulta + formulario + guardado): en otra pantalla basta con `<MetodoCostoVenta codMetodo={...} />`.
++Los nombres viejos (`CostoVentaTable`, `CoberturaTable`, ...) siguen en el barrel como alias.
++Rango y scalling conservan `-columns`, `-form` y `-table` (`RangoTable`, `ScallingTable`).
++
++### Lo que sigue a mano (se conservó el comportamiento existente)
++
++- Avisos de más de 8 decimales (cobertura, porcentaje, costo-porcentaje); `minimo: 0` inicial de porcentaje.
++- costo-porcentaje: el input de venta (etiqueta, `max`, `step` y "%" cambian con `es_porcentaje`) y el radio
++  Porcentaje / Valor. Su lado de costo está definido pero oculto; `cod_rubro` se envía sin estar en el esquema
++  (`sinEsquema`).
++- equipo: todo el markup del formulario (asteriscos, placeholders, símbolo en la etiqueta); usa la definición
++  para validar. Sus selects guardan la opción en la misma llave del API (`cod_moneda_costo`, ...), las monedas
++  usan `value` numérico y se envía `value || null` (campos `opcion`); al insertar no se envía
++  `cod_tarifa_equipo` (lo quita `MetodoEquipo`).
++- rango: el formulario (grilla de 7 columnas, montos en "" en vez de null) y la edición local con "Guardar
++  todo". Columnas id, "A partir de..." y acciones.
++- scalling: el tipo de punto de enlace (no se envía: al leer sale del punto y en el formulario filtra los
++  puntos), el formulario y las columnas tipo y acciones.
++- El JSON enviado conserva valores, pero el orden de llaves sigue `cod_metodo` primero y luego `campos`
++  (equipo y rango tenían otro orden; el backend no depende del orden).
+ 
+ ## Pendiente (no es centralización)
+ 
+-- Agregar un campo a un método todavía requiere tocar su esquema, su payload, su formulario y su tabla.
++- `api/crear-api-metodo.ts` no se usa en ningún lado (se puede borrar).
+ - `porcentaje-form.tsx` inicializa `minimo: 0` en lugar de `minimo_costo` / `minimo_venta`
+   (solo afecta si el input aparece vacío o en 0 al crear; lo enviado es igual).
+diff --git a/src/features/pricing/tarifas/api/tarifa-cobertura.ts b/src/features/pricing/tarifas/api/tarifa-cobertura.ts
+index cad5223eddc9be5e201b64e9cbbb3c03b81d0fdb..77a667791db02a30c97aed53b5f146ff88c3e844 100644
+--- a/src/features/pricing/tarifas/api/tarifa-cobertura.ts
++++ b/src/features/pricing/tarifas/api/tarifa-cobertura.ts
+@@ -1,30 +1,14 @@
+-import { z } from "zod";
+-import { zId } from "@/shared/lib/zod-scalars";
++import {
++  METODO_COBERTURA,
++  type TarifaCobertura,
++  type TarifaCoberturaMutationPayload,
++} from "../lib/metodos/cobertura";
+ import { crearCatalogoMetodo, type FiltrosMetodo } from "./catalogo-metodo";
+ 
+-export const tarifaCoberturaSchema = z
+-  .object({
+-    cod_tarifa_cobertura: zId,
+-    cod_metodo: zId.nullable(),
++// Campos, tipos y payload: definición única en lib/metodos/cobertura.ts.
++export const tarifaCoberturaSchema = METODO_COBERTURA.esquema;
+ 
+-    porcentaje_costo: z.union([z.string(), z.number()]).nullable(),
+-
+-    porcentaje_venta: z.union([z.string(), z.number()]).nullable(),
+-
+-    minimo_costo: z.union([z.string(), z.number()]).nullable(),
+-
+-    minimo_venta: z.union([z.string(), z.number()]).nullable(),
+-
+-    cod_moneda_costo: zId.nullable(),
+-    cod_moneda_venta: zId.nullable(),
+-
+-    cod_rubro: zId.nullable().optional(),
+-
+-    cod_estado: zId,
+-  })
+-  .passthrough();
+-
+-export type TarifaCobertura = z.infer<typeof tarifaCoberturaSchema>;
++export type { TarifaCobertura, TarifaCoberturaMutationPayload };
+ 
+ export type FiltrosTarifaCobertura = FiltrosMetodo;
+ 
+@@ -36,25 +20,6 @@ export {
+   useMonedasOperativas as useMonedasCobertura,
+ } from "./monedas";
+ 
+-export type TarifaCoberturaMutationPayload = {
+-  cod_tarifa_cobertura?: string | number | null;
+-
+-  cod_metodo: string | number;
+-
+-  porcentaje_costo: number;
+-  porcentaje_venta: number;
+-
+-  minimo_costo: number;
+-  minimo_venta: number;
+-
+-  cod_moneda_costo: string | number | null;
+-  cod_moneda_venta: string | number | null;
+-
+-  cod_rubro: string | number | null;
+-
+-  cod_estado: string | number;
+-};
+-
+ /* CONSULTA Y MUTACIONES (createCatalogo vía crearCatalogoMetodo) */
+ 
+ const api = crearCatalogoMetodo<typeof tarifaCoberturaSchema, TarifaCoberturaMutationPayload>({
+diff --git a/src/features/pricing/tarifas/api/tarifa-costo-porcentaje.ts b/src/features/pricing/tarifas/api/tarifa-costo-porcentaje.ts
+index b9a217ab8f6eb820d2006377f39968791eb68495..df5b9e4c07dc3dcb67ab321c6c3d7205b497a767 100644
+--- a/src/features/pricing/tarifas/api/tarifa-costo-porcentaje.ts
++++ b/src/features/pricing/tarifas/api/tarifa-costo-porcentaje.ts
+@@ -1,28 +1,17 @@
+-import { z } from "zod";
+-import { zId } from "@/shared/lib/zod-scalars";
++import {
++  METODO_COSTO_PORCENTAJE,
++  type TarifaCostoPorcentaje,
++  type TarifaCostoPorcentajeMutationPayload,
++} from "../lib/metodos/costo-porcentaje";
+ import { crearCatalogoMetodo, type FiltrosMetodo } from "./catalogo-metodo";
+ 
+-export const tarifaCostoPorcentajejeSchema = z
+-  .object({
+-    cod_tarifa_porcentaje: zId,
+-    cod_metodo: zId.nullable(),
++// Campos, tipos y payload: definición única en lib/metodos/costo-porcentaje.ts.
++// (Se conservan los nombres existentes, con "Porcentajeje".)
++export const tarifaCostoPorcentajejeSchema = METODO_COSTO_PORCENTAJE.esquema;
+ 
+-    porcentaje_costo: z.union([z.string(), z.number()]).nullable(),
+-    porcentaje_venta: z.union([z.string(), z.number()]).nullable(),
++export type TarifaCostoPorcentajeje = TarifaCostoPorcentaje;
+ 
+-    minimo_costo: z.union([z.string(), z.number()]).nullable(),
+-    minimo_venta: z.union([z.string(), z.number()]).nullable(),
+-
+-    cod_moneda_costo: zId.nullable(),
+-    cod_moneda_venta: zId.nullable(),
+-
+-    es_porcentaje: z.boolean(),
+-
+-    cod_estado: zId,
+-  })
+-  .passthrough();
+-
+-export type TarifaCostoPorcentajeje = z.infer<typeof tarifaCostoPorcentajejeSchema>;
++export type TarifaCostoPorcentajejeMutationPayload = TarifaCostoPorcentajeMutationPayload;
+ 
+ export type FiltrosTarifaCostoPorcentaje = FiltrosMetodo;
+ 
+@@ -34,27 +23,6 @@ export {
+   useMonedasOperativas as useMonedasPorcentaje,
+ } from "./monedas";
+ 
+-export type TarifaCostoPorcentajejeMutationPayload = {
+-  cod_tarifa_porcentaje?: string | number | null;
+-
+-  cod_metodo: string | number;
+-
+-  porcentaje_costo: number;
+-  porcentaje_venta: number;
+-
+-  minimo_costo: number;
+-  minimo_venta: number;
+-
+-  cod_rubro: string | number | null;
+-
+-  es_porcentaje: boolean | null;
+-
+-  cod_moneda_costo: string | number | null;
+-  cod_moneda_venta: string | number | null;
+-
+-  cod_estado: string | number;
+-};
+-
+ /* CONSULTA Y MUTACIONES (createCatalogo vía crearCatalogoMetodo) */
+ 
+ const api = crearCatalogoMetodo<
+diff --git a/src/features/pricing/tarifas/api/tarifa-equipo.ts b/src/features/pricing/tarifas/api/tarifa-equipo.ts
+index 147cc4e2e1d0ce8d6c63fc16a0da99e3ec846f35..3719b12728d5cc24da2204fb9f807a39459b77e7 100644
+--- a/src/features/pricing/tarifas/api/tarifa-equipo.ts
++++ b/src/features/pricing/tarifas/api/tarifa-equipo.ts
+@@ -1,26 +1,14 @@
+-import { z } from "zod";
+-
+-import { zId } from "@/shared/lib/zod-scalars";
++import {
++  METODO_EQUIPO,
++  type TarifaEquipo,
++  type TarifaEquipoMutationPayload,
++} from "../lib/metodos/equipo";
+ import { crearCatalogoMetodo, type FiltrosMetodo } from "./catalogo-metodo";
+ 
+-export const tarifaEquipoSchema = z
+-  .object({
+-    cod_tarifa_equipo: zId,
+-    cod_metodo: zId.nullable(),
+-    cod_equipo: zId.nullable(),
+-
+-    costo: z.union([z.string(), z.number()]).nullable(),
+-
+-    venta: z.union([z.string(), z.number()]).nullable(),
+-
+-    cod_moneda_costo: zId.nullable(),
+-    cod_moneda_venta: zId.nullable(),
++// Campos, tipos y payload: definición única en lib/metodos/equipo.ts.
++export const tarifaEquipoSchema = METODO_EQUIPO.esquema;
+ 
+-    cod_estado: zId.nullable(),
+-  })
+-  .passthrough();
+-
+-export type TarifaEquipo = z.infer<typeof tarifaEquipoSchema>;
++export type { TarifaEquipo, TarifaEquipoMutationPayload };
+ 
+ export type FiltrosTarifaEquipo = FiltrosMetodo;
+ 
+@@ -36,27 +24,6 @@ export {
+   useMonedasOperativas as useMonedasEquipo,
+ } from "./monedas";
+ 
+-/* ==========================================================================
+- * MUTATIONS
+- * ========================================================================== */
+-
+-export type TarifaEquipoMutationPayload = {
+-  cod_tarifa_equipo?: string | number | null;
+-
+-  cod_metodo: string | number;
+-
+-  cod_equipo: string | number | null;
+-
+-  costo: number;
+-  venta: number;
+-
+-  cod_moneda_costo: string | number | null;
+-
+-  cod_moneda_venta: string | number | null;
+-
+-  cod_estado: string | number;
+-};
+-
+ /* CONSULTA Y MUTACIONES (createCatalogo vía crearCatalogoMetodo) */
+ 
+ const api = crearCatalogoMetodo<typeof tarifaEquipoSchema, TarifaEquipoMutationPayload>({
+diff --git a/src/features/pricing/tarifas/api/tarifa-porcentaje.ts b/src/features/pricing/tarifas/api/tarifa-porcentaje.ts
+index fe0db018471a320f835304c658b251cfb7c2590e..24591915ff4bbd34a32ff4960d4a273e12d8d6bd 100644
+--- a/src/features/pricing/tarifas/api/tarifa-porcentaje.ts
++++ b/src/features/pricing/tarifas/api/tarifa-porcentaje.ts
+@@ -1,29 +1,14 @@
+-import { z } from "zod";
+-import { zId } from "@/shared/lib/zod-scalars";
++import {
++  METODO_PORCENTAJE,
++  type TarifaPorcentaje,
++  type TarifaPorcentajeMutationPayload,
++} from "../lib/metodos/porcentaje";
+ import { crearCatalogoMetodo, type FiltrosMetodo } from "./catalogo-metodo";
+ 
+-export const tarifaPorcentajeSchema = z
+-  .object({
+-    cod_tarifa_porcentaje: zId,
+-    cod_metodo: zId.nullable(),
++// Campos, tipos y payload: definición única en lib/metodos/porcentaje.ts.
++export const tarifaPorcentajeSchema = METODO_PORCENTAJE.esquema;
+ 
+-    porcentaje_costo: z.union([z.string(), z.number()]).nullable(),
+-
+-    porcentaje_venta: z.union([z.string(), z.number()]).nullable(),
+-
+-    minimo_costo: z.union([z.string(), z.number()]).nullable(),
+-    minimo_venta: z.union([z.string(), z.number()]).nullable(),
+-
+-    cod_moneda_costo: zId.nullable(),
+-    cod_moneda_venta: zId.nullable(),
+-
+-    cod_rubro: zId.nullable(),
+-
+-    cod_estado: zId,
+-  })
+-  .passthrough();
+-
+-export type TarifaPorcentaje = z.infer<typeof tarifaPorcentajeSchema>;
++export type { TarifaPorcentaje, TarifaPorcentajeMutationPayload };
+ 
+ export type FiltrosTarifaPorcentaje = FiltrosMetodo;
+ 
+@@ -35,25 +20,6 @@ export {
+   useMonedasOperativas as useMonedasPorcentaje,
+ } from "./monedas";
+ 
+-export type TarifaPorcentajeMutationPayload = {
+-  cod_tarifa_porcentaje?: string | number | null;
+-
+-  cod_metodo: string | number;
+-
+-  porcentaje_costo: number;
+-  porcentaje_venta: number;
+-
+-  minimo_costo: number;
+-  minimo_venta: number;
+-
+-  cod_rubro: string | number | null;
+-
+-  cod_moneda_costo: string | number | null;
+-  cod_moneda_venta: string | number | null;
+-
+-  cod_estado: string | number;
+-};
+-
+ /* CONSULTA Y MUTACIONES (createCatalogo vía crearCatalogoMetodo) */
+ 
+ const api = crearCatalogoMetodo<typeof tarifaPorcentajeSchema, TarifaPorcentajeMutationPayload>({
+diff --git a/src/features/pricing/tarifas/api/tarifa-rangos.ts b/src/features/pricing/tarifas/api/tarifa-rangos.ts
+index 98ce22ebd1aaffafa3dc59d41c7a27b1a29b7048..8f831ed910e9092c4ed15887c23bf6872b9c1046 100644
+--- a/src/features/pricing/tarifas/api/tarifa-rangos.ts
++++ b/src/features/pricing/tarifas/api/tarifa-rangos.ts
+@@ -1,5 +1,5 @@
+ import { mutationOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+-import { TARIFA_RANGOS_QUERY_KEY } from "@/features/pricing/shared";
++import { TARIFA_RANGOS_QUERY_KEY, type TarifaRangoMutationPayload } from "@/features/pricing/shared";
+ import { http } from "@/shared/api/client";
+ 
+ /* Lectura (esquema, tipos y consulta): compartida en pricing/shared/api/tarifa-rangos.ts */
+@@ -12,6 +12,9 @@ export {
+   useTarifaRangos,
+ } from "@/features/pricing/shared";
+ 
++// Payload: definición única en pricing/shared/lib/metodos/rango.ts.
++export type { TarifaRangoMutationPayload };
++
+ // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
+ export {
+   type MonedaOperativa as MonedaRango,
+@@ -20,27 +23,6 @@ export {
+   useMonedasOperativas as useMonedasRango,
+ } from "./monedas";
+ 
+-export type TarifaRangoMutationPayload = {
+-  cod_tarifa_rango?: string | number | null;
+-
+-  cod_servicio?: string | number | null;
+-  cod_metodo: string | number;
+-
+-  inicio: string | number;
+-  final: string | number | null;
+-
+-  costo_minimo: string | number | null;
+-  venta_minimo: string | number | null;
+-
+-  costo: string | number | null;
+-  cod_moneda_costo: string | number;
+-
+-  venta: string | number | null;
+-  cod_moneda_venta: string | number;
+-
+-  cod_estado?: string | number | null;
+-};
+-
+ export const guardarTarifaRangosOptions = () =>
+   mutationOptions({
+     mutationFn: async (rangos: TarifaRangoMutationPayload[]) => {
+diff --git a/src/features/pricing/tarifas/api/tarifa-scalling.ts b/src/features/pricing/tarifas/api/tarifa-scalling.ts
+index e694ac24b5ca4d4c50c5e33033b5807547395a29..64c91ba1cdbf9780ea3eb8dc9e78917c873258a5 100644
+--- a/src/features/pricing/tarifas/api/tarifa-scalling.ts
++++ b/src/features/pricing/tarifas/api/tarifa-scalling.ts
+@@ -1,19 +1,14 @@
+-import { z } from "zod";
+-import { zId } from "@/shared/lib/zod-scalars";
++import {
++  METODO_SCALLING,
++  type TarifaScalling,
++  type TarifaScallingMutationPayload,
++} from "../lib/metodos/scalling";
+ import { crearCatalogoMetodo, type FiltrosMetodo } from "./catalogo-metodo";
+ 
+-export const tarifaScallingSchema = z
+-  .object({
+-    cod_tarifa_scalling: zId,
+-    cod_metodo: zId.nullable(),
+-    cod_puntoenlace: zId.nullable(),
+-    costo: z.union([z.string(), z.number()]).nullable(),
+-    cod_moneda: zId.nullable(),
+-    cod_estado: zId,
+-  })
+-  .passthrough();
++// Campos, tipos y payload: definición única en lib/metodos/scalling.ts.
++export const tarifaScallingSchema = METODO_SCALLING.esquema;
+ 
+-export type TarifaScalling = z.infer<typeof tarifaScallingSchema>;
++export type { TarifaScalling, TarifaScallingMutationPayload };
+ 
+ export type FiltrosTarifaScalling = FiltrosMetodo;
+ 
+@@ -27,17 +22,6 @@ export {
+   useMonedasOperativas as useMonedasScalling,
+ } from "./monedas";
+ 
+-/* MUTATIONS */
+-
+-export type TarifaScallingMutationPayload = {
+-  cod_tarifa_scalling?: string | number | null;
+-  cod_metodo: string | number;
+-  cod_puntoenlace: string | number | null;
+-  costo: string | number | null;
+-  cod_moneda: string | number;
+-  cod_estado: string | number;
+-};
+-
+ /* CONSULTA Y MUTACIONES (createCatalogo vía crearCatalogoMetodo) */
+ 
+ const api = crearCatalogoMetodo<typeof tarifaScallingSchema, TarifaScallingMutationPayload>({
+diff --git a/src/features/pricing/tarifas/components/metodos/campo-metodo.tsx b/src/features/pricing/tarifas/components/metodos/campo-metodo.tsx
+index b0efd76219f6f76db4e5d935e80cbb3fd14de0f6..727c1ae4276d7a720fef5d37ec149dd791fe11b7 100644
+--- a/src/features/pricing/tarifas/components/metodos/campo-metodo.tsx
++++ b/src/features/pricing/tarifas/components/metodos/campo-metodo.tsx
+@@ -4,25 +4,32 @@ import type React from "react";
+ import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
+ import { Field, FieldLabel } from "@/shared/components/ui/field";
+ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/components/ui/input-group";
+-import { type MonedaOpcion, useFiltroOpciones } from "../../hooks/use-opciones-tarifa";
++import {
++  type MonedaOpcion,
++  type RubroOpcion,
++  useFiltroOpciones,
++} from "../../hooks/use-opciones-tarifa";
+ import type { DefCampo } from "../../lib/campos-metodo";
+ 
+ /* ==========================================================================
+  * CAMPO DE UN MÉTODO DE TARIFA
+  *
+- * Dibuja un campo (etiqueta + input) a partir de su definición en
+- * lib/metodos/<metodo>.ts. El layout (grilla, orden, mensajes) lo decide el
++ * Dibuja un campo (etiqueta + input + sus errores) a partir de su definición
++ * en lib/metodos/<metodo>.ts. El layout (grilla, orden) lo decide el
+  * formulario de cada método:
+  *
+- *   const campo = { metodo: METODO_X, fila: row, onChange: cambiar, monedas, readonly };
++ *   const { errores } = METODO_X.validar(row);
++ *   const campo = { metodo: METODO_X, fila: row, onChange: cambiar, monedas, readonly, errores };
+  *   <CampoMetodo {...campo} campo="costo" />
+- *   <CampoMetodo {...campo} campo="venta">{mensajeDeError}</CampoMetodo>
+  *
+  * Los campos con un input distinto (radio, selects en cascada, ...) se
+  * escriben a mano en el formulario.
+  * ========================================================================== */
+ 
+ const SIN_MONEDAS: MonedaOpcion[] = [];
++const SIN_RUBROS: RubroOpcion[] = [];
++
++type Opcion = { value: string; label: string };
+ 
+ type Props<C extends Record<string, DefCampo>, F extends object> = {
+   metodo: { campos: C };
+@@ -30,8 +37,16 @@ type Props<C extends Record<string, DefCampo>, F extends object> = {
+   fila: F;
+   onChange: (cambio: Partial<F>) => void;
+   monedas?: MonedaOpcion[] | undefined;
++  rubros?: RubroOpcion[] | undefined;
+   readonly?: boolean | undefined;
+-  /** Contenido extra debajo del input (ej. mensaje de error). */
++  /** Resultado de METODO_X.validar(fila).errores: se muestran los de este campo. */
++  errores?: Partial<Record<string, string[]>> | undefined;
++  /**
++   * Selects: estilo de los formularios que envuelven el combo en
++   * <div className="w-full"> y no le pasan `label` (ej. porcentaje).
++   */
++  comboEnvuelto?: boolean | undefined;
++  /** Contenido extra al final del campo. */
+   children?: React.ReactNode;
+ };
+ 
+@@ -41,40 +56,57 @@ export function CampoMetodo<C extends Record<string, DefCampo>, F extends object
+   fila,
+   onChange,
+   monedas = SIN_MONEDAS,
++  rubros = SIN_RUBROS,
+   readonly = false,
++  errores,
++  comboEnvuelto = false,
+   children,
+ }: Props<C, F>) {
+   const def = metodo.campos[campo] as DefCampo;
+   const valores = fila as Record<string, unknown>;
+ 
+   const fetchMonedas = useFiltroOpciones(monedas);
++  const fetchRubros = useFiltroOpciones(rubros);
+ 
+   const cambiar = (clave: string, valor: unknown) => onChange({ [clave]: valor } as Partial<F>);
+ 
+-  if (def.tipo === "moneda" && def.en) {
++  const mensajes = errores?.[campo]?.map((mensaje, i) => (
++    // biome-ignore lint/suspicious/noArrayIndexKey: lista fija de mensajes de las reglas.
++    <p key={i} className="mt-1 text-sm text-destructive">
++      {mensaje}
++    </p>
++  ));
++
++  if ((def.tipo === "moneda" || def.tipo === "rubro") && def.en) {
+     const en = def.en;
++    const esMoneda = def.tipo === "moneda";
++    const opciones: Opcion[] = esMoneda ? monedas : rubros;
++
++    const combo = (
++      <AsyncComboboxInput<Opcion>
++        {...(comboEnvuelto ? {} : { label: def.label })}
++        value={(valores[en] as Opcion | null | undefined) ?? null}
++        onChange={(opcion: Opcion | null) => cambiar(en, opcion)}
++        fetchOptions={esMoneda ? fetchMonedas : fetchRubros}
++        initialOptions={opciones}
++        getOptionValue={(option: Opcion) => option.value}
++        getOptionLabel={(option: Opcion) => option.label}
++        placeholder="Seleccione..."
++        searchPlaceholder={esMoneda ? "Buscar moneda..." : "Buscar rubro..."}
++        minSearchLength={0}
++        fetchOnEmpty
++        clearable
++        readOnly={readonly}
++      />
++    );
+ 
+     return (
+       <Field>
+         <FieldLabel>{def.label}</FieldLabel>
+ 
+-        <InputGroup>
+-          <AsyncComboboxInput<MonedaOpcion>
+-            label={def.label}
+-            value={(valores[en] as MonedaOpcion | null | undefined) ?? null}
+-            onChange={(opcion: MonedaOpcion | null) => cambiar(en, opcion)}
+-            fetchOptions={fetchMonedas}
+-            initialOptions={monedas}
+-            getOptionValue={(option: MonedaOpcion) => option.value}
+-            getOptionLabel={(option: MonedaOpcion) => option.label}
+-            placeholder="Seleccione..."
+-            searchPlaceholder="Buscar moneda..."
+-            minSearchLength={0}
+-            fetchOnEmpty
+-            clearable
+-            readOnly={readonly}
+-          />
+-        </InputGroup>
++        <InputGroup>{comboEnvuelto ? <div className="w-full">{combo}</div> : combo}</InputGroup>
++
++        {mensajes}
+ 
+         {children}
+       </Field>
+@@ -82,11 +114,12 @@ export function CampoMetodo<C extends Record<string, DefCampo>, F extends object
+   }
+ 
+   if (def.tipo === "monto") {
+-    const { step, simboloDe } = def.formulario ?? {};
+-    const simbolo =
+-      simboloDe == null
++    const { min, max, step, simboloDe, sufijo } = def.formulario ?? {};
++    const addon =
++      sufijo ??
++      (simboloDe == null
+         ? undefined
+-        : (valores[simboloDe] as MonedaOpcion | null | undefined)?.simbolo;
++        : (valores[simboloDe] as MonedaOpcion | null | undefined)?.simbolo);
+ 
+     return (
+       <Field>
+@@ -95,6 +128,8 @@ export function CampoMetodo<C extends Record<string, DefCampo>, F extends object
+         <InputGroup>
+           <InputGroupInput
+             type="number"
++            {...(min == null ? {} : { min })}
++            {...(max == null ? {} : { max })}
+             {...(step == null ? {} : { step })}
+             readOnly={readonly}
+             value={(valores[campo] as string | number | null | undefined) ?? ""}
+@@ -103,9 +138,11 @@ export function CampoMetodo<C extends Record<string, DefCampo>, F extends object
+             }
+           />
+ 
+-          {simbolo && <InputGroupAddon align="inline-end">{simbolo}</InputGroupAddon>}
++          {addon && <InputGroupAddon align="inline-end">{addon}</InputGroupAddon>}
+         </InputGroup>
+ 
++        {mensajes}
++
+         {children}
+       </Field>
+     );
+diff --git a/src/features/pricing/tarifas/components/metodos/cobertura/cobertura-columns.tsx b/src/features/pricing/tarifas/components/metodos/cobertura/cobertura-columns.tsx
+deleted file mode 100644
+index e6c860e2ef5c81eb9505fa9764852c89c6cd0d6d..0000000000000000000000000000000000000000
+--- a/src/features/pricing/tarifas/components/metodos/cobertura/cobertura-columns.tsx
++++ /dev/null
+@@ -1,9 +0,0 @@
+-import type { TarifaCobertura } from "../../../api/tarifa-cobertura";
+-import type { MonedaOpcion } from "../../../hooks/use-opciones-tarifa";
+-
+-export type MonedaCoberturaOption = MonedaOpcion;
+-
+-export type FilaCobertura = Partial<TarifaCobertura> & {
+-  moneda_costo?: MonedaCoberturaOption | null;
+-  moneda_venta?: MonedaCoberturaOption | null;
+-};
+diff --git a/src/features/pricing/tarifas/components/metodos/cobertura/cobertura-form.tsx b/src/features/pricing/tarifas/components/metodos/cobertura/cobertura-form.tsx
+index 71ab2050ce6f0512450e28e522173b0f8a0b701a..389be284fa4b635d6def0dde37bb4e840786e4f0 100644
+--- a/src/features/pricing/tarifas/components/metodos/cobertura/cobertura-form.tsx
++++ b/src/features/pricing/tarifas/components/metodos/cobertura/cobertura-form.tsx
+@@ -2,13 +2,14 @@
+ 
+ import { Plus, Save } from "lucide-react";
+ import React from "react";
+-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
+ import { Button } from "@/shared/components/ui/button";
+-import { Field, FieldLabel } from "@/shared/components/ui/field";
+-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/components/ui/input-group";
+-import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
++import {
++  type FilaCobertura,
++  METODO_COBERTURA,
++  type MonedaCoberturaOption,
++} from "../../../lib/metodos/cobertura";
+ import { obtenerCantidadDecimales } from "../../../lib/tarifa-helpers";
+-import type { FilaCobertura, MonedaCoberturaOption } from "./cobertura-columns";
++import { CampoMetodo } from "../campo-metodo";
+ 
+ type Props = {
+   value?: FilaCobertura | null;
+@@ -29,33 +30,19 @@ export function CoberturaForm({
+   isPending = false,
+   onGuardar,
+ }: Props) {
+-  const [row, setRow] = React.useState<FilaCobertura>(
+-    value ?? {
+-      porcentaje_costo: 0,
+-      porcentaje_venta: 0,
+-      minimo_costo: 0,
+-      minimo_venta: 0,
+-    },
+-  );
++  // Nuevo: porcentajes y mínimos en 0 (`inicial` en lib/metodos/cobertura.ts).
++  const [row, setRow] = React.useState<FilaCobertura>(value ?? METODO_COBERTURA.filaNueva());
+ 
+   React.useEffect(() => {
+-    setRow(
+-      value ?? {
+-        porcentaje_costo: 0,
+-        porcentaje_venta: 0,
+-        minimo_costo: 0,
+-        minimo_venta: 0,
+-      },
+-    );
++    setRow(value ?? METODO_COBERTURA.filaNueva());
+   }, [value]);
+ 
+-  const fetchMonedas = useFiltroOpciones(monedas);
+-
+-  const porcentajeCosto = Number(row.porcentaje_costo ?? 0);
++  const cambiar = React.useCallback((cambio: Partial<FilaCobertura>) => {
++    setRow((prev) => ({ ...prev, ...cambio }));
++  }, []);
+ 
+-  const porcentajeVenta = Number(row.porcentaje_venta ?? 0);
+-
+-  const errorPorcentaje = porcentajeCosto > porcentajeVenta;
++  // Monedas requeridas y venta >= costo: ver lib/metodos/cobertura.ts.
++  const { valido, errores } = METODO_COBERTURA.validar(row);
+ 
+   /*
+    * Se conserva la condición del código viejo:
+@@ -67,18 +54,9 @@ export function CoberturaForm({
+ 
+   const errorDecimalesVenta = obtenerCantidadDecimales(row.porcentaje_venta) > 9;
+ 
+-  const puedeGuardar =
+-    !readonly && row.moneda_costo != null && row.moneda_venta != null && !errorPorcentaje;
++  const puedeGuardar = !readonly && valido;
+ 
+-  const setNumero = (
+-    field: "minimo_costo" | "minimo_venta" | "porcentaje_costo" | "porcentaje_venta",
+-    value: string,
+-  ) => {
+-    setRow((prev) => ({
+-      ...prev,
+-      [field]: value === "" ? null : Number(value),
+-    }));
+-  };
++  const campo = { metodo: METODO_COBERTURA, fila: row, onChange: cambiar, monedas, readonly, errores };
+ 
+   return (
+     <div className="space-y-4">
+@@ -95,127 +73,17 @@ export function CoberturaForm({
+       )}
+ 
+       <div className="grid gap-4 md:grid-cols-2">
+-        <Field>
+-          <FieldLabel>Mínimo costo</FieldLabel>
+-
+-          <InputGroup>
+-            <InputGroupInput
+-              type="number"
+-              readOnly={readonly}
+-              value={row.minimo_costo ?? ""}
+-              onChange={(event) => setNumero("minimo_costo", event.target.value)}
+-            />
+-          </InputGroup>
+-        </Field>
+-
+-        <Field>
+-          <FieldLabel>Mínimo venta</FieldLabel>
+-
+-          <InputGroup>
+-            <InputGroupInput
+-              type="number"
+-              readOnly={readonly}
+-              value={row.minimo_venta ?? ""}
+-              onChange={(event) => setNumero("minimo_venta", event.target.value)}
+-            />
+-          </InputGroup>
+-        </Field>
+-
+-        <Field>
+-          <FieldLabel>Moneda de costo</FieldLabel>
+-
+-          <InputGroup>
+-            <AsyncComboboxInput<MonedaCoberturaOption>
+-              label="Moneda de costo"
+-              value={row.moneda_costo ?? null}
+-              onChange={(moneda_costo) =>
+-                setRow((prev) => ({
+-                  ...prev,
+-                  moneda_costo,
+-                }))
+-              }
+-              fetchOptions={fetchMonedas}
+-              initialOptions={monedas}
+-              getOptionValue={(option) => option.value}
+-              getOptionLabel={(option) => option.label}
+-              placeholder="Seleccione..."
+-              searchPlaceholder="Buscar moneda..."
+-              minSearchLength={0}
+-              fetchOnEmpty
+-              clearable
+-              readOnly={readonly}
+-            />
+-          </InputGroup>
+-        </Field>
+-
+-        <Field>
+-          <FieldLabel>Porcentaje costo</FieldLabel>
+-
+-          <InputGroup>
+-            <InputGroupInput
+-              type="number"
+-              min={0}
+-              max={100}
+-              step="0.01"
+-              readOnly={readonly}
+-              value={row.porcentaje_costo ?? ""}
+-              onChange={(event) => setNumero("porcentaje_costo", event.target.value)}
+-            />
+-
+-            <InputGroupAddon align="inline-end">%</InputGroupAddon>
+-          </InputGroup>
+-        </Field>
+-
+-        <Field>
+-          <FieldLabel>Moneda de venta</FieldLabel>
+-
+-          <InputGroup>
+-            <AsyncComboboxInput<MonedaCoberturaOption>
+-              label="Moneda de venta"
+-              value={row.moneda_venta ?? null}
+-              onChange={(moneda_venta) =>
+-                setRow((prev) => ({
+-                  ...prev,
+-                  moneda_venta,
+-                }))
+-              }
+-              fetchOptions={fetchMonedas}
+-              initialOptions={monedas}
+-              getOptionValue={(option) => option.value}
+-              getOptionLabel={(option) => option.label}
+-              placeholder="Seleccione..."
+-              searchPlaceholder="Buscar moneda..."
+-              minSearchLength={0}
+-              fetchOnEmpty
+-              clearable
+-              readOnly={readonly}
+-            />
+-          </InputGroup>
+-        </Field>
+-
+-        <Field>
+-          <FieldLabel>Porcentaje venta</FieldLabel>
+-
+-          <InputGroup>
+-            <InputGroupInput
+-              type="number"
+-              min={0}
+-              max={100}
+-              step="0.01"
+-              readOnly={readonly}
+-              value={row.porcentaje_venta ?? ""}
+-              onChange={(event) => setNumero("porcentaje_venta", event.target.value)}
+-            />
+-
+-            <InputGroupAddon align="inline-end">%</InputGroupAddon>
+-          </InputGroup>
+-
+-          {errorPorcentaje && (
+-            <p className="mt-1 text-sm text-destructive">
+-              El valor de venta debe ser mayor al de costo
+-            </p>
+-          )}
+-        </Field>
++        <CampoMetodo {...campo} campo="minimo_costo" />
++
++        <CampoMetodo {...campo} campo="minimo_venta" />
++
++        <CampoMetodo {...campo} campo="cod_moneda_costo" />
++
++        <CampoMetodo {...campo} campo="porcentaje_costo" />
++
++        <CampoMetodo {...campo} campo="cod_moneda_venta" />
++
++        <CampoMetodo {...campo} campo="porcentaje_venta" />
+       </div>
+ 
+       {!readonly && (
+diff --git a/src/features/pricing/tarifas/components/metodos/cobertura/cobertura-table.tsx b/src/features/pricing/tarifas/components/metodos/cobertura/cobertura.tsx
+similarity index 62%
+rename from src/features/pricing/tarifas/components/metodos/cobertura/cobertura-table.tsx
+rename to src/features/pricing/tarifas/components/metodos/cobertura/cobertura.tsx
+index 165e04f7b61d625781ec5d1952eaabacae03e331..8c68002728feb80ad51697d2d7b64ba3a79a6657 100644
+--- a/src/features/pricing/tarifas/components/metodos/cobertura/cobertura-table.tsx
++++ b/src/features/pricing/tarifas/components/metodos/cobertura/cobertura.tsx
+@@ -10,7 +10,11 @@ import {
+   useTarifaCobertura,
+ } from "../../../api/tarifa-cobertura";
+ import { useOpcionesMonedas } from "../../../hooks/use-opciones-tarifa";
+-import type { FilaCobertura, MonedaCoberturaOption } from "./cobertura-columns";
++import {
++  type FilaCobertura,
++  METODO_COBERTURA,
++  type MonedaCoberturaOption,
++} from "../../../lib/metodos/cobertura";
+ import { CoberturaForm } from "./cobertura-form";
+ 
+ type Props = {
+@@ -30,7 +34,11 @@ type Props = {
+   servicio?: Record<string, unknown>;
+ };
+ 
+-export function CoberturaTable({ codMetodo, readonly = false, onTarifaCreada = () => {} }: Props) {
++/**
++ * Tarifa de método Cobertura: consulta, formulario y guardado.
++ * Componente padre reutilizable: basta con `<MetodoCobertura codMetodo={...} />`.
++ */
++export function MetodoCobertura({ codMetodo, readonly = false, onTarifaCreada = () => {} }: Props) {
+   const coberturaQuery = useTarifaCobertura({
+     ...(codMetodo == null ? {} : { codMetodo }),
+   });
+@@ -51,55 +59,17 @@ export function CoberturaTable({ codMetodo, readonly = false, onTarifaCreada = (
+ 
+   const esNuevo = cobertura == null;
+ 
+-  const value = React.useMemo<FilaCobertura | null>(() => {
+-    if (!cobertura) return null;
+-
+-    return {
+-      ...cobertura,
+-
+-      moneda_costo:
+-        monedas.find(
+-          (moneda) => String(moneda.cod_moneda) === String(cobertura.cod_moneda_costo),
+-        ) ?? null,
+-
+-      moneda_venta:
+-        monedas.find(
+-          (moneda) => String(moneda.cod_moneda) === String(cobertura.cod_moneda_venta),
+-        ) ?? null,
+-    };
+-  }, [cobertura, monedas]);
++  const value = React.useMemo<FilaCobertura | null>(
++    () => (cobertura ? METODO_COBERTURA.aFila(cobertura, { monedas }) : null),
++    [cobertura, monedas],
++  );
+ 
++  // cod_tarifa_cobertura ?? 0 y cod_rubro: null (al insertar y al actualizar): ver la definición.
+   const formatearFilaApi = React.useCallback(
+     (fila: FilaCobertura): TarifaCoberturaMutationPayload | null => {
+-      if (codMetodo == null) {
+-        return null;
+-      }
+-
+-      return {
+-        cod_tarifa_cobertura: fila.cod_tarifa_cobertura ?? 0,
+-
+-        cod_metodo: codMetodo,
+-
+-        porcentaje_costo: Number(fila.porcentaje_costo),
+-
+-        porcentaje_venta: Number(fila.porcentaje_venta),
+-
+-        minimo_venta: Number(fila.minimo_venta),
+-
+-        minimo_costo: Number(fila.minimo_costo),
+-
+-        cod_moneda_costo: fila.moneda_costo?.cod_moneda ?? null,
+-
+-        cod_moneda_venta: fila.moneda_venta?.cod_moneda ?? null,
+-
+-        /*
+-         * El código viejo hace esto tanto
+-         * al insertar como al actualizar.
+-         */
+-        cod_rubro: null,
++      if (codMetodo == null) return null;
+ 
+-        cod_estado: 1,
+-      };
++      return METODO_COBERTURA.aPayload(fila, { codMetodo });
+     },
+     [codMetodo],
+   );
+diff --git a/src/features/pricing/tarifas/components/metodos/columnas-metodo.ts b/src/features/pricing/tarifas/components/metodos/columnas-metodo.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..3ec40efa2bff8a1be71a998f0369d0efdafac285
+--- /dev/null
++++ b/src/features/pricing/tarifas/components/metodos/columnas-metodo.ts
+@@ -0,0 +1,52 @@
++import type { DefCampo } from "@/features/pricing/shared";
++
++/* ==========================================================================
++ * COLUMNAS DE LA TABLA DE UN MÉTODO (rango, scalling)
++ *
++ * Arma las columnas a partir de la definición del método, en el orden dado:
++ *
++ *   ...columnasMetodo<FilaX>(METODO_X, ["costo", "cod_moneda_costo", "venta"])
++ *
++ *   - monto (y demás campos sin opción): { accessorKey: cod, header: label }
++ *   - moneda / rubro / opcion:           { id: en, header: label, cell: opcion.label }
++ *     (con `conAccessor`, también accessorFn: opcion.label, para buscar/ordenar por texto)
++ *
++ * Las columnas especiales (id con orden, acciones, ...) se escriben a mano.
++ * Devuelve objetos de columna de TanStack (ColumnDef) con tipo propio.
++ * ========================================================================== */
++
++export type ColumnaMetodo<F> =
++  | { accessorKey: string; header: string }
++  | {
++      id: string;
++      header: string;
++      cell: (contexto: { row: { original: F } }) => string;
++      accessorFn?: (fila: F) => string;
++    };
++
++export function columnasMetodo<F, C extends Record<string, DefCampo> = Record<string, DefCampo>>(
++  metodo: { campos: C },
++  codigos: readonly (keyof C & string)[],
++  { conAccessor = false }: { conAccessor?: boolean } = {},
++): ColumnaMetodo<F>[] {
++  return codigos.map((cod): ColumnaMetodo<F> => {
++    const def = metodo.campos[cod] as DefCampo;
++    const header = def.label ?? cod;
++
++    if (def.en && def.en !== cod) {
++      const en = def.en;
++      const texto = (fila: F) =>
++        ((fila as Record<string, unknown>)[en] as { label?: string } | null | undefined)?.label ??
++        "";
++
++      return {
++        id: en,
++        ...(conAccessor ? { accessorFn: texto } : {}),
++        header,
++        cell: ({ row }) => texto(row.original),
++      };
++    }
++
++    return { accessorKey: cod, header };
++  });
++}
+diff --git a/src/features/pricing/tarifas/components/metodos/costo-porcentaje/costo-porcentaje-form.tsx b/src/features/pricing/tarifas/components/metodos/costo-porcentaje/costo-porcentaje-form.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..e558ba76257101fce90d4627b6e662041eb19a85
+--- /dev/null
++++ b/src/features/pricing/tarifas/components/metodos/costo-porcentaje/costo-porcentaje-form.tsx
+@@ -0,0 +1,163 @@
++"use client";
++
++import { Plus, Save } from "lucide-react";
++import React from "react";
++import { Button } from "@/shared/components/ui/button";
++import { Field, FieldLabel } from "@/shared/components/ui/field";
++import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/components/ui/input-group";
++import { Label } from "@/shared/components/ui/label";
++import { RadioGroup, RadioGroupItem } from "@/shared/components/ui/radio-group";
++import {
++  type FilaCostoPorcentaje,
++  METODO_COSTO_PORCENTAJE,
++  type MonedaCostoPorcentajeOption,
++  type RubroCostoPorcentajeOption,
++} from "../../../lib/metodos/costo-porcentaje";
++import { obtenerCantidadDecimales } from "../../../lib/tarifa-helpers";
++import { CampoMetodo } from "../campo-metodo";
++
++type Props = {
++  value?: FilaCostoPorcentaje | null;
++
++  monedas: MonedaCostoPorcentajeOption[];
++  rubros: RubroCostoPorcentajeOption[];
++
++  esNuevo: boolean;
++  readonly?: boolean;
++  isPending?: boolean;
++
++  onGuardar: (row: FilaCostoPorcentaje) => void;
++};
++
++export function CostoPorcentajeForm({
++  value,
++  monedas,
++  esNuevo,
++  readonly = false,
++  isPending = false,
++  onGuardar,
++}: Props) {
++  // Nuevo: montos en 0, monedas vacías y es_porcentaje (`inicial` en lib/metodos/costo-porcentaje.ts).
++  const [row, setRow] = React.useState<FilaCostoPorcentaje>(
++    value ?? METODO_COSTO_PORCENTAJE.filaNueva(),
++  );
++
++  React.useEffect(() => {
++    setRow(value ?? METODO_COSTO_PORCENTAJE.filaNueva());
++  }, [value]);
++
++  const cambiar = React.useCallback((cambio: Partial<FilaCostoPorcentaje>) => {
++    setRow((prev) => ({ ...prev, ...cambio }));
++  }, []);
++
++  // Moneda de venta requerida, venta >= costo y rango según es_porcentaje: ver la definición.
++  const { valido, errores } = METODO_COSTO_PORCENTAJE.validar(row);
++
++  // Se conserva exactamente la condición vieja.
++  const advertenciaDecimalesCosto = obtenerCantidadDecimales(row.porcentaje_costo) > 9;
++
++  const advertenciaDecimalesVenta = obtenerCantidadDecimales(row.porcentaje_venta) > 9;
++
++  const puedeGuardar = !readonly && valido;
++
++  const campo = {
++    metodo: METODO_COSTO_PORCENTAJE,
++    fila: row,
++    onChange: cambiar,
++    monedas,
++    readonly,
++    errores,
++    comboEnvuelto: true,
++  };
++
++  /*
++   * El lado de costo (cod_moneda_costo, porcentaje_costo, minimo_costo) está
++   * definido pero oculto. Para mostrarlo: <CampoMetodo {...campo} campo="..." />.
++   */
++  return (
++    <div className="space-y-4">
++      {advertenciaDecimalesCosto && (
++        <div className="rounded-md border p-3 text-sm">
++          El porcentaje de costo no debe tener mas de 8 decimales.
++        </div>
++      )}
++
++      {advertenciaDecimalesVenta && (
++        <div className="rounded-md border p-3 text-sm">
++          El porcentaje de valor no debe tener mas de 8 decimales.
++        </div>
++      )}
++
++      <div className="grid gap-4 md:grid-cols-2">
++        <CampoMetodo {...campo} campo="minimo_venta" />
++
++        {/* A mano: etiqueta, max, step y "%" cambian con es_porcentaje. */}
++        <Field>
++          <FieldLabel>{row.es_porcentaje ? "Porcentaje venta" : "Valor venta"}</FieldLabel>
++
++          <InputGroup>
++            <InputGroupInput
++              type="number"
++              min={0}
++              {...(row.es_porcentaje ? { max: 100 } : {})}
++              step={row.es_porcentaje ? 0.01 : 1}
++              readOnly={readonly}
++              value={row.porcentaje_venta ?? ""}
++              onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
++                cambiar({
++                  porcentaje_venta: event.target.value === "" ? null : Number(event.target.value),
++                })
++              }
++            />
++
++            {row.es_porcentaje && <InputGroupAddon align="inline-end">%</InputGroupAddon>}
++          </InputGroup>
++
++          {row.es_porcentaje && (
++            <p className="mt-1 text-xs text-muted-foreground">
++              Ingrese el porcentaje en enteros con decimales (ej. 25.26 para 25.26 %).
++            </p>
++          )}
++
++          {errores.porcentaje_venta?.map((mensaje) => (
++            <p key={mensaje} className="mt-1 text-sm text-destructive">
++              {mensaje}
++            </p>
++          ))}
++        </Field>
++
++        <CampoMetodo {...campo} campo="cod_moneda_venta" />
++
++        <Field>
++          <FieldLabel>Tipo de valor</FieldLabel>
++
++          <InputGroup className="flex p-2">
++            <RadioGroup
++              value={row.es_porcentaje ? "porcentaje" : "valor"}
++              onValueChange={(value: string) => cambiar({ es_porcentaje: value === "porcentaje" })}
++              className="flex flex-row gap-2"
++              disabled={readonly}
++            >
++              <div className="flex items-center gap-2">
++                <RadioGroupItem value="porcentaje" id={`porcentaje`} />
++                <Label htmlFor={`porcentaje`}>Porcentaje</Label>
++              </div>
++              <div className="flex items-center gap-2">
++                <RadioGroupItem value="valor" id={`valor`} />
++                <Label htmlFor={`valor`}>Valor</Label>
++              </div>
++            </RadioGroup>
++          </InputGroup>
++        </Field>
++      </div>
++
++      {!readonly && (
++        <Button type="button" disabled={!puedeGuardar || isPending} onClick={() => onGuardar(row)}>
++          {esNuevo ? <Plus className="size-4" /> : <Save className="size-4" />}
++
++          {esNuevo ? "Agregar" : "Actualizar"}
++        </Button>
++      )}
++    </div>
++  );
++}
+diff --git a/src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-table.tsx b/src/features/pricing/tarifas/components/metodos/costo-porcentaje/costo-porcentaje.tsx
+similarity index 57%
+rename from src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-table.tsx
+rename to src/features/pricing/tarifas/components/metodos/costo-porcentaje/costo-porcentaje.tsx
+index bd17006a7711afa4f3f22a8c5c704cdc2c8abba3..df97a6d7664458a0a298f6c22448e59b07bd4f41 100644
+--- a/src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-table.tsx
++++ b/src/features/pricing/tarifas/components/metodos/costo-porcentaje/costo-porcentaje.tsx
+@@ -11,12 +11,13 @@ import {
+   useTarifaCostoPorcentajeje,
+ } from "../../../api/tarifa-costo-porcentaje";
+ import { useOpcionesMonedas, useOpcionesRubros } from "../../../hooks/use-opciones-tarifa";
+-import type {
+-  FilaPorcentaje,
+-  MonedaPorcentajeOption,
+-  RubroPorcentajeOption,
+-} from "./porcentaje-columns";
+-import { CostoPorcentajeForm } from "./porcentaje-form";
++import {
++  type FilaCostoPorcentaje,
++  METODO_COSTO_PORCENTAJE,
++  type MonedaCostoPorcentajeOption,
++  type RubroCostoPorcentajeOption,
++} from "../../../lib/metodos/costo-porcentaje";
++import { CostoPorcentajeForm } from "./costo-porcentaje-form";
+ 
+ type Props = {
+   codMetodo?: string | number | null;
+@@ -30,7 +31,11 @@ type Props = {
+   servicio?: Record<string, unknown>;
+ };
+ 
+-export function CostoPorcentajeTable({
++/**
++ * Tarifa de método Costo por Porcentaje: consulta, formulario y guardado.
++ * Componente padre reutilizable: basta con `<MetodoCostoPorcentaje codMetodo={...} />`.
++ */
++export function MetodoCostoPorcentaje({
+   codMetodo,
+   readonly = false,
+   reConsultar = () => {},
+@@ -42,7 +47,7 @@ export function CostoPorcentajeTable({
+ 
+   const rubrosFetch = useRubrosFetch.useLista();
+ 
+-  const rubros: RubroPorcentajeOption[] = useOpcionesRubros(rubrosFetch.data);
++  const rubros: RubroCostoPorcentajeOption[] = useOpcionesRubros(rubrosFetch.data);
+ 
+   const monedasQuery = useMonedasPorcentaje();
+ 
+@@ -50,7 +55,7 @@ export function CostoPorcentajeTable({
+ 
+   const actualizarPorcentaje = useActualizarTarifaCostoPorcentajeje();
+ 
+-  const monedas: MonedaPorcentajeOption[] = useOpcionesMonedas(monedasQuery.data);
++  const monedas: MonedaCostoPorcentajeOption[] = useOpcionesMonedas(monedasQuery.data);
+ 
+   /*
+    * Igual que el componente viejo:
+@@ -60,63 +65,23 @@ export function CostoPorcentajeTable({
+ 
+   const esNuevo = porcentaje == null;
+ 
+-  const value = React.useMemo<FilaPorcentaje | null>(() => {
+-    if (!porcentaje) return null;
+-
+-    return {
+-      ...porcentaje,
+-
+-      moneda_costo:
+-        monedas.find(
+-          (moneda) => String(moneda.cod_moneda) === String(porcentaje.cod_moneda_costo),
+-        ) ?? null,
+-
+-      moneda_venta:
+-        monedas.find(
+-          (moneda) => String(moneda.cod_moneda) === String(porcentaje.cod_moneda_venta),
+-        ) ?? null,
+-
+-      rubro:
+-        rubros.find(
+-          (rubro) => String(rubro.cod_rubro ?? rubro.value) === String(porcentaje.cod_rubro),
+-        ) ?? null,
+-    };
+-  }, [porcentaje, monedas, rubros]);
++  const value = React.useMemo<FilaCostoPorcentaje | null>(
++    () => (porcentaje ? METODO_COSTO_PORCENTAJE.aFila(porcentaje, { monedas, rubros }) : null),
++    [porcentaje, monedas, rubros],
++  );
+ 
++  // cod_tarifa_porcentaje ?? 0, mínimos vacíos como 0 y Boolean(es_porcentaje): ver la definición.
+   const formatearFilaApi = React.useCallback(
+-    (fila: FilaPorcentaje): TarifaCostoPorcentajejeMutationPayload | null => {
+-      if (codMetodo == null) {
+-        return null;
+-      }
+-
+-      return {
+-        cod_tarifa_porcentaje: fila.cod_tarifa_porcentaje ?? 0,
+-
+-        cod_metodo: codMetodo,
+-
+-        porcentaje_costo: Number(fila.porcentaje_costo),
+-
+-        porcentaje_venta: Number(fila.porcentaje_venta),
+-
+-        minimo_costo: Number(fila.minimo_costo ?? 0),
+-        minimo_venta: Number(fila.minimo_venta ?? 0),
+-
+-        es_porcentaje: Boolean(fila.es_porcentaje),
+-
+-        cod_rubro: fila.rubro?.cod_rubro ?? fila.rubro?.value ?? null,
+-
+-        cod_moneda_costo: fila.moneda_costo?.cod_moneda ?? null,
+-
+-        cod_moneda_venta: fila.moneda_venta?.cod_moneda ?? null,
++    (fila: FilaCostoPorcentaje): TarifaCostoPorcentajejeMutationPayload | null => {
++      if (codMetodo == null) return null;
+ 
+-        cod_estado: 1,
+-      };
++      return METODO_COSTO_PORCENTAJE.aPayload(fila, { codMetodo });
+     },
+     [codMetodo],
+   );
+ 
+   const handleGuardar = React.useCallback(
+-    (fila: FilaPorcentaje) => {
++    (fila: FilaCostoPorcentaje) => {
+       const payload = formatearFilaApi(fila);
+ 
+       if (!payload) return;
+diff --git a/src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-columns.tsx b/src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-columns.tsx
+deleted file mode 100644
+index d2054e417b03aabb742918d307b304733aab8883..0000000000000000000000000000000000000000
+--- a/src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-columns.tsx
++++ /dev/null
+@@ -1,12 +0,0 @@
+-import type { TarifaCostoPorcentajeje } from "../../../api/tarifa-costo-porcentaje";
+-import type { MonedaOpcion, RubroOpcion } from "../../../hooks/use-opciones-tarifa";
+-
+-export type MonedaPorcentajeOption = MonedaOpcion;
+-
+-export type RubroPorcentajeOption = RubroOpcion;
+-
+-export type FilaPorcentaje = Partial<TarifaCostoPorcentajeje> & {
+-  moneda_costo?: MonedaPorcentajeOption | null;
+-  moneda_venta?: MonedaPorcentajeOption | null;
+-  rubro?: RubroPorcentajeOption | null;
+-};
+diff --git a/src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-form.tsx b/src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-form.tsx
+deleted file mode 100644
+index 6a4e04b55ee63614e3de24be3a7db8f2ce4f00d5..0000000000000000000000000000000000000000
+--- a/src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-form.tsx
++++ /dev/null
+@@ -1,293 +0,0 @@
+-"use client";
+-
+-import { Plus, Save } from "lucide-react";
+-import React from "react";
+-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
+-import { Button } from "@/shared/components/ui/button";
+-import { Field, FieldLabel } from "@/shared/components/ui/field";
+-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/components/ui/input-group";
+-import { Label } from "@/shared/components/ui/label";
+-import { RadioGroup, RadioGroupItem } from "@/shared/components/ui/radio-group";
+-import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
+-import { obtenerCantidadDecimales } from "../../../lib/tarifa-helpers";
+-import type {
+-  FilaPorcentaje,
+-  MonedaPorcentajeOption,
+-  RubroPorcentajeOption,
+-} from "./porcentaje-columns";
+-
+-type Props = {
+-  value?: FilaPorcentaje | null;
+-
+-  monedas: MonedaPorcentajeOption[];
+-  rubros: RubroPorcentajeOption[];
+-
+-  esNuevo: boolean;
+-  readonly?: boolean;
+-  isPending?: boolean;
+-
+-  onGuardar: (row: FilaPorcentaje) => void;
+-};
+-
+-export function CostoPorcentajeForm({
+-  value,
+-  monedas,
+-  esNuevo,
+-  readonly = false,
+-  isPending = false,
+-  onGuardar,
+-}: Props) {
+-  const [row, setRow] = React.useState<FilaPorcentaje>(
+-    value ?? {
+-      porcentaje_costo: 0,
+-      porcentaje_venta: 0,
+-      minimo_costo: 0,
+-      minimo_venta: 0,
+-      moneda_costo: null,
+-      moneda_venta: null,
+-      es_porcentaje: true,
+-    },
+-  );
+-
+-  React.useEffect(() => {
+-    setRow(
+-      value ?? {
+-        porcentaje_costo: 0,
+-        porcentaje_venta: 0,
+-        minimo_costo: 0,
+-        minimo_venta: 0,
+-        moneda_costo: null,
+-        moneda_venta: null,
+-        es_porcentaje: true,
+-      },
+-    );
+-  }, [value]);
+-
+-  const fetchMonedas = useFiltroOpciones(monedas);
+-
+-  // const fetchRubros = React.useCallback(
+-  //   async (search: string): Promise<RubroPorcentajeOption[]> => {
+-  //     const busqueda = search.trim().toLowerCase();
+-
+-  //     if (!busqueda) return rubros;
+-
+-  //     return rubros.filter((rubro) => rubro.label.toLowerCase().includes(busqueda));
+-  //   },
+-  //   [rubros],
+-  // );
+-
+-  const porcentajeCosto = Number(row.porcentaje_costo ?? 0);
+-
+-  const porcentajeVenta = Number(row.porcentaje_venta ?? 0);
+-
+-  const errorPorcentaje = porcentajeCosto > porcentajeVenta;
+-
+-  // Se conserva exactamente la condición vieja.
+-  const advertenciaDecimalesCosto = obtenerCantidadDecimales(row.porcentaje_costo) > 9;
+-
+-  const advertenciaDecimalesVenta = obtenerCantidadDecimales(row.porcentaje_venta) > 9;
+-
+-  // Si es porcentaje se guarda en enteros con decimales (25.26 = 25.26 %), no como 0.2526.
+-  // Cotizaciones lo convierte a factor (÷ 100) al calcular la venta.
+-  const fueraDeRango = (valor: number) => valor < 0 || (Boolean(row.es_porcentaje) && valor > 100);
+-
+-  const porcentajeCostoFueraRango = fueraDeRango(porcentajeCosto);
+-
+-  const porcentajeVentaFueraRango = fueraDeRango(porcentajeVenta);
+-
+-  const puedeGuardar =
+-    !readonly &&
+-    row.moneda_venta != null &&
+-    !errorPorcentaje &&
+-    !porcentajeCostoFueraRango &&
+-    !porcentajeVentaFueraRango;
+-
+-  const setNumero = (field: "minimo_venta" | "porcentaje_venta", value: string) => {
+-    setRow((prev) => ({
+-      ...prev,
+-      [field]: value === "" ? null : Number(value),
+-    }));
+-  };
+-
+-  return (
+-    <div className="space-y-4">
+-      {advertenciaDecimalesCosto && (
+-        <div className="rounded-md border p-3 text-sm">
+-          El porcentaje de costo no debe tener mas de 8 decimales.
+-        </div>
+-      )}
+-
+-      {advertenciaDecimalesVenta && (
+-        <div className="rounded-md border p-3 text-sm">
+-          El porcentaje de valor no debe tener mas de 8 decimales.
+-        </div>
+-      )}
+-
+-      <div className="grid gap-4 md:grid-cols-2">
+-        {/* <Field>
+-          <FieldLabel>Costo Mínimo</FieldLabel>
+-
+-          <InputGroup>
+-            <InputGroupInput
+-              type="number"
+-              readOnly={readonly}
+-              value={row.minimo_costo ?? ""}
+-              onChange={(event) => setRow((row) => ({ ...row, minimo_costo: event.target.value }))}
+-            />
+-          </InputGroup>
+-        </Field> */}
+-
+-        <Field>
+-          <FieldLabel>Mínimo Venta</FieldLabel>
+-
+-          <InputGroup>
+-            <InputGroupInput
+-              type="number"
+-              readOnly={readonly}
+-              value={row.minimo_venta ?? ""}
+-              onChange={(event) => setRow((row) => ({ ...row, minimo_venta: event.target.value }))}
+-            />
+-          </InputGroup>
+-        </Field>
+-
+-        <Field>
+-          <FieldLabel>{row.es_porcentaje ? "Porcentaje venta" : "Valor venta"}</FieldLabel>
+-
+-          <InputGroup>
+-            <InputGroupInput
+-              type="number"
+-              min={0}
+-              {...(row.es_porcentaje ? { max: 100 } : {})}
+-              step={row.es_porcentaje ? 0.01 : 1}
+-              readOnly={readonly}
+-              value={row.porcentaje_venta ?? ""}
+-              onChange={(event) => setNumero("porcentaje_venta", event.target.value)}
+-            />
+-
+-            {row.es_porcentaje && <InputGroupAddon align="inline-end">%</InputGroupAddon>}
+-          </InputGroup>
+-
+-          {row.es_porcentaje && (
+-            <p className="mt-1 text-xs text-muted-foreground">
+-              Ingrese el porcentaje en enteros con decimales (ej. 25.26 para 25.26 %).
+-            </p>
+-          )}
+-
+-          {errorPorcentaje && (
+-            <p className="mt-1 text-sm text-destructive">
+-              El valor de venta debe ser mayor al de costo
+-            </p>
+-          )}
+-
+-          {porcentajeVentaFueraRango && (
+-            <p className="mt-1 text-sm text-destructive">
+-              {row.es_porcentaje
+-                ? "El porcentaje debe estar entre 0 y 100."
+-                : "El valor no puede ser negativo."}
+-            </p>
+-          )}
+-        </Field>
+-
+-        {/* <Field>
+-          <FieldLabel>Moneda de costo</FieldLabel>
+-
+-          <InputGroup>
+-            <div className="w-full">
+-              <AsyncComboboxInput<MonedaPorcentajeOption>
+-                value={row.moneda_costo ?? null}
+-                onChange={(moneda_costo) => setRow((prev) => ({ ...prev, moneda_costo }))}
+-                fetchOptions={fetchMonedas}
+-                initialOptions={monedas}
+-                getOptionValue={(option) => option.value}
+-                getOptionLabel={(option) => option.label}
+-                placeholder="Seleccione..."
+-                searchPlaceholder="Buscar moneda..."
+-                minSearchLength={0}
+-                fetchOnEmpty
+-                clearable
+-                readOnly={readonly}
+-              />
+-            </div>
+-          </InputGroup>
+-        </Field> */}
+-
+-        {/* <Field>
+-          <FieldLabel>Porcentaje costo</FieldLabel>
+-
+-          <InputGroup>
+-            <InputGroupInput
+-              type="number"
+-              min={0}
+-              max={100}
+-              step={row.es_porcentaje ? 0.01 : 1}
+-              readOnly={readonly}
+-              value={row.porcentaje_costo ?? ""}
+-              onChange={(event) => setNumero("porcentaje_costo", event.target.value)}
+-            />
+-
+-            <InputGroupAddon align="inline-end">%</InputGroupAddon>
+-          </InputGroup>
+-
+-          {porcentajeCostoFueraRango && (
+-            <p className="mt-1 text-sm text-destructive">El porcentaje debe estar entre 0 y 100.</p>
+-          )}
+-        </Field> */}
+-
+-        <Field>
+-          <FieldLabel>Moneda de venta</FieldLabel>
+-
+-          <InputGroup>
+-            <div className="w-full">
+-              <AsyncComboboxInput<MonedaPorcentajeOption>
+-                value={row.moneda_venta ?? null}
+-                onChange={(moneda_venta) => setRow((prev) => ({ ...prev, moneda_venta }))}
+-                fetchOptions={fetchMonedas}
+-                initialOptions={monedas}
+-                getOptionValue={(option) => option.value}
+-                getOptionLabel={(option) => option.label}
+-                placeholder="Seleccione..."
+-                searchPlaceholder="Buscar moneda..."
+-                minSearchLength={0}
+-                fetchOnEmpty
+-                clearable
+-                readOnly={readonly}
+-              />
+-            </div>
+-          </InputGroup>
+-        </Field>
+-
+-        <Field>
+-          <FieldLabel>Tipo de valor</FieldLabel>
+-
+-          <InputGroup className="flex p-2">
+-            <RadioGroup
+-              value={row.es_porcentaje ? "porcentaje" : "valor"}
+-              onValueChange={(value) =>
+-                setRow((prev) => ({ ...prev, es_porcentaje: value === "porcentaje" }))
+-              }
+-              className="flex flex-row gap-2"
+-              disabled={readonly}
+-            >
+-              <div className="flex items-center gap-2">
+-                <RadioGroupItem value="porcentaje" id={`porcentaje`} />
+-                <Label htmlFor={`porcentaje`}>Porcentaje</Label>
+-              </div>
+-              <div className="flex items-center gap-2">
+-                <RadioGroupItem value="valor" id={`valor`} />
+-                <Label htmlFor={`valor`}>Valor</Label>
+-              </div>
+-            </RadioGroup>
+-          </InputGroup>
+-        </Field>
+-      </div>
+-
+-      {!readonly && (
+-        <Button type="button" disabled={!puedeGuardar || isPending} onClick={() => onGuardar(row)}>
+-          {esNuevo ? <Plus className="size-4" /> : <Save className="size-4" />}
+-
+-          {esNuevo ? "Agregar" : "Actualizar"}
+-        </Button>
+-      )}
+-    </div>
+-  );
+-}
+diff --git a/src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta-form.tsx b/src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta-form.tsx
+index eaaa2a80f79b13fc048ebc560a32aa40cd48d6e0..8835937acf46dab52424d9ef7bdabff78a14e2c1 100644
+--- a/src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta-form.tsx
++++ b/src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta-form.tsx
+@@ -44,7 +44,7 @@ export function CostoVentaForm({
+ 
+   const puedeGuardar = !readonly && valido;
+ 
+-  const campo = { metodo: METODO_COSTO_VENTA, fila: row, onChange: cambiar, monedas, readonly };
++  const campo = { metodo: METODO_COSTO_VENTA, fila: row, onChange: cambiar, monedas, readonly, errores };
+ 
+   return (
+     <div className="space-y-4">
+@@ -55,9 +55,7 @@ export function CostoVentaForm({
+ 
+         <CampoMetodo {...campo} campo="cod_moneda_venta" />
+ 
+-        <CampoMetodo {...campo} campo="venta">
+-          {errores.venta && <p className="mt-1 text-sm text-destructive">{errores.venta}</p>}
+-        </CampoMetodo>
++        <CampoMetodo {...campo} campo="venta" />
+       </div>
+ 
+       {!readonly && (
+diff --git a/src/features/pricing/tarifas/components/metodos/equipo/equipo-columns.tsx b/src/features/pricing/tarifas/components/metodos/equipo/equipo-columns.tsx
+deleted file mode 100644
+index e473fea899a2cf1ae4948c77fc28055fc6654b81..0000000000000000000000000000000000000000
+--- a/src/features/pricing/tarifas/components/metodos/equipo/equipo-columns.tsx
++++ /dev/null
+@@ -1,9 +0,0 @@
+-"use client";
+-
+-export default function EquipoColumn() {
+-  return (
+-    <div>
+-      <h1>Client Component</h1>
+-    </div>
+-  );
+-}
+diff --git a/src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx b/src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx
+index 0bdf97ec42e4a98868958ba2c9740e845390c836..2a93f9b22ee5a746038347fdb9386cb048d84cac 100644
+--- a/src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx
++++ b/src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx
+@@ -7,42 +7,12 @@ import { Button } from "@/shared/components/ui/button";
+ import { Field, FieldLabel } from "@/shared/components/ui/field";
+ import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
+ import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
+-
+-export type EquipoOption = {
+-  value: string | number;
+-  label: string;
+-
+-  [key: string]: unknown;
+-};
+-
+-export type MonedaEquipoOption = {
+-  value: string | number;
+-  label: string;
+-
+-  cod_moneda: string | number;
+-
+-  simbolo?: string;
+-
+-  [key: string]: unknown;
+-};
+-
+-export type FilaEquipo = {
+-  cod_tarifa_equipo?: string | number | null;
+-
+-  cod_metodo?: string | number | null;
+-
+-  cod_equipo: EquipoOption | null;
+-
+-  costo: string | number | null;
+-
+-  venta: string | number | null;
+-
+-  cod_moneda_costo: MonedaEquipoOption | null;
+-
+-  cod_moneda_venta: MonedaEquipoOption | null;
+-
+-  cod_estado?: string | number | null;
+-};
++import {
++  type EquipoOption,
++  type FilaEquipo,
++  METODO_EQUIPO,
++  type MonedaEquipoOption,
++} from "../../../lib/metodos/equipo";
+ 
+ type Props = {
+   value: FilaEquipo;
+@@ -74,28 +44,10 @@ export function EquipoForm({
+ 
+   const fetchMonedas = useFiltroOpciones(monedas);
+ 
+-  const ventaMenorCosto = React.useMemo(() => {
+-    if (
+-      values.costo == null ||
+-      values.venta == null ||
+-      values.costo === "" ||
+-      values.venta === ""
+-    ) {
+-      return false;
+-    }
+-
+-    return Number(values.costo) > Number(values.venta);
+-  }, [values.costo, values.venta]);
+-
+-  const puedeGuardar =
+-    values.cod_equipo != null &&
+-    values.cod_moneda_costo != null &&
+-    values.cod_moneda_venta != null &&
+-    values.costo != null &&
+-    values.costo !== "" &&
+-    values.venta != null &&
+-    values.venta !== "" &&
+-    !ventaMenorCosto;
++  // Requeridos (equipo, monedas, costo, venta) y venta >= costo: ver lib/metodos/equipo.ts.
++  const { valido: puedeGuardar, errores } = METODO_EQUIPO.validar(values);
++
++  const ventaMenorCosto = errores.venta != null;
+ 
+   const esNuevo = values.cod_tarifa_equipo == null || Number(values.cod_tarifa_equipo) === 0;
+ 
+diff --git a/src/features/pricing/tarifas/components/metodos/equipo/equipo-table.tsx b/src/features/pricing/tarifas/components/metodos/equipo/equipo.tsx
+similarity index 74%
+rename from src/features/pricing/tarifas/components/metodos/equipo/equipo-table.tsx
+rename to src/features/pricing/tarifas/components/metodos/equipo/equipo.tsx
+index 9bc40096f2ad6e9628a2a43f8ae9400e33323c3d..467ef4088cd328750831f4e71898244b7b82ff17 100644
+--- a/src/features/pricing/tarifas/components/metodos/equipo/equipo-table.tsx
++++ b/src/features/pricing/tarifas/components/metodos/equipo/equipo.tsx
+@@ -16,19 +16,18 @@ import React from "react";
+ // import { useFetchEquipos } from "RUTA_REAL";
+ 
+ import {
+-  type TarifaEquipoMutationPayload,
+   useActualizarTarifaEquipo,
+   useInsertarTarifaEquipo,
+   useMonedasEquipo,
+   useTarifaEquipo,
+ } from "../../../api/tarifa-equipo";
+-
+ import {
+-  EquipoForm,
+   type EquipoOption,
+   type FilaEquipo,
++  METODO_EQUIPO,
+   type MonedaEquipoOption,
+-} from "./equipo-form";
++} from "../../../lib/metodos/equipo";
++import { EquipoForm } from "./equipo-form";
+ 
+ type Props = {
+   codMetodo?: string | number | null;
+@@ -38,7 +37,11 @@ type Props = {
+   onTarifaCreada?: () => void;
+ };
+ 
+-export function EquipoTable({ codMetodo, readonly = false, onTarifaCreada = () => {} }: Props) {
++/**
++ * Tarifa de método Equipo: consulta, formulario y guardado.
++ * Componente padre reutilizable: basta con `<MetodoEquipo codMetodo={...} />`.
++ */
++export function MetodoEquipo({ codMetodo, readonly = false, onTarifaCreada = () => {} }: Props) {
+   /*
+    * =========================================================
+    * CONSULTAS
+@@ -124,36 +127,17 @@ export function EquipoTable({ codMetodo, readonly = false, onTarifaCreada = () =
+     const equipo = tarifaEquipo.data?.[0];
+ 
+     if (!equipo) {
++      // Todo vacío y cod_estado 1 (`inicial` en lib/metodos/equipo.ts).
+       return {
+         cod_tarifa_equipo: null,
+ 
+         cod_metodo: codMetodo ?? null,
+ 
+-        cod_equipo: null,
+-
+-        costo: null,
+-
+-        venta: null,
+-
+-        cod_moneda_costo: null,
+-
+-        cod_moneda_venta: null,
+-
+-        cod_estado: 1,
++        ...METODO_EQUIPO.filaNueva(),
+       };
+     }
+ 
+-    return {
+-      ...equipo,
+-
+-      cod_equipo: equipos.find((item) => String(item.value) === String(equipo.cod_equipo)) ?? null,
+-
+-      cod_moneda_costo:
+-        monedas.find((item) => String(item.value) === String(equipo.cod_moneda_costo)) ?? null,
+-
+-      cod_moneda_venta:
+-        monedas.find((item) => String(item.value) === String(equipo.cod_moneda_venta)) ?? null,
+-    };
++    return METODO_EQUIPO.aFila(equipo, { equipos, monedasEquipo: monedas });
+   }, [tarifaEquipo.data, equipos, monedas, codMetodo]);
+ 
+   /*
+@@ -169,30 +153,13 @@ export function EquipoTable({ codMetodo, readonly = false, onTarifaCreada = () =
+       }
+ 
+       /*
+-       * Payload común.
+-       *
+-       * Se conserva:
+-       *
+-       * Number(costo)
+-       * Number(venta)
+-       * option.value || null
+-       * cod_estado = 1
++       * Payload común (ver lib/metodos/equipo.ts): Number(costo), Number(venta),
++       * option.value || null y cod_estado = 1. Sin cod_tarifa_equipo: al insertar
++       * no se envía y al actualizar va al final, igual que el código viejo.
+        */
+-      const payloadBase = {
+-        costo: Number(fila.costo),
+-
+-        venta: Number(fila.venta),
+-
+-        cod_metodo: codMetodo,
+-
+-        cod_equipo: fila.cod_equipo?.value || null,
+-
+-        cod_moneda_costo: fila.cod_moneda_costo?.value || null,
+-
+-        cod_moneda_venta: fila.cod_moneda_venta?.value || null,
+-
+-        cod_estado: 1,
+-      } satisfies Omit<TarifaEquipoMutationPayload, "cod_tarifa_equipo">;
++      const { cod_tarifa_equipo: _id, ...payloadBase } = METODO_EQUIPO.aPayload(fila, {
++        codMetodo,
++      });
+ 
+       /*
+        * INSERT
+diff --git a/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-columns.tsx b/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-columns.tsx
+deleted file mode 100644
+index e5b392cba7658f1dd5dfe5e7c0f663420c90c464..0000000000000000000000000000000000000000
+--- a/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-columns.tsx
++++ /dev/null
+@@ -1,12 +0,0 @@
+-import type { TarifaPorcentaje } from "../../../api/tarifa-porcentaje";
+-import type { MonedaOpcion, RubroOpcion } from "../../../hooks/use-opciones-tarifa";
+-
+-export type MonedaPorcentajeOption = MonedaOpcion;
+-
+-export type RubroPorcentajeOption = RubroOpcion;
+-
+-export type FilaPorcentaje = Partial<TarifaPorcentaje> & {
+-  moneda_costo?: MonedaPorcentajeOption | null;
+-  moneda_venta?: MonedaPorcentajeOption | null;
+-  rubro?: RubroPorcentajeOption | null;
+-};
+diff --git a/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-form.tsx b/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-form.tsx
+index 298fc3b8e058c7ab8cc35eab52df2d8b7ac02003..1170dd1ab20e318733a3f6cc22ae039221078f5b 100644
+--- a/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-form.tsx
++++ b/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-form.tsx
+@@ -2,17 +2,16 @@
+ 
+ import { Plus, Save } from "lucide-react";
+ import React from "react";
+-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
+ import { Button } from "@/shared/components/ui/button";
+-import { Field, FieldGroup, FieldLabel } from "@/shared/components/ui/field";
+-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/components/ui/input-group";
+-import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
++import { FieldGroup } from "@/shared/components/ui/field";
++import {
++  type FilaPorcentaje,
++  METODO_PORCENTAJE,
++  type MonedaPorcentajeOption,
++  type RubroPorcentajeOption,
++} from "../../../lib/metodos/porcentaje";
+ import { obtenerCantidadDecimales } from "../../../lib/tarifa-helpers";
+-import type {
+-  FilaPorcentaje,
+-  MonedaPorcentajeOption,
+-  RubroPorcentajeOption,
+-} from "./porcentaje-columns";
++import { CampoMetodo } from "../campo-metodo";
+ 
+ type Props = {
+   value?: FilaPorcentaje | null;
+@@ -27,6 +26,19 @@ type Props = {
+   onGuardar: (row: FilaPorcentaje) => void;
+ };
+ 
++/*
++ * Nuevo: porcentajes en 0 (`inicial` en lib/metodos/porcentaje.ts).
++ * `minimo: 0` se conserva del código viejo (no corresponde a ningún campo:
++ * los mínimos son minimo_costo / minimo_venta; pendiente aparte).
++ */
++const filaNueva = (): FilaPorcentaje => ({
++  ...METODO_PORCENTAJE.filaNueva(),
++  minimo: 0,
++  rubro: null,
++  moneda_costo: null,
++  moneda_venta: null,
++});
++
+ export function PorcentajeForm({
+   value,
+   monedas,
+@@ -36,65 +48,35 @@ export function PorcentajeForm({
+   isPending = false,
+   onGuardar,
+ }: Props) {
+-  const [row, setRow] = React.useState<FilaPorcentaje>(
+-    value ?? {
+-      porcentaje_costo: 0,
+-      porcentaje_venta: 0,
+-      minimo: 0,
+-      rubro: null,
+-      moneda_costo: null,
+-      moneda_venta: null,
+-    },
+-  );
++  const [row, setRow] = React.useState<FilaPorcentaje>(value ?? filaNueva());
+ 
+   React.useEffect(() => {
+-    setRow(
+-      value ?? {
+-        porcentaje_costo: 0,
+-        porcentaje_venta: 0,
+-        minimo: 0,
+-        rubro: null,
+-        moneda_costo: null,
+-        moneda_venta: null,
+-      },
+-    );
++    setRow(value ?? filaNueva());
+   }, [value]);
+ 
+-  const fetchMonedas = useFiltroOpciones(monedas);
+-
+-  const fetchRubros = useFiltroOpciones(rubros);
+-
+-  const porcentajeCosto = Number(row.porcentaje_costo ?? 0);
+-
+-  const porcentajeVenta = Number(row.porcentaje_venta ?? 0);
++  const cambiar = React.useCallback((cambio: Partial<FilaPorcentaje>) => {
++    setRow((prev) => ({ ...prev, ...cambio }));
++  }, []);
+ 
+-  const errorPorcentaje = porcentajeCosto > porcentajeVenta;
++  // Monedas requeridas, venta >= costo y porcentajes entre 0 y 100: ver lib/metodos/porcentaje.ts.
++  const { valido, errores } = METODO_PORCENTAJE.validar(row);
+ 
+   // Se conserva exactamente la condición vieja.
+   const advertenciaDecimalesCosto = obtenerCantidadDecimales(row.porcentaje_costo) > 9;
+ 
+   const advertenciaDecimalesVenta = obtenerCantidadDecimales(row.porcentaje_venta) > 9;
+ 
+-  const porcentajeCostoFueraRango = porcentajeCosto < 0 || porcentajeCosto > 100;
+-
+-  const porcentajeVentaFueraRango = porcentajeVenta < 0 || porcentajeVenta > 100;
+-
+-  const puedeGuardar =
+-    !readonly &&
+-    row.moneda_costo != null &&
+-    row.moneda_venta != null &&
+-    !errorPorcentaje &&
+-    !porcentajeCostoFueraRango &&
+-    !porcentajeVentaFueraRango;
+-
+-  const setNumero = (
+-    field: "minimo_costo" | "minimo_venta" | "porcentaje_costo" | "porcentaje_venta",
+-    value: string,
+-  ) => {
+-    setRow((prev) => ({
+-      ...prev,
+-      [field]: value === "" ? null : Number(value),
+-    }));
++  const puedeGuardar = !readonly && valido;
++
++  const campo = {
++    metodo: METODO_PORCENTAJE,
++    fila: row,
++    onChange: cambiar,
++    monedas,
++    rubros,
++    readonly,
++    errores,
++    comboEnvuelto: true,
+   };
+ 
+   return (
+@@ -113,150 +95,19 @@ export function PorcentajeForm({
+ 
+       <div className="grid gap-4 md:grid-cols-2">
+         <FieldGroup>
+-          <Field>
+-            <FieldLabel>Mínimo Costo</FieldLabel>
+-
+-            <InputGroup>
+-              <InputGroupInput
+-                type="number"
+-                readOnly={readonly}
+-                value={row.minimo_costo ?? ""}
+-                onChange={(event) => setNumero("minimo_costo", event.target.value)}
+-              />
+-            </InputGroup>
+-          </Field>
+-          <Field>
+-            <FieldLabel>Mínimo Venta</FieldLabel>
+-
+-            <InputGroup>
+-              <InputGroupInput
+-                type="number"
+-                readOnly={readonly}
+-                value={row.minimo_venta ?? ""}
+-                onChange={(event) => setNumero("minimo_venta", event.target.value)}
+-              />
+-            </InputGroup>
+-          </Field>
++          <CampoMetodo {...campo} campo="minimo_costo" />
++          <CampoMetodo {...campo} campo="minimo_venta" />
+         </FieldGroup>
+ 
+-        <Field>
+-          <FieldLabel>Moneda de costo</FieldLabel>
+-
+-          <InputGroup>
+-            <div className="w-full">
+-              <AsyncComboboxInput<MonedaPorcentajeOption>
+-                value={row.moneda_costo ?? null}
+-                onChange={(moneda_costo) => setRow((prev) => ({ ...prev, moneda_costo }))}
+-                fetchOptions={fetchMonedas}
+-                initialOptions={monedas}
+-                getOptionValue={(option) => option.value}
+-                getOptionLabel={(option) => option.label}
+-                placeholder="Seleccione..."
+-                searchPlaceholder="Buscar moneda..."
+-                minSearchLength={0}
+-                fetchOnEmpty
+-                clearable
+-                readOnly={readonly}
+-              />
+-            </div>
+-          </InputGroup>
+-        </Field>
+-
+-        <Field>
+-          <FieldLabel>Porcentaje costo</FieldLabel>
+-
+-          <InputGroup>
+-            <InputGroupInput
+-              type="number"
+-              min={0}
+-              max={100}
+-              step="0.01"
+-              readOnly={readonly}
+-              value={row.porcentaje_costo ?? ""}
+-              onChange={(event) => setNumero("porcentaje_costo", event.target.value)}
+-            />
+-
+-            <InputGroupAddon align="inline-end">%</InputGroupAddon>
+-          </InputGroup>
+-
+-          {porcentajeCostoFueraRango && (
+-            <p className="mt-1 text-sm text-destructive">El porcentaje debe estar entre 0 y 100.</p>
+-          )}
+-        </Field>
+-
+-        <Field>
+-          <FieldLabel>Moneda de venta</FieldLabel>
+-
+-          <InputGroup>
+-            <div className="w-full">
+-              <AsyncComboboxInput<MonedaPorcentajeOption>
+-                value={row.moneda_venta ?? null}
+-                onChange={(moneda_venta) => setRow((prev) => ({ ...prev, moneda_venta }))}
+-                fetchOptions={fetchMonedas}
+-                initialOptions={monedas}
+-                getOptionValue={(option) => option.value}
+-                getOptionLabel={(option) => option.label}
+-                placeholder="Seleccione..."
+-                searchPlaceholder="Buscar moneda..."
+-                minSearchLength={0}
+-                fetchOnEmpty
+-                clearable
+-                readOnly={readonly}
+-              />
+-            </div>
+-          </InputGroup>
+-        </Field>
+-
+-        <Field>
+-          <FieldLabel>Porcentaje venta</FieldLabel>
+-
+-          <InputGroup>
+-            <InputGroupInput
+-              type="number"
+-              min={0}
+-              max={100}
+-              step="0.01"
+-              readOnly={readonly}
+-              value={row.porcentaje_venta ?? ""}
+-              onChange={(event) => setNumero("porcentaje_venta", event.target.value)}
+-            />
+-
+-            <InputGroupAddon align="inline-end">%</InputGroupAddon>
+-          </InputGroup>
++        <CampoMetodo {...campo} campo="cod_moneda_costo" />
+ 
+-          {errorPorcentaje && (
+-            <p className="mt-1 text-sm text-destructive">
+-              El valor de venta debe ser mayor al de costo
+-            </p>
+-          )}
++        <CampoMetodo {...campo} campo="porcentaje_costo" />
+ 
+-          {porcentajeVentaFueraRango && (
+-            <p className="mt-1 text-sm text-destructive">El porcentaje debe estar entre 0 y 100.</p>
+-          )}
+-        </Field>
++        <CampoMetodo {...campo} campo="cod_moneda_venta" />
+ 
+-        <Field>
+-          <FieldLabel>Rubro</FieldLabel>
++        <CampoMetodo {...campo} campo="porcentaje_venta" />
+ 
+-          <InputGroup>
+-            <div className="w-full">
+-              <AsyncComboboxInput<RubroPorcentajeOption>
+-                value={row.rubro ?? null}
+-                onChange={(rubro) => setRow((prev) => ({ ...prev, rubro }))}
+-                fetchOptions={fetchRubros}
+-                initialOptions={rubros}
+-                getOptionValue={(option) => option.value}
+-                getOptionLabel={(option) => option.label}
+-                placeholder="Seleccione..."
+-                searchPlaceholder="Buscar rubro..."
+-                minSearchLength={0}
+-                fetchOnEmpty
+-                clearable
+-                readOnly={readonly}
+-              />
+-            </div>
+-          </InputGroup>
+-        </Field>
++        <CampoMetodo {...campo} campo="cod_rubro" />
+       </div>
+ 
+       {!readonly && (
+diff --git a/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-table.tsx b/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje.tsx
+similarity index 65%
+rename from src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-table.tsx
+rename to src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje.tsx
+index 7b5af7cca73de259a3eb2a015458a0bf940fd23c..1118692b3912da3cf92997968bbba1be29685510 100644
+--- a/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-table.tsx
++++ b/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje.tsx
+@@ -11,11 +11,12 @@ import {
+   useTarifaPorcentaje,
+ } from "../../../api/tarifa-porcentaje";
+ import { useOpcionesMonedas, useOpcionesRubros } from "../../../hooks/use-opciones-tarifa";
+-import type {
+-  FilaPorcentaje,
+-  MonedaPorcentajeOption,
+-  RubroPorcentajeOption,
+-} from "./porcentaje-columns";
++import {
++  type FilaPorcentaje,
++  METODO_PORCENTAJE,
++  type MonedaPorcentajeOption,
++  type RubroPorcentajeOption,
++} from "../../../lib/metodos/porcentaje";
+ import { PorcentajeForm } from "./porcentaje-form";
+ 
+ type Props = {
+@@ -30,7 +31,11 @@ type Props = {
+   servicio?: Record<string, unknown>;
+ };
+ 
+-export function PorcentajeTable({
++/**
++ * Tarifa de método Porcentaje (por rubro): consulta, formulario y guardado.
++ * Componente padre reutilizable: basta con `<MetodoPorcentaje codMetodo={...} />`.
++ */
++export function MetodoPorcentaje({
+   codMetodo,
+   readonly = false,
+   reConsultar = () => {},
+@@ -60,55 +65,17 @@ export function PorcentajeTable({
+ 
+   const esNuevo = porcentaje == null;
+ 
+-  const value = React.useMemo<FilaPorcentaje | null>(() => {
+-    if (!porcentaje) return null;
+-
+-    return {
+-      ...porcentaje,
+-
+-      moneda_costo:
+-        monedas.find(
+-          (moneda) => String(moneda.cod_moneda) === String(porcentaje.cod_moneda_costo),
+-        ) ?? null,
+-
+-      moneda_venta:
+-        monedas.find(
+-          (moneda) => String(moneda.cod_moneda) === String(porcentaje.cod_moneda_venta),
+-        ) ?? null,
+-
+-      rubro:
+-        rubros.find(
+-          (rubro) => String(rubro.cod_rubro ?? rubro.value) === String(porcentaje.cod_rubro),
+-        ) ?? null,
+-    };
+-  }, [porcentaje, monedas, rubros]);
++  const value = React.useMemo<FilaPorcentaje | null>(
++    () => (porcentaje ? METODO_PORCENTAJE.aFila(porcentaje, { monedas, rubros }) : null),
++    [porcentaje, monedas, rubros],
++  );
+ 
++  // cod_tarifa_porcentaje ?? 0 y mínimos vacíos como 0: ver la definición.
+   const formatearFilaApi = React.useCallback(
+     (fila: FilaPorcentaje): TarifaPorcentajeMutationPayload | null => {
+-      if (codMetodo == null) {
+-        return null;
+-      }
+-
+-      return {
+-        cod_tarifa_porcentaje: fila.cod_tarifa_porcentaje ?? 0,
+-
+-        cod_metodo: codMetodo,
+-
+-        porcentaje_costo: Number(fila.porcentaje_costo),
+-
+-        porcentaje_venta: Number(fila.porcentaje_venta),
+-
+-        minimo_costo: Number(fila.minimo_costo ?? 0),
+-        minimo_venta: Number(fila.minimo_venta ?? 0),
+-
+-        cod_rubro: fila.rubro?.cod_rubro ?? fila.rubro?.value ?? null,
+-
+-        cod_moneda_costo: fila.moneda_costo?.cod_moneda ?? null,
+-
+-        cod_moneda_venta: fila.moneda_venta?.cod_moneda ?? null,
++      if (codMetodo == null) return null;
+ 
+-        cod_estado: 1,
+-      };
++      return METODO_PORCENTAJE.aPayload(fila, { codMetodo });
+     },
+     [codMetodo],
+   );
+diff --git a/src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx b/src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx
+index 9c498ac7f075d297cbf3374bccefd6711324b51a..c36a3d2d9f0788e685e4bc8ad43aeb09d6d86f51 100644
+--- a/src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx
++++ b/src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx
+@@ -1,24 +1,16 @@
+ import { Pencil, Trash2 } from "lucide-react";
+ import { DataTableColumnHeader } from "@/shared/components/data-table/data-table";
+ import { Button } from "@/shared/components/ui/button";
++import { type FilaRango, METODO_RANGO } from "@/features/pricing/shared";
+ import type { ColumnDef } from "@/shared/lib/tanstack-table";
+-import type { TarifaRango } from "../../../api/tarifa-rangos";
++import type { MonedaOpcion } from "../../../hooks/use-opciones-tarifa";
++import { columnasMetodo } from "../columnas-metodo";
+ 
+-export type MonedaRangoOption = {
+-  value: string;
+-  label: string;
++export type MonedaRangoOption = MonedaOpcion;
+ 
+-  cod_moneda: string | number;
+-  simbolo_moneda?: string;
+-
+-  [key: string]: unknown;
+-};
+-
+-export type FilaMetodoRango = Partial<TarifaRango> & {
++/** Fila de la tabla: la fila del método (pricing/shared/lib/metodos/rango.ts) + id local. */
++export type FilaMetodoRango = FilaRango & {
+   localId: string;
+-
+-  moneda_costo?: MonedaRangoOption | null;
+-  moneda_venta?: MonedaRangoOption | null;
+ };
+ 
+ type Props = {
+@@ -42,32 +34,15 @@ export function crearRangoColumns({
+       header: ({ column }) => <DataTableColumnHeader column={column} title="A partir de..." />,
+       enableSorting: true,
+     },
+-    {
+-      accessorKey: "costo_minimo",
+-      header: "Mínimo costo",
+-    },
+-    {
+-      accessorKey: "venta_minimo",
+-      header: "Mínimo venta",
+-    },
+-    {
+-      accessorKey: "costo",
+-      header: "Costo",
+-    },
+-    {
+-      id: "moneda_costo",
+-      header: "Moneda costo",
+-      cell: ({ row }) => row.original.moneda_costo?.label ?? "",
+-    },
+-    {
+-      accessorKey: "venta",
+-      header: "Venta",
+-    },
+-    {
+-      id: "moneda_venta",
+-      header: "Moneda venta",
+-      cell: ({ row }) => row.original.moneda_venta?.label ?? "",
+-    },
++    // Encabezados = `label` de cada campo en la definición.
++    ...columnasMetodo<FilaMetodoRango>(METODO_RANGO, [
++      "costo_minimo",
++      "venta_minimo",
++      "costo",
++      "cod_moneda_costo",
++      "venta",
++      "cod_moneda_venta",
++    ]),
+   ];
+ 
+   if (!readonly) {
+diff --git a/src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx b/src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx
+index b4e358fe9accc4891cd2c6413ecb26532aa7ca01..3b18fc5202537dc65861816cf02eb1eb0763e995 100644
+--- a/src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx
++++ b/src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx
+@@ -7,6 +7,7 @@ import { Button } from "@/shared/components/ui/button";
+ import { Field, FieldLabel } from "@/shared/components/ui/field";
+ import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
+ import { crearIdLocal } from "@/shared/lib/id";
++import { METODO_RANGO } from "@/features/pricing/shared";
+ import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
+ import type { FilaMetodoRango, MonedaRangoOption } from "./rango-columns";
+ 
+@@ -30,16 +31,8 @@ export function RangoForm({ value, monedas, onGuardar, onCancelar, readonly = fa
+   const fetchMonedas = useFiltroOpciones(monedas);
+ 
+   const iniciarNuevo = () => {
+-    setRow({
+-      localId: crearIdLocal(),
+-      inicio: "",
+-      costo_minimo: "",
+-      venta_minimo: "",
+-      costo: "",
+-      venta: "",
+-      moneda_costo: null,
+-      moneda_venta: null,
+-    });
++    // Montos en "" y monedas en null (`inicial` en pricing/shared/lib/metodos/rango.ts).
++    setRow({ localId: crearIdLocal(), ...METODO_RANGO.filaNueva() });
+   };
+ 
+   if (readonly) return null;
+@@ -55,22 +48,10 @@ export function RangoForm({ value, monedas, onGuardar, onCancelar, readonly = fa
+ 
+   const esEdicion = Boolean(value);
+ 
+-  const errores = (() => {
+-    const lista: string[] = [];
++  // Requeridos ("Mínimo de Costo", ...) y venta >= costo: ver la definición del método.
++  const validacion = METODO_RANGO.validar(row);
+ 
+-    if (!row.costo_minimo) lista.push("Mínimo de Costo");
+-    if (!row.venta_minimo) lista.push("Mínimo de Venta");
+-    if (!row.costo) lista.push("Costo");
+-    if (!row.venta) lista.push("Venta");
+-    if (!row.moneda_costo) lista.push("Moneda de Costo");
+-    if (!row.moneda_venta) lista.push("Moneda de Venta");
+-
+-    if (row.costo && row.venta && Number(row.costo) > Number(row.venta)) {
+-      lista.push("El valor de venta debe ser igual o mayor al valor del costo");
+-    }
+-
+-    return lista;
+-  })();
++  const errores = [...validacion.faltantes, ...Object.values(validacion.errores).flat()];
+ 
+   const setNumero = (
+     field: "inicio" | "costo_minimo" | "venta_minimo" | "costo" | "venta",
+diff --git a/src/features/pricing/tarifas/components/metodos/rango/rango-table.tsx b/src/features/pricing/tarifas/components/metodos/rango/rango-table.tsx
+index cbe014d63fa64b47a3251cce1ff6a7d33b4f4eea..6a92eedea7b7b44bca31d09e29dfe9533c52ed3d 100644
+--- a/src/features/pricing/tarifas/components/metodos/rango/rango-table.tsx
++++ b/src/features/pricing/tarifas/components/metodos/rango/rango-table.tsx
+@@ -1,6 +1,7 @@
+ "use client";
+ 
+ import React from "react";
++import { METODO_RANGO } from "@/features/pricing/shared";
+ import { DataTable } from "@/shared/components/data-table/data-table";
+ import { Alert } from "@/shared/components/ui/alert";
+ import { Button } from "@/shared/components/ui/button";
+@@ -55,21 +56,19 @@ export function RangoTable({
+ 
+   const monedas: MonedaRangoOption[] = useOpcionesMonedas(monedasQuery.data);
+ 
++  // Las filas editadas ya traen sus opciones; las del API las buscan por código.
+   const data = React.useMemo<FilaMetodoRango[]>(
+     () =>
+-      rangosLocales.map((rango) => ({
+-        ...rango,
+-
+-        moneda_costo:
+-          rango.moneda_costo ??
+-          monedas.find((moneda) => String(moneda.cod_moneda) === String(rango.cod_moneda_costo)) ??
+-          null,
+-
+-        moneda_venta:
+-          rango.moneda_venta ??
+-          monedas.find((moneda) => String(moneda.cod_moneda) === String(rango.cod_moneda_venta)) ??
+-          null,
+-      })),
++      rangosLocales.map((rango) => {
++        const fila = METODO_RANGO.aFila(rango, { monedas });
++
++        return {
++          ...fila,
++          localId: rango.localId,
++          moneda_costo: rango.moneda_costo ?? fila.moneda_costo ?? null,
++          moneda_venta: rango.moneda_venta ?? fila.moneda_venta ?? null,
++        };
++      }),
+     [rangosLocales, monedas],
+   );
+ 
+@@ -93,31 +92,8 @@ export function RangoTable({
+       if (!fila.moneda_costo) return null;
+       if (!fila.moneda_venta) return null;
+ 
+-      return {
+-        cod_tarifa_rango: fila.cod_tarifa_rango ?? null,
+-
+-        cod_servicio: codServicio ?? null,
+-        cod_metodo: codMetodo,
+-
+-        inicio: fila.inicio || 0,
+-
+-        // Igual al componente viejo.
+-        final: null,
+-
+-        costo_minimo: fila.costo_minimo ?? null,
+-
+-        venta_minimo: fila.venta_minimo ?? null,
+-
+-        costo: fila.costo ?? null,
+-
+-        cod_moneda_costo: fila.moneda_costo.cod_moneda,
+-
+-        venta: fila.venta ?? null,
+-
+-        cod_moneda_venta: fila.moneda_venta.cod_moneda,
+-
+-        cod_estado: fila.cod_estado ?? 1,
+-      };
++      // inicio || 0, final null, montos tal cual y cod_estado ?? 1: ver la definición.
++      return METODO_RANGO.aPayload(fila, { codMetodo, codServicio });
+     },
+     [codMetodo, codServicio],
+   );
+diff --git a/src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx b/src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx
+index 222979d28ca54a63d9ea8ebfae15661f97e153c0..f5ca2b43392e037e5847005119b989591ced3f0c 100644
+--- a/src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx
++++ b/src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx
+@@ -1,35 +1,16 @@
+ import { Pencil, Trash2 } from "lucide-react";
+ import { Button } from "@/shared/components/ui/button";
+ import type { ColumnDef } from "@/shared/lib/tanstack-table";
+-import type { TarifaScalling } from "../../../api/tarifa-scalling";
+-import type { MonedaOpcion } from "../../../hooks/use-opciones-tarifa";
++import { type FilaMetodoScalling, METODO_SCALLING } from "../../../lib/metodos/scalling";
++import { columnasMetodo } from "../columnas-metodo";
+ 
+-export type TipoPuntoEnlaceScallingOption = {
+-  value: string;
+-  label: string;
+-
+-  cod_tipo: string | number;
+-
+-  [key: string]: unknown;
+-};
+-
+-export type PuntoEnlaceScallingOption = {
+-  value: string;
+-  label: string;
+-
+-  cod_puntoenlace: string | number;
+-  cod_tipo: string | number;
+-
+-  [key: string]: unknown;
+-};
+-
+-export type MonedaScallingOption = MonedaOpcion;
+-
+-export type FilaMetodoScalling = Partial<TarifaScalling> & {
+-  tipo_puntoenlace?: TipoPuntoEnlaceScallingOption | null;
+-  punto_enlace?: PuntoEnlaceScallingOption | null;
+-  moneda?: MonedaScallingOption | null;
+-};
++// Tipos: definición única en lib/metodos/scalling.ts (se reexportan con sus nombres de siempre).
++export type {
++  FilaMetodoScalling,
++  MonedaScallingOption,
++  PuntoEnlaceScallingOption,
++  TipoPuntoEnlaceScallingOption,
++} from "../../../lib/metodos/scalling";
+ 
+ type Props = {
+   onEditar: (row: FilaMetodoScalling) => void;
+@@ -51,30 +32,12 @@ export function crearScallingColumns({
+       cell: ({ row }) => row.original.tipo_puntoenlace?.label ?? "",
+     },
+ 
+-    {
+-      id: "punto_enlace",
+-
+-      accessorFn: (row) => row.punto_enlace?.label ?? "",
+-
+-      header: "Aduana/Puerto/Aeropuerto",
+-
+-      cell: ({ row }) => row.original.punto_enlace?.label ?? "",
+-    },
+-
+-    {
+-      id: "moneda",
+-
+-      accessorFn: (row) => row.moneda?.label ?? "",
+-
+-      header: "Moneda",
+-
+-      cell: ({ row }) => row.original.moneda?.label ?? "",
+-    },
+-
+-    {
+-      accessorKey: "costo",
+-      header: "Valor",
+-    },
++    // Encabezados = `label` de cada campo; accessorFn para la búsqueda por texto.
++    ...columnasMetodo<FilaMetodoScalling>(
++      METODO_SCALLING,
++      ["cod_puntoenlace", "cod_moneda", "costo"],
++      { conAccessor: true },
++    ),
+ 
+     {
+       id: "acciones",
+diff --git a/src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx b/src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx
+index fb453562d5563f128a334d890311552c316ca229..da4aa4e432d823a0bfa7a4640ad5c82bab161806 100644
+--- a/src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx
++++ b/src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx
+@@ -11,12 +11,13 @@ import { Field, FieldLabel } from "@/shared/components/ui/field";
+ 
+ import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
+ import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
+-import type {
+-  FilaMetodoScalling,
+-  MonedaScallingOption,
+-  PuntoEnlaceScallingOption,
+-  TipoPuntoEnlaceScallingOption,
+-} from "./scalling-columns";
++import {
++  type FilaMetodoScalling,
++  METODO_SCALLING,
++  type MonedaScallingOption,
++  type PuntoEnlaceScallingOption,
++  type TipoPuntoEnlaceScallingOption,
++} from "../../../lib/metodos/scalling";
+ 
+ type Props = {
+   value?: FilaMetodoScalling | null;
+@@ -44,16 +45,13 @@ export function ScallingForm({
+   isPending = false,
+ }: Props) {
+   const crearBase = React.useCallback(
++    // punto_enlace null, costo 0 y moneda null: `inicial` en lib/metodos/scalling.ts.
+     (): FilaMetodoScalling => ({
+       cod_tarifa_scalling: 0,
+ 
+       tipo_puntoenlace: tipoPuntoEnlaceDefault ?? null,
+ 
+-      punto_enlace: null,
+-
+-      costo: 0,
+-
+-      moneda: null,
++      ...METODO_SCALLING.filaNueva(),
+ 
+       cod_puntoenlace: null,
+       cod_moneda: null,
+@@ -85,10 +83,11 @@ export function ScallingForm({
+ 
+   const esEdicion = value?.cod_tarifa_scalling != null && Number(value.cod_tarifa_scalling) !== 0;
+ 
++  // Punto y moneda requeridos (ver la definición); el tipo, por la cascada.
++  const puedeGuardar = row.tipo_puntoenlace != null && METODO_SCALLING.validar(row).valido;
++
+   const guardar = () => {
+-    if (!row.tipo_puntoenlace) return;
+-    if (!row.punto_enlace) return;
+-    if (!row.moneda) return;
++    if (!puedeGuardar) return;
+ 
+     onGuardar(row);
+ 
+@@ -226,7 +225,7 @@ export function ScallingForm({
+         <Button
+           type="button"
+           onClick={guardar}
+-          disabled={!row.tipo_puntoenlace || !row.punto_enlace || !row.moneda || isPending}
++          disabled={!puedeGuardar || isPending}
+         >
+           {esEdicion ? <Save className="size-4" /> : <Plus className="size-4" />}
+ 
+diff --git a/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx b/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx
+index 7c50af516b53e4c3ce9d58bf2e73c10ee17b87ed..578519d08ceb0400f3d9168b802bdfe108f75506 100644
+--- a/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx
++++ b/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx
+@@ -17,12 +17,13 @@ import {
+ } from "../../../api/tarifa-scalling";
+ import { useOpcionesMonedas } from "../../../hooks/use-opciones-tarifa";
+ import {
+-  crearScallingColumns,
+   type FilaMetodoScalling,
++  METODO_SCALLING,
+   type MonedaScallingOption,
+   type PuntoEnlaceScallingOption,
+   type TipoPuntoEnlaceScallingOption,
+-} from "./scalling-columns";
++} from "../../../lib/metodos/scalling";
++import { crearScallingColumns } from "./scalling-columns";
+ import { ScallingForm } from "./scalling-form";
+ 
+ const TIPO_PUNTO_SEGUN_TRANSPORTE: Record<string, string> = {
+@@ -155,11 +156,11 @@ export function ScallingTable({ codMetodo, codTipoTransporte }: Props) {
+ 
+   const data = React.useMemo<FilaMetodoScalling[]>(
+     () =>
+-      (scallingQuery.data ?? []).map((fila) => {
+-        const puntoEnlace =
+-          puntosEnlace.find(
+-            (punto) => String(punto.cod_puntoenlace) === String(fila.cod_puntoenlace),
+-          ) ?? null;
++      (scallingQuery.data ?? []).map((registro) => {
++        // punto_enlace (por cod_puntoenlace) y moneda: ver la definición.
++        const fila = METODO_SCALLING.aFila(registro, { puntosEnlace, monedas });
++
++        const puntoEnlace = fila.punto_enlace ?? null;
+ 
+         const tipoPuntoEnlace =
+           puntoEnlace == null
+@@ -168,17 +169,10 @@ export function ScallingTable({ codMetodo, codTipoTransporte }: Props) {
+                 (tipo) => String(tipo.cod_tipo) === String(puntoEnlace.cod_tipo),
+               ) ?? null);
+ 
+-        const moneda =
+-          monedas.find((item) => String(item.cod_moneda) === String(fila.cod_moneda)) ?? null;
+-
+         return {
+           ...fila,
+ 
+           tipo_puntoenlace: tipoPuntoEnlace,
+-
+-          punto_enlace: puntoEnlace,
+-
+-          moneda,
+         };
+       }),
+     [scallingQuery.data, puntosEnlace, tiposPuntoEnlace, monedas],
+@@ -194,23 +188,8 @@ export function ScallingTable({ codMetodo, codTipoTransporte }: Props) {
+     (fila: FilaMetodoScalling): TarifaScallingMutationPayload | null => {
+       if (codMetodo == null) return null;
+ 
+-      return {
+-        cod_tarifa_scalling: fila.cod_tarifa_scalling ?? 0,
+-
+-        cod_metodo: codMetodo,
+-
+-        cod_puntoenlace: fila.punto_enlace?.cod_puntoenlace ?? fila.punto_enlace?.value ?? null,
+-
+-        costo: fila.costo ?? 0,
+-
+-        /*
+-         * Se conserva el comportamiento viejo:
+-         * si no existe moneda usa cod_moneda = 1.
+-         */
+-        cod_moneda: fila.moneda?.cod_moneda ?? fila.moneda?.value ?? 1,
+-
+-        cod_estado: fila.cod_estado ?? 1,
+-      };
++      // id ?? 0, punto, costo ?? 0, cod_moneda ?? value ?? 1 y cod_estado ?? 1: ver la definición.
++      return METODO_SCALLING.aPayload(fila, { codMetodo });
+     },
+     [codMetodo],
+   );
+diff --git a/src/features/pricing/tarifas/components/tab-tarifas.tsx b/src/features/pricing/tarifas/components/tab-tarifas.tsx
+index 24ea845feac22103e84d8f143c9ca934637ed5fa..0f739596e5f8e02f6cd27224ec42e03e13671f70 100644
+--- a/src/features/pricing/tarifas/components/tab-tarifas.tsx
++++ b/src/features/pricing/tarifas/components/tab-tarifas.tsx
+@@ -24,11 +24,11 @@ import { CommoditiesTable } from "./metodo-commodities/commodities-table";
+ import { DetalleTable } from "./metodo-detalle/detalle-table";
+ import { EntidadTable } from "./metodo-entidad/entidad-table";
+ import { PaisTable } from "./metodo-pais/pais-table";
+-import { CoberturaTable } from "./metodos/cobertura/cobertura-table";
+-import { CostoPorcentajeTable } from "./metodos/costo-porcentaje/porcentaje-table";
++import { MetodoCobertura } from "./metodos/cobertura/cobertura";
++import { MetodoCostoPorcentaje } from "./metodos/costo-porcentaje/costo-porcentaje";
+ import { MetodoCostoVenta } from "./metodos/costoVenta/costo-venta";
+-import { EquipoTable } from "./metodos/equipo/equipo-table";
+-import { PorcentajeTable } from "./metodos/porcentaje/porcentaje-table";
++import { MetodoEquipo } from "./metodos/equipo/equipo";
++import { MetodoPorcentaje } from "./metodos/porcentaje/porcentaje";
+ import { RangoTable } from "./metodos/rango/rango-table";
+ import { ScallingTable } from "./metodos/scalling/scalling-table";
+ 
+@@ -347,15 +347,15 @@ export function TarifasTabs({
+         break;
+ 
+       case 103:
+-        componente = <EquipoTable {...props} />;
++        componente = <MetodoEquipo {...props} />;
+         break;
+ 
+       case 148:
+-        componente = <PorcentajeTable {...props} />;
++        componente = <MetodoPorcentaje {...props} />;
+         break;
+ 
+       case 363:
+-        componente = <CoberturaTable {...props} />;
++        componente = <MetodoCobertura {...props} />;
+         break;
+ 
+       case 342:
+@@ -363,7 +363,7 @@ export function TarifasTabs({
+         break;
+ 
+       case 504:
+-        componente = <CostoPorcentajeTable {...props} />;
++        componente = <MetodoCostoPorcentaje {...props} />;
+         break;
+ 
+       default:
+diff --git a/src/features/pricing/tarifas/hooks/use-opciones-tarifa.ts b/src/features/pricing/tarifas/hooks/use-opciones-tarifa.ts
+index cbc88126714090c6eae73527ae5b89552ca333e6..76736e36d6b5b8959d6050ed30509031a4d7a411 100644
+--- a/src/features/pricing/tarifas/hooks/use-opciones-tarifa.ts
++++ b/src/features/pricing/tarifas/hooks/use-opciones-tarifa.ts
+@@ -1,4 +1,8 @@
+ import React from "react";
++import type { MonedaOpcion, RubroOpcion } from "@/features/pricing/shared";
++
++// Los tipos viven con el motor de campos de métodos (pricing/shared/lib/campos-metodo.ts).
++export type { MonedaOpcion, RubroOpcion };
+ 
+ /* ==========================================================================
+  * OPCIONES DE SELECT COMPARTIDAS POR LOS MÉTODOS DE TARIFA
+@@ -14,17 +18,6 @@ type Id = string | number;
+  * MONEDAS
+  * ========================================================================== */
+ 
+-/** Opción de moneda para los selects de tarifas. */
+-export type MonedaOpcion = {
+-  value: string;
+-  label: string;
+-
+-  cod_moneda: Id;
+-  simbolo?: string | undefined;
+-
+-  [key: string]: unknown;
+-};
+-
+ type MonedaFuente = {
+   cod_moneda: Id;
+   simbolo_moneda?: string | null;
+@@ -68,15 +61,6 @@ export function useOpcionesMonedas(
+  * RUBROS
+  * ========================================================================== */
+ 
+-export type RubroOpcion = {
+-  value: string;
+-  label: string;
+-
+-  cod_rubro: Id;
+-
+-  [key: string]: unknown;
+-};
+-
+ type RubroFuente = {
+   cod_rubro?: Id | null;
+   codRubro?: Id | null;
+diff --git a/src/features/pricing/tarifas/index.ts b/src/features/pricing/tarifas/index.ts
+index 83bfc6d5b83aa4590a89754cb15f7664ad2dceb6..05477091a4b286bd95d0ae05c1bcb87359a46f18 100644
+--- a/src/features/pricing/tarifas/index.ts
++++ b/src/features/pricing/tarifas/index.ts
+@@ -217,33 +217,36 @@ export {
+ export { PaisForm } from "./components/metodo-pais/pais-form";
+ export { PaisTable } from "./components/metodo-pais/pais-table";
+ export { CampoMetodo } from "./components/metodos/campo-metodo";
+-export type {
+-  FilaCobertura,
+-  MonedaCoberturaOption,
+-} from "./components/metodos/cobertura/cobertura-columns";
++export {
++  MetodoCobertura,
++  /** @deprecated Nombre anterior; usar `MetodoCobertura`. */
++  MetodoCobertura as CoberturaTable,
++} from "./components/metodos/cobertura/cobertura";
+ export { CoberturaForm } from "./components/metodos/cobertura/cobertura-form";
+-export { CoberturaTable } from "./components/metodos/cobertura/cobertura-table";
++export {
++  MetodoCostoPorcentaje,
++  /** @deprecated Nombre anterior; usar `MetodoCostoPorcentaje`. */
++  MetodoCostoPorcentaje as CostoPorcentajeTable,
++} from "./components/metodos/costo-porcentaje/costo-porcentaje";
++export { CostoPorcentajeForm } from "./components/metodos/costo-porcentaje/costo-porcentaje-form";
+ export {
+   MetodoCostoVenta,
+   /** @deprecated Nombre anterior; usar `MetodoCostoVenta`. */
+   MetodoCostoVenta as CostoVentaTable,
+ } from "./components/metodos/costoVenta/costo-venta";
+ export { CostoVentaForm } from "./components/metodos/costoVenta/costo-venta-form";
+-export { default as EquipoColumn } from "./components/metodos/equipo/equipo-columns";
+ export {
+-  EquipoForm,
+-  type EquipoOption,
+-  type FilaEquipo,
+-  type MonedaEquipoOption,
+-} from "./components/metodos/equipo/equipo-form";
+-export { EquipoTable } from "./components/metodos/equipo/equipo-table";
+-export type {
+-  FilaPorcentaje,
+-  MonedaPorcentajeOption,
+-  RubroPorcentajeOption,
+-} from "./components/metodos/porcentaje/porcentaje-columns";
++  MetodoEquipo,
++  /** @deprecated Nombre anterior; usar `MetodoEquipo`. */
++  MetodoEquipo as EquipoTable,
++} from "./components/metodos/equipo/equipo";
++export { EquipoForm } from "./components/metodos/equipo/equipo-form";
++export {
++  MetodoPorcentaje,
++  /** @deprecated Nombre anterior; usar `MetodoPorcentaje`. */
++  MetodoPorcentaje as PorcentajeTable,
++} from "./components/metodos/porcentaje/porcentaje";
+ export { PorcentajeForm } from "./components/metodos/porcentaje/porcentaje-form";
+-export { PorcentajeTable } from "./components/metodos/porcentaje/porcentaje-table";
+ export {
+   crearRangoColumns,
+   type FilaMetodoRango,
+@@ -275,9 +278,13 @@ export {
+   useOpcionesRubros,
+ } from "./hooks/use-opciones-tarifa";
+ export {
++  booleano,
++  type CampoBooleano,
+   type CampoFijo,
+   type CampoMoneda,
+   type CampoMonto,
++  type CampoOpcion,
++  type CampoRubro,
+   type CatalogosMetodo,
+   type ContextoMetodo,
+   type DefCampo,
+@@ -286,7 +293,11 @@ export {
+   fijo,
+   moneda,
+   monto,
++  opcion,
++  rangoPermitido,
+   type ReglaMetodo,
++  rubro,
++  sinEsquema,
+   ventaNoMenorQueCosto,
+ } from "./lib/campos-metodo";
+ export type {
+@@ -303,11 +314,34 @@ export type {
+   UseFormularioOptions,
+   VisibleWhenRule,
+ } from "./lib/form-types";
++export {
++  type FilaCobertura,
++  METODO_COBERTURA,
++  type MonedaCoberturaOption,
++} from "./lib/metodos/cobertura";
++export {
++  type FilaCostoPorcentaje,
++  METODO_COSTO_PORCENTAJE,
++  type MonedaCostoPorcentajeOption,
++  type RubroCostoPorcentajeOption,
++} from "./lib/metodos/costo-porcentaje";
+ export {
+   type FilaCostoVenta,
+   METODO_COSTO_VENTA,
+   type MonedaCostoVentaOption,
+ } from "./lib/metodos/costo-venta";
++export {
++  type EquipoOption,
++  type FilaEquipo,
++  METODO_EQUIPO,
++  type MonedaEquipoOption,
++} from "./lib/metodos/equipo";
++export {
++  type FilaPorcentaje,
++  METODO_PORCENTAJE,
++  type MonedaPorcentajeOption,
++  type RubroPorcentajeOption,
++} from "./lib/metodos/porcentaje";
+ export { fieldRules } from "./lib/tarifa-field-rules";
+ export {
+   CATALOGOS_AGREGAR_TODOS,
+diff --git a/src/features/pricing/tarifas/lib/campos-metodo.ts b/src/features/pricing/tarifas/lib/campos-metodo.ts
+index 471149239214d99a763643fbe68c871ed7a22b0d..a0298e27191832ccab200f0148c0d8f2b234b3b4 100644
+--- a/src/features/pricing/tarifas/lib/campos-metodo.ts
++++ b/src/features/pricing/tarifas/lib/campos-metodo.ts
+@@ -1,308 +1,39 @@
+ /* ==========================================================================
+  * MÉTODOS DE TARIFA: DEFINICIÓN ÚNICA DE CAMPOS
+  *
+- * Cada campo de un método (costo, venta, moneda, ...) se declara UNA vez en
+- * la definición del método (lib/metodos/<metodo>.ts). A partir de ella se
+- * obtienen:
+- *
+- *   - el esquema Zod de la lista y el tipo del registro   (api/tarifa-<metodo>.ts)
+- *   - el tipo del payload y la función que lo arma        (aPayload)
+- *   - la fila del formulario desde el registro del API    (aFila: busca las opciones)
+- *   - la validación del formulario                        (validar)
+- *   - la etiqueta y el input de cada campo                (components/metodos/campo-metodo.tsx)
+- *
+- * Tipos de campo: monto, moneda, fijo, delContexto.
+- * Si un campo no se comporta como su tipo, se sobrescribe SOLO esa parte en
+- * la definición (aPayload, deApi, esquema, ...) en lugar de forzar el tipo.
+- *
+- * ¿Cómo agrego un campo a un método?
+- *   1. Agrégalo en `campos` de lib/metodos/<metodo>.ts.
+- *   2. Si se ve en el formulario: <CampoMetodo {...campo} campo="mi_campo" /> en su -form.tsx.
+- *   El orden de `campos` es el orden del payload.
+- * ========================================================================== */
+-
+-import { z } from "zod";
+-
+-import { zId } from "@/shared/lib/zod-scalars";
+-
+-import type { MonedaOpcion } from "../hooks/use-opciones-tarifa";
+-
+-type Id = string | number;
+-
+-type Simplificar<T> = { [K in keyof T]: T[K] } & {};
+-
+-/** Valores de una fila tal como los maneja el formulario. */
+-type Valores = Record<string, unknown>;
+-
+-/** Datos que no vienen de la fila sino del componente (props). */
+-export type ContextoMetodo = {
+-  codMetodo: Id;
+-  codServicio?: Id | null | undefined;
+-};
+-
+-/** Catálogos con los que se convierten códigos del API en opciones de select. */
+-export type CatalogosMetodo = {
+-  monedas?: readonly MonedaOpcion[] | undefined;
+-};
+-
+-/** Cómo se dibuja el campo en el formulario. */
+-export type FormularioCampo = {
+-  /** `step` del input numérico. */
+-  step?: string | number;
+-  /** Campo de moneda cuyo símbolo se muestra al final del input. */
+-  simboloDe?: string;
+-};
+-
+-export type DefCampo<TPayload = unknown> = {
+-  tipo: "monto" | "moneda" | "fijo" | "contexto";
+-  /** Texto que ve el usuario (formulario y mensajes). */
+-  label?: string;
+-  /** Validación al leer del API. Sin esquema, el campo no forma parte del registro. */
+-  esquema?: z.ZodType;
+-  /** Clave en la fila del formulario cuando no es la del API (ej. la opción de moneda). */
+-  en?: string;
+-  /** Obligatorio para poder guardar. */
+-  requerido?: boolean;
+-  /** Valor que se envía al backend. */
+-  aPayload: (valores: Valores, cod: string, ctx: ContextoMetodo) => TPayload;
+-  /** Valor de la fila (en `en`) a partir del registro del API. */
+-  deApi?: (registro: Valores, cod: string, catalogos: CatalogosMetodo) => unknown;
+-  /** Si el campo está vacío (para `requerido`). */
+-  falta?: (valores: Valores, cod: string) => boolean;
+-  formulario?: FormularioCampo;
+-};
+-
+-/** Error de una regla: se muestra debajo de `campo`. */
+-export type ErrorRegla = { campo: string; mensaje: string };
+-
+-export type ReglaMetodo = (valores: Valores) => ErrorRegla | null;
+-
+-/* ==========================================================================
+- * TIPOS DE CAMPO
+- * ========================================================================== */
+-
+-const vacio = (valor: unknown) => valor == null || valor === "";
+-
+-const esquemaMonto = z.union([z.string(), z.number()]).nullable();
+-
+-type AlPayload<P> = DefCampo<P>["aPayload"];
+-
+-/** Lo que cualquier campo visible puede sobrescribir. */
+-type Sobrescribir<P> = {
+-  label?: string;
+-  requerido?: boolean;
+-  aPayload?: AlPayload<P>;
+-};
+-
+-type Campo<Tipo extends DefCampo["tipo"], P> = Omit<DefCampo<P>, "tipo" | "aPayload"> & {
+-  tipo: Tipo;
+-  aPayload: AlPayload<P>;
+-};
+-
+-export type CampoMonto<P = number> = Campo<"monto", P> & { esquema: typeof esquemaMonto };
+-
+-type OpcionesMonto<P> = Sobrescribir<P> & { formulario?: FormularioCampo };
+-
+-/** Número (costo, venta, mínimos, porcentajes). Se envía con Number(valor). */
+-export function monto(opciones?: OpcionesMonto<number> & { aPayload?: never }): CampoMonto;
+-export function monto<P>(opciones: OpcionesMonto<P> & { aPayload: AlPayload<P> }): CampoMonto<P>;
+-export function monto<P>(opciones: OpcionesMonto<P> = {}): CampoMonto<P> {
+-  const { aPayload, ...resto } = opciones;
+-
+-  return {
+-    tipo: "monto",
+-    esquema: esquemaMonto,
+-    falta: (valores, cod) => vacio(valores[cod]),
+-    aPayload: aPayload ?? ((valores, cod) => Number(valores[cod]) as unknown as P),
+-    ...resto,
+-  };
+-}
+-
+-export type CampoMoneda<En extends string, P = Id | null> = Campo<"moneda", P> & {
+-  esquema: z.ZodNullable<typeof zId>;
+-  en: En;
+-  deApi: (registro: Valores, cod: string, catalogos: CatalogosMetodo) => MonedaOpcion | null;
+-};
+-
+-/**
+- * Moneda: en el API es un código (cod_moneda_costo); en el formulario es la
+- * opción completa, guardada en `en` (moneda_costo). Se envía opcion.cod_moneda.
+- */
+-export function moneda<const En extends string>(
+-  opciones: Sobrescribir<Id | null> & { en: En; aPayload?: never },
+-): CampoMoneda<En>;
+-export function moneda<const En extends string, P>(
+-  opciones: Sobrescribir<P> & { en: En; aPayload: AlPayload<P> },
+-): CampoMoneda<En, P>;
+-export function moneda<const En extends string, P>(
+-  opciones: Sobrescribir<P> & { en: En },
+-): CampoMoneda<En, P> {
+-  const { aPayload, ...resto } = opciones;
+-  const opcionDe = (valores: Valores) => valores[resto.en] as MonedaOpcion | null | undefined;
+-
+-  return {
+-    tipo: "moneda",
+-    esquema: zId.nullable(),
+-    falta: (valores) => !opcionDe(valores),
+-    aPayload: aPayload ?? ((valores) => (opcionDe(valores)?.cod_moneda ?? null) as unknown as P),
+-    deApi: (registro, cod, catalogos) =>
+-      catalogos.monedas?.find((item) => String(item.cod_moneda) === String(registro[cod])) ?? null,
+-    ...resto,
+-  };
+-}
+-
+-export type CampoFijo<V> = Campo<"fijo", V>;
+-
+-/** Valor que siempre se envía igual (ej. cod_estado: 1). Con `esquema`, también se lee del API. */
+-export function fijo<const V>(valor: V): CampoFijo<V>;
+-export function fijo<const V, E extends z.ZodType>(
+-  valor: V,
+-  opciones: { esquema: E },
+-): CampoFijo<V> & { esquema: E };
+-export function fijo<const V>(valor: V, opciones: { esquema?: z.ZodType } = {}): CampoFijo<V> {
+-  return { tipo: "fijo", aPayload: () => valor, ...opciones };
+-}
+-
+-export type CampoContexto = Campo<"contexto", Id | null>;
+-
+-/** Valor que viene de las props del componente (ej. cod_servicio). Se envía `?? null`. */
+-export function delContexto(clave: Exclude<keyof ContextoMetodo, "codMetodo">): CampoContexto {
+-  return { tipo: "contexto", aPayload: (_valores, _cod, ctx) => ctx[clave] ?? null };
+-}
+-
+-/* ==========================================================================
+- * REGLAS REUTILIZABLES
+- * ========================================================================== */
+-
+-/** Error en `venta` cuando ambos tienen valor y costo > venta. */
+-export const ventaNoMenorQueCosto =
+-  (costo: string, venta: string, mensaje: string): ReglaMetodo =>
+-  (valores) => {
+-    if (vacio(valores[costo]) || vacio(valores[venta])) return null;
+-
+-    return Number(valores[costo]) > Number(valores[venta]) ? { campo: venta, mensaje } : null;
+-  };
+-
+-/* ==========================================================================
+- * DEFINICIÓN DEL MÉTODO
++ * El motor vive en pricing/shared/lib/campos-metodo.ts (la definición de
++ * rango también la usa Cotizaciones). Aquí solo se reexporta para que las
++ * definiciones de tarifas/lib/metodos/ lo importen de "../campos-metodo".
+  * ========================================================================== */
+ 
+-type CamposMetodo = Record<string, DefCampo>;
+-
+-type ShapeMetodo<IdCod extends string, C extends CamposMetodo> = Simplificar<
+-  { [K in IdCod]: typeof zId } & { cod_metodo: z.ZodNullable<typeof zId> } & {
+-    [K in keyof C as C[K] extends { esquema: z.ZodType } ? K : never]: C[K] extends {
+-      esquema: infer E;
+-    }
+-      ? E
+-      : never;
+-  }
+->;
+-
+-export type PayloadMetodo<IdCod extends string, C extends CamposMetodo> = Simplificar<
+-  { [K in IdCod]?: Id | null } & { cod_metodo: Id } & {
+-    [K in keyof C]: ReturnType<C[K]["aPayload"]>;
+-  }
+->;
+-
+-type OpcionesFila<C extends CamposMetodo> = {
+-  [K in keyof C as C[K] extends { en: infer E extends string } ? E : never]?: C[K] extends {
+-    deApi: (...args: never[]) => infer O;
+-  }
+-    ? O
+-    : never;
+-};
+-
+-type ConfigMetodo<IdCod extends string, C extends CamposMetodo> = {
+-  /** Llave del registro y valor que se envía si la fila aún no la tiene (nuevo). */
+-  id: { cod: IdCod; siFalta: null | 0 };
+-  campos: C;
+-  /** Validaciones entre campos (ej. venta >= costo). */
+-  reglas?: readonly ReglaMetodo[];
+-};
+-
+-export type ResultadoValidacion = {
+-  /** No falta ningún requerido y ninguna regla falla. */
+-  valido: boolean;
+-  /** Etiquetas de los requeridos vacíos, en el orden de `campos`. */
+-  faltantes: string[];
+-  /** Mensaje de error por campo. */
+-  errores: Partial<Record<string, string>>;
+-};
+-
+-export function definirMetodo<const IdCod extends string, const C extends CamposMetodo>(
+-  config: ConfigMetodo<IdCod, C>,
+-) {
+-  const { id, campos, reglas = [] } = config;
+-  const entradas = Object.entries(campos) as [string, DefCampo][];
+-
+-  const shape: Record<string, z.ZodType> = { [id.cod]: zId, cod_metodo: zId.nullable() };
+-
+-  for (const [cod, campo] of entradas) {
+-    if (campo.esquema) shape[cod] = campo.esquema;
+-  }
+-
+-  const esquema = z.object(shape as ShapeMetodo<IdCod, C>).passthrough();
+-
+-  type Registro = z.infer<typeof esquema>;
+-  type Fila = Simplificar<Partial<Registro> & OpcionesFila<C>>;
+-  type Payload = PayloadMetodo<IdCod, C>;
+-
+-  /** Registro del API → fila del formulario (agrega las opciones de select). */
+-  const aFila = (registro: Registro, catalogos: CatalogosMetodo): Fila => {
+-    const fila: Valores = { ...registro };
+-
+-    for (const [cod, campo] of entradas) {
+-      if (campo.en && campo.deApi) fila[campo.en] = campo.deApi(registro, cod, catalogos);
+-    }
+-
+-    return fila as Fila;
+-  };
+-
+-  /** Fila del formulario → payload del backend. */
+-  const aPayload = (fila: Fila, ctx: ContextoMetodo): Payload => {
+-    const valores = fila as Valores;
+-    const payload: Valores = {
+-      [id.cod]: valores[id.cod] ?? id.siFalta,
+-      cod_metodo: ctx.codMetodo,
+-    };
+-
+-    for (const [cod, campo] of entradas) {
+-      payload[cod] = campo.aPayload(valores, cod, ctx);
+-    }
+-
+-    return payload as Payload;
+-  };
+-
+-  const validar = (fila: Fila): ResultadoValidacion => {
+-    const valores = fila as Valores;
+-
+-    const faltantes = entradas
+-      .filter(([cod, campo]) => campo.requerido && campo.falta?.(valores, cod))
+-      .map(([cod, campo]) => campo.label ?? cod);
+-
+-    const errores: Partial<Record<string, string>> = {};
+-
+-    for (const regla of reglas) {
+-      const error = regla(valores);
+-      if (error && errores[error.campo] === undefined) errores[error.campo] = error.mensaje;
+-    }
+-
+-    return {
+-      valido: faltantes.length === 0 && Object.keys(errores).length === 0,
+-      faltantes,
+-      errores,
+-    };
+-  };
+-
+-  return {
+-    id,
+-    campos,
+-    esquema,
+-    aFila,
+-    aPayload,
+-    validar,
+-    /** Solo para tipos: `typeof METODO.tipos.fila`. */
+-    tipos: undefined as unknown as { registro: Registro; fila: Fila; payload: Payload },
+-  };
+-}
++export {
++  booleano,
++  type CampoBooleano,
++  type CampoContexto,
++  type CampoFijo,
++  type CampoMoneda,
++  type CampoMonto,
++  type CampoOpcion,
++  type CampoPropio,
++  type CampoRubro,
++  type CatalogosMetodo,
++  type ContextoMetodo,
++  type DefCampo,
++  definirMetodo,
++  delContexto,
++  type ErrorRegla,
++  esquemaMonto,
++  fijo,
++  type FormularioCampo,
++  moneda,
++  monto,
++  opcion,
++  type PayloadMetodo,
++  propio,
++  rangoPermitido,
++  type ReglaMetodo,
++  type ResultadoValidacion,
++  rubro,
++  sinEsquema,
++  ventaNoMenorQueCosto,
++} from "@/features/pricing/shared";
+diff --git a/src/features/pricing/tarifas/lib/metodos/cobertura.ts b/src/features/pricing/tarifas/lib/metodos/cobertura.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..72951ff4c1e5620ed6f9a9d8122f727e03694611
+--- /dev/null
++++ b/src/features/pricing/tarifas/lib/metodos/cobertura.ts
+@@ -0,0 +1,61 @@
++/* ==========================================================================
++ * MÉTODO COBERTURA: DEFINICIÓN ÚNICA DE CAMPOS
++ *
++ * Esquema, tipos, payload, validación y campos del formulario salen de aquí
++ * (ver lib/campos-metodo.ts). Para agregar un campo: agrégalo en `campos` y,
++ * si se ve, colócalo en components/metodos/cobertura/cobertura-form.tsx.
++ *
++ * A mano en el formulario: los avisos de más de 8 decimales (no bloquean).
++ * ========================================================================== */
++
++import { zId } from "@/shared/lib/zod-scalars";
++
++import type { MonedaOpcion } from "../../hooks/use-opciones-tarifa";
++import { definirMetodo, fijo, moneda, monto, ventaNoMenorQueCosto } from "../campos-metodo";
++
++const PORCENTAJE = { min: 0, max: 100, step: "0.01", sufijo: "%" } as const;
++
++export const METODO_COBERTURA = definirMetodo({
++  id: { cod: "cod_tarifa_cobertura", siFalta: 0 },
++
++  campos: {
++    porcentaje_costo: monto({ label: "Porcentaje costo", inicial: 0, formulario: PORCENTAJE }),
++
++    porcentaje_venta: monto({ label: "Porcentaje venta", inicial: 0, formulario: PORCENTAJE }),
++
++    minimo_venta: monto({ label: "Mínimo venta", inicial: 0 }),
++
++    minimo_costo: monto({ label: "Mínimo costo", inicial: 0 }),
++
++    cod_moneda_costo: moneda({ label: "Moneda de costo", en: "moneda_costo", requerido: true }),
++
++    cod_moneda_venta: moneda({ label: "Moneda de venta", en: "moneda_venta", requerido: true }),
++
++    // Se envía null tanto al insertar como al actualizar (igual que el código viejo).
++    cod_rubro: fijo(null, { esquema: zId.nullable().optional() }),
++
++    cod_estado: fijo(1, { esquema: zId }),
++  },
++
++  reglas: [
++    ventaNoMenorQueCosto(
++      "porcentaje_costo",
++      "porcentaje_venta",
++      "El valor de venta debe ser mayor al de costo",
++      { vaciosComoCero: true },
++    ),
++  ],
++});
++
++type Tipos = typeof METODO_COBERTURA.tipos;
++
++/** Registro de la lista (lo que devuelve el API). */
++export type TarifaCobertura = Tipos["registro"];
++
++/** Fila del formulario: el registro + las opciones de moneda. */
++export type FilaCobertura = Tipos["fila"];
++
++/** Lo que se envía a insertar / actualizar. */
++export type TarifaCoberturaMutationPayload = Tipos["payload"];
++
++export type MonedaCoberturaOption = MonedaOpcion;
+diff --git a/src/features/pricing/tarifas/lib/metodos/costo-porcentaje.ts b/src/features/pricing/tarifas/lib/metodos/costo-porcentaje.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..8384942144ff59e4a35ca84bded6221964255925
+--- /dev/null
++++ b/src/features/pricing/tarifas/lib/metodos/costo-porcentaje.ts
+@@ -0,0 +1,110 @@
++/* ==========================================================================
++ * MÉTODO COSTO POR PORCENTAJE: DEFINICIÓN ÚNICA DE CAMPOS
++ *
++ * Esquema, tipos, payload, validación y campos del formulario salen de aquí
++ * (ver lib/campos-metodo.ts). Para agregar un campo: agrégalo en `campos` y,
++ * si se ve, colócalo en components/metodos/costo-porcentaje/costo-porcentaje-form.tsx.
++ *
++ * El lado de costo (porcentaje_costo, minimo_costo, moneda de costo) se envía
++ * pero hoy no se muestra en el formulario. Solo la moneda de venta es requerida.
++ *
++ * A mano en el formulario: el input de venta (etiqueta, max, step y "%"
++ * cambian con es_porcentaje), el radio Porcentaje / Valor y los avisos de
++ * más de 8 decimales.
++ * ========================================================================== */
++
++import { zId } from "@/shared/lib/zod-scalars";
++
++import type { MonedaOpcion, RubroOpcion } from "../../hooks/use-opciones-tarifa";
++import {
++  booleano,
++  definirMetodo,
++  fijo,
++  moneda,
++  monto,
++  type ReglaMetodo,
++  rubro,
++  sinEsquema,
++  ventaNoMenorQueCosto,
++} from "../campos-metodo";
++
++/** Los mínimos vacíos se envían como 0. */
++const numeroOCero = (valores: Record<string, unknown>, cod: string) => Number(valores[cod] ?? 0);
++
++/**
++ * Si es porcentaje se guarda en enteros con decimales (25.26 = 25.26 %), no como 0.2526;
++ * Cotizaciones lo convierte a factor (÷ 100) al calcular la venta.
++ * Porcentaje: entre 0 y 100. Valor: no negativo.
++ */
++const dentroDeRango =
++  (campo: string): ReglaMetodo =>
++  (valores) => {
++    const valor = Number(valores[campo] ?? 0);
++    const esPorcentaje = Boolean(valores.es_porcentaje);
++
++    if (!(valor < 0 || (esPorcentaje && valor > 100))) return null;
++
++    return {
++      campo,
++      mensaje: esPorcentaje
++        ? "El porcentaje debe estar entre 0 y 100."
++        : "El valor no puede ser negativo.",
++    };
++  };
++
++export const METODO_COSTO_PORCENTAJE = definirMetodo({
++  id: { cod: "cod_tarifa_porcentaje", siFalta: 0 },
++
++  campos: {
++    porcentaje_costo: monto({ label: "Porcentaje costo", inicial: 0 }),
++
++    porcentaje_venta: monto({ label: "Porcentaje venta", inicial: 0 }),
++
++    minimo_costo: monto({ label: "Costo Mínimo", inicial: 0, aPayload: numeroOCero }),
++
++    minimo_venta: monto({ label: "Mínimo Venta", inicial: 0, aPayload: numeroOCero }),
++
++    es_porcentaje: booleano({ label: "Tipo de valor", inicial: true }),
++
++    // Se envía, pero no es parte del esquema de la lista ni se ve en el formulario.
++    cod_rubro: sinEsquema(rubro({ label: "Rubro", en: "rubro" })),
++
++    cod_moneda_costo: moneda({ label: "Moneda de costo", en: "moneda_costo", inicial: null }),
++
++    cod_moneda_venta: moneda({
++      label: "Moneda de venta",
++      en: "moneda_venta",
++      requerido: true,
++      inicial: null,
++    }),
++
++    cod_estado: fijo(1, { esquema: zId }),
++  },
++
++  // El orden es el de los mensajes debajo de cada campo.
++  reglas: [
++    ventaNoMenorQueCosto(
++      "porcentaje_costo",
++      "porcentaje_venta",
++      "El valor de venta debe ser mayor al de costo",
++      { vaciosComoCero: true },
++    ),
++    dentroDeRango("porcentaje_costo"),
++    dentroDeRango("porcentaje_venta"),
++  ],
++});
++
++type Tipos = typeof METODO_COSTO_PORCENTAJE.tipos;
++
++/** Registro de la lista (lo que devuelve el API). */
++export type TarifaCostoPorcentaje = Tipos["registro"];
++
++/** Fila del formulario: el registro + las opciones de moneda y rubro. */
++export type FilaCostoPorcentaje = Tipos["fila"];
++
++/** Lo que se envía a insertar / actualizar. */
++export type TarifaCostoPorcentajeMutationPayload = Tipos["payload"];
++
++export type MonedaCostoPorcentajeOption = MonedaOpcion;
++
++export type RubroCostoPorcentajeOption = RubroOpcion;
+diff --git a/src/features/pricing/tarifas/lib/metodos/equipo.ts b/src/features/pricing/tarifas/lib/metodos/equipo.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..158fdc713bbbfdd01837451bd4332980797716cb
+--- /dev/null
++++ b/src/features/pricing/tarifas/lib/metodos/equipo.ts
+@@ -0,0 +1,98 @@
++/* ==========================================================================
++ * MÉTODO EQUIPO: DEFINICIÓN ÚNICA DE CAMPOS
++ *
++ * Esquema, tipos, payload, validación y fila nueva salen de aquí (ver
++ * lib/campos-metodo.ts). Para agregar un campo: agrégalo en `campos` y
++ * colócalo en components/metodos/equipo/equipo-form.tsx.
++ *
++ * Diferencias con los demás métodos (se conservan del código viejo):
++ *   - La opción del select se guarda en la MISMA llave del API
++ *     (cod_equipo, cod_moneda_costo, cod_moneda_venta).
++ *   - Las monedas usan `value` numérico (= cod_moneda) y se envía
++ *     `opcion.value || null` tal cual al backend.
++ *   - Al insertar no se envía cod_tarifa_equipo (lo resuelve MetodoEquipo).
++ *   - El formulario tiene su propio estilo (asteriscos, placeholders,
++ *     símbolo en la etiqueta): se escribe a mano.
++ * ========================================================================== */
++
++import { zId } from "@/shared/lib/zod-scalars";
++
++import { definirMetodo, fijo, monto, opcion, ventaNoMenorQueCosto } from "../campos-metodo";
++
++type Id = string | number;
++
++export type EquipoOption = {
++  value: Id;
++  label: string;
++
++  [key: string]: unknown;
++};
++
++export type MonedaEquipoOption = {
++  value: Id;
++  label: string;
++
++  cod_moneda: Id;
++
++  simbolo?: string;
++
++  [key: string]: unknown;
++};
++
++/** `||` (no `??`): un value 0 o "" se envía null, igual que el código viejo. */
++const valueONull = (valores: Record<string, unknown>, cod: string) =>
++  (valores[cod] as { value?: Id } | null | undefined)?.value || null;
++
++export const METODO_EQUIPO = definirMetodo({
++  id: { cod: "cod_tarifa_equipo", siFalta: null },
++
++  campos: {
++    cod_equipo: opcion<EquipoOption>()({
++      label: "Equipo",
++      en: "cod_equipo",
++      catalogo: "equipos",
++      requerido: true,
++      inicial: null,
++      aPayload: valueONull,
++    }),
++
++    costo: monto({ label: "Costo", requerido: true, inicial: null }),
++
++    venta: monto({ label: "Venta", requerido: true, inicial: null }),
++
++    cod_moneda_costo: opcion<MonedaEquipoOption>()({
++      label: "Moneda de costo",
++      en: "cod_moneda_costo",
++      catalogo: "monedasEquipo",
++      requerido: true,
++      inicial: null,
++      aPayload: valueONull,
++    }),
++
++    cod_moneda_venta: opcion<MonedaEquipoOption>()({
++      label: "Moneda de venta",
++      en: "cod_moneda_venta",
++      catalogo: "monedasEquipo",
++      requerido: true,
++      inicial: null,
++      aPayload: valueONull,
++    }),
++
++    cod_estado: fijo(1, { esquema: zId.nullable(), inicial: 1 }),
++  },
++
++  reglas: [
++    ventaNoMenorQueCosto("costo", "venta", "El valor de venta debe ser mayor al de costo"),
++  ],
++});
++
++type Tipos = typeof METODO_EQUIPO.tipos;
++
++/** Registro de la lista (lo que devuelve el API). */
++export type TarifaEquipo = Tipos["registro"];
++
++/** Fila del formulario: el registro con las opciones en cod_equipo / cod_moneda_*. */
++export type FilaEquipo = Tipos["fila"];
++
++/** Lo que se envía a insertar / actualizar. */
++export type TarifaEquipoMutationPayload = Tipos["payload"];
+diff --git a/src/features/pricing/tarifas/lib/metodos/porcentaje.ts b/src/features/pricing/tarifas/lib/metodos/porcentaje.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..067dd1a62d880457b7caab594b36a5fb8e2dfb0d
+--- /dev/null
++++ b/src/features/pricing/tarifas/lib/metodos/porcentaje.ts
+@@ -0,0 +1,78 @@
++/* ==========================================================================
++ * MÉTODO PORCENTAJE (por rubro): DEFINICIÓN ÚNICA DE CAMPOS
++ *
++ * Esquema, tipos, payload, validación y campos del formulario salen de aquí
++ * (ver lib/campos-metodo.ts). Para agregar un campo: agrégalo en `campos` y,
++ * si se ve, colócalo en components/metodos/porcentaje/porcentaje-form.tsx.
++ *
++ * A mano en el formulario: los avisos de más de 8 decimales (no bloquean).
++ * ========================================================================== */
++
++import { zId } from "@/shared/lib/zod-scalars";
++
++import type { MonedaOpcion, RubroOpcion } from "../../hooks/use-opciones-tarifa";
++import {
++  definirMetodo,
++  fijo,
++  moneda,
++  monto,
++  rangoPermitido,
++  rubro,
++  ventaNoMenorQueCosto,
++} from "../campos-metodo";
++
++const PORCENTAJE = { min: 0, max: 100, step: "0.01", sufijo: "%" } as const;
++
++const FUERA_DE_RANGO = "El porcentaje debe estar entre 0 y 100.";
++
++/** Los mínimos vacíos se envían como 0. */
++const numeroOCero = (valores: Record<string, unknown>, cod: string) => Number(valores[cod] ?? 0);
++
++export const METODO_PORCENTAJE = definirMetodo({
++  id: { cod: "cod_tarifa_porcentaje", siFalta: 0 },
++
++  campos: {
++    porcentaje_costo: monto({ label: "Porcentaje costo", inicial: 0, formulario: PORCENTAJE }),
++
++    porcentaje_venta: monto({ label: "Porcentaje venta", inicial: 0, formulario: PORCENTAJE }),
++
++    minimo_costo: monto({ label: "Mínimo Costo", aPayload: numeroOCero }),
++
++    minimo_venta: monto({ label: "Mínimo Venta", aPayload: numeroOCero }),
++
++    cod_rubro: rubro({ label: "Rubro", en: "rubro" }),
++
++    cod_moneda_costo: moneda({ label: "Moneda de costo", en: "moneda_costo", requerido: true }),
++
++    cod_moneda_venta: moneda({ label: "Moneda de venta", en: "moneda_venta", requerido: true }),
++
++    cod_estado: fijo(1, { esquema: zId }),
++  },
++
++  // El orden es el de los mensajes debajo de cada campo.
++  reglas: [
++    ventaNoMenorQueCosto(
++      "porcentaje_costo",
++      "porcentaje_venta",
++      "El valor de venta debe ser mayor al de costo",
++      { vaciosComoCero: true },
++    ),
++    rangoPermitido("porcentaje_costo", 0, 100, FUERA_DE_RANGO),
++    rangoPermitido("porcentaje_venta", 0, 100, FUERA_DE_RANGO),
++  ],
++});
++
++type Tipos = typeof METODO_PORCENTAJE.tipos;
++
++/** Registro de la lista (lo que devuelve el API). */
++export type TarifaPorcentaje = Tipos["registro"];
++
++/** Fila del formulario: el registro + las opciones de moneda y rubro. */
++export type FilaPorcentaje = Tipos["fila"];
++
++/** Lo que se envía a insertar / actualizar. */
++export type TarifaPorcentajeMutationPayload = Tipos["payload"];
++
++export type MonedaPorcentajeOption = MonedaOpcion;
++
++export type RubroPorcentajeOption = RubroOpcion;
+diff --git a/src/features/pricing/tarifas/lib/metodos/scalling.ts b/src/features/pricing/tarifas/lib/metodos/scalling.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..afdf0ba43ee059ad28b8d05278528995d1a89fe1
+--- /dev/null
++++ b/src/features/pricing/tarifas/lib/metodos/scalling.ts
+@@ -0,0 +1,96 @@
++/* ==========================================================================
++ * MÉTODO SCALLING: DEFINICIÓN ÚNICA DE CAMPOS
++ *
++ * Esquema, tipos, payload, validación, fila nueva y columnas salen de aquí
++ * (ver lib/campos-metodo.ts). Para agregar un campo: agrégalo en `campos`;
++ * si se ve, colócalo en components/metodos/scalling/scalling-form.tsx y, si va
++ * en la tabla, su código en la lista de scalling-columns.tsx.
++ *
++ * A mano (se conserva del código viejo):
++ *   - El tipo de punto de enlace no se envía: al leer sale del punto y en el
++ *     formulario filtra los puntos (cascada). También es requerido para guardar.
++ *   - cod_moneda ?? value ?? 1, costo ?? 0 (sin Number) y cod_estado ?? 1.
++ *   - El formulario (combos sin `label`, placeholders propios) se escribe a mano.
++ * ========================================================================== */
++
++import { zId } from "@/shared/lib/zod-scalars";
++
++import type { MonedaOpcion } from "../../hooks/use-opciones-tarifa";
++import { definirMetodo, moneda, monto, opcion, propio } from "../campos-metodo";
++
++type Id = string | number;
++
++export type TipoPuntoEnlaceScallingOption = {
++  value: string;
++  label: string;
++
++  cod_tipo: Id;
++
++  [key: string]: unknown;
++};
++
++export type PuntoEnlaceScallingOption = {
++  value: string;
++  label: string;
++
++  cod_puntoenlace: Id;
++  cod_tipo: Id;
++
++  [key: string]: unknown;
++};
++
++export type MonedaScallingOption = MonedaOpcion;
++
++export const METODO_SCALLING = definirMetodo({
++  id: { cod: "cod_tarifa_scalling", siFalta: 0 },
++
++  campos: {
++    cod_puntoenlace: opcion<PuntoEnlaceScallingOption>()({
++      label: "Aduana/Puerto/Aeropuerto",
++      en: "punto_enlace",
++      catalogo: "puntosEnlace",
++      buscarPor: (punto) => punto.cod_puntoenlace,
++      requerido: true,
++      inicial: null,
++      aPayload: (valores) => {
++        const punto = valores.punto_enlace as PuntoEnlaceScallingOption | null | undefined;
++
++        return punto?.cod_puntoenlace ?? punto?.value ?? null;
++      },
++    }),
++
++    costo: monto({
++      label: "Valor",
++      inicial: 0,
++      aPayload: (valores, cod) => (valores[cod] ?? 0) as Id,
++    }),
++
++    cod_moneda: moneda({
++      label: "Moneda",
++      en: "moneda",
++      requerido: true,
++      inicial: null,
++      // Sin moneda se envía 1 (comportamiento viejo).
++      aPayload: (valores) => {
++        const opcionMoneda = valores.moneda as MonedaOpcion | null | undefined;
++
++        return (opcionMoneda?.cod_moneda ?? opcionMoneda?.value ?? 1) as Id;
++      },
++    }),
++
++    cod_estado: propio({ esquema: zId, aPayload: (valores, cod) => (valores[cod] ?? 1) as Id }),
++  },
++});
++
++type Tipos = typeof METODO_SCALLING.tipos;
++
++/** Registro de la lista (lo que devuelve el API). */
++export type TarifaScalling = Tipos["registro"];
++
++/** Fila del formulario y de la tabla: la del método + el tipo de punto (cascada). */
++export type FilaMetodoScalling = Tipos["fila"] & {
++  tipo_puntoenlace?: TipoPuntoEnlaceScallingOption | null;
++};
++
++/** Lo que se envía a insertar / actualizar / eliminar. */
++export type TarifaScallingMutationPayload = Tipos["payload"];
