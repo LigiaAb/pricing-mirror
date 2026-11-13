@@ -76,6 +76,9 @@ Resumen:
   - Detalle de flete por transporte: `lib/detalle-flete.ts` (`null` = ese transporte no lleva detalle).
   - Estados: `useEstadosCalculo()` dentro del cálculo (el container valida que existan).
 - **Tarifas**
+  - Campos de los métodos: definición única en `lib/metodos/<metodo>.ts` (`definirMetodo`; rango en
+    `pricing/shared/lib/metodos/rango.ts`). Agregar un campo = 1 línea en `campos` + `<CampoMetodo>` en su
+    `-form.tsx` si se ve (+ su código en `columnasMetodo` si va en tabla). Ver `tarifas/ARQUITECTURA.md`.
   - Monedas: `useMonedasOperativas()`; opciones de select y búsqueda local en `hooks/use-opciones-tarifa.ts`.
   - Helpers en `lib/tarifa-helpers.ts`.
 
@@ -95,7 +98,9 @@ Resumen:
   `components/calculo-cotizacion.tsx`.
 - Tipo `Rubro` claro para Due Agent / Due Carrier / Totales (hoy `Record<string, unknown>` y casts).
 - Decisiones por texto (`=== "TERRESTRE"`, `"IVA"`, `includes("FLETE")`) → códigos en `constantes.ts`.
-- Tarifas: agregar un campo a un método aún requiere tocar esquema, payload, formulario y tabla.
+- Tarifas: los formularios de equipo, rango y scalling (y el input de venta de costo-porcentaje) siguen a mano;
+  podrían pasar a `<CampoMetodo>` si se acepta unificar su markup (placeholders, asteriscos, "" vs null).
+- `tarifas/api/crear-api-metodo.ts` no se usa.
 - `tarifas/.../porcentaje-form.tsx` inicializa `minimo: 0` en vez de `minimo_costo` / `minimo_venta`.
 - `tarifas/api/monedas.ts` podría reutilizar el catálogo `monedas` de `@/features/catalogos`.
 

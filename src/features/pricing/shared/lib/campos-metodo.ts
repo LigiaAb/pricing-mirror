@@ -23,7 +23,8 @@
  * ¿Cómo agrego un campo a un método?
  *   1. Agrégalo en `campos` de tarifas/lib/metodos/<metodo>.ts (rango: shared/lib/metodos/rango.ts).
  *   2. Si se ve en el formulario: <CampoMetodo {...campo} campo="mi_campo" /> en su -form.tsx.
- *   El orden de `campos` es el orden del payload.
+ *   3. Si va en la tabla (rango, scalling): su código en columnasMetodo de -columns.tsx.
+ *   El orden de `campos` es el orden del payload. Guía completa: tarifas/ARQUITECTURA.md.
  * ========================================================================== */
 
 import { z } from "zod";
