@@ -1,5 +1,6 @@
-import { registro } from "./utils";
 import { TIPO_METODO } from "./constantes";
+import { registro } from "./utils";
+
 type Registro = Record<string, unknown>;
 
 export function esMetodoCostoPorcentaje(item: Registro): boolean {

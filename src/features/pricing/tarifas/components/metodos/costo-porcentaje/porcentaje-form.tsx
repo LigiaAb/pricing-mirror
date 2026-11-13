@@ -89,8 +89,7 @@ export function CostoPorcentajeForm({
 
   // Si es porcentaje se guarda en enteros con decimales (25.26 = 25.26 %), no como 0.2526.
   // Cotizaciones lo convierte a factor (÷ 100) al calcular la venta.
-  const fueraDeRango = (valor: number) =>
-    valor < 0 || (Boolean(row.es_porcentaje) && valor > 100);
+  const fueraDeRango = (valor: number) => valor < 0 || (Boolean(row.es_porcentaje) && valor > 100);
 
   const porcentajeCostoFueraRango = fueraDeRango(porcentajeCosto);
 
