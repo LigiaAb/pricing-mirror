@@ -62,7 +62,7 @@ export function EquipoForm({
           <InputGroup>
             <div className="w-full">
               <AsyncComboboxInput<EquipoOption>
-                value={values.cod_equipo}
+                value={values.cod_equipo ?? null}
                 onChange={(cod_equipo) =>
                   setValues((prev) => ({
                     ...prev,
@@ -94,7 +94,7 @@ export function EquipoForm({
           <InputGroup>
             <div className="w-full">
               <AsyncComboboxInput<MonedaEquipoOption>
-                value={values.cod_moneda_costo}
+                value={values.cod_moneda_costo ?? null}
                 onChange={(cod_moneda_costo) =>
                   setValues((prev) => ({
                     ...prev,
@@ -149,7 +149,7 @@ export function EquipoForm({
           <InputGroup>
             <div className="w-full">
               <AsyncComboboxInput<MonedaEquipoOption>
-                value={values.cod_moneda_venta}
+                value={values.cod_moneda_venta ?? null}
                 onChange={(cod_moneda_venta) =>
                   setValues((prev) => ({
                     ...prev,
