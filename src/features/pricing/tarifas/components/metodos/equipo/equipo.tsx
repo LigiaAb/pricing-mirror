@@ -16,19 +16,18 @@ import React from "react";
 // import { useFetchEquipos } from "RUTA_REAL";
 
 import {
-  type TarifaEquipoMutationPayload,
   useActualizarTarifaEquipo,
   useInsertarTarifaEquipo,
   useMonedasEquipo,
   useTarifaEquipo,
 } from "../../../api/tarifa-equipo";
-
 import {
-  EquipoForm,
   type EquipoOption,
   type FilaEquipo,
+  METODO_EQUIPO,
   type MonedaEquipoOption,
-} from "./equipo-form";
+} from "../../../lib/metodos/equipo";
+import { EquipoForm } from "./equipo-form";
 
 type Props = {
   codMetodo?: string | number | null;
@@ -38,7 +37,11 @@ type Props = {
   onTarifaCreada?: () => void;
 };
 
-export function EquipoTable({ codMetodo, readonly = false, onTarifaCreada = () => {} }: Props) {
+/**
+ * Tarifa de método Equipo: consulta, formulario y guardado.
+ * Componente padre reutilizable: basta con `<MetodoEquipo codMetodo={...} />`.
+ */
+export function MetodoEquipo({ codMetodo, readonly = false, onTarifaCreada = () => {} }: Props) {
   /*
    * =========================================================
    * CONSULTAS
@@ -124,36 +127,17 @@ export function EquipoTable({ codMetodo, readonly = false, onTarifaCreada = () =
     const equipo = tarifaEquipo.data?.[0];
 
     if (!equipo) {
+      // Todo vacío y cod_estado 1 (`inicial` en lib/metodos/equipo.ts).
       return {
         cod_tarifa_equipo: null,
 
         cod_metodo: codMetodo ?? null,
 
-        cod_equipo: null,
-
-        costo: null,
-
-        venta: null,
-
-        cod_moneda_costo: null,
-
-        cod_moneda_venta: null,
-
-        cod_estado: 1,
+        ...METODO_EQUIPO.filaNueva(),
       };
     }
 
-    return {
-      ...equipo,
-
-      cod_equipo: equipos.find((item) => String(item.value) === String(equipo.cod_equipo)) ?? null,
-
-      cod_moneda_costo:
-        monedas.find((item) => String(item.value) === String(equipo.cod_moneda_costo)) ?? null,
-
-      cod_moneda_venta:
-        monedas.find((item) => String(item.value) === String(equipo.cod_moneda_venta)) ?? null,
-    };
+    return METODO_EQUIPO.aFila(equipo, { equipos, monedasEquipo: monedas });
   }, [tarifaEquipo.data, equipos, monedas, codMetodo]);
 
   /*
@@ -169,30 +153,13 @@ export function EquipoTable({ codMetodo, readonly = false, onTarifaCreada = () =
       }
 
       /*
-       * Payload común.
-       *
-       * Se conserva:
-       *
-       * Number(costo)
-       * Number(venta)
-       * option.value || null
-       * cod_estado = 1
+       * Payload común (ver lib/metodos/equipo.ts): Number(costo), Number(venta),
+       * option.value || null y cod_estado = 1. Sin cod_tarifa_equipo: al insertar
+       * no se envía y al actualizar va al final, igual que el código viejo.
        */
-      const payloadBase = {
-        costo: Number(fila.costo),
-
-        venta: Number(fila.venta),
-
-        cod_metodo: codMetodo,
-
-        cod_equipo: fila.cod_equipo?.value || null,
-
-        cod_moneda_costo: fila.cod_moneda_costo?.value || null,
-
-        cod_moneda_venta: fila.cod_moneda_venta?.value || null,
-
-        cod_estado: 1,
-      } satisfies Omit<TarifaEquipoMutationPayload, "cod_tarifa_equipo">;
+      const { cod_tarifa_equipo: _id, ...payloadBase } = METODO_EQUIPO.aPayload(fila, {
+        codMetodo,
+      });
 
       /*
        * INSERT

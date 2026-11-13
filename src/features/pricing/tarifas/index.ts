@@ -235,14 +235,12 @@ export {
   MetodoCostoVenta as CostoVentaTable,
 } from "./components/metodos/costoVenta/costo-venta";
 export { CostoVentaForm } from "./components/metodos/costoVenta/costo-venta-form";
-export { default as EquipoColumn } from "./components/metodos/equipo/equipo-columns";
 export {
-  EquipoForm,
-  type EquipoOption,
-  type FilaEquipo,
-  type MonedaEquipoOption,
-} from "./components/metodos/equipo/equipo-form";
-export { EquipoTable } from "./components/metodos/equipo/equipo-table";
+  MetodoEquipo,
+  /** @deprecated Nombre anterior; usar `MetodoEquipo`. */
+  MetodoEquipo as EquipoTable,
+} from "./components/metodos/equipo/equipo";
+export { EquipoForm } from "./components/metodos/equipo/equipo-form";
 export {
   MetodoPorcentaje,
   /** @deprecated Nombre anterior; usar `MetodoPorcentaje`. */
@@ -285,6 +283,7 @@ export {
   type CampoFijo,
   type CampoMoneda,
   type CampoMonto,
+  type CampoOpcion,
   type CampoRubro,
   type CatalogosMetodo,
   type ContextoMetodo,
@@ -294,6 +293,7 @@ export {
   fijo,
   moneda,
   monto,
+  opcion,
   rangoPermitido,
   type ReglaMetodo,
   rubro,
@@ -330,6 +330,12 @@ export {
   METODO_COSTO_VENTA,
   type MonedaCostoVentaOption,
 } from "./lib/metodos/costo-venta";
+export {
+  type EquipoOption,
+  type FilaEquipo,
+  METODO_EQUIPO,
+  type MonedaEquipoOption,
+} from "./lib/metodos/equipo";
 export {
   type FilaPorcentaje,
   METODO_PORCENTAJE,

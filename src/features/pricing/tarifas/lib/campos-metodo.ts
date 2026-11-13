@@ -12,7 +12,7 @@
  *   - la fila inicial de un registro nuevo                (filaNueva)
  *   - la etiqueta y el input de cada campo                (components/metodos/campo-metodo.tsx)
  *
- * Tipos de campo: monto, moneda, rubro, booleano, fijo, delContexto.
+ * Tipos de campo: monto, moneda, rubro, opcion, booleano, fijo, delContexto.
  * Si un campo no se comporta como su tipo, se sobrescribe SOLO esa parte en
  * la definición (aPayload, deApi, esquema, ...) en lugar de forzar el tipo.
  *
@@ -32,6 +32,9 @@ type Id = string | number;
 
 type Simplificar<T> = { [K in keyof T]: T[K] } & {};
 
+/** Omit que conserva las llaves conocidas cuando T tiene índice (passthrough). */
+type SinLlaves<T, K extends PropertyKey> = { [P in keyof T as P extends K ? never : P]: T[P] };
+
 /** Valores de una fila tal como los maneja el formulario. */
 type Valores = Record<string, unknown>;
 
@@ -45,6 +48,8 @@ export type ContextoMetodo = {
 export type CatalogosMetodo = {
   monedas?: readonly MonedaOpcion[] | undefined;
   rubros?: readonly RubroOpcion[] | undefined;
+  /** Otros catálogos para campos `opcion` (ej. equipos). */
+  [catalogo: string]: readonly unknown[] | undefined;
 };
 
 /** Cómo se dibuja el campo en el formulario. */
@@ -60,7 +65,7 @@ export type FormularioCampo = {
 };
 
 export type DefCampo<TPayload = unknown> = {
-  tipo: "monto" | "moneda" | "rubro" | "booleano" | "fijo" | "contexto";
+  tipo: "monto" | "moneda" | "rubro" | "opcion" | "booleano" | "fijo" | "contexto";
   /** Texto que ve el usuario (formulario y mensajes). */
   label?: string;
   /** Validación al leer del API. Sin esquema, el campo no forma parte del registro. */
@@ -112,7 +117,7 @@ type Campo<Tipo extends DefCampo["tipo"], P> = Omit<DefCampo<P>, "tipo" | "aPayl
 
 export type CampoMonto<P = number> = Campo<"monto", P> & { esquema: typeof esquemaMonto };
 
-type OpcionesMonto<P> = Sobrescribir<P> & { inicial?: number; formulario?: FormularioCampo };
+type OpcionesMonto<P> = Sobrescribir<P> & { inicial?: number | null; formulario?: FormularioCampo };
 
 /** Número (costo, venta, mínimos, porcentajes). Se envía con Number(valor). */
 export function monto(opciones?: OpcionesMonto<number> & { aPayload?: never }): CampoMonto;
@@ -187,6 +192,41 @@ export function rubro<const En extends string>(
   };
 }
 
+type OpcionCatalogo = { value: Id; label: string };
+
+export type CampoOpcion<En extends string, O, P = Id | null> = Campo<"opcion", P> & {
+  esquema: z.ZodNullable<typeof zId>;
+  en: En;
+  deApi: (registro: Valores, cod: string, catalogos: CatalogosMetodo) => O | null;
+};
+
+/**
+ * Select de cualquier catálogo de opciones { value, label } (ej. equipos), con el
+ * tipo de opción explícito: `opcion<EquipoOption>()({ en: "cod_equipo", catalogo: "equipos" })`.
+ * La opción se busca por `value` en `catalogos[catalogo]` y se envía opcion.value.
+ * CampoMetodo no lo dibuja: el select se escribe en el formulario.
+ */
+export function opcion<O extends OpcionCatalogo>() {
+  return <const En extends string>(
+    opciones: Sobrescribir<Id | null> & { en: En; catalogo: string; inicial?: null },
+  ): CampoOpcion<En, O> => {
+    const { aPayload, catalogo, ...resto } = opciones;
+    const opcionDe = (valores: Valores) => valores[resto.en] as O | null | undefined;
+
+    return {
+      tipo: "opcion",
+      esquema: zId.nullable(),
+      falta: (valores) => !opcionDe(valores),
+      aPayload: aPayload ?? ((valores) => opcionDe(valores)?.value ?? null),
+      deApi: (registro, cod, catalogos) =>
+        ((catalogos[catalogo] ?? []) as readonly O[]).find(
+          (item) => String(item.value) === String(registro[cod]),
+        ) ?? null,
+      ...resto,
+    };
+  };
+}
+
 export type CampoBooleano = Campo<"booleano", boolean> & { esquema: z.ZodBoolean };
 
 /** Sí / no (ej. es_porcentaje). Se envía Boolean(valor). El input se escribe en el formulario. */
@@ -205,9 +245,12 @@ export type CampoFijo<V> = Campo<"fijo", V>;
 export function fijo<const V>(valor: V): CampoFijo<V>;
 export function fijo<const V, E extends z.ZodType>(
   valor: V,
-  opciones: { esquema: E },
+  opciones: { esquema: E; inicial?: unknown },
 ): CampoFijo<V> & { esquema: E };
-export function fijo<const V>(valor: V, opciones: { esquema?: z.ZodType } = {}): CampoFijo<V> {
+export function fijo<const V>(
+  valor: V,
+  opciones: { esquema?: z.ZodType; inicial?: unknown } = {},
+): CampoFijo<V> {
   return { tipo: "fijo", aPayload: () => valor, ...opciones };
 }
 
@@ -288,7 +331,7 @@ export type PayloadMetodo<IdCod extends string, C extends CamposMetodo> = Simpli
 >;
 
 type OpcionesFila<C extends CamposMetodo> = {
-  [K in keyof C as C[K] extends { en: infer E extends string } ? E : never]?: C[K] extends {
+  -readonly [K in keyof C as C[K] extends { en: infer E extends string } ? E : never]?: C[K] extends {
     deApi: (...args: never[]) => infer O;
   }
     ? O
@@ -327,7 +370,13 @@ export function definirMetodo<const IdCod extends string, const C extends Campos
   const esquema = z.object(shape as ShapeMetodo<IdCod, C>).passthrough();
 
   type Registro = z.infer<typeof esquema>;
-  type Fila = Simplificar<Partial<Registro> & OpcionesFila<C>>;
+  // El id es null mientras el registro es nuevo. Si la opción se guarda en la misma llave
+  // del API (ej. equipo: cod_moneda_costo), manda la opción.
+  type Fila = Simplificar<
+    SinLlaves<Partial<Registro>, IdCod | keyof OpcionesFila<C>> & {
+      [K in IdCod]?: Id | null;
+    } & OpcionesFila<C>
+  >;
   type Payload = PayloadMetodo<IdCod, C>;
 
   /** Registro del API → fila del formulario (agrega las opciones de select). */

@@ -1,26 +1,14 @@
-import { z } from "zod";
-
-import { zId } from "@/shared/lib/zod-scalars";
+import {
+  METODO_EQUIPO,
+  type TarifaEquipo,
+  type TarifaEquipoMutationPayload,
+} from "../lib/metodos/equipo";
 import { crearCatalogoMetodo, type FiltrosMetodo } from "./catalogo-metodo";
 
-export const tarifaEquipoSchema = z
-  .object({
-    cod_tarifa_equipo: zId,
-    cod_metodo: zId.nullable(),
-    cod_equipo: zId.nullable(),
+// Campos, tipos y payload: definición única en lib/metodos/equipo.ts.
+export const tarifaEquipoSchema = METODO_EQUIPO.esquema;
 
-    costo: z.union([z.string(), z.number()]).nullable(),
-
-    venta: z.union([z.string(), z.number()]).nullable(),
-
-    cod_moneda_costo: zId.nullable(),
-    cod_moneda_venta: zId.nullable(),
-
-    cod_estado: zId.nullable(),
-  })
-  .passthrough();
-
-export type TarifaEquipo = z.infer<typeof tarifaEquipoSchema>;
+export type { TarifaEquipo, TarifaEquipoMutationPayload };
 
 export type FiltrosTarifaEquipo = FiltrosMetodo;
 
@@ -35,27 +23,6 @@ export {
   monedasOperativasOptions as monedasEquipoOptions,
   useMonedasOperativas as useMonedasEquipo,
 } from "./monedas";
-
-/* ==========================================================================
- * MUTATIONS
- * ========================================================================== */
-
-export type TarifaEquipoMutationPayload = {
-  cod_tarifa_equipo?: string | number | null;
-
-  cod_metodo: string | number;
-
-  cod_equipo: string | number | null;
-
-  costo: number;
-  venta: number;
-
-  cod_moneda_costo: string | number | null;
-
-  cod_moneda_venta: string | number | null;
-
-  cod_estado: string | number;
-};
 
 /* CONSULTA Y MUTACIONES (createCatalogo vía crearCatalogoMetodo) */
 

@@ -15,7 +15,7 @@ tarifas/
 │  └─ use-formulario-tarifas.ts  ← formulario principal de tarifa
 ├─ lib/
 │  ├─ campos-metodo.ts      ← DEFINICIÓN ÚNICA de campos de métodos: tipos de campo y definirMetodo
-│  ├─ metodos/<metodo>.ts   ← campos de cada método (migrados: costo-venta, cobertura, porcentaje, costo-porcentaje)
+│  ├─ metodos/<metodo>.ts   ← campos de cada método (migrados: costo-venta, cobertura, porcentaje, costo-porcentaje, equipo)
 │  ├─ tarifa-field-rules.ts ← reglas de campos del formulario principal
 │  └─ tarifa-helpers.ts     ← funciones compartidas (decimales, fechas, ...)
 └─ components/
@@ -75,11 +75,11 @@ Excepción: **equipo** convierte monedas con `value` numérico porque ese valor 
 
 ## Campos de un método (definición única) — en migración
 
-Migrados: **costoVenta**, **cobertura**, **porcentaje** y **costo-porcentaje** (`lib/metodos/<metodo>.ts`).
+Migrados: **costoVenta**, **cobertura**, **porcentaje**, **costo-porcentaje** y **equipo** (`lib/metodos/<metodo>.ts`).
 De cada `METODO_<X>` salen el esquema, los tipos (registro, fila, payload), `aFila`, `aPayload`, `filaNueva`
 y `validar` (requeridos + `reglas`). El formulario usa `<CampoMetodo>` con el mismo layout; cada campo dibuja
 sus propios mensajes de error. Componentes padre reutilizables: `MetodoCostoVenta`, `MetodoCobertura`,
-`MetodoPorcentaje`, `MetodoCostoPorcentaje` (alias viejos `*Table` en el barrel).
+`MetodoPorcentaje`, `MetodoCostoPorcentaje`, `MetodoEquipo` (alias viejos `*Table` en el barrel).
 
 Sigue a mano en los formularios (la definición igual da esquema, payload y validación):
 
@@ -88,6 +88,10 @@ Sigue a mano en los formularios (la definición igual da esquema, payload y vali
 - costo-porcentaje: el input de venta (etiqueta, `max`, `step` y "%" cambian con `es_porcentaje`) y el radio
   Porcentaje / Valor. Su lado de costo está definido pero oculto; `cod_rubro` se envía sin estar en el esquema
   (`sinEsquema`).
+- equipo: todo el markup del formulario (asteriscos, placeholders, símbolo en la etiqueta); usa la definición
+  solo para validar. Sus selects guardan la opción en la misma llave del API (`cod_moneda_costo`, ...), las
+  monedas usan `value` numérico y se envía `value || null` (campos `opcion`); al insertar no se envía
+  `cod_tarifa_equipo` (lo quita `MetodoEquipo`).
 
 Los demás métodos se migran uno por uno.
 

@@ -27,7 +27,7 @@ import { PaisTable } from "./metodo-pais/pais-table";
 import { MetodoCobertura } from "./metodos/cobertura/cobertura";
 import { MetodoCostoPorcentaje } from "./metodos/costo-porcentaje/costo-porcentaje";
 import { MetodoCostoVenta } from "./metodos/costoVenta/costo-venta";
-import { EquipoTable } from "./metodos/equipo/equipo-table";
+import { MetodoEquipo } from "./metodos/equipo/equipo";
 import { MetodoPorcentaje } from "./metodos/porcentaje/porcentaje";
 import { RangoTable } from "./metodos/rango/rango-table";
 import { ScallingTable } from "./metodos/scalling/scalling-table";
@@ -347,7 +347,7 @@ export function TarifasTabs({
         break;
 
       case 103:
-        componente = <EquipoTable {...props} />;
+        componente = <MetodoEquipo {...props} />;
         break;
 
       case 148:
