@@ -24,7 +24,7 @@ import { CommoditiesTable } from "./metodo-commodities/commodities-table";
 import { DetalleTable } from "./metodo-detalle/detalle-table";
 import { EntidadTable } from "./metodo-entidad/entidad-table";
 import { PaisTable } from "./metodo-pais/pais-table";
-import { CoberturaTable } from "./metodos/cobertura/cobertura-table";
+import { MetodoCobertura } from "./metodos/cobertura/cobertura";
 import { CostoPorcentajeTable } from "./metodos/costo-porcentaje/porcentaje-table";
 import { MetodoCostoVenta } from "./metodos/costoVenta/costo-venta";
 import { EquipoTable } from "./metodos/equipo/equipo-table";
@@ -355,7 +355,7 @@ export function TarifasTabs({
         break;
 
       case 363:
-        componente = <CoberturaTable {...props} />;
+        componente = <MetodoCobertura {...props} />;
         break;
 
       case 342:

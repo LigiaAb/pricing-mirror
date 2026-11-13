@@ -1,30 +1,14 @@
-import { z } from "zod";
-import { zId } from "@/shared/lib/zod-scalars";
+import {
+  METODO_COBERTURA,
+  type TarifaCobertura,
+  type TarifaCoberturaMutationPayload,
+} from "../lib/metodos/cobertura";
 import { crearCatalogoMetodo, type FiltrosMetodo } from "./catalogo-metodo";
 
-export const tarifaCoberturaSchema = z
-  .object({
-    cod_tarifa_cobertura: zId,
-    cod_metodo: zId.nullable(),
+// Campos, tipos y payload: definición única en lib/metodos/cobertura.ts.
+export const tarifaCoberturaSchema = METODO_COBERTURA.esquema;
 
-    porcentaje_costo: z.union([z.string(), z.number()]).nullable(),
-
-    porcentaje_venta: z.union([z.string(), z.number()]).nullable(),
-
-    minimo_costo: z.union([z.string(), z.number()]).nullable(),
-
-    minimo_venta: z.union([z.string(), z.number()]).nullable(),
-
-    cod_moneda_costo: zId.nullable(),
-    cod_moneda_venta: zId.nullable(),
-
-    cod_rubro: zId.nullable().optional(),
-
-    cod_estado: zId,
-  })
-  .passthrough();
-
-export type TarifaCobertura = z.infer<typeof tarifaCoberturaSchema>;
+export type { TarifaCobertura, TarifaCoberturaMutationPayload };
 
 export type FiltrosTarifaCobertura = FiltrosMetodo;
 
@@ -35,25 +19,6 @@ export {
   monedasOperativasOptions as monedasCoberturaOptions,
   useMonedasOperativas as useMonedasCobertura,
 } from "./monedas";
-
-export type TarifaCoberturaMutationPayload = {
-  cod_tarifa_cobertura?: string | number | null;
-
-  cod_metodo: string | number;
-
-  porcentaje_costo: number;
-  porcentaje_venta: number;
-
-  minimo_costo: number;
-  minimo_venta: number;
-
-  cod_moneda_costo: string | number | null;
-  cod_moneda_venta: string | number | null;
-
-  cod_rubro: string | number | null;
-
-  cod_estado: string | number;
-};
 
 /* CONSULTA Y MUTACIONES (createCatalogo vía crearCatalogoMetodo) */
 

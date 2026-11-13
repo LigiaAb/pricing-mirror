@@ -1,0 +1,224 @@
+diff --git a/src/features/pricing/tarifas/ARQUITECTURA.md b/src/features/pricing/tarifas/ARQUITECTURA.md
+index 1c614c86d4d5d41134510633a6b2c9cdf375298b..86dcee17e303c09f41a0a656098dae62e7cde8e1 100644
+GIT binary patch
+delta 427
+zcmYLFu};H43{}-F>OeO}Pmo4Yv!WIup%x}eK~#v1a~iigxb({T5~(cx0LH8={R5<K
+zto#7{5tpQe#pm<0pZ(t3(fjeoPtyxws$()XGu!XxbF0Bc{~%h!3W8t{U=V;Wl#HX4
+ztWGpXe@NG|=ybgy!4wk&F}j$HhvUc7hcf|;iWWc$h+i^FF$AR<tX#V28=6bDMu#wy
+z%0Ww9DUC@d1c8?_P$<gmrmmKG*>;^#j>21k$Wh4zjp#$sYM-y!%_oMyP-dl)uNW)h
+zo+n1ty#viw-_ycYr2ASe8U^@{3mI}rPwq1D-#sa5%H4yVLs(a!mKCEhq@4PzI}J`D
+zu$;Sykm5q`dS=?BnL;BqB+jEfPp`59bIER_1JbWe^`5xTRHn{2E;jAMhPVA}-!^^$
+DbgPyN
+
+delta 242
+zcmbQE-mSLbBJ<`u%vn5>-39a|^b}lD6%u@1L;PL*<DLD3L;T~zT>U~EC+`rD_2kk>
+z2uUo;OiOgmFD}UsOU)}uOwdtCaLdd=6G2zyTUwG>l9`_ukXV_MpO}&``JI3mpF*WV
+zLRn%?W=djFf;HD<c|pg?iGspWRzT}hOY&3lku2fT0IEwYRw&C%&B|9uK*)q7Cgr3i
+vD5T~oq~<6jB^DK>=4k3E_~aKWq@?B^URbP<dw3<ttYU@YRE5pnLV=6`C#O~1
+
+diff --git a/src/features/pricing/tarifas/api/tarifa-cobertura.ts b/src/features/pricing/tarifas/api/tarifa-cobertura.ts
+index cad5223eddc9be5e201b64e9cbbb3c03b81d0fdb..77a667791db02a30c97aed53b5f146ff88c3e844 100644
+GIT binary patch
+delta 241
+zcmaDS@S966Gq)hWs6?TfOF_ZcHN@Y=Ki=8j$u%e>G{{khOJVXsCQ)W6J$V8fzmg7D
+ztwLH+ey)O&o}PYAW|DqxYDs=dezAUXeo|^tNoi5yM7Kb1eSHPzM4-XNItnG3KuV!f
+zp&+p`CqFU8N+BgREi*4OIrH%5JcYx%fUHD?)I0^OM(LFl>rI@dW{&PKz0~5u($w5U
+tYc8(T3b6A_DhpB-sue;Ki!##^ouN*dT*s!!q)@y0A5$UY=0B`OOaL2WQ;Glp
+
+literal 2158
+zcmbtV&2Abo5WeqIj5t9AyLV{QQbZ)w5LyC<sH%|JHNokwjchM!XnCL>`U1V?#X7ck
+z4J?~fN-yB`eDgowm}MIwHT-}b>|rHE292Fa8ohvd!6@;f_mNr?Ns}mL%Ls8D6_b=m
+zb&QWCC2~MCNyWVwQ!NtF2K~69aK%zBg>rY^W*Ef<xRY5l8Vl%m8&)j1(x8cCD>4vE
+zDs?W&ZM>!#fw!;=079{Rps{ZLz%xKBl7&Mr;u7A4-6&~$vGZXsL!PH8S*EnvY6lj8
+zPGib7d7!ATv_M#xb0&E6%Pv$}GJcO(yySU?(KK6MTQ3^f8e^|Ak}=LQ@gGqX23{Y5
+zsbwZOO^A<Tl$>N+R=hx!t|};Bd6_SzspyG36dR58C8_U$@k^B^iNl)C?OXU0ZirHP
+zEk%C6Znh3HVn=IsIwEE`LdI8AzA<94s-L0Dij`tO&yAf-E-FP4jBROD7iW&EJk<oA
+z{%{r(pd7-;l|+SFK~qtSp>j(&q(T7~*-}yk2?b1)LiY5_u%s21V{eAprsbSWHdGSL
+zwgiYO{CYB&@;GN6Rqz9`PT;XlaL`a*1y806$~Y)O_gaO>sO5^fh>kRk%HiH?wS#h<
+z_+lLKx~^yATw{`ge<F{mAPKh6l%bB%@4Dc)2tUCQ(H_ziJL5D;l2>3>e$H`cqldaj
+zvSOM`846D+Sql99xxzVvD)IQRi>Mvj3PaCfixdks{R34JsRHW-do#rsFqquj&aY>E
+zxP$S0)*p-}H^W<KnjNlbxx``n^qWA<UT?ug6a;QblMTa`)qq}PU>hoAt4zVAUF?o9
+zU1+%7t~znK+#6;rm3<Jp^&B?<%9D*?Tq9fEJCQP6Flf*IcbwIVQ2@pjJ~%`ot~@>m
+zC9%#)%61lf_^5~PksC+*%aw1|pN_8ji^1f>a5|e$`-{)>;q-3tad?MS#oC77=%WgW
+xo$-^$(IjNkD0q5ShEx7tyUdZXmBJVN9{HpZQhwA!`$tJ5`0#lK-@6=o!Cxr1>&5^8
+
+diff --git a/src/features/pricing/tarifas/components/metodos/campo-metodo.tsx b/src/features/pricing/tarifas/components/metodos/campo-metodo.tsx
+index b0efd76219f6f76db4e5d935e80cbb3fd14de0f6..fab168ea7314adf46f1e19575d33510c3e4292ec 100644
+GIT binary patch
+delta 187
+zcmaDPdq-|V6t`k-W}c2hZeoRwLUBoI0g%khP0G*7cS!{@OVcv5@+W6<tI8*)q~zx*
+z*m5a=0YpN<-X6-=m^_cWfKhWYAJ1|xpm_?mwhDQrIXMdU3e~j=RtnV$Ai-MATBve}
+kA=P?%dKy5Bv8V<L0#$Eb%#+Q?3buK&D4!;j<;ph~0NbQDc>n+a
+
+delta 81
+zcmca3_egd_6gPiyNos+PLUCqpQhrXpOX}omZdCy&Pr;T;0SqSZ=PsCRz_Wa_F>fRz
+QJ5+Y^L_SS8dq3Y?0C|8M4gdfE
+
+diff --git a/src/features/pricing/tarifas/components/metodos/cobertura/cobertura-columns.tsx b/src/features/pricing/tarifas/components/metodos/cobertura/cobertura-columns.tsx
+deleted file mode 100644
+index e6c860e2ef5c81eb9505fa9764852c89c6cd0d6d..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 348
+zcmaivu?~VT5J2~S#f8BQ*hO?OaWgo$n-fcHEWM^Zj0X946;u!hlN;Z?d#6fEj)AXM
+zLJeDVs=y`frQ^yWG*CDyA&8>58?-9s77Ft>6(mA^S=MCa0W+H`GQWx=(aFb^mm#%;
+z^kHXwc!a$4Ii2PclUaWHQW)w-D=Vc3^(k!7u|ho?{WXUP)B>PvLw7lOrp5Fn9v{4c
+QskBad{45RQU%W}g9jx1WBme*a
+
+diff --git a/src/features/pricing/tarifas/components/metodos/cobertura/cobertura-form.tsx b/src/features/pricing/tarifas/components/metodos/cobertura/cobertura-form.tsx
+index 71ab2050ce6f0512450e28e522173b0f8a0b701a..164b91f8976d225cde04f6a60ce5d8d3c2506f05 100644
+GIT binary patch
+delta 1132
+zcmbVK%Wl&^6jgW$1;GwAlrAojT5QRT5iBBw#t}7TMH&>!3PC!tr_|J*G2;h{EX%(@
+z<saY&5R0&3g%A>Z{)Qzpo~W3HLPV6s^~^oz+;issxO=qn_Qlbs&YdPeJPipv^n7fy
+z3E^?Vu^~<e+q=UD!?8Ww+8*sb9o?5_RcHD6^3|J0GlzZ70%#*-s=x0|%z(tqWs&L3
+znab~tC+iv5I0)IGx`P_dk;k_bW_EbyQDet6VJ9Ie>q5x5Luia&kqD*`e0@*7fJHzk
+z+y-sWqn_hoe@}k@Nf)Cy(oy;GY-c^ienOz%UoeFBg=MLRHN8AIr!U#LcK-U77<}Sk
+z4m}tV?8GREh>d-Jf}KN6t1g9u$C$@r#?9Z7wRGrNkTpwuWu*XwP{>JY$U?y&*Y$fM
+z>D+*4&qXClk;#Bj;^GK6d7TjM$#M#*j0db9I4p{VUP}0>Ss=mVFdD^>fe6HNnE^!O
+zoN*CvE_|GPZB%t(u5tE8pRHc78U@_o1iOs-Q`p#;vs42r;_5L4QwHimy9=BK$i%xK
+zC=FoLKEU)P>B2lr0|MpJ5H{yJdBx9(*hxD3aPeECuxp!?snkN2OOBBB+JV@MfQ_p_
+z+F)8TKK0vN3Rp$@H(;?K=`eS!2LBJ)UrW9uxDYmv-PWZ4IrzfdHE9L5j<W*Dh*}MF
+Zva7t->aU)9o0soeYnN(C&%U%eji0A4bIbq$
+
+literal 6648
+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
+
+diff --git a/src/features/pricing/tarifas/components/metodos/cobertura/cobertura-table.tsx b/src/features/pricing/tarifas/components/metodos/cobertura/cobertura.tsx
+similarity index 62%
+rename from src/features/pricing/tarifas/components/metodos/cobertura/cobertura-table.tsx
+rename to src/features/pricing/tarifas/components/metodos/cobertura/cobertura.tsx
+index 165e04f7b61d625781ec5d1952eaabacae03e331..8c68002728feb80ad51697d2d7b64ba3a79a6657 100644
+GIT binary patch
+delta 630
+zcmZXS!D`z;6h(2fDCh^e=;o4@WyGj!C$XEj33Opxg1Rcfd6GtDU^HV!Ga-&KCO^<c
+zlb^^c1%E<5s@u#+jZ<0>1A6biJNF&t_xs0pzec^yDgx|s!Eq)eO?1wUb%qjOot|d1
+zPqX=Cc5-^2eLX)8wN^RRikGk2*}@8~l4y;}=o<TsrQIh*p4QyzQa5Sw;=F$liF%=p
+z#R~qq?S1b@Z<7uN5eCS}h>B2h)K3p#E-1P{LljyyPFhM(X;VAtwHix&cVtQ`H46q4
+z?X4A8mSaJs;V|4;A;k^lk`IwnV<{Nn@^IP)>--P>#=cy3wWAedY>jku89dX7U$=29
+zr;4yB{+{%M+mCxUZ#JF{(2sF6LVvd_#{WTN6ga<15|5#7c{W(b7(zKI<A56Ywlhjz
+zG#8;0A4L94(-3)XTV~mOr^R@T4<1Zt8kZa0d7@7eLNy*I8Q=DQR9Hs=j){l3;s!FX
+zuY?kXc-ks<m%aV@*>L|JR2!?kHU#@q`}ct``a(;osq9yN$FSLsso!mT72WPV1H<al
+AzyJUM
+
+delta 1188
+zcmb_cO>fgc5LEyH%Dv^lhaQ~l$~bUMl;(io2A6U}RkT^J%U1Sov{_fsDzf+s^vquX
+zr2GVa6j%1c-flxGF63m*n>X|3&1`-=`2Fzb;b2dHUNT(Z4X?;6xnN2+ie#6|!Tuwx
+zQ7T#ESw5mY@|?=5sl{sZeeiAYgne2{rBOD5YAyvrf%jxlvCZ8(=eOD<#q<ytLzo{g
+zkvt8xQYdD+35ceuCPSCeMSMDt=Xprad<IZU!3r{`a;4?iv21N0UF9VgMG~TDk$A+(
+zIMRxXlP+RP7xMs4r|8hoF-q{=(kv8CF`GHz+p^A>(Bw*1dxNh3B+GT%Ez6p+o;)^+
+z*BL&9p|ako<8(5-Ji7O_?ajvZeOSKX_O5Sj2C(jFqIhXn(H+hhrMV;L+csqVdJ)X>
+z^qOf|v~p}~y|v#mN-(EIt(T{)TQ%M_wds?%7Tc)tAnYc>{5Ec4I<$?cH5a^=^BuGp
+z*}?GFc&$;#a7fI!Iy*O*o!^b*FU1c#i*E0)OY6+@&!CeUS8$<!R2UufcD29(URR*M
+zHU&SCIOFV8;v=C9%)BsYBDCz2Z7!+6#mf9s5M>ruOB*0mH>Bd{MCDQHD16(QRkKiL
+bR{PqcWzjtYnMR~A*vtNbtvC7oFSq{yUCM1P
+
+diff --git a/src/features/pricing/tarifas/components/tab-tarifas.tsx b/src/features/pricing/tarifas/components/tab-tarifas.tsx
+index 24ea845feac22103e84d8f143c9ca934637ed5fa..5244ef2d3f94a26c8e0b8a69b2b978b4f2f296c1 100644
+GIT binary patch
+delta 53
+zcmaD{b-!u@3)|#*Y#i)KsYNBFMTwJz*wi-Lu~{ihu2Dq@-c{9}T&2Xjd7s)+F#r>5
+B6I1{I
+
+delta 56
+zcmca#^|)#S3md0%eo|^tNoi5yWC2#O$trB3Y`P_hNja&TE!nITkYq2Y8Ejswwn+>C
+DIA;^@
+
+diff --git a/src/features/pricing/tarifas/index.ts b/src/features/pricing/tarifas/index.ts
+index 83bfc6d5b83aa4590a89754cb15f7664ad2dceb6..95471c4fd0a2f3771f39ed2975ea4436abd3be46 100644
+GIT binary patch
+delta 127
+zcmccVy~}6A4~fa#Qao%)sYNBFMU&;EOtc`(!~{JBEqyKp1>e+?{FHp>e5kNOVzB~@
+zGr3+$eex_x!O4k|QJZ<BxVWUDigZBwTtoa_{NtVdom_)LLW3M9_pwP#_Ek}s{El6A
+Jv#`oBMga9zDl7m1
+
+delta 88
+zcmV-e0H^=DOxa7Y_!t><d2nSQdkP>RMrmweLvLbba&&caVJr$DlP4r1lf4uXlaLw&
+ulaCn@2rXl8Y;|pJbCaMMT9d083X`B8Ba@986O*tP6tn#q2MV)yB*OudLmz$s
+
+diff --git a/src/features/pricing/tarifas/lib/campos-metodo.ts b/src/features/pricing/tarifas/lib/campos-metodo.ts
+index 471149239214d99a763643fbe68c871ed7a22b0d..7afdfedc8e2b5994b277e1f1fa70bfe955e85463 100644
+GIT binary patch
+delta 968
+zcmZuwO=}ZT6vaTPrlPp&A_*J=)kzFV7j`ot1}VC;_(ckqN?s;+;)^ryrSp+iL+H*w
+zFh9U$aUoQ)cjMND|3J{Cf5Q7Flg3DA^O*bYIrp4<@B6U-`}KK{Yr4`CkV-mIc<2*i
+zg@6V!i~<c6(^%ub&oYQTz7aDw_h#*eFI5)}bbWEcXYzf$T;fpMX0+d<pqU5wYWbi1
+zSwFUcMzxBUbP{Q}a;U+@U8zzD9?KcU5iA<kQQj(7>ZmrDC5%nxZ2#)7E2oZDAP+||
+zf&7uA_u>-aOQlTlLMn7KpWT`PJHj973;0+#-#+WCRF=o0WA#?)V`W?z#U0`407o-B
+z|7z{lGApy1oNbh5=QoENr+HNIC<r*0xa^ozB)V{7q52w*4%zhsq|v&`e9C!!a>?O%
+zs6CV7k3=94N(jHFLqw7kGmTC8CSMy;;Yc0sYG3bCpu4QpP|a;T<XWbtA=22Mx6;u(
+zjwlX<ok`fiySa!tN`OL;5nZY0lTP6tyWlUCYl9a;szEIcrOH=BKB-U)X*H-vEKyNt
+zV`57DBbPhd)7m4UFhvWKsUfb|cuoUPJfTQ)pIXV+LZP(asIL-KFkwWpSws!(HnuC=
+z(7klwth7lK9;7M{=eMbBHj_Ln7B?3^FgxmbX12gIKl@SWU+<VHKQ?dTvbVtY%y>MW
+zNV+|Im{Ba&D%&28g%PiF_DtBHm3-Q=l8<+HZ0W*Eq4f-e+pQMQj>j(*^(!gtz|s9f
+XhOHzf?w#uFzV#({?SeV^Sv~s;w+lVW
+
+delta 168
+zcmaDH*A~8^h-vdqrWn@AsvHWFQ#ndD%W+<3++55Z%{uuJkId#j0$JQP3a&*(`9%t;
+zc?t<-sd*)d2@1)jiFqmc3W>Q%`Naw)nW=d|xw6C@prT5J<ox22d<8oNuu{FrYO>n8
+vU?D4o;*z4wymTFi41$}Rnpd2dl?oG>d_Y!v^8~qQp3O`;8<{2_(pv}s7V$j{
+
+diff --git a/src/features/pricing/tarifas/lib/metodos/cobertura.ts b/src/features/pricing/tarifas/lib/metodos/cobertura.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..72951ff4c1e5620ed6f9a9d8122f727e03694611
+GIT binary patch
+literal 2272
+zcmb_eO>g5i5WV|X3<MOgUD--*g%%6c^*VryI(D<}X|c%C676M5iC&U2;sp5tJ@?jI
+zk3Hm+pP)b1M^gSuHU$c-VAvGNd2i;;aOk8<Z@<~oqApG9KjzbSQyNZx8ePqQyBehQ
+zZgere91q9!pO;ksh0y?0G#pH3)AulORwMJJ;suMzinTH^t=U#8mdCVVQsgWX^;1b(
+z%2<JA%DJSa(nTei7K#j$yu>82FID~M;MyCmNs2`h40;8(Dp!4LI(?ck&4{fuUolNp
+z88A~fQ~$GKQW3B|1-nnQjUAj3WH@bjOqr7PQ`YRt6uc>UX-yIcOp>Vu*S6B^FzPu^
+zL4DhAVjWPyN>6hVMoJQ)v5hc3LMrONU8M8_zA{lDMni4bEu?~0tn4_vZ<svlCaso0
+zMB36l-Hmg4pruv?ML#CyGt)dzoT7Is?-?k-w29vA4eWN!VKspqIh(FCp~}5^zn|dq
+zS*hPmQW@S;ewmw|MfR2qD0|kNFGVTz#HTB!rMOWs6&}?8TD)!`IJ;C6UMl@-#fQpR
+zb<A~=a_3^EN@Hm@y&8@#=YyX|^cJ2LqD<)wpzJoK^D~T$<?EE9v;Nt6gty9(<Ndn`
+z;LITNKmi)R^$G>h$;j3E^}f~teG)?ZzC|SR6oi?=PlWI55cc)HR2-YQVA3*pL=SNb
+zHX#VuVN3+Z%td{}VTEv0r-@bVdy;IyC2(i^9U#IEU_!`DFf1ar!(mB}g?Q+AvJ(O?
+z?|%~b9siR6a*IM;zXCp~AKh|D?FlmNU2G6uiGPRiGWY|6(>~PFk%}nSBN;>ex>L6U
+z;wY2o*b44xjsvJgjyzah@vkx*B7KcvC*v{0ZthivB%${l9coiQGAb)6$ud*|F^PN|
+zv>x;{v?V{mGFzd0-eIaORu~f8CiI-Fe#*rPatnT=TpPjT#L?A4BPLh)ZHFDBY<XzR
+zscQ&*H^~-~w>y2cwm9QVwmYZcb7Pqk#)F(cNAP>8sd02*$xKQgyaPV;XUDqjSBRqL
+z2OvUQ_RsN3Bi?RhB;Dnqw9BSn!eGJC$TbfA7V{9~km$zh9yVxRW(W<3+^G>V9Qbft
+zh(5-xhYlKnZ+UZfUE$Qb7qz74{h;r!Gi*+}UAp2cVXRh;RWe*pkc!&4a9mn)zNxs}
+z`1}lJW870{$4##ZOuktTclQf8J@<zQGJ4qPW5aVHfPQ*KrY`Nfjr2X}4ei>nb0-w|
+z3r>gh6~-l|_iVoe|8YMyRml#On9!jHUx3d~1DaHpxssZNoBt4B^H;zV9t#rA>fXJn
+OFG!e$`EUolY5fawCgT49
+
+literal 0
+HcmV?d00001
+

@@ -82,11 +82,12 @@ export function CampoMetodo<C extends Record<string, DefCampo>, F extends object
   }
 
   if (def.tipo === "monto") {
-    const { step, simboloDe } = def.formulario ?? {};
-    const simbolo =
-      simboloDe == null
+    const { min, max, step, simboloDe, sufijo } = def.formulario ?? {};
+    const addon =
+      sufijo ??
+      (simboloDe == null
         ? undefined
-        : (valores[simboloDe] as MonedaOpcion | null | undefined)?.simbolo;
+        : (valores[simboloDe] as MonedaOpcion | null | undefined)?.simbolo);
 
     return (
       <Field>
@@ -95,6 +96,8 @@ export function CampoMetodo<C extends Record<string, DefCampo>, F extends object
         <InputGroup>
           <InputGroupInput
             type="number"
+            {...(min == null ? {} : { min })}
+            {...(max == null ? {} : { max })}
             {...(step == null ? {} : { step })}
             readOnly={readonly}
             value={(valores[campo] as string | number | null | undefined) ?? ""}
@@ -103,7 +106,7 @@ export function CampoMetodo<C extends Record<string, DefCampo>, F extends object
             }
           />
 
-          {simbolo && <InputGroupAddon align="inline-end">{simbolo}</InputGroupAddon>}
+          {addon && <InputGroupAddon align="inline-end">{addon}</InputGroupAddon>}
         </InputGroup>
 
         {children}

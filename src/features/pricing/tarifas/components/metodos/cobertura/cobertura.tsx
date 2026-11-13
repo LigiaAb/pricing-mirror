@@ -10,7 +10,11 @@ import {
   useTarifaCobertura,
 } from "../../../api/tarifa-cobertura";
 import { useOpcionesMonedas } from "../../../hooks/use-opciones-tarifa";
-import type { FilaCobertura, MonedaCoberturaOption } from "./cobertura-columns";
+import {
+  type FilaCobertura,
+  METODO_COBERTURA,
+  type MonedaCoberturaOption,
+} from "../../../lib/metodos/cobertura";
 import { CoberturaForm } from "./cobertura-form";
 
 type Props = {
@@ -30,7 +34,11 @@ type Props = {
   servicio?: Record<string, unknown>;
 };
 
-export function CoberturaTable({ codMetodo, readonly = false, onTarifaCreada = () => {} }: Props) {
+/**
+ * Tarifa de método Cobertura: consulta, formulario y guardado.
+ * Componente padre reutilizable: basta con `<MetodoCobertura codMetodo={...} />`.
+ */
+export function MetodoCobertura({ codMetodo, readonly = false, onTarifaCreada = () => {} }: Props) {
   const coberturaQuery = useTarifaCobertura({
     ...(codMetodo == null ? {} : { codMetodo }),
   });
@@ -51,55 +59,17 @@ export function CoberturaTable({ codMetodo, readonly = false, onTarifaCreada = (
 
   const esNuevo = cobertura == null;
 
-  const value = React.useMemo<FilaCobertura | null>(() => {
-    if (!cobertura) return null;
+  const value = React.useMemo<FilaCobertura | null>(
+    () => (cobertura ? METODO_COBERTURA.aFila(cobertura, { monedas }) : null),
+    [cobertura, monedas],
+  );
 
-    return {
-      ...cobertura,
-
-      moneda_costo:
-        monedas.find(
-          (moneda) => String(moneda.cod_moneda) === String(cobertura.cod_moneda_costo),
-        ) ?? null,
-
-      moneda_venta:
-        monedas.find(
-          (moneda) => String(moneda.cod_moneda) === String(cobertura.cod_moneda_venta),
-        ) ?? null,
-    };
-  }, [cobertura, monedas]);
-
+  // cod_tarifa_cobertura ?? 0 y cod_rubro: null (al insertar y al actualizar): ver la definición.
   const formatearFilaApi = React.useCallback(
     (fila: FilaCobertura): TarifaCoberturaMutationPayload | null => {
-      if (codMetodo == null) {
-        return null;
-      }
+      if (codMetodo == null) return null;
 
-      return {
-        cod_tarifa_cobertura: fila.cod_tarifa_cobertura ?? 0,
-
-        cod_metodo: codMetodo,
-
-        porcentaje_costo: Number(fila.porcentaje_costo),
-
-        porcentaje_venta: Number(fila.porcentaje_venta),
-
-        minimo_venta: Number(fila.minimo_venta),
-
-        minimo_costo: Number(fila.minimo_costo),
-
-        cod_moneda_costo: fila.moneda_costo?.cod_moneda ?? null,
-
-        cod_moneda_venta: fila.moneda_venta?.cod_moneda ?? null,
-
-        /*
-         * El código viejo hace esto tanto
-         * al insertar como al actualizar.
-         */
-        cod_rubro: null,
-
-        cod_estado: 1,
-      };
+      return METODO_COBERTURA.aPayload(fila, { codMetodo });
     },
     [codMetodo],
   );

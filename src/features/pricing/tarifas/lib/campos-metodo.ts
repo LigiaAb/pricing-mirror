@@ -9,6 +9,7 @@
  *   - el tipo del payload y la función que lo arma        (aPayload)
  *   - la fila del formulario desde el registro del API    (aFila: busca las opciones)
  *   - la validación del formulario                        (validar)
+ *   - la fila inicial de un registro nuevo                (filaNueva)
  *   - la etiqueta y el input de cada campo                (components/metodos/campo-metodo.tsx)
  *
  * Tipos de campo: monto, moneda, fijo, delContexto.
@@ -47,10 +48,14 @@ export type CatalogosMetodo = {
 
 /** Cómo se dibuja el campo en el formulario. */
 export type FormularioCampo = {
-  /** `step` del input numérico. */
+  /** `min` / `max` / `step` del input numérico. */
+  min?: number;
+  max?: number;
   step?: string | number;
   /** Campo de moneda cuyo símbolo se muestra al final del input. */
   simboloDe?: string;
+  /** Texto fijo al final del input (ej. "%"). */
+  sufijo?: string;
 };
 
 export type DefCampo<TPayload = unknown> = {
@@ -63,6 +68,8 @@ export type DefCampo<TPayload = unknown> = {
   en?: string;
   /** Obligatorio para poder guardar. */
   requerido?: boolean;
+  /** Valor con el que empieza un registro nuevo (filaNueva). Sin `inicial`, el campo empieza vacío. */
+  inicial?: unknown;
   /** Valor que se envía al backend. */
   aPayload: (valores: Valores, cod: string, ctx: ContextoMetodo) => TPayload;
   /** Valor de la fila (en `en`) a partir del registro del API. */
@@ -101,7 +108,7 @@ type Campo<Tipo extends DefCampo["tipo"], P> = Omit<DefCampo<P>, "tipo" | "aPayl
 
 export type CampoMonto<P = number> = Campo<"monto", P> & { esquema: typeof esquemaMonto };
 
-type OpcionesMonto<P> = Sobrescribir<P> & { formulario?: FormularioCampo };
+type OpcionesMonto<P> = Sobrescribir<P> & { inicial?: number; formulario?: FormularioCampo };
 
 /** Número (costo, venta, mínimos, porcentajes). Se envía con Number(valor). */
 export function monto(opciones?: OpcionesMonto<number> & { aPayload?: never }): CampoMonto;
@@ -174,10 +181,25 @@ export function delContexto(clave: Exclude<keyof ContextoMetodo, "codMetodo">): 
  * REGLAS REUTILIZABLES
  * ========================================================================== */
 
-/** Error en `venta` cuando ambos tienen valor y costo > venta. */
+/**
+ * Error en `venta` cuando costo > venta.
+ * Por defecto solo compara si ambos tienen valor; con `vaciosComoCero` un
+ * vacío cuenta como 0 (ej. cobertura: costo 5 y venta vacía es error).
+ */
 export const ventaNoMenorQueCosto =
-  (costo: string, venta: string, mensaje: string): ReglaMetodo =>
+  (
+    costo: string,
+    venta: string,
+    mensaje: string,
+    opciones: { vaciosComoCero?: boolean } = {},
+  ): ReglaMetodo =>
   (valores) => {
+    if (opciones.vaciosComoCero) {
+      return Number(valores[costo] ?? 0) > Number(valores[venta] ?? 0)
+        ? { campo: venta, mensaje }
+        : null;
+    }
+
     if (vacio(valores[costo]) || vacio(valores[venta])) return null;
 
     return Number(valores[costo]) > Number(valores[venta]) ? { campo: venta, mensaje } : null;
@@ -274,6 +296,17 @@ export function definirMetodo<const IdCod extends string, const C extends Campos
     return payload as Payload;
   };
 
+  /** Fila de un registro nuevo: solo los campos con `inicial`. */
+  const filaNueva = (): Fila => {
+    const fila: Valores = {};
+
+    for (const [cod, campo] of entradas) {
+      if (campo.inicial !== undefined) fila[cod] = campo.inicial;
+    }
+
+    return fila as Fila;
+  };
+
   const validar = (fila: Fila): ResultadoValidacion => {
     const valores = fila as Valores;
 
@@ -301,6 +334,7 @@ export function definirMetodo<const IdCod extends string, const C extends Campos
     esquema,
     aFila,
     aPayload,
+    filaNueva,
     validar,
     /** Solo para tipos: `typeof METODO.tipos.fila`. */
     tipos: undefined as unknown as { registro: Registro; fila: Fila; payload: Payload },

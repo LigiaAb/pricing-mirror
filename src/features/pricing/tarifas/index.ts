@@ -217,12 +217,12 @@ export {
 export { PaisForm } from "./components/metodo-pais/pais-form";
 export { PaisTable } from "./components/metodo-pais/pais-table";
 export { CampoMetodo } from "./components/metodos/campo-metodo";
-export type {
-  FilaCobertura,
-  MonedaCoberturaOption,
-} from "./components/metodos/cobertura/cobertura-columns";
+export {
+  MetodoCobertura,
+  /** @deprecated Nombre anterior; usar `MetodoCobertura`. */
+  MetodoCobertura as CoberturaTable,
+} from "./components/metodos/cobertura/cobertura";
 export { CoberturaForm } from "./components/metodos/cobertura/cobertura-form";
-export { CoberturaTable } from "./components/metodos/cobertura/cobertura-table";
 export {
   MetodoCostoVenta,
   /** @deprecated Nombre anterior; usar `MetodoCostoVenta`. */
@@ -303,6 +303,11 @@ export type {
   UseFormularioOptions,
   VisibleWhenRule,
 } from "./lib/form-types";
+export {
+  type FilaCobertura,
+  METODO_COBERTURA,
+  type MonedaCoberturaOption,
+} from "./lib/metodos/cobertura";
 export {
   type FilaCostoVenta,
   METODO_COSTO_VENTA,
