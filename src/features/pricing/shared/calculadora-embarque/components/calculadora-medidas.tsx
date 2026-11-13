@@ -788,7 +788,9 @@ export function CalculadoraMedidas({
                   step="0.01"
                   disabled={lectura}
                   value={volumenDirecto}
-                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => setVolumenDirecto(event.target.value)}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                    setVolumenDirecto(event.target.value)
+                  }
                 />
               )}
             </div>
@@ -809,7 +811,9 @@ export function CalculadoraMedidas({
                   step="0.01"
                   disabled={lectura}
                   value={pesoDirecto}
-                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPesoDirecto(event.target.value)}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                    setPesoDirecto(event.target.value)
+                  }
                 />
               )}
             </div>
