@@ -17,13 +17,6 @@ src/features/pricing/carga-masiva-fletes/components/carga-masiva-fletes.tsx: err
 src/features/pricing/carga-masiva-fletes/components/carga-masiva-fletes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/carga-masiva-fletes/components/carga-masiva-fletes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/carga-masiva-fletes/components/carga-masiva-fletes.tsx: error TS7006: Parameter 'value' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/calculadora-medidas.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/calculadora-medidas.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/calculadora-medidas.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/calculadora-medidas.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/calculadora-medidas.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/calculadora-medidas.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/calculadora-medidas.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/carrier-selector.tsx: error TS2709: Cannot use namespace 'ComboboxOption' as a type.
 src/features/pricing/cotizacion/calculo/components/carrier-selector.tsx: error TS7006: Parameter 'selectedValue' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS2709: Cannot use namespace 'ComboboxOption' as a type.
@@ -136,10 +129,6 @@ src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Proper
 src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
 src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipo_padre_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
 src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipo_padre_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipo_padre_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipo_padre_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipo_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipo_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
 src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipo_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
 src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2709: Cannot use namespace 'Entidad' as a type.
 src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS7006: Parameter 'i' implicitly has an 'any' type.

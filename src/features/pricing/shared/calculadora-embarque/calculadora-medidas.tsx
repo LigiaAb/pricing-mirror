@@ -10,6 +10,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
 import {
@@ -20,18 +21,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/components/ui/table";
-import { useCatalogosCotizacion } from "../hooks/use-catalogos-cotizacion";
+
 import {
   calcularTotalesMedidas,
+  combinarTotales,
   crearDimension,
   type DimensionCalculo,
-  ETIQUETAS_CALCULADORA,
+  type Id,
+  numero,
   type TotalesMedidas,
   type Unidad,
-} from "../lib/calculadora-medidas";
-import { UNIDAD_DEFAULT } from "../lib/constantes";
-import type { Id } from "../lib/tipos";
-import { numero } from "../lib/utils";
+} from "./calculos";
+import { UNIDAD_DEFAULT } from "./constantes";
+import { obtenerEtiquetasCalculadora } from "./etiquetas";
+import { useUnidadesEmbarque } from "./use-unidades-embarque";
 
 type FormMedida = {
   cantidad: string;
@@ -47,12 +50,22 @@ type FormMedida = {
   unidadPeso: Unidad | null;
 };
 
-type Props = {
-  open: boolean;
+export type CalculadoraMedidasProps = {
+  /*
+   * Apertura. Dos formas de usarla:
+   *
+   * - `trigger`: el botón que la abre (texto/ícono a gusto de cada pantalla).
+   *   La calculadora maneja su propio estado abierto/cerrado.
+   * - `open` + `onOpenChange`: la pantalla controla cuándo se abre.
+   */
+  trigger?: React.ReactNode;
 
-  onOpenChange: (open: boolean) => void;
+  open?: boolean | undefined;
 
-  dimensiones: DimensionCalculo[];
+  onOpenChange?: ((open: boolean) => void) | undefined;
+
+  /** Filas ya calculadas (por ejemplo, las guardadas). Por defecto ninguna. */
+  dimensiones?: DimensionCalculo[] | undefined;
 
   /**
    * Totales que ya estaban aplicados anteriormente.
@@ -66,8 +79,9 @@ type Props = {
 
   codTipoTransporte?: Id | null | undefined;
 
-  lectura?: boolean;
+  lectura?: boolean | undefined;
 
+  /** Se llama al presionar "Aplicar"; cada módulo decide dónde guardar el resultado. */
   onAplicar: (data: {
     dimensiones: DimensionCalculo[];
 
@@ -123,11 +137,20 @@ function mostrarNumero(value: unknown) {
  * COMPONENTE
  * ========================================================================== */
 
-export function CalculadoraMedidas({
-  open,
-  onOpenChange,
+const SIN_DIMENSIONES: DimensionCalculo[] = [];
 
-  dimensiones,
+/**
+ * Calculadora de embarques: volumen, peso, peso volumétrico y CW por tipo de
+ * transporte. No depende de cotizaciones: lee sus unidades sola y devuelve el
+ * resultado en `onAplicar`.
+ */
+export function CalculadoraMedidas({
+  trigger,
+
+  open: openControlado,
+  onOpenChange: onOpenChangeControlado,
+
+  dimensiones = SIN_DIMENSIONES,
 
   pesoInicial = 0,
   volumenInicial = 0,
@@ -137,14 +160,45 @@ export function CalculadoraMedidas({
   lectura = false,
 
   onAplicar,
-}: Props) {
-  const { unidadesMedida, unidadesPeso } = useCatalogosCotizacion().calculo;
+}: CalculadoraMedidasProps) {
+  const { unidadesMedida, unidadesPeso } = useUnidadesEmbarque();
+
+  /* ==========================================================================
+   * APERTURA (controlada o con trigger)
+   * ========================================================================== */
+
+  const [openInterno, setOpenInterno] = React.useState(false);
+
+  const open = openControlado ?? openInterno;
+
+  const onOpenChange = React.useCallback(
+    (siguiente: boolean) => {
+      if (openControlado === undefined) {
+        setOpenInterno(siguiente);
+      }
+
+      onOpenChangeControlado?.(siguiente);
+    },
+    [openControlado, onOpenChangeControlado],
+  );
 
   /* ==========================================================================
    * ESTADO
    * ========================================================================== */
 
-  const etiquetas = ETIQUETAS_CALCULADORA;
+  /* IDs únicos: permite varias calculadoras en la misma pantalla. */
+  const idBase = React.useId();
+  const ids = {
+    unidadMedida: `${idBase}-unidad-medida`,
+    largo: `${idBase}-largo`,
+    ancho: `${idBase}-ancho`,
+    alto: `${idBase}-alto`,
+    unidadPeso: `${idBase}-unidad-peso`,
+    pesoUnitario: `${idBase}-peso-unitario`,
+    cantidad: `${idBase}-cantidad`,
+  };
+
+  const etiquetas = obtenerEtiquetasCalculadora(codTipoTransporte);
 
   const [items, setItems] = React.useState<DimensionCalculo[]>([]);
 
@@ -187,7 +241,7 @@ export function CalculadoraMedidas({
 
     wasOpenRef.current = true;
 
-    setItems(dimensiones ?? []);
+    setItems(dimensiones);
 
     setPesoDirecto(numero(pesoInicial) > 0 ? String(pesoInicial) : "");
 
@@ -201,6 +255,34 @@ export function CalculadoraMedidas({
     );
   }, [open, dimensiones, pesoInicial, volumenInicial, unidadesMedida, unidadesPeso]);
 
+  /*
+   * Si las unidades terminan de cargar con el diálogo ya abierto,
+   * se asignan las de por defecto (solo si aún no hay ninguna elegida).
+   */
+  React.useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setForm((prev) => {
+      if (prev.unidadMedida || prev.unidadPeso) {
+        return prev;
+      }
+
+      const iniciales = crearFormularioInicial({ unidadesMedida, unidadesPeso });
+
+      if (!iniciales.unidadMedida && !iniciales.unidadPeso) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        unidadMedida: iniciales.unidadMedida,
+        unidadPeso: iniciales.unidadPeso,
+      };
+    });
+  }, [open, unidadesMedida, unidadesPeso]);
+
   /* ==========================================================================
    * TOTALES DE FILAS
    * ========================================================================== */
@@ -211,42 +293,15 @@ export function CalculadoraMedidas({
   );
 
   /*
-   * El legado da prioridad al total calculado
-   * desde filas.
-   *
-   * Solo si no existe (> 0) usa el total
-   * escrito directamente.
+   * Las filas tienen prioridad; si un total de filas es 0
+   * se usa el escrito directamente.
    */
-  const pesoTotal = totalesFilas.pesoTotal > 0 ? totalesFilas.pesoTotal : numero(pesoDirecto);
-
-  const volumenTotal =
-    totalesFilas.volumenTotal > 0 ? totalesFilas.volumenTotal : numero(volumenDirecto);
-
-  const cantidadTotal = totalesFilas.cantidadTotal;
-
-  const valorCw = Math.max(pesoTotal, volumenTotal);
-
-  const tipoCw: TotalesMedidas["tipo"] =
-    valorCw <= 0
-      ? "AUN NO SE HA CALCULADO"
-      : pesoTotal >= volumenTotal
-        ? "KILOGRAMOS"
-        : "KILOS VOLUMETRICOS";
-
-  const totalesFinales = React.useMemo<TotalesMedidas>(
-    () => ({
-      pesoTotal,
-
-      volumenTotal,
-
-      cantidadTotal,
-
-      valorCw,
-
-      tipo: tipoCw,
-    }),
-    [pesoTotal, volumenTotal, cantidadTotal, valorCw, tipoCw],
+  const totalesFinales = React.useMemo(
+    () => combinarTotales(totalesFilas, pesoDirecto, volumenDirecto),
+    [totalesFilas, pesoDirecto, volumenDirecto],
   );
+
+  const { cantidadTotal, valorCw, tipo: tipoCw } = totalesFinales;
 
   /* ==========================================================================
    * VALIDACIÓN DE NUEVA FILA
@@ -414,9 +469,11 @@ export function CalculadoraMedidas({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
+
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
         <DialogHeader>
-          <DialogTitle>Calculadora de volumen y peso</DialogTitle>
+          <DialogTitle>{etiquetas.titulo}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5">
@@ -433,12 +490,12 @@ export function CalculadoraMedidas({
                   <p className="font-medium">Volumen</p>
 
                   <div className="space-y-1">
-                    <label htmlFor="unidad-medida" className="text-sm">
+                    <label htmlFor={ids.unidadMedida} className="text-sm">
                       Unidad de medida
                     </label>
 
                     <select
-                      id="unidad-medida"
+                      id={ids.unidadMedida}
                       className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
                       value={form.unidadMedida?.value ?? ""}
                       onChange={(event) => {
@@ -466,17 +523,17 @@ export function CalculadoraMedidas({
 
                   <div className="grid grid-cols-3 gap-2">
                     <div className="space-y-1">
-                      <label htmlFor="largo" className="text-xs text-muted-foreground">
+                      <label htmlFor={ids.largo} className="text-xs text-muted-foreground">
                         Largo
                       </label>
 
                       <Input
-                        id="largo"
+                        id={ids.largo}
                         type="number"
                         min={0}
                         step="0.01"
                         value={form.largo}
-                        onChange={(event) =>
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
                           setForm((prev) => ({
                             ...prev,
 
@@ -487,17 +544,17 @@ export function CalculadoraMedidas({
                     </div>
 
                     <div className="space-y-1">
-                      <label htmlFor="ancho" className="text-xs text-muted-foreground">
+                      <label htmlFor={ids.ancho} className="text-xs text-muted-foreground">
                         Ancho
                       </label>
 
                       <Input
-                        id="ancho"
+                        id={ids.ancho}
                         type="number"
                         min={0}
                         step="0.01"
                         value={form.ancho}
-                        onChange={(event) =>
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
                           setForm((prev) => ({
                             ...prev,
 
@@ -508,17 +565,17 @@ export function CalculadoraMedidas({
                     </div>
 
                     <div className="space-y-1">
-                      <label htmlFor="alto" className="text-xs text-muted-foreground">
+                      <label htmlFor={ids.alto} className="text-xs text-muted-foreground">
                         Alto
                       </label>
 
                       <Input
-                        id="alto"
+                        id={ids.alto}
                         type="number"
                         min={0}
                         step="0.01"
                         value={form.alto}
-                        onChange={(event) =>
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
                           setForm((prev) => ({
                             ...prev,
 
@@ -540,12 +597,12 @@ export function CalculadoraMedidas({
                   <p className="font-medium">Peso</p>
 
                   <div className="space-y-1">
-                    <label htmlFor="unidad-peso" className="text-sm">
+                    <label htmlFor={ids.unidadPeso} className="text-sm">
                       Unidad de peso
                     </label>
 
                     <select
-                      id="unidad-peso"
+                      id={ids.unidadPeso}
                       className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
                       value={form.unidadPeso?.value ?? ""}
                       onChange={(event) => {
@@ -571,17 +628,17 @@ export function CalculadoraMedidas({
                   </div>
 
                   <div className="space-y-1">
-                    <label htmlFor="peso-unitario" className="text-xs text-muted-foreground">
+                    <label htmlFor={ids.pesoUnitario} className="text-xs text-muted-foreground">
                       Peso unitario
                     </label>
 
                     <Input
-                      id="peso-unitario"
+                      id={ids.pesoUnitario}
                       type="number"
                       min={0}
                       step="0.01"
                       value={form.pesoUnitario}
-                      onChange={(event) =>
+                      onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
                         setForm((prev) => ({
                           ...prev,
 
@@ -601,17 +658,17 @@ export function CalculadoraMedidas({
 
               <div className="mt-4 flex flex-wrap items-end gap-3">
                 <div className="w-32 space-y-1">
-                  <label htmlFor="cantidad" className="text-sm">
+                  <label htmlFor={ids.cantidad} className="text-sm">
                     Cantidad
                   </label>
 
                   <Input
-                    id="cantidad"
+                    id={ids.cantidad}
                     type="number"
                     min={1}
                     step={1}
                     value={form.cantidad}
-                    onChange={(event) =>
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
                       setForm((prev) => ({
                         ...prev,
 
@@ -731,7 +788,7 @@ export function CalculadoraMedidas({
                   step="0.01"
                   disabled={lectura}
                   value={volumenDirecto}
-                  onChange={(event) => setVolumenDirecto(event.target.value)}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => setVolumenDirecto(event.target.value)}
                 />
               )}
             </div>
@@ -752,7 +809,7 @@ export function CalculadoraMedidas({
                   step="0.01"
                   disabled={lectura}
                   value={pesoDirecto}
-                  onChange={(event) => setPesoDirecto(event.target.value)}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPesoDirecto(event.target.value)}
                 />
               )}
             </div>
@@ -769,7 +826,7 @@ export function CalculadoraMedidas({
                   ? etiquetas.tipoVolumen
                   : tipoCw === "KILOGRAMOS"
                     ? etiquetas.tipoPeso
-                    : tipoCw}
+                    : etiquetas.sinCalculo}
               </p>
             </div>
           </div>
