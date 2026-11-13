@@ -13,6 +13,7 @@ shared/
 ├─ hooks/
 │  └─ use-catalogos-pricing.ts ← carga y normaliza los catálogos generales ({ value, label } + camel/snake)
 ├─ lib/
+│  ├─ campos-metodo.ts   ← motor de definición única de campos de métodos de tarifa (definirMetodo, monto, moneda, ...)
 │  ├─ formatos.ts        ← conAmbosFormatos
 │  └─ vigencia-metodo.ts ← getEstadoMetodo (vencida / próxima a vencer)
 └─ components/

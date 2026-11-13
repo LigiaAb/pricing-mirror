@@ -6,6 +6,7 @@
  *
  *   api/         consultas de catálogos (métodos, proveedores, clientes) y
  *                lectura de rangos de tarifa.
+ *   lib/         motor de definición única de campos de métodos de tarifa.
  *   components/  FichaResumen (resumen de un servicio/método de tarifa).
  *
  * Regla: aquí solo entra código que usan AMBOS módulos y que no depende de
@@ -72,5 +73,35 @@ export {
   type UsuariosCatalog,
   useCatalogosPricing,
 } from "./hooks/use-catalogos-pricing";
+export {
+  booleano,
+  type CampoBooleano,
+  type CampoContexto,
+  type CampoFijo,
+  type CampoMoneda,
+  type CampoMonto,
+  type CampoOpcion,
+  type CampoRubro,
+  type CatalogosMetodo,
+  type ContextoMetodo,
+  type DefCampo,
+  definirMetodo,
+  delContexto,
+  type ErrorRegla,
+  fijo,
+  type FormularioCampo,
+  moneda,
+  type MonedaOpcion,
+  monto,
+  opcion,
+  type PayloadMetodo,
+  rangoPermitido,
+  type ReglaMetodo,
+  type ResultadoValidacion,
+  rubro,
+  type RubroOpcion,
+  sinEsquema,
+  ventaNoMenorQueCosto,
+} from "./lib/campos-metodo";
 export { type ConAmbosFormatos, conAmbosFormatos } from "./lib/formatos";
 export { getEstadoMetodo } from "./lib/vigencia-metodo";

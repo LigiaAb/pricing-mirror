@@ -1,4 +1,8 @@
 import React from "react";
+import type { MonedaOpcion, RubroOpcion } from "@/features/pricing/shared";
+
+// Los tipos viven con el motor de campos de métodos (pricing/shared/lib/campos-metodo.ts).
+export type { MonedaOpcion, RubroOpcion };
 
 /* ==========================================================================
  * OPCIONES DE SELECT COMPARTIDAS POR LOS MÉTODOS DE TARIFA
@@ -13,17 +17,6 @@ type Id = string | number;
 /* ==========================================================================
  * MONEDAS
  * ========================================================================== */
-
-/** Opción de moneda para los selects de tarifas. */
-export type MonedaOpcion = {
-  value: string;
-  label: string;
-
-  cod_moneda: Id;
-  simbolo?: string | undefined;
-
-  [key: string]: unknown;
-};
 
 type MonedaFuente = {
   cod_moneda: Id;
@@ -67,15 +60,6 @@ export function useOpcionesMonedas(
 /* ==========================================================================
  * RUBROS
  * ========================================================================== */
-
-export type RubroOpcion = {
-  value: string;
-  label: string;
-
-  cod_rubro: Id;
-
-  [key: string]: unknown;
-};
 
 type RubroFuente = {
   cod_rubro?: Id | null;

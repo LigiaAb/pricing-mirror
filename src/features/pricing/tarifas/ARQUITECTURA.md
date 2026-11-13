@@ -14,7 +14,7 @@ tarifas/
 │  ├─ use-opciones-tarifa.ts     ← monedas / rubros como opciones { value, label } y búsqueda local
 │  └─ use-formulario-tarifas.ts  ← formulario principal de tarifa
 ├─ lib/
-│  ├─ campos-metodo.ts      ← DEFINICIÓN ÚNICA de campos de métodos: tipos de campo y definirMetodo
+│  ├─ campos-metodo.ts      ← reexporta el motor de definición única (vive en pricing/shared/lib/campos-metodo.ts)
 │  ├─ metodos/<metodo>.ts   ← campos de cada método (migrados: costo-venta, cobertura, porcentaje, costo-porcentaje, equipo)
 │  ├─ tarifa-field-rules.ts ← reglas de campos del formulario principal
 │  └─ tarifa-helpers.ts     ← funciones compartidas (decimales, fechas, ...)
