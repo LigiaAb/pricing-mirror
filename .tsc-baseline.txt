@@ -24,11 +24,6 @@ src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS
 src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS7006: Parameter 'next' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS7006: Parameter 'nextValue' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS7006: Parameter 'value' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
 src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
@@ -134,6 +129,12 @@ src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2709: Cannot
 src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS7006: Parameter 'i' implicitly has an 'any' type.
 src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS7006: Parameter 'i' implicitly has an 'any' type.
 src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/features/pricing/shared/index.ts: error TS2307: Cannot find module './calculadora-embarque/calculadora-medidas' or its corresponding type declarations.
+src/features/pricing/shared/index.ts: error TS2307: Cannot find module './calculadora-embarque/calculos' or its corresponding type declarations.
+src/features/pricing/shared/index.ts: error TS2307: Cannot find module './calculadora-embarque/constantes' or its corresponding type declarations.
+src/features/pricing/shared/index.ts: error TS2307: Cannot find module './calculadora-embarque/etiquetas' or its corresponding type declarations.
+src/features/pricing/shared/index.ts: error TS2307: Cannot find module './calculadora-embarque/unidades' or its corresponding type declarations.
+src/features/pricing/shared/index.ts: error TS2307: Cannot find module './calculadora-embarque/use-unidades-embarque' or its corresponding type declarations.
 src/features/pricing/tarifas/components/creacion-tarifa.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/creacion-tarifa.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/creacion-tarifa.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
@@ -151,12 +152,6 @@ src/features/pricing/tarifas/components/metodo-commodities/commodities-columns.t
 src/features/pricing/tarifas/components/metodo-commodities/commodities-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-commodities/commodities-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-commodities/commodities-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-commodities/commodities-form.tsx: error TS7006: Parameter 'commodity' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-commodities/commodities-form.tsx: error TS7006: Parameter 'estado' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-commodities/commodities-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-commodities/commodities-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-commodities/commodities-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-commodities/commodities-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
@@ -167,49 +162,17 @@ src/features/pricing/tarifas/components/metodo-detalle/detalle-columns.tsx: erro
 src/features/pricing/tarifas/components/metodo-detalle/detalle-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-detalle/detalle-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-detalle/detalle-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-detalle/detalle-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-detalle/detalle-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-detalle/detalle-form.tsx: error TS7006: Parameter 'tipo' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-detalle/detalle-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-detalle/detalle-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-entidad/entidad-columns.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
 src/features/pricing/tarifas/components/metodo-entidad/entidad-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-entidad/entidad-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-entidad/entidad-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-entidad/entidad-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-pais/pais-columns.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
 src/features/pricing/tarifas/components/metodo-pais/pais-columns.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
 src/features/pricing/tarifas/components/metodo-pais/pais-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-pais/pais-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'ciudad' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'continente' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'pais' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'punto_enlace' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'tipo' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx: error TS7006: Parameter 'tipo_puntoenlace' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx: error TS7006: Parameter 'cod_equipo' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx: error TS7006: Parameter 'cod_moneda_costo' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx: error TS7006: Parameter 'cod_moneda_venta' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
 src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
 src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
@@ -220,26 +183,11 @@ src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS70
 src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'e' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'e' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'e' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'moneda_costo' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'moneda_venta' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
 src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx: error TS7006: Parameter 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx: error TS7006: Parameter 'moneda' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx: error TS7006: Parameter 'punto_enlace' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx: error TS7006: Parameter 'tipo_puntoenlace' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx: error TS7006: Parameter 'tipo' implicitly has an 'any' type.
