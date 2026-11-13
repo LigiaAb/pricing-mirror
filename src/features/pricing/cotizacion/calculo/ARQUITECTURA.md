@@ -30,7 +30,9 @@ se repite va en `components/utils.tsx`. Antes de escribir un helper nuevo, revis
 
 Cotizaciones **no importa nada de Tarifas** (ni Tarifas de Cotizaciones). Lo que ambos usan está en
 `pricing/shared` (`@/features/pricing/shared`): catálogos base (`useCatalogosPricing`), APIs de métodos,
-proveedores, clientes y lectura de rangos de tarifa, y el componente `FichaResumen`.
+proveedores, clientes y lectura de rangos de tarifa, el componente `FichaResumen` y la **calculadora de
+embarques** (`CalculadoraMedidas`, cálculos de CW y `TIPO_TRANSPORTE` / `UNIDAD_DEFAULT`, que `lib/constantes.ts`
+re-exporta). Aquí solo queda lo propio de cotizaciones: `lib/dimensiones-cotizacion.ts` (filas guardadas → calculadora).
 
 ## Catálogos
 
@@ -145,7 +147,7 @@ el cálculo y muestra un aviso si faltan estados. Dentro del cálculo se usa `us
 | #   | Sección           | Hook                             | Lógica (`lib/`)                                  | Componente                    |
 | --- | ----------------- | -------------------------------- | ------------------------------------------------ | ----------------------------- |
 | 1   | Versiones         | `use-version-cotizacion`         | `versiones.ts`                                   | `versiones-table`             |
-| 2   | Criterios         | `use-criterios-cotizacion`       | `criterios-cotizacion`, `calculadora-medidas`    | `criterios-form`              |
+| 2   | Criterios         | `use-criterios-cotizacion`       | `criterios-cotizacion`, `dimensiones-cotizacion` | `criterios-form`              |
 | 3   | Cálculo (backend) | `use-calculo-cotizacion`         | —                                                | —                             |
 | 4   | Carrier / Flete   | `use-carrier-flete`              | `carrier-flete.ts`                               | `carrier-selector`            |
 | 5   | Repartir rubros   | `use-rubros-cotizacion`          | `procesar-rubros-calculados`, `rubros-guardados` | —                             |
