@@ -2,9 +2,9 @@
 
 import React from "react";
 
-import { TIPOS_TRANSPORTE } from "@/features/pricing/shared";
-
 import { useRutasScalling } from "../api/scalling";
+
+import { TIPOS_TRANSPORTE } from "../lib/calculadora-medidas";
 
 import {
   construirLegsScalling,

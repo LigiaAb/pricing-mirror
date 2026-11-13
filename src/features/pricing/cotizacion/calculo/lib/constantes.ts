@@ -6,8 +6,12 @@
  * archivos. Si un código cambia o necesitas uno nuevo, se cambia AQUÍ.
  * ========================================================================== */
 
-/** cod_tipo_transporte y unidades por defecto: corporativos, viven en pricing/shared. */
-export { TIPO_TRANSPORTE, UNIDAD_DEFAULT } from "@/features/pricing/shared";
+/** cod_tipo_transporte */
+export const TIPO_TRANSPORTE = {
+  AEREO: 49,
+  MARITIMO: 50,
+  TERRESTRE: 51,
+} as const;
 
 /** cod_tipo_pago */
 export const TIPO_PAGO = {
@@ -51,6 +55,14 @@ export const COD_ENTIDAD_DUE_AGENT = 13624;
 
 /** Estado de cabecera que el sistema anterior ocultaba en el listado. */
 export const COD_ESTADO_OCULTO_LEGADO = 67;
+
+/** Unidades por defecto de la calculadora de medidas. */
+export const UNIDAD_DEFAULT = {
+  /** Unidad de volumen / medida. */
+  MEDIDA: 165,
+  /** Unidad de peso. */
+  PESO: 162,
+} as const;
 
 /** Ubicación por defecto para aeropuertos en Guatemala. */
 export const COD_PAIS_GUATEMALA = 1001;

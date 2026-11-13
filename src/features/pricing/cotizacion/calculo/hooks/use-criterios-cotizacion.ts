@@ -5,16 +5,15 @@ import React from "react";
 import {
   calcularTotalesMedidas,
   type DimensionCalculo,
+  reconstruirDimensiones,
   type TotalesMedidas,
-} from "@/features/pricing/shared";
-
+} from "../lib/calculadora-medidas";
 
 import {
   normalizarBooleanCriterio,
   prepararCriteriosCalculo,
   type ValoresCriterios,
 } from "../lib/criterios-cotizacion";
-import { reconstruirDimensiones } from "../lib/dimensiones-cotizacion";
 
 import type { Id } from "../lib/tipos";
 import { useCatalogosCotizacion } from "./use-catalogos-cotizacion";

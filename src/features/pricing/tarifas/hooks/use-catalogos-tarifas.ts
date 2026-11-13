@@ -296,4 +296,3 @@ export const useCatalogosTarifas = (props: UseCatalogosTarifaOptions = {}) => {
     refetchServicios,
   };
 };
-

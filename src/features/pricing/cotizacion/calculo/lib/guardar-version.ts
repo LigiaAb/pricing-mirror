@@ -1,7 +1,6 @@
 import { addDays } from "date-fns";
 
 import { obtenerOrdenGrupoDefault } from "./agrupacion-rubros";
-import { UNIDAD_DEFAULT } from "./constantes";
 
 import type { Id } from "./tipos";
 
@@ -189,8 +188,8 @@ export function construirDimensionesPayload(
 
             cotdetdim_peso_unitario: pesoTotalDirecto,
 
-            cotdetdim_unidad_medida: UNIDAD_DEFAULT.MEDIDA,
-            cotdetdim_unidad_peso: UNIDAD_DEFAULT.PESO,
+            cotdetdim_unidad_medida: 165,
+            cotdetdim_unidad_peso: 162,
 
             total_peso: pesoTotalDirecto,
             total_volumen: volumenTotalDirecto,

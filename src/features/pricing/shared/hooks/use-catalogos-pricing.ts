@@ -47,7 +47,6 @@ import type { Entidad } from "@/features/entidades";
 import { useClientesTarifaSimple } from "../api/clientes";
 import { type Metodo, useMetodos } from "../api/metodos";
 import { useProveedoresTarifa } from "../api/proveedores";
-import { esUnidadEmbarque } from "../calculadora-embarque/unidades";
 import { conAmbosFormatos } from "../lib/formatos";
 
 export type OpcionEntidad = Partial<Entidad> & {
@@ -238,8 +237,22 @@ export function useCatalogosPricing() {
         .filter(
           (t) => t.tipo_tabla === "CLASIFICACION_SERVICIO" && t.tipo_padre_tabla === "TRANSPORTE",
         ),
-      unidadesMedida: allRelaciones.filter((t) => esUnidadEmbarque(t, "VOLUMEN")),
-      unidadesPeso: allRelaciones.filter((t) => esUnidadEmbarque(t, "PESO")),
+      unidadesMedida: allRelaciones
+        .filter((item) => estaActivo(item.cod_estado ?? item.codEstado))
+        .filter(
+          (t) =>
+            t.tipo_tabla === "COORDINACION_CARGA" &&
+            t.tipo_padre_tabla === "TIPO_MEDIDA" &&
+            t.tipo_padre_desc === "VOLUMEN",
+        ),
+      unidadesPeso: allRelaciones
+        .filter((item) => estaActivo(item.cod_estado ?? item.codEstado))
+        .filter(
+          (t) =>
+            t.tipo_tabla === "COORDINACION_CARGA" &&
+            t.tipo_padre_tabla === "TIPO_MEDIDA" &&
+            t.tipo_padre_desc === "PESO",
+        ),
       categoriasTransporte: allTipos
         .filter((item) => estaActivo(item.cod_estado ?? item.codEstado))
         .filter((t) => t.tipoTabla === "CATEGORIA_TRANSPORTE"),

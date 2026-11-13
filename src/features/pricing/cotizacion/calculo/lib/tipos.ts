@@ -104,8 +104,16 @@ export type CatalogoTipo = {
   nom_tipo?: string | null;
 };
 
-/** Unidad de medida/peso: definida en la calculadora de embarques (pricing/shared). */
-export type { Unidad } from "@/features/pricing/shared";
+/** Unidad de medida o de peso. */
+export type Unidad = {
+  value: Id;
+
+  label?: string | null;
+  tipo_desc?: string | null;
+  tipo_padre_desc?: string | null;
+
+  [key: string]: unknown;
+};
 
 export type PuntoEnlaceCatalogo = {
   value: Id;

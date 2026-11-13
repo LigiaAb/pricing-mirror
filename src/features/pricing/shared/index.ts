@@ -7,8 +7,6 @@
  *   api/         consultas de catálogos (métodos, proveedores, clientes) y
  *                lectura de rangos de tarifa.
  *   components/  FichaResumen (resumen de un servicio/método de tarifa).
- *   calculadora-embarque/  CalculadoraMedidas + cálculos de volumen, peso y
- *                CW por transporte (corporativos, sin datos de cotización).
  *
  * Regla: aquí solo entra código que usan AMBOS módulos y que no depende de
  * ninguno de ellos.
@@ -51,38 +49,6 @@ export {
   tarifaRangosOptions,
   useTarifaRangos,
 } from "./api/tarifa-rangos";
-export {
-  calcularTotalesMedidas,
-  calcularVolumen,
-  combinarTotales,
-  convertirLongitud,
-  convertirPesoAKg,
-  convertirVolumetrico,
-  crearDimension,
-  type DimensionCalculo,
-  type TotalesMedidas,
-  type Unidad,
-} from "./calculadora-embarque/calculos";
-export {
-  CalculadoraMedidas,
-  type CalculadoraMedidasProps,
-} from "./calculadora-embarque/calculadora-medidas";
-export {
-  TIPO_TRANSPORTE,
-  TIPOS_TRANSPORTE,
-  type TipoTransporte,
-  UNIDAD_DEFAULT,
-} from "./calculadora-embarque/constantes";
-export {
-  type EtiquetasCalculadora,
-  obtenerEtiquetasCalculadora,
-} from "./calculadora-embarque/etiquetas";
-export {
-  esUnidadEmbarque,
-  normalizarUnidades,
-  type TipoMedida,
-} from "./calculadora-embarque/unidades";
-export { useUnidadesEmbarque } from "./calculadora-embarque/use-unidades-embarque";
 export {
   FichaResumen,
   type ItemFichaResumen,
