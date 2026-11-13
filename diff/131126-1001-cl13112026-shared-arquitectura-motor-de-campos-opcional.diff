@@ -1,0 +1,21 @@
+diff --git a/src/features/pricing/shared/ARQUITECTURA.md b/src/features/pricing/shared/ARQUITECTURA.md
+index e6cfd80722cbf44589fab757602f3094d82ad011..12a21f00c684986c9dfcb478634365ec635113eb 100644
+--- a/src/features/pricing/shared/ARQUITECTURA.md
++++ b/src/features/pricing/shared/ARQUITECTURA.md
+@@ -9,13 +9,15 @@ shared/
+ │  ├─ metodos.ts         ← catálogo de métodos de tarifa (createCatalogo)
+ │  ├─ proveedores.ts     ← proveedores (paginado completo)
+ │  ├─ clientes.ts        ← clientes
+-│  └─ tarifa-rangos.ts   ← SOLO lectura de rangos (las mutaciones están en tarifas/api/tarifa-rangos.ts)
++│  └─ tarifa-rangos.ts   ← SOLO lectura de rangos; esquema de lib/metodos/rango.ts (mutaciones en tarifas/api/tarifa-rangos.ts)
+ ├─ components/
+ │  ├─ ficha-resumen.tsx  ← FichaResumen (lee sus propios catálogos; funciona dentro o fuera de cualquier provider)
+ │  └─ resumen-item.tsx
+ ├─ hooks/
+ │  └─ use-catalogos-pricing.ts ← carga y normaliza los catálogos generales ({ value, label } + camel/snake)
+ ├─ lib/
++│  ├─ campos-metodo.ts   ← motor de definición única de campos de métodos de tarifa (definirMetodo, monto, moneda, ...)
++│  ├─ metodos/rango.ts   ← METODO_RANGO: campos del método rango (de aquí sale tarifaRangoSchema)
+ │  ├─ formatos.ts        ← conAmbosFormatos
+ │  └─ vigencia-metodo.ts ← getEstadoMetodo (vencida / próxima a vencer)
+ └─ calculadora-embarque/ ← CALCULADORA DE EMBARQUES (corporativa, ver abajo)
