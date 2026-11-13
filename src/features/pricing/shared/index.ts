@@ -54,7 +54,7 @@ export {
 export {
   CalculadoraMedidas,
   type CalculadoraMedidasProps,
-} from "./calculadora-embarque/components/calculadora-medidas";
+} from "./calculadora-embarque/calculadora-medidas";
 export {
   calcularTotalesMedidas,
   calcularVolumen,
@@ -66,23 +66,23 @@ export {
   type DimensionCalculo,
   type TotalesMedidas,
   type Unidad,
-} from "./calculadora-embarque/lib/calculos";
+} from "./calculadora-embarque/calculos";
 export {
   TIPO_TRANSPORTE,
   TIPOS_TRANSPORTE,
   type TipoTransporte,
   UNIDAD_DEFAULT,
-} from "./calculadora-embarque/lib/constantes";
+} from "./calculadora-embarque/constantes";
 export {
   type EtiquetasCalculadora,
   obtenerEtiquetasCalculadora,
-} from "./calculadora-embarque/lib/etiquetas";
+} from "./calculadora-embarque/etiquetas";
 export {
   esUnidadEmbarque,
   normalizarUnidades,
   type TipoMedida,
-} from "./calculadora-embarque/lib/unidades";
-export { useUnidadesEmbarque } from "./calculadora-embarque/hooks/use-unidades-embarque";
+} from "./calculadora-embarque/unidades";
+export { useUnidadesEmbarque } from "./calculadora-embarque/use-unidades-embarque";
 export {
   FichaResumen,
   type ItemFichaResumen,
