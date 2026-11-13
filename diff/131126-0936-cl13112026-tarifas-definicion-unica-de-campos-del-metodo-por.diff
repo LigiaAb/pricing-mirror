@@ -1,0 +1,289 @@
+diff --git a/src/features/pricing/tarifas/ARQUITECTURA.md b/src/features/pricing/tarifas/ARQUITECTURA.md
+index 86dcee17e303c09f41a0a656098dae62e7cde8e1..14bf369d8bf3dfb4a40331e866e72e31cfb320b7 100644
+GIT binary patch
+delta 366
+zcmYjN%}T>S5T^7N3YvQKGALpaL#ikUDjoz+Dk%2gaW~0Ww(Mr(Y=TG+K17a+;L)2<
+ze1g74AI52g#>+7O-_QH*Pw+kO_F^b4Wmr^ljMI5{(mReJiZYubRW->df)}pa9c~0d
+zt8`$nvblAGv%loL`B;D5gn;m=Mp8V1JrIN=Eu9DxxNN{bIyi+)=8}UcE#xY#$I^4P
+zgOY5i_{3o0n23WM0f{U%Lw~CS&9lF=5qsihiFvys+`RdR7cq#oGnA=D0ayTPNF@>K
+zF!Aoys78=rWMLOG%}|e)Osyp`Y_rziet=*l`oAY3>*rU(s6rWg0{g<_EK^c1IJUkd
+YaLrG1G_y~ZG5cDY0}f$&)xYcf0^o^%umAu6
+
+delta 211
+zcmdn0F-LvF9p=q1n5%i*6*LlZGL!UkQ%mww@{9G8^NUOJb<0xoN)q)-iW4*yDiyS}
+zlJk>Ni%Lq161B82ltX1E&l0F-wpK`;Y$9kfd8VKeBiH0Tf~u3h3K}^oq~<B4<|rg3
+z78RxDXzFqK<SP`GrYaO?rUS`Dh1|rve5jJN{G!~_oW!Ece1()$1-Pw~Gli5T^%Q*a
+bi-E$qhZhzr<Q`rLcCJEkD%a*GLV=6`Fi=ZG
+
+diff --git a/src/features/pricing/tarifas/api/tarifa-porcentaje.ts b/src/features/pricing/tarifas/api/tarifa-porcentaje.ts
+index fe0db018471a320f835304c658b251cfb7c2590e..24591915ff4bbd34a32ff4960d4a273e12d8d6bd 100644
+GIT binary patch
+delta 250
+zcmeAcT+XeUnOl%wRH9JLrJ&&J8shKbA0OZ!<m~Df;^^h70~9Q&EJ#(D?7$(y0%A>W
+zU{g@m;i^?gE6UGRP}0-W&&f>E&rL1KPsuOV2bz?enpcvTl{(Qa&_`ci!8s9Vda;f|
+zNhXj|s8lFOtjx(zOtDf(NlnYl%S_HZyg5(d@Gc-LQ6V)?0lQgxCB=FZr>R?EI8QIN
+wxUe)eH_@7lE42db3$SCW6+#k=GSd<R;I5fm&!)(vP`mjXQyJst->egu0L494n*aa+
+
+literal 2187
+zcmbVN&2HL25Wf2<Mw}o5`wnedgos2NLYk06R8?rPm$0e5i+0zjA>n~~=nM3k7whbg
+zZ7`5Zxq!X%&FuVq-<V}9AvHY12DY$}B7??8B#mCcO2a5AO`jvRB$6gk%H|Q`Iw~e9
+zk!lwoOG@N`Xp)KtF{WB1q7C|KMd5;_S_<XP%9vpkdvGVSXbcw6UpB2+aHT;L$rj{V
+z$e40X9_ekoq#1#aun7P{F@L17Za(8PKrE7(gU>L4$9G{fO4_B}-C_?zo~J39r?lB>
+z2NqCy&0?XnKv<Y_CV2DvCRAE7{(x9K<asuyvf294dNat{r2MWR8RIMy@5{op!u!8J
+z0n^J&aGH=ZiBYmwY|(L#Dz2)b%ErrlE=@yE*{RYbaR4)|Z3}<G6;VnrrN|$a%~r(>
+zOQ>m$7={ud;|nT37`s@Upw4+Mjwj}kaC?+RuPB1CZHek4*SN}4P2lw}XE6cFA&gur
+zRHzj+6}1>D*MvhV6mXHvB~_46z*;F}ufL5vT4BL=Lt<N*yJWJWl4!OjK$O3?Qh{la
+zyRC$IVIbHUDzLLuE~@mwCyn%0<_e#D<>qb1FIUthwc~1hs`JXN9TdByY{-tNkB)Af
+zYphi8Yx0x|lHepwFOJIjQx}{N;RT!u?L(U4e4I<6@EXk8SLIqLSnXo;(09k?xm?)L
+zxUa{;P@W$;nB+a>Yl$4>yQi{KU|*ZV`s+?%eIp7*)nL6~Yq)#{gUQwH-Q~0o_b|Sj
+z_6MWM)$kUYW`%27>~L7W{vmK=t+(JT3IeyI$%^63j)2})VjJqBs}bScE_NrJE;QV3
+zSDk874MR?4zX;tEayJOdla*jxqi)@oB4xO3FrxkMxVSrEJ9ct5H~`~{N`xT1c>IqC
+ziFHm=wy{3d%bQ+Xl+DhDbA6rmZ$=mW+4baRFua=fzYJ&J?uIw_v#-N@>^F8j{7Iiw
+zNG$vJzM7^?Tbvj1VR!b`ed!v4dajSe%YRgM0WrnP32c9-eneNVhxo0lqZj-G9bEUg
+
+diff --git a/src/features/pricing/tarifas/components/metodos/campo-metodo.tsx b/src/features/pricing/tarifas/components/metodos/campo-metodo.tsx
+index fab168ea7314adf46f1e19575d33510c3e4292ec..727c1ae4276d7a720fef5d37ec149dd791fe11b7 100644
+GIT binary patch
+delta 1589
+zcmZ`(L2nyH6jl<_)Gh%5mo!N5uu^2F_AXQ)B*$wjg;a`A>&l@}6q$Cs9w!rKcb1u1
+zH<q*Vfj@wlGZH_50|Ie?1047T+z^VmA#tZCBqZL<dfSAG%kIvbH{bid@4ea6m;QS7
+z>$es<WdJ=%DBKh=9g=PmG7;B{U@sj=@i>+$dV_IYgs7^QO@HC<*WfCsQ~{MzNUCZ;
+zAR$sS2}6n-_#CmAh3w~V<1%aljm>27n)z<AwJ|NuKn4Na+<CA2PWRqjZ%jBF5?Phv
+zL2b+YvG_r$UL=~<(i`T7r9bb4B32sqc5mJ5-MQZD?ls{I+5JAk?f19JWv4AyfT1ZM
+zbV{3`v}EzY7H~44yjVhJzI^I*)oNCqIi3lZ+p`{3Dc58ute_`Yju<C3Z!R9OC`2j6
+z0we}5ls$qg3L%LS;lZYl=FXF`$ZcyB;jJDGg&ekWUiCS@{eHU*CooH6XCWPK;aPuk
+z6QAhg9_2LDs%haFcie2fk&sc!iDdZwNs7heaZ34^#y~lQA{qz`<p`}I8$-y6QnyG%
+zgUW-(DCNA;h6%(1IK?(9RN>!uHr<CRJ@OzCGNiF4N3`ZS7%Rx(?zl=?m`|6z=LrYw
+zIzETCtkrIQUH<VoXD)W)QRB>K7cQ^O{jhU)9_fn<KQ(O3_IgBhc<7p}5a5YftV)Y*
+z?yj&|o*&UzAxoQF`0edGCjE{Vk)&FkXVih!AZSC?$^qYp0TU5zu!9)K890lzkK>)-
+z1dCMpvDlW9Om?v+$M4cf6BCpsDE5fhUL)o#FN+Jb79>5um$M3534BZ^!IWiZZI5*0
+zb<p%!H&m3rhjxC_P_r?uv>hve>6~rm)-6A=8?_qFH~<?#wTd(1X_g4M5(EKMB6p!H
+zaB_mQ<~we~`BbTy-&U^7tl-=&s`5Vox^+H%j$=o!$QAA{L2>l*o8_+CBY+O%M-(){
+z)l!aQaX25rz`6aQ#cXY>NgTdyCvzZ<cjF}0tsJ+Ij^aJftDYMT=)g3?3e(~aTh?w)
+zA**F&^VP+d%`X@0W})<gSugo-y6NdA8h>vpn4Tf)HgfHj@tG+@l&G|JwNRTIZy6s@
+zog=+(|0cn-DjaST%=e{N%<rYk<{x}l${RNnB{Dp`%}GcP1s_s*u5{&kszM^?exbw)
+z5-5VsIvYb8s=Tq93y623L{Cs&dEI=py1wG)9vS~>(wY9(p#Qtyd1BV`@&325q&t_H
+a(`VL7#ihx<x%6=9@#^zS*UXF0ZvP7vsTE-W
+
+delta 490
+zcmY*VJx{`55Drv8p$#9#=-|gogNR?n7>NrosJIY<iT;6?_DpGB`ZjGbAx2ksF9t_{
+zf{BZhCj0;g2L|I$a4>OmvQS9yrn~3vdG4P3$$l<B?gz5O?N~r++ysr*Ew#zbEz)-2
+zxXE0b`v5ouF9N@K9b60(Fr#DxAA-BlEz$zhp$0hk9xP&6sN$`#hxdY<xd79pa`|#J
+za0C_G=Jr)Fe@I&vuYt=ojy>TEL!l20g;%j1Nvvtmpav%zFw!)wwo7tgDB~R-Okg0g
+zj@`&h1gOSM*1_)dE8ffi7UFYLo&g!-u~jT241A8w?o660N6ADm+5lF%)ZknhrdPu*
+zisA~+BnVc-6rPInVP60ZF^_j*Ds>L7s{5ETV!Vk9Qfv6TG4d^@$GoJJMnzg0msPLS
+zrQG)54hN{M>L-k<pmU~yU6K#lj!JFft0{^i`#1HaOm@H+F0Y%FmgRQ-c~P0CMH>w8
+XEV&uXm$9EpV{CTqsSxi8UZVd25hk4M
+
+diff --git a/src/features/pricing/tarifas/components/metodos/cobertura/cobertura-form.tsx b/src/features/pricing/tarifas/components/metodos/cobertura/cobertura-form.tsx
+index 164b91f8976d225cde04f6a60ce5d8d3c2506f05..389be284fa4b635d6def0dde37bb4e840786e4f0 100644
+GIT binary patch
+delta 30
+lcmbOz{#|rK7aOOJLTXV_eo<=i<}NmEW+nyw%~4$Di~yuP30(jH
+
+delta 184
+zcmew^I#GN>7u)8^Y}(BAc3cW@P@P&-lwXuutXGg<l$@GZl9-hmUk0KT)YKF-kQ6E?
+z*c2!v=Oh*v`z7Y4+A8Ii=o%`Nq*j#Z7Ux3fl+@yqqSEA&%(7G^JDld$+NkLlAiF@b
+Z7H*4;zH?%3LB4NlNq$QH<^!DOi~ySJIGz9i
+
+diff --git a/src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta-form.tsx b/src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta-form.tsx
+index eaaa2a80f79b13fc048ebc560a32aa40cd48d6e0..8835937acf46dab52424d9ef7bdabff78a14e2c1 100644
+GIT binary patch
+delta 30
+mcmZ3)zk_eXZWc}*h18;={G!z2&AVBw8JQIHH)pe%GXemmM+un#
+
+delta 145
+zcmdnNw}^kkZkEkQSgaZA?YI=+pgOgvD8DGRSg$NKuOv}HO-;e3Kp{CNvAEbTF*ns#
+zDYrz|P@yEXqC~ei7ec3`7MB#2CYNNEr7GE>YOl4?FR-hHn{K1;oS0jX@0(hZpOO!=
+M)JA_ZH=8aa0BMUY9{>OV
+
+diff --git a/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-columns.tsx b/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-columns.tsx
+deleted file mode 100644
+index e5b392cba7658f1dd5dfe5e7c0f663420c90c464..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 458
+zcma)&F%N<;6omKwiWdeafn7v5Hv=*5recXz;5BVA8sxuQC<X)ulP*o}zIS&#7brF8
+zmtauAkxHJ@7-hl=O>YcpNG0arc%E+`72MaY$~DGL<^+WQaQ0ZR3ynm=u~@>PJWI5n
+zDe#JTSAMCOi>;g~*YXXNuxFpnGW%?i(1s2n43CXG?d2KEAkoON<Jqu(2r-qK(`-GS
+sW&;bT2teLeJte3#ZdYBH$;meqWtIiK{?QElk6t$88R2}DFSicJ2ftFHTL1t6
+
+diff --git a/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-form.tsx b/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-form.tsx
+index 298fc3b8e058c7ab8cc35eab52df2d8b7ac02003..1170dd1ab20e318733a3f6cc22ae039221078f5b 100644
+GIT binary patch
+literal 3356
+zcmcInQE%He5PtWsxcZ@x3){-pK5UAetaH->1Ckg?v6mo7Xz}c@r9_RC+@y|v(w_RZ
+z*Zi>^Nm-H|XInPR2m+J5JKi0??<3tU3_>ggrg?Y2(-BFgbPg++%EI*FoGlSbm}`|l
+zR~E70IMB#qYg?I~*<od|wX}kti#%6p9pR_Y+%Szij1}#Z(w-(PL^yL+O~@6z7by7$
+zt%~gLeCO7(<=O$r?=qwal1-J4X%F@Z`!s!g^zroF>DBb~Y;tt+@$D~1cGB4%Q!2b=
+zeVXM$rS<YzG1IDvwO(DfWjGA|pA@q&!CY}=Lh53*bt^Yevm8^@6PD(JGyV=^kuZs-
+zE^;GQ&a{}b!41j`wQ0whFlyhi+p6sv+v$N%fy_IuxT#i|fibM8+9i_(9!6WufqO^`
+zDaipKajh^B?C#0M<vtl{+YqwZ*%)g=HfT-?T&f6WN=am?^Fzi}D(@(R)~qm7Ou0xG
+z?P-dj(hmjGoaqPxt-fq$-GlJ~ES2E<osxD8Uv=OWRC_kvH-IVZL2xZn5ep`-?RfV=
+z4Rg~Q+91~n87Gwb-ZfZqsMMfdGT<m7e)z`4LcvntCj~*OXjyACgl3MwAf-AU{z$<c
+zMP#E%WgvO@-9|KEhzvgZRjf>|AY2cZ7O4A>*;de3ij^^)qsu7l*c^ytglStLqvH&E
+z+YPb(2<#~jhr>r$AJ)D>&jPzH(GJ{sMh*mS&0)YN_-NMUxt=Y1)Ooz6c2jai8e7^x
+z!<6?*CoUt0yC$@$H+A1CsJO`rAynX;N#l51<D)%UgQMRmBXAh+If(mCT@YaUba?rh
+z`f^ErPNaq;b>}(DakME82Z75E4iB3S2R&OFG>%8}ImUSqIM~@PLlyohXMnN~7cTOp
+zkL6P%WXuH9?W875${CA42Z388<W1@939Z|SKHfaYG%nqAu(Ahlhkg6SM}pGU;Zv!y
+z2*Zlo1~mRwpe7|ErFZ8F2V=ss#pNArawykGG`fTD_VyyO)lYMXDC8((FA=I<aMcIY
+zS`kS|tHzIIc<8K{wj}qBq7=_tyu(|%VOZi=A(;)%iOUb)QpZBpY{)oeMhZ(rucdY3
+z${9Z?y>{1OQ>#aP4-Vi*cmDp&b_M>`5|-+DO4GLky9RFu&I;sM$sEOcK^Le~NO<|O
+zYF;Y~rzvFR(dT8JgnHMt1`f#)SQ<F2s&sP0(gj9VnJoVNbS3wG;AOq~UM1p3)%p1W
+z-Q6>Flr9UDIYBkog`=qzVUiNe3!OsXHXU)Xq_+h#=7f%K+%*}Cad0<y(>-wO0IOY{
+z^+!e>@KG$)wj<HYfb^CR5>7XX=7h&=@EUTw%?Bo_qg&4-*+Mc&c!h5gZjLh~7rKuj
+zVa6`~K>w;6*@DV{Mj=(P&bL?EBJF2q<{lIOSLVbMrQttkzTL|ODF7^3Hh2RGkL+j=
+zD`^JbxB5szw0@ASTVb0pnzSAwE3Z14D*f#@?zV5bE`-nbbe!4n9EI&nnnU{QL}JCS
+zJk&kEUC4jxye$sTa&GP16!R~3e!jEa*)h7+zY5E12ye(ui)_`a-98`3-Rf};To^W!
+z$j7S}8>)4G5A_XQ(xYu6Mf`cZ@)u=&O*?Tf+Xz@y*FGG=$o|;a5DM`XNhJs}5W&d(
+z2x-emy;`%;F|rBReY?=OV7g20-M4XG&^`2(hGo<F&=<MRh=}a~y(T+dL}lks4I3`!
+
+literal 8195
+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
+
+diff --git a/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-table.tsx b/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje.tsx
+similarity index 65%
+rename from src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-table.tsx
+rename to src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje.tsx
+index 7b5af7cca73de259a3eb2a015458a0bf940fd23c..1118692b3912da3cf92997968bbba1be29685510 100644
+GIT binary patch
+delta 572
+zcmZvYv1=PK7{zhi!FA}?DbVy~^BHq0bSOA=N^qUQ;GPMdlgM|vprDfuozBEHA#29K
+zWyshyL!i`ug4ZnhXEIm1IBqZnA&KwPd-{Fv>Eq+p@7qdkRtL;9WyP<``!Bsw@I5#l
+z28Z3=kI{a=*IG6)P?AM-sC3Arp=T^e4OjA|T|88FwteE4OYkvCm{F0+NV*dI+4xYo
+zB+X_WO^m4KF-63XEbiPx{4++wYM}G6R$d#Sl36YcZ6Q`V$%PdvOmUi19nnbn&aJDG
+z)Y3`AkkUvqXqFo;_)j_(tc@|v40T30>3<!RT(5o$RrFlz%zWR!0NFcnrlii!Er&sz
+z%g{}VHRXJ_`nh^!(*YVDI(sGdG8=ruU_D5m9&kb3Y|BS2%#f6!X07LOGhBFRL*_zw
+zE?5*-we5HA=Iz$)P6&$Yw_C){pDgYrPgI5p4Hx(J3{|4=sf`KK5H8u6OCIvYT>8ab
+n?WV7p$+axKOE1U0to;XdNT)*4s1aLa$GHm063%ZokKX(R$|=4)
+
+delta 1264
+zcmb_b!A{#i5LHMh;1h?^0}^4#$wsc*s<%WTUr-bYZX6=VStD2WF50Y75sLf~=D?Bu
+zL8bggFZ>K=c4s&CVge_8u-5Zt-psx?e%yaL{CD5l7B^P}ZXGBeTA$0_r@gi>&qteI
+zy1ui3n6nIe!M7{MBSJ;^n|zH}nrC#rJl;5Hb;%!z2#9kUiG)!YS9#~*G+pj?ezptO
+zgW-wlAfF@#_oycGfD@5(3N%mCfrBX~qVoZQAgJ?wodS?CN@n3CVspXzSf<!@bRNVB
+zow=)MAput-ILMjc3B5FtAY!vg1rCQ`(7L6Sq1$;<AM<!H8sX^8xvrH~W-ir#?O-1_
+z7q)wAF4Z4^=TmMeg`W+f)I1osWx@bzfG2ff9l8$FoXE^KHPckS)5ZSsWvQh?i-FW}
+z;g^56x@~XZlzZEEXDid?y!KvbhQ-SK#)beW6Gh0AIGohR^&w8uFev|T?H83lIyWPN
+z%~)U6{lcS#*92y};55&sguBSrM5XA}HdvVUzp5<MAWhgV%@UeqY+XYeQR08MY&KY<
+znd)UDvZ}zcYEUH?x??25^XR3?cv}OY)vs3FNNN9wT5-MX`ZAie(4qG!%r&sFp}>%)
+bc$b09MX3DzvHCS}x72pwoiCQHopI+GKc9aP
+
+diff --git a/src/features/pricing/tarifas/components/tab-tarifas.tsx b/src/features/pricing/tarifas/components/tab-tarifas.tsx
+index 5244ef2d3f94a26c8e0b8a69b2b978b4f2f296c1..a913829baf5d0d0e25236c62e5631c1d9fb88d21 100644
+GIT binary patch
+delta 65
+zcmca#b-QYVG&{d<YDs=den5Uva%x^lV%B6$cFoNZ?8oFVBn(t_Ca+cGoxDqpZ*#HQ
+G8!-S&3K;GH
+
+delta 45
+zcmV+|0Mh^4df$4m8wZn01|pL_2Njct1`@Mh2f7}U949rC@E8S?s38rL3nmn^btdK(
+DeNPX}
+
+diff --git a/src/features/pricing/tarifas/index.ts b/src/features/pricing/tarifas/index.ts
+index 95471c4fd0a2f3771f39ed2975ea4436abd3be46..42b47c7861128d55bc4039f9627b8519db96eef6 100644
+GIT binary patch
+delta 204
+zcmdnxv(I;fzRctU;w%EbsU`U-`2qPw$*FlIiCL+Wd8G^u5ZnYk1ucCp1qF0v3W>!E
+z2vw8wq*Nw5$cj$hDigaoP1c^3w<s|$JwG6|C^xetGiCAuB}tZ|(xjrzTa@&eCeP#K
+z)<{HX)&Uvs8shKbA0OZ!<m~Df;^^fH5-h1KNS*8{Bh3P4B+DpGKA^(GRRDMD=IbiS
+Fi~ynZMm_)l
+
+delta 140
+zcmdnzyUS;TzKlspWkIS!HJ5^dTV_sTKz>njYF<fVR;mtA#5X@LH3dn`zn~;DKMyD~
+zSy@$S@?H_a$;V{GIdqfrb4qjbiYMQdiRD&6m@xUhwDRN=GNO|=h)ZsEk~L@L2U``C
+Xnx2#Bn_7~evU#zR9@FMD)d)rawIMNw
+
+diff --git a/src/features/pricing/tarifas/lib/campos-metodo.ts b/src/features/pricing/tarifas/lib/campos-metodo.ts
+index 7afdfedc8e2b5994b277e1f1fa70bfe955e85463..cbaca15a3d85ce8524b2b772778e1e41668a498a 100644
+GIT binary patch
+delta 919
+zcmZuwy>8P`6jl;Np>7x;kTghDPlt-QByK7|Lirt_Lk0@UhK#8l`!+bT?+w>BDk7*z
+z3`{Ke2@nGdLnXfes2dXxfK&;dfH&aWYgY=0$-d_te}Cut*OQak$?ZasM-$GHn*}pp
+zYQk6^-W6};HvwcP7<PaY%VE@ek+vVqZI@Bqh;yY{^0o9imq9#T`CeFu#$C&wv->1u
+z4g-&Y<4&TP1p)Jzn%ucKS}jVBII1+$@8VCDH(9NHr8-VII$$%Of$1|!9LsFNoN$IU
+z3d9533Qs?HY>MC{6A2CbG;v%k*~~eR!eKas=av_dc>hv0qsm_$#gD7y3sORFkH(KK
+z@5CRggJW4pjllwF<azjrs6!526wp;ba0j747bJaXFquMUIg<Z;sX~7M>F7}VOWJu+
+zN_=0dX9_oJ;buybG29~!9ATUUswylAZSl8SFPkr~)yvtu8xmhlZms1?$J?;SIpaVm
+zn6}u534sgykv}0kg%eP16`n;HFC0dMTOv%|cWD!R>&SoxnQ1U*+$J=%W+Z_2&)4y8
+zyRB-ly`zvLY>7BTDBPk`_K<Mj4P9J%U+DtwL(q002)RqAi0RS}Y8L_|!P0@y013`V
+z<1g#i^%Ph7#;lihlR%fqMrxp|;A-%uk}%>_tQ$@D1Q{$A*>NEJzz|;Iy+KJyedDay
+z3WQrCGeRS2rzzsX>&3W(FW5IZnR-@W#;aSc72OyNy2`7r692wdNyb}er9A!uyRCzf
+mngXFR38-cI`k-r?){wP-dl<fMs7NRjXnvZ2k^E@A&HVv<bv!x%
+
+delta 119
+zcmdmx^*C;WDf4C<<~XL!%UM;KHveYd%D8zK=V|86i+DY`H{X`o!nXOj%3)Svg_Kl<
+z)S{yNB837VPEO1%$e(;&OLsGy_D}Z7jK=ZI3TkST6OF}rY;6@v^HNgNGV@YXCMOt6
+V@`82g<)-EpCuXH?UTNIU2mqR$E5HB%
+
+diff --git a/src/features/pricing/tarifas/lib/metodos/porcentaje.ts b/src/features/pricing/tarifas/lib/metodos/porcentaje.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..067dd1a62d880457b7caab594b36a5fb8e2dfb0d
+GIT binary patch
+literal 2723
+zcmb_eO>f&q5WV|X3<MOATv=3Z1zRT-WVvt=eN=UOF$`rzu9S61uChz2{(yf#&%O25
+zV-G&%C+Ls$%`PcX@kdY~f*_H*oOv_zX5KP5q~ovlIiN!tZvH$UpNwfTp7sZ$^WM(`
+zYOb^)Q_PKSg>*7FJsX|%&o+OJX!AF&dRU@<Z#WtM3VU`jupbMViZ<nHrEQy5;wI4|
+zZqr&MDi)F2e9GvCB9UU7VwuoFo3u!TQJSnsWQIi&AB)WcyKAncp+wCCZ*Y{#T*tbT
+z+g67r!Uz&eBbUNZk$ImXuWbHZibNB9z4LbO=%&r?tRgFEE!!07Wb-L1pNcf1$z+z>
+zzysI-X-8NPSF(0_#IXYWx>IJ`qf}%LXfKhF5+o<q%DNmW-TcG3(s%fYREjJuHDNbT
+zG^!=C7W?~(T+(51aG;Qr$?1-6&tkf#h0!TBehln;VPqU|O>cF4WKjcQY~%Z_L4LE6
+zuo|Kuu^6u+rL#6oxdZ&o)>o$!;QL<d4>l;QJksu2X^(P{xe#z!g>XPfe4#RBhK@gQ
+zK?`-I`9F0y<yG#MjL4RHB2B7t75f#2=V#W;$w&`nrp+&f>}$&=RdxtxuTMCuNM|;$
+zcl0rmOH~$9w+;5LLweQ4mCfZUq(-;XebvBS!QtWln+DPq7VQErTW_bo4W_->$zV3^
+zjeZ)_F*ODW?K%d@&Lv5UI-m!0BdLp)2TX?p3JwqHE&3weJY*`x#acw02mGTmWwzct
+z2(+?JHFZ18qmMr;QV9b3_yJrK!=#P0Ax&kZP5gt+jmnm7Ou>gt|B=1s{*FT=#mg-^
+zeodnyol8?0USRu@-n^l13lYg{*C`%pIA95w)g<6}pS<QBcu??u=Rq3qHS?6ub~WH4
+zs#B5V0)?jg_5qAMH!#FC)#^2in8uJ>A=k}2O2k|yDE?$SgFwO)@QEIZl)xq^+X+Wl
+z=l8zl!1e%K+q?+ip7@^t=pqpKT=YZFFS#CtXEE_o7*d_gZM3DcXCkef{m%XWWoJx@
+z6YbDzcde*ylHoyO0vhfaw0KoAw(|p7%L+13v-i4yme_LQJk_n>-AD+V!Ssfdn?gQ`
+zuuJthgo>0pLbdiH0?!^}^AtB<wb825pG%=vL*z?kQw9NHcripcEg;L#aiqrboyyEY
+z{#m%^;!3-WMJ#+5L$HzKG7*@;3)jvruFsUI>2`=3ySeanZ7@E6>N{m-)efR^W6r>C
+zivy8R2?N=>!Ko}<sO4moR(Gr>O4~jJgvFvNzsGZFBk(<aZPsI`<_zQIWN}~VzHDEy
+z^Md^)^qN)2oipeBmH<WL8@-@M;?r@j5v6KQ<x)Y?92JScYXMlMCJuV^8j7<nWU_{a
+zCe)jp;r#&OSt^@{a;H*FQ;x}@Uo=3Z^V_&Afld|N@4uUb?6-Q5zJ*3vst!D6$oD^F
+z-i_2FaQ65V^aAT!*tb5D?KwaKdI!Gw90^E7d4YGRTVWn~KmRPXVUdd*=XR+$sBf8R
+k`8MVd>$UMiy$f)>VsqH}4S(?OP6}5~CnQgpxb@27KbMbl^#A|>
+
+literal 0
+HcmV?d00001
+

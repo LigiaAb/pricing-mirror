@@ -28,7 +28,7 @@ import { MetodoCobertura } from "./metodos/cobertura/cobertura";
 import { CostoPorcentajeTable } from "./metodos/costo-porcentaje/porcentaje-table";
 import { MetodoCostoVenta } from "./metodos/costoVenta/costo-venta";
 import { EquipoTable } from "./metodos/equipo/equipo-table";
-import { PorcentajeTable } from "./metodos/porcentaje/porcentaje-table";
+import { MetodoPorcentaje } from "./metodos/porcentaje/porcentaje";
 import { RangoTable } from "./metodos/rango/rango-table";
 import { ScallingTable } from "./metodos/scalling/scalling-table";
 
@@ -351,7 +351,7 @@ export function TarifasTabs({
         break;
 
       case 148:
-        componente = <PorcentajeTable {...props} />;
+        componente = <MetodoPorcentaje {...props} />;
         break;
 
       case 363:

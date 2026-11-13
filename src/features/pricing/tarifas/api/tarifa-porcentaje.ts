@@ -1,29 +1,14 @@
-import { z } from "zod";
-import { zId } from "@/shared/lib/zod-scalars";
+import {
+  METODO_PORCENTAJE,
+  type TarifaPorcentaje,
+  type TarifaPorcentajeMutationPayload,
+} from "../lib/metodos/porcentaje";
 import { crearCatalogoMetodo, type FiltrosMetodo } from "./catalogo-metodo";
 
-export const tarifaPorcentajeSchema = z
-  .object({
-    cod_tarifa_porcentaje: zId,
-    cod_metodo: zId.nullable(),
+// Campos, tipos y payload: definición única en lib/metodos/porcentaje.ts.
+export const tarifaPorcentajeSchema = METODO_PORCENTAJE.esquema;
 
-    porcentaje_costo: z.union([z.string(), z.number()]).nullable(),
-
-    porcentaje_venta: z.union([z.string(), z.number()]).nullable(),
-
-    minimo_costo: z.union([z.string(), z.number()]).nullable(),
-    minimo_venta: z.union([z.string(), z.number()]).nullable(),
-
-    cod_moneda_costo: zId.nullable(),
-    cod_moneda_venta: zId.nullable(),
-
-    cod_rubro: zId.nullable(),
-
-    cod_estado: zId,
-  })
-  .passthrough();
-
-export type TarifaPorcentaje = z.infer<typeof tarifaPorcentajeSchema>;
+export type { TarifaPorcentaje, TarifaPorcentajeMutationPayload };
 
 export type FiltrosTarifaPorcentaje = FiltrosMetodo;
 
@@ -34,25 +19,6 @@ export {
   monedasOperativasOptions as monedasPorcentajeOptions,
   useMonedasOperativas as useMonedasPorcentaje,
 } from "./monedas";
-
-export type TarifaPorcentajeMutationPayload = {
-  cod_tarifa_porcentaje?: string | number | null;
-
-  cod_metodo: string | number;
-
-  porcentaje_costo: number;
-  porcentaje_venta: number;
-
-  minimo_costo: number;
-  minimo_venta: number;
-
-  cod_rubro: string | number | null;
-
-  cod_moneda_costo: string | number | null;
-  cod_moneda_venta: string | number | null;
-
-  cod_estado: string | number;
-};
 
 /* CONSULTA Y MUTACIONES (createCatalogo vía crearCatalogoMetodo) */
 

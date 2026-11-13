@@ -15,7 +15,7 @@ tarifas/
 │  └─ use-formulario-tarifas.ts  ← formulario principal de tarifa
 ├─ lib/
 │  ├─ campos-metodo.ts      ← DEFINICIÓN ÚNICA de campos de métodos: tipos de campo y definirMetodo
-│  ├─ metodos/<metodo>.ts   ← campos de cada método (migrados: costo-venta, cobertura)
+│  ├─ metodos/<metodo>.ts   ← campos de cada método (migrados: costo-venta, cobertura, porcentaje)
 │  ├─ tarifa-field-rules.ts ← reglas de campos del formulario principal
 │  └─ tarifa-helpers.ts     ← funciones compartidas (decimales, fechas, ...)
 └─ components/
@@ -75,12 +75,13 @@ Excepción: **equipo** convierte monedas con `value` numérico porque ese valor 
 
 ## Campos de un método (definición única) — en migración
 
-Migrados: **costoVenta** (`lib/metodos/costo-venta.ts`) y **cobertura** (`lib/metodos/cobertura.ts`).
+Migrados: **costoVenta**, **cobertura** y **porcentaje** (`lib/metodos/<metodo>.ts`).
 De cada `METODO_<X>` salen el esquema, los tipos (registro, fila, payload), `aFila`, `aPayload`, `filaNueva`
-y `validar`; el formulario usa `<CampoMetodo>` con el mismo layout. Componentes padre reutilizables:
-`MetodoCostoVenta`, `MetodoCobertura` (alias viejos `CostoVentaTable`, `CoberturaTable` en el barrel).
-Lo que sigue a mano en el formulario de cobertura: los avisos de más de 8 decimales. Los demás métodos se
-migran uno por uno.
+y `validar` (requeridos + `reglas`). El formulario usa `<CampoMetodo>` con el mismo layout; cada campo dibuja
+sus propios mensajes de error. Componentes padre reutilizables: `MetodoCostoVenta`, `MetodoCobertura`,
+`MetodoPorcentaje` (alias viejos `CostoVentaTable`, `CoberturaTable`, `PorcentajeTable` en el barrel).
+Sigue a mano en los formularios: los avisos de más de 8 decimales (cobertura, porcentaje) y el `minimo: 0`
+inicial de porcentaje. Los demás métodos se migran uno por uno.
 
 ## Pendiente (no es centralización)
 

@@ -237,13 +237,12 @@ export {
   type MonedaEquipoOption,
 } from "./components/metodos/equipo/equipo-form";
 export { EquipoTable } from "./components/metodos/equipo/equipo-table";
-export type {
-  FilaPorcentaje,
-  MonedaPorcentajeOption,
-  RubroPorcentajeOption,
-} from "./components/metodos/porcentaje/porcentaje-columns";
+export {
+  MetodoPorcentaje,
+  /** @deprecated Nombre anterior; usar `MetodoPorcentaje`. */
+  MetodoPorcentaje as PorcentajeTable,
+} from "./components/metodos/porcentaje/porcentaje";
 export { PorcentajeForm } from "./components/metodos/porcentaje/porcentaje-form";
-export { PorcentajeTable } from "./components/metodos/porcentaje/porcentaje-table";
 export {
   crearRangoColumns,
   type FilaMetodoRango,
@@ -286,7 +285,9 @@ export {
   fijo,
   moneda,
   monto,
+  rangoPermitido,
   type ReglaMetodo,
+  rubro,
   ventaNoMenorQueCosto,
 } from "./lib/campos-metodo";
 export type {
@@ -313,6 +314,12 @@ export {
   METODO_COSTO_VENTA,
   type MonedaCostoVentaOption,
 } from "./lib/metodos/costo-venta";
+export {
+  type FilaPorcentaje,
+  METODO_PORCENTAJE,
+  type MonedaPorcentajeOption,
+  type RubroPorcentajeOption,
+} from "./lib/metodos/porcentaje";
 export { fieldRules } from "./lib/tarifa-field-rules";
 export {
   CATALOGOS_AGREGAR_TODOS,

@@ -56,7 +56,7 @@ export function CoberturaForm({
 
   const puedeGuardar = !readonly && valido;
 
-  const campo = { metodo: METODO_COBERTURA, fila: row, onChange: cambiar, monedas, readonly };
+  const campo = { metodo: METODO_COBERTURA, fila: row, onChange: cambiar, monedas, readonly, errores };
 
   return (
     <div className="space-y-4">
@@ -83,11 +83,7 @@ export function CoberturaForm({
 
         <CampoMetodo {...campo} campo="cod_moneda_venta" />
 
-        <CampoMetodo {...campo} campo="porcentaje_venta">
-          {errores.porcentaje_venta && (
-            <p className="mt-1 text-sm text-destructive">{errores.porcentaje_venta}</p>
-          )}
-        </CampoMetodo>
+        <CampoMetodo {...campo} campo="porcentaje_venta" />
       </div>
 
       {!readonly && (

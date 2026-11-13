@@ -12,7 +12,7 @@
  *   - la fila inicial de un registro nuevo                (filaNueva)
  *   - la etiqueta y el input de cada campo                (components/metodos/campo-metodo.tsx)
  *
- * Tipos de campo: monto, moneda, fijo, delContexto.
+ * Tipos de campo: monto, moneda, rubro, fijo, delContexto.
  * Si un campo no se comporta como su tipo, se sobrescribe SOLO esa parte en
  * la definición (aPayload, deApi, esquema, ...) en lugar de forzar el tipo.
  *
@@ -26,7 +26,7 @@ import { z } from "zod";
 
 import { zId } from "@/shared/lib/zod-scalars";
 
-import type { MonedaOpcion } from "../hooks/use-opciones-tarifa";
+import type { MonedaOpcion, RubroOpcion } from "../hooks/use-opciones-tarifa";
 
 type Id = string | number;
 
@@ -44,6 +44,7 @@ export type ContextoMetodo = {
 /** Catálogos con los que se convierten códigos del API en opciones de select. */
 export type CatalogosMetodo = {
   monedas?: readonly MonedaOpcion[] | undefined;
+  rubros?: readonly RubroOpcion[] | undefined;
 };
 
 /** Cómo se dibuja el campo en el formulario. */
@@ -59,7 +60,7 @@ export type FormularioCampo = {
 };
 
 export type DefCampo<TPayload = unknown> = {
-  tipo: "monto" | "moneda" | "fijo" | "contexto";
+  tipo: "monto" | "moneda" | "rubro" | "fijo" | "contexto";
   /** Texto que ve el usuario (formulario y mensajes). */
   label?: string;
   /** Validación al leer del API. Sin esquema, el campo no forma parte del registro. */
@@ -79,7 +80,7 @@ export type DefCampo<TPayload = unknown> = {
   formulario?: FormularioCampo;
 };
 
-/** Error de una regla: se muestra debajo de `campo`. */
+/** Error de una regla: se muestra debajo de `campo` (CampoMetodo lo dibuja solo). */
 export type ErrorRegla = { campo: string; mensaje: string };
 
 export type ReglaMetodo = (valores: Valores) => ErrorRegla | null;
@@ -158,6 +159,31 @@ export function moneda<const En extends string, P>(
   };
 }
 
+export type CampoRubro<En extends string, P = Id | null> = Campo<"rubro", P> & {
+  esquema: z.ZodNullable<typeof zId>;
+  en: En;
+  deApi: (registro: Valores, cod: string, catalogos: CatalogosMetodo) => RubroOpcion | null;
+};
+
+/** Rubro: como `moneda`, pero con el catálogo de rubros (código cod_rubro ?? value). */
+export function rubro<const En extends string>(
+  opciones: Sobrescribir<Id | null> & { en: En },
+): CampoRubro<En> {
+  const { aPayload, ...resto } = opciones;
+  const opcionDe = (valores: Valores) => valores[resto.en] as RubroOpcion | null | undefined;
+  const codigo = (opcion: RubroOpcion | null | undefined) => opcion?.cod_rubro ?? opcion?.value;
+
+  return {
+    tipo: "rubro",
+    esquema: zId.nullable(),
+    falta: (valores) => !opcionDe(valores),
+    aPayload: aPayload ?? ((valores) => codigo(opcionDe(valores)) ?? null),
+    deApi: (registro, cod, catalogos) =>
+      catalogos.rubros?.find((item) => String(codigo(item)) === String(registro[cod])) ?? null,
+    ...resto,
+  };
+}
+
 export type CampoFijo<V> = Campo<"fijo", V>;
 
 /** Valor que siempre se envía igual (ej. cod_estado: 1). Con `esquema`, también se lee del API. */
@@ -205,6 +231,15 @@ export const ventaNoMenorQueCosto =
     return Number(valores[costo]) > Number(valores[venta]) ? { campo: venta, mensaje } : null;
   };
 
+/** Error en `campo` si Number(valor ?? 0) queda fuera de [min, max] (ej. porcentajes 0–100). */
+export const rangoPermitido =
+  (campo: string, min: number, max: number, mensaje: string): ReglaMetodo =>
+  (valores) => {
+    const valor = Number(valores[campo] ?? 0);
+
+    return valor < min || valor > max ? { campo, mensaje } : null;
+  };
+
 /* ==========================================================================
  * DEFINICIÓN DEL MÉTODO
  * ========================================================================== */
@@ -248,8 +283,8 @@ export type ResultadoValidacion = {
   valido: boolean;
   /** Etiquetas de los requeridos vacíos, en el orden de `campos`. */
   faltantes: string[];
-  /** Mensaje de error por campo. */
-  errores: Partial<Record<string, string>>;
+  /** Mensajes de error por campo, en el orden de `reglas`. */
+  errores: Partial<Record<string, string[]>>;
 };
 
 export function definirMetodo<const IdCod extends string, const C extends CamposMetodo>(
@@ -314,11 +349,11 @@ export function definirMetodo<const IdCod extends string, const C extends Campos
       .filter(([cod, campo]) => campo.requerido && campo.falta?.(valores, cod))
       .map(([cod, campo]) => campo.label ?? cod);
 
-    const errores: Partial<Record<string, string>> = {};
+    const errores: Partial<Record<string, string[]>> = {};
 
     for (const regla of reglas) {
       const error = regla(valores);
-      if (error && errores[error.campo] === undefined) errores[error.campo] = error.mensaje;
+      if (error) errores[error.campo] = [...(errores[error.campo] ?? []), error.mensaje];
     }
 
     return {
