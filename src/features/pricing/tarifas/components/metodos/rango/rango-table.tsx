@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { METODO_RANGO } from "@/features/pricing/shared";
 import { DataTable } from "@/shared/components/data-table/data-table";
 import { Alert } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
@@ -55,21 +56,19 @@ export function RangoTable({
 
   const monedas: MonedaRangoOption[] = useOpcionesMonedas(monedasQuery.data);
 
+  // Las filas editadas ya traen sus opciones; las del API las buscan por código.
   const data = React.useMemo<FilaMetodoRango[]>(
     () =>
-      rangosLocales.map((rango) => ({
-        ...rango,
+      rangosLocales.map((rango) => {
+        const fila = METODO_RANGO.aFila(rango, { monedas });
 
-        moneda_costo:
-          rango.moneda_costo ??
-          monedas.find((moneda) => String(moneda.cod_moneda) === String(rango.cod_moneda_costo)) ??
-          null,
-
-        moneda_venta:
-          rango.moneda_venta ??
-          monedas.find((moneda) => String(moneda.cod_moneda) === String(rango.cod_moneda_venta)) ??
-          null,
-      })),
+        return {
+          ...fila,
+          localId: rango.localId,
+          moneda_costo: rango.moneda_costo ?? fila.moneda_costo ?? null,
+          moneda_venta: rango.moneda_venta ?? fila.moneda_venta ?? null,
+        };
+      }),
     [rangosLocales, monedas],
   );
 
@@ -93,31 +92,8 @@ export function RangoTable({
       if (!fila.moneda_costo) return null;
       if (!fila.moneda_venta) return null;
 
-      return {
-        cod_tarifa_rango: fila.cod_tarifa_rango ?? null,
-
-        cod_servicio: codServicio ?? null,
-        cod_metodo: codMetodo,
-
-        inicio: fila.inicio || 0,
-
-        // Igual al componente viejo.
-        final: null,
-
-        costo_minimo: fila.costo_minimo ?? null,
-
-        venta_minimo: fila.venta_minimo ?? null,
-
-        costo: fila.costo ?? null,
-
-        cod_moneda_costo: fila.moneda_costo.cod_moneda,
-
-        venta: fila.venta ?? null,
-
-        cod_moneda_venta: fila.moneda_venta.cod_moneda,
-
-        cod_estado: fila.cod_estado ?? 1,
-      };
+      // inicio || 0, final null, montos tal cual y cod_estado ?? 1: ver la definición.
+      return METODO_RANGO.aPayload(fila, { codMetodo, codServicio });
     },
     [codMetodo, codServicio],
   );

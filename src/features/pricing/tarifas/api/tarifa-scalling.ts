@@ -1,19 +1,14 @@
-import { z } from "zod";
-import { zId } from "@/shared/lib/zod-scalars";
+import {
+  METODO_SCALLING,
+  type TarifaScalling,
+  type TarifaScallingMutationPayload,
+} from "../lib/metodos/scalling";
 import { crearCatalogoMetodo, type FiltrosMetodo } from "./catalogo-metodo";
 
-export const tarifaScallingSchema = z
-  .object({
-    cod_tarifa_scalling: zId,
-    cod_metodo: zId.nullable(),
-    cod_puntoenlace: zId.nullable(),
-    costo: z.union([z.string(), z.number()]).nullable(),
-    cod_moneda: zId.nullable(),
-    cod_estado: zId,
-  })
-  .passthrough();
+// Campos, tipos y payload: definición única en lib/metodos/scalling.ts.
+export const tarifaScallingSchema = METODO_SCALLING.esquema;
 
-export type TarifaScalling = z.infer<typeof tarifaScallingSchema>;
+export type { TarifaScalling, TarifaScallingMutationPayload };
 
 export type FiltrosTarifaScalling = FiltrosMetodo;
 
@@ -26,17 +21,6 @@ export {
   monedasOperativasOptions as monedasScallingOptions,
   useMonedasOperativas as useMonedasScalling,
 } from "./monedas";
-
-/* MUTATIONS */
-
-export type TarifaScallingMutationPayload = {
-  cod_tarifa_scalling?: string | number | null;
-  cod_metodo: string | number;
-  cod_puntoenlace: string | number | null;
-  costo: string | number | null;
-  cod_moneda: string | number;
-  cod_estado: string | number;
-};
 
 /* CONSULTA Y MUTACIONES (createCatalogo vía crearCatalogoMetodo) */
 

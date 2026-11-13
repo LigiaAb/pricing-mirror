@@ -2,13 +2,14 @@
 
 import { Plus, Save } from "lucide-react";
 import React from "react";
-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
 import { Button } from "@/shared/components/ui/button";
-import { Field, FieldLabel } from "@/shared/components/ui/field";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/components/ui/input-group";
-import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
+import {
+  type FilaCobertura,
+  METODO_COBERTURA,
+  type MonedaCoberturaOption,
+} from "../../../lib/metodos/cobertura";
 import { obtenerCantidadDecimales } from "../../../lib/tarifa-helpers";
-import type { FilaCobertura, MonedaCoberturaOption } from "./cobertura-columns";
+import { CampoMetodo } from "../campo-metodo";
 
 type Props = {
   value?: FilaCobertura | null;
@@ -29,33 +30,19 @@ export function CoberturaForm({
   isPending = false,
   onGuardar,
 }: Props) {
-  const [row, setRow] = React.useState<FilaCobertura>(
-    value ?? {
-      porcentaje_costo: 0,
-      porcentaje_venta: 0,
-      minimo_costo: 0,
-      minimo_venta: 0,
-    },
-  );
+  // Nuevo: porcentajes y mínimos en 0 (`inicial` en lib/metodos/cobertura.ts).
+  const [row, setRow] = React.useState<FilaCobertura>(value ?? METODO_COBERTURA.filaNueva());
 
   React.useEffect(() => {
-    setRow(
-      value ?? {
-        porcentaje_costo: 0,
-        porcentaje_venta: 0,
-        minimo_costo: 0,
-        minimo_venta: 0,
-      },
-    );
+    setRow(value ?? METODO_COBERTURA.filaNueva());
   }, [value]);
 
-  const fetchMonedas = useFiltroOpciones(monedas);
+  const cambiar = React.useCallback((cambio: Partial<FilaCobertura>) => {
+    setRow((prev) => ({ ...prev, ...cambio }));
+  }, []);
 
-  const porcentajeCosto = Number(row.porcentaje_costo ?? 0);
-
-  const porcentajeVenta = Number(row.porcentaje_venta ?? 0);
-
-  const errorPorcentaje = porcentajeCosto > porcentajeVenta;
+  // Monedas requeridas y venta >= costo: ver lib/metodos/cobertura.ts.
+  const { valido, errores } = METODO_COBERTURA.validar(row);
 
   /*
    * Se conserva la condición del código viejo:
@@ -67,18 +54,9 @@ export function CoberturaForm({
 
   const errorDecimalesVenta = obtenerCantidadDecimales(row.porcentaje_venta) > 9;
 
-  const puedeGuardar =
-    !readonly && row.moneda_costo != null && row.moneda_venta != null && !errorPorcentaje;
+  const puedeGuardar = !readonly && valido;
 
-  const setNumero = (
-    field: "minimo_costo" | "minimo_venta" | "porcentaje_costo" | "porcentaje_venta",
-    value: string,
-  ) => {
-    setRow((prev) => ({
-      ...prev,
-      [field]: value === "" ? null : Number(value),
-    }));
-  };
+  const campo = { metodo: METODO_COBERTURA, fila: row, onChange: cambiar, monedas, readonly, errores };
 
   return (
     <div className="space-y-4">
@@ -95,127 +73,17 @@ export function CoberturaForm({
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Field>
-          <FieldLabel>Mínimo costo</FieldLabel>
+        <CampoMetodo {...campo} campo="minimo_costo" />
 
-          <InputGroup>
-            <InputGroupInput
-              type="number"
-              readOnly={readonly}
-              value={row.minimo_costo ?? ""}
-              onChange={(event) => setNumero("minimo_costo", event.target.value)}
-            />
-          </InputGroup>
-        </Field>
+        <CampoMetodo {...campo} campo="minimo_venta" />
 
-        <Field>
-          <FieldLabel>Mínimo venta</FieldLabel>
+        <CampoMetodo {...campo} campo="cod_moneda_costo" />
 
-          <InputGroup>
-            <InputGroupInput
-              type="number"
-              readOnly={readonly}
-              value={row.minimo_venta ?? ""}
-              onChange={(event) => setNumero("minimo_venta", event.target.value)}
-            />
-          </InputGroup>
-        </Field>
+        <CampoMetodo {...campo} campo="porcentaje_costo" />
 
-        <Field>
-          <FieldLabel>Moneda de costo</FieldLabel>
+        <CampoMetodo {...campo} campo="cod_moneda_venta" />
 
-          <InputGroup>
-            <AsyncComboboxInput<MonedaCoberturaOption>
-              label="Moneda de costo"
-              value={row.moneda_costo ?? null}
-              onChange={(moneda_costo) =>
-                setRow((prev) => ({
-                  ...prev,
-                  moneda_costo,
-                }))
-              }
-              fetchOptions={fetchMonedas}
-              initialOptions={monedas}
-              getOptionValue={(option) => option.value}
-              getOptionLabel={(option) => option.label}
-              placeholder="Seleccione..."
-              searchPlaceholder="Buscar moneda..."
-              minSearchLength={0}
-              fetchOnEmpty
-              clearable
-              readOnly={readonly}
-            />
-          </InputGroup>
-        </Field>
-
-        <Field>
-          <FieldLabel>Porcentaje costo</FieldLabel>
-
-          <InputGroup>
-            <InputGroupInput
-              type="number"
-              min={0}
-              max={100}
-              step="0.01"
-              readOnly={readonly}
-              value={row.porcentaje_costo ?? ""}
-              onChange={(event) => setNumero("porcentaje_costo", event.target.value)}
-            />
-
-            <InputGroupAddon align="inline-end">%</InputGroupAddon>
-          </InputGroup>
-        </Field>
-
-        <Field>
-          <FieldLabel>Moneda de venta</FieldLabel>
-
-          <InputGroup>
-            <AsyncComboboxInput<MonedaCoberturaOption>
-              label="Moneda de venta"
-              value={row.moneda_venta ?? null}
-              onChange={(moneda_venta) =>
-                setRow((prev) => ({
-                  ...prev,
-                  moneda_venta,
-                }))
-              }
-              fetchOptions={fetchMonedas}
-              initialOptions={monedas}
-              getOptionValue={(option) => option.value}
-              getOptionLabel={(option) => option.label}
-              placeholder="Seleccione..."
-              searchPlaceholder="Buscar moneda..."
-              minSearchLength={0}
-              fetchOnEmpty
-              clearable
-              readOnly={readonly}
-            />
-          </InputGroup>
-        </Field>
-
-        <Field>
-          <FieldLabel>Porcentaje venta</FieldLabel>
-
-          <InputGroup>
-            <InputGroupInput
-              type="number"
-              min={0}
-              max={100}
-              step="0.01"
-              readOnly={readonly}
-              value={row.porcentaje_venta ?? ""}
-              onChange={(event) => setNumero("porcentaje_venta", event.target.value)}
-            />
-
-            <InputGroupAddon align="inline-end">%</InputGroupAddon>
-          </InputGroup>
-
-          {errorPorcentaje && (
-            <p className="mt-1 text-sm text-destructive">
-              El valor de venta debe ser mayor al de costo
-            </p>
-          )}
-        </Field>
+        <CampoMetodo {...campo} campo="porcentaje_venta" />
       </div>
 
       {!readonly && (

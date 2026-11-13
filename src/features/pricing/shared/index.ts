@@ -8,7 +8,8 @@
  *                lectura de rangos de tarifa.
  *   components/  FichaResumen (resumen de un servicio/método de tarifa).
  *   hooks/       catálogos generales (useCatalogosPricing).
- *   lib/         funciones puras: formatos y vigencia de métodos.
+ *   lib/         funciones puras: formatos y vigencia de métodos; motor de
+ *                definición única de campos de métodos de tarifa (y rango).
  *   calculadora-embarque/  calculadora de embarques corporativa, con sus
  *                propias components/, hooks/ y lib/ (volumen, peso y CW
  *                por transporte, sin datos de cotización).
@@ -109,5 +110,43 @@ export {
   type UsuariosCatalog,
   useCatalogosPricing,
 } from "./hooks/use-catalogos-pricing";
+export {
+  booleano,
+  type CampoBooleano,
+  type CampoContexto,
+  type CampoFijo,
+  type CampoMoneda,
+  type CampoMonto,
+  type CampoOpcion,
+  type CampoPropio,
+  type CampoRubro,
+  type CatalogosMetodo,
+  type ContextoMetodo,
+  type DefCampo,
+  definirMetodo,
+  delContexto,
+  type ErrorRegla,
+  esquemaMonto,
+  fijo,
+  type FormularioCampo,
+  moneda,
+  type MonedaOpcion,
+  monto,
+  opcion,
+  type PayloadMetodo,
+  propio,
+  rangoPermitido,
+  type ReglaMetodo,
+  type ResultadoValidacion,
+  rubro,
+  type RubroOpcion,
+  sinEsquema,
+  ventaNoMenorQueCosto,
+} from "./lib/campos-metodo";
 export { type ConAmbosFormatos, conAmbosFormatos } from "./lib/formatos";
+export {
+  type FilaRango,
+  METODO_RANGO,
+  type TarifaRangoMutationPayload,
+} from "./lib/metodos/rango";
 export { getEstadoMetodo } from "./lib/vigencia-metodo";

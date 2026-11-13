@@ -1,5 +1,5 @@
 import { mutationOptions, useMutation, useQueryClient } from "@tanstack/react-query";
-import { TARIFA_RANGOS_QUERY_KEY } from "@/features/pricing/shared";
+import { TARIFA_RANGOS_QUERY_KEY, type TarifaRangoMutationPayload } from "@/features/pricing/shared";
 import { http } from "@/shared/api/client";
 
 /* Lectura (esquema, tipos y consulta): compartida en pricing/shared/api/tarifa-rangos.ts */
@@ -12,6 +12,9 @@ export {
   useTarifaRangos,
 } from "@/features/pricing/shared";
 
+// Payload: definición única en pricing/shared/lib/metodos/rango.ts.
+export type { TarifaRangoMutationPayload };
+
 // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
 export {
   type MonedaOperativa as MonedaRango,
@@ -19,27 +22,6 @@ export {
   monedasOperativasOptions as monedasRangoOptions,
   useMonedasOperativas as useMonedasRango,
 } from "./monedas";
-
-export type TarifaRangoMutationPayload = {
-  cod_tarifa_rango?: string | number | null;
-
-  cod_servicio?: string | number | null;
-  cod_metodo: string | number;
-
-  inicio: string | number;
-  final: string | number | null;
-
-  costo_minimo: string | number | null;
-  venta_minimo: string | number | null;
-
-  costo: string | number | null;
-  cod_moneda_costo: string | number;
-
-  venta: string | number | null;
-  cod_moneda_venta: string | number;
-
-  cod_estado?: string | number | null;
-};
 
 export const guardarTarifaRangosOptions = () =>
   mutationOptions({

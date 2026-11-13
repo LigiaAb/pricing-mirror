@@ -24,11 +24,11 @@ import { CommoditiesTable } from "./metodo-commodities/commodities-table";
 import { DetalleTable } from "./metodo-detalle/detalle-table";
 import { EntidadTable } from "./metodo-entidad/entidad-table";
 import { PaisTable } from "./metodo-pais/pais-table";
-import { CoberturaTable } from "./metodos/cobertura/cobertura-table";
-import { CostoPorcentajeTable } from "./metodos/costo-porcentaje/porcentaje-table";
+import { MetodoCobertura } from "./metodos/cobertura/cobertura";
+import { MetodoCostoPorcentaje } from "./metodos/costo-porcentaje/costo-porcentaje";
 import { MetodoCostoVenta } from "./metodos/costoVenta/costo-venta";
-import { EquipoTable } from "./metodos/equipo/equipo-table";
-import { PorcentajeTable } from "./metodos/porcentaje/porcentaje-table";
+import { MetodoEquipo } from "./metodos/equipo/equipo";
+import { MetodoPorcentaje } from "./metodos/porcentaje/porcentaje";
 import { RangoTable } from "./metodos/rango/rango-table";
 import { ScallingTable } from "./metodos/scalling/scalling-table";
 
@@ -347,15 +347,15 @@ export function TarifasTabs({
         break;
 
       case 103:
-        componente = <EquipoTable {...props} />;
+        componente = <MetodoEquipo {...props} />;
         break;
 
       case 148:
-        componente = <PorcentajeTable {...props} />;
+        componente = <MetodoPorcentaje {...props} />;
         break;
 
       case 363:
-        componente = <CoberturaTable {...props} />;
+        componente = <MetodoCobertura {...props} />;
         break;
 
       case 342:
@@ -363,7 +363,7 @@ export function TarifasTabs({
         break;
 
       case 504:
-        componente = <CostoPorcentajeTable {...props} />;
+        componente = <MetodoCostoPorcentaje {...props} />;
         break;
 
       default:

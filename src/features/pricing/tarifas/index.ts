@@ -217,33 +217,36 @@ export {
 export { PaisForm } from "./components/metodo-pais/pais-form";
 export { PaisTable } from "./components/metodo-pais/pais-table";
 export { CampoMetodo } from "./components/metodos/campo-metodo";
-export type {
-  FilaCobertura,
-  MonedaCoberturaOption,
-} from "./components/metodos/cobertura/cobertura-columns";
+export {
+  MetodoCobertura,
+  /** @deprecated Nombre anterior; usar `MetodoCobertura`. */
+  MetodoCobertura as CoberturaTable,
+} from "./components/metodos/cobertura/cobertura";
 export { CoberturaForm } from "./components/metodos/cobertura/cobertura-form";
-export { CoberturaTable } from "./components/metodos/cobertura/cobertura-table";
+export {
+  MetodoCostoPorcentaje,
+  /** @deprecated Nombre anterior; usar `MetodoCostoPorcentaje`. */
+  MetodoCostoPorcentaje as CostoPorcentajeTable,
+} from "./components/metodos/costo-porcentaje/costo-porcentaje";
+export { CostoPorcentajeForm } from "./components/metodos/costo-porcentaje/costo-porcentaje-form";
 export {
   MetodoCostoVenta,
   /** @deprecated Nombre anterior; usar `MetodoCostoVenta`. */
   MetodoCostoVenta as CostoVentaTable,
 } from "./components/metodos/costoVenta/costo-venta";
 export { CostoVentaForm } from "./components/metodos/costoVenta/costo-venta-form";
-export { default as EquipoColumn } from "./components/metodos/equipo/equipo-columns";
 export {
-  EquipoForm,
-  type EquipoOption,
-  type FilaEquipo,
-  type MonedaEquipoOption,
-} from "./components/metodos/equipo/equipo-form";
-export { EquipoTable } from "./components/metodos/equipo/equipo-table";
-export type {
-  FilaPorcentaje,
-  MonedaPorcentajeOption,
-  RubroPorcentajeOption,
-} from "./components/metodos/porcentaje/porcentaje-columns";
+  MetodoEquipo,
+  /** @deprecated Nombre anterior; usar `MetodoEquipo`. */
+  MetodoEquipo as EquipoTable,
+} from "./components/metodos/equipo/equipo";
+export { EquipoForm } from "./components/metodos/equipo/equipo-form";
+export {
+  MetodoPorcentaje,
+  /** @deprecated Nombre anterior; usar `MetodoPorcentaje`. */
+  MetodoPorcentaje as PorcentajeTable,
+} from "./components/metodos/porcentaje/porcentaje";
 export { PorcentajeForm } from "./components/metodos/porcentaje/porcentaje-form";
-export { PorcentajeTable } from "./components/metodos/porcentaje/porcentaje-table";
 export {
   crearRangoColumns,
   type FilaMetodoRango,
@@ -275,9 +278,13 @@ export {
   useOpcionesRubros,
 } from "./hooks/use-opciones-tarifa";
 export {
+  booleano,
+  type CampoBooleano,
   type CampoFijo,
   type CampoMoneda,
   type CampoMonto,
+  type CampoOpcion,
+  type CampoRubro,
   type CatalogosMetodo,
   type ContextoMetodo,
   type DefCampo,
@@ -286,7 +293,11 @@ export {
   fijo,
   moneda,
   monto,
+  opcion,
+  rangoPermitido,
   type ReglaMetodo,
+  rubro,
+  sinEsquema,
   ventaNoMenorQueCosto,
 } from "./lib/campos-metodo";
 export type {
@@ -304,10 +315,33 @@ export type {
   VisibleWhenRule,
 } from "./lib/form-types";
 export {
+  type FilaCobertura,
+  METODO_COBERTURA,
+  type MonedaCoberturaOption,
+} from "./lib/metodos/cobertura";
+export {
+  type FilaCostoPorcentaje,
+  METODO_COSTO_PORCENTAJE,
+  type MonedaCostoPorcentajeOption,
+  type RubroCostoPorcentajeOption,
+} from "./lib/metodos/costo-porcentaje";
+export {
   type FilaCostoVenta,
   METODO_COSTO_VENTA,
   type MonedaCostoVentaOption,
 } from "./lib/metodos/costo-venta";
+export {
+  type EquipoOption,
+  type FilaEquipo,
+  METODO_EQUIPO,
+  type MonedaEquipoOption,
+} from "./lib/metodos/equipo";
+export {
+  type FilaPorcentaje,
+  METODO_PORCENTAJE,
+  type MonedaPorcentajeOption,
+  type RubroPorcentajeOption,
+} from "./lib/metodos/porcentaje";
 export { fieldRules } from "./lib/tarifa-field-rules";
 export {
   CATALOGOS_AGREGAR_TODOS,

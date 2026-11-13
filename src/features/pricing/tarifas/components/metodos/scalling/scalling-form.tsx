@@ -11,12 +11,13 @@ import { Field, FieldLabel } from "@/shared/components/ui/field";
 
 import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
 import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
-import type {
-  FilaMetodoScalling,
-  MonedaScallingOption,
-  PuntoEnlaceScallingOption,
-  TipoPuntoEnlaceScallingOption,
-} from "./scalling-columns";
+import {
+  type FilaMetodoScalling,
+  METODO_SCALLING,
+  type MonedaScallingOption,
+  type PuntoEnlaceScallingOption,
+  type TipoPuntoEnlaceScallingOption,
+} from "../../../lib/metodos/scalling";
 
 type Props = {
   value?: FilaMetodoScalling | null;
@@ -44,16 +45,13 @@ export function ScallingForm({
   isPending = false,
 }: Props) {
   const crearBase = React.useCallback(
+    // punto_enlace null, costo 0 y moneda null: `inicial` en lib/metodos/scalling.ts.
     (): FilaMetodoScalling => ({
       cod_tarifa_scalling: 0,
 
       tipo_puntoenlace: tipoPuntoEnlaceDefault ?? null,
 
-      punto_enlace: null,
-
-      costo: 0,
-
-      moneda: null,
+      ...METODO_SCALLING.filaNueva(),
 
       cod_puntoenlace: null,
       cod_moneda: null,
@@ -85,10 +83,11 @@ export function ScallingForm({
 
   const esEdicion = value?.cod_tarifa_scalling != null && Number(value.cod_tarifa_scalling) !== 0;
 
+  // Punto y moneda requeridos (ver la definición); el tipo, por la cascada.
+  const puedeGuardar = row.tipo_puntoenlace != null && METODO_SCALLING.validar(row).valido;
+
   const guardar = () => {
-    if (!row.tipo_puntoenlace) return;
-    if (!row.punto_enlace) return;
-    if (!row.moneda) return;
+    if (!puedeGuardar) return;
 
     onGuardar(row);
 
@@ -226,7 +225,7 @@ export function ScallingForm({
         <Button
           type="button"
           onClick={guardar}
-          disabled={!row.tipo_puntoenlace || !row.punto_enlace || !row.moneda || isPending}
+          disabled={!puedeGuardar || isPending}
         >
           {esEdicion ? <Save className="size-4" /> : <Plus className="size-4" />}
 

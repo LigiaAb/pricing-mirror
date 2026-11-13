@@ -11,11 +11,12 @@ import {
   useTarifaPorcentaje,
 } from "../../../api/tarifa-porcentaje";
 import { useOpcionesMonedas, useOpcionesRubros } from "../../../hooks/use-opciones-tarifa";
-import type {
-  FilaPorcentaje,
-  MonedaPorcentajeOption,
-  RubroPorcentajeOption,
-} from "./porcentaje-columns";
+import {
+  type FilaPorcentaje,
+  METODO_PORCENTAJE,
+  type MonedaPorcentajeOption,
+  type RubroPorcentajeOption,
+} from "../../../lib/metodos/porcentaje";
 import { PorcentajeForm } from "./porcentaje-form";
 
 type Props = {
@@ -30,7 +31,11 @@ type Props = {
   servicio?: Record<string, unknown>;
 };
 
-export function PorcentajeTable({
+/**
+ * Tarifa de método Porcentaje (por rubro): consulta, formulario y guardado.
+ * Componente padre reutilizable: basta con `<MetodoPorcentaje codMetodo={...} />`.
+ */
+export function MetodoPorcentaje({
   codMetodo,
   readonly = false,
   reConsultar = () => {},
@@ -60,55 +65,17 @@ export function PorcentajeTable({
 
   const esNuevo = porcentaje == null;
 
-  const value = React.useMemo<FilaPorcentaje | null>(() => {
-    if (!porcentaje) return null;
+  const value = React.useMemo<FilaPorcentaje | null>(
+    () => (porcentaje ? METODO_PORCENTAJE.aFila(porcentaje, { monedas, rubros }) : null),
+    [porcentaje, monedas, rubros],
+  );
 
-    return {
-      ...porcentaje,
-
-      moneda_costo:
-        monedas.find(
-          (moneda) => String(moneda.cod_moneda) === String(porcentaje.cod_moneda_costo),
-        ) ?? null,
-
-      moneda_venta:
-        monedas.find(
-          (moneda) => String(moneda.cod_moneda) === String(porcentaje.cod_moneda_venta),
-        ) ?? null,
-
-      rubro:
-        rubros.find(
-          (rubro) => String(rubro.cod_rubro ?? rubro.value) === String(porcentaje.cod_rubro),
-        ) ?? null,
-    };
-  }, [porcentaje, monedas, rubros]);
-
+  // cod_tarifa_porcentaje ?? 0 y mínimos vacíos como 0: ver la definición.
   const formatearFilaApi = React.useCallback(
     (fila: FilaPorcentaje): TarifaPorcentajeMutationPayload | null => {
-      if (codMetodo == null) {
-        return null;
-      }
+      if (codMetodo == null) return null;
 
-      return {
-        cod_tarifa_porcentaje: fila.cod_tarifa_porcentaje ?? 0,
-
-        cod_metodo: codMetodo,
-
-        porcentaje_costo: Number(fila.porcentaje_costo),
-
-        porcentaje_venta: Number(fila.porcentaje_venta),
-
-        minimo_costo: Number(fila.minimo_costo ?? 0),
-        minimo_venta: Number(fila.minimo_venta ?? 0),
-
-        cod_rubro: fila.rubro?.cod_rubro ?? fila.rubro?.value ?? null,
-
-        cod_moneda_costo: fila.moneda_costo?.cod_moneda ?? null,
-
-        cod_moneda_venta: fila.moneda_venta?.cod_moneda ?? null,
-
-        cod_estado: 1,
-      };
+      return METODO_PORCENTAJE.aPayload(fila, { codMetodo });
     },
     [codMetodo],
   );

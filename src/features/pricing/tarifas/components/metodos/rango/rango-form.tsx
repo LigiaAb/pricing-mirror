@@ -7,6 +7,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
 import { crearIdLocal } from "@/shared/lib/id";
+import { METODO_RANGO } from "@/features/pricing/shared";
 import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
 import type { FilaMetodoRango, MonedaRangoOption } from "./rango-columns";
 
@@ -30,16 +31,8 @@ export function RangoForm({ value, monedas, onGuardar, onCancelar, readonly = fa
   const fetchMonedas = useFiltroOpciones(monedas);
 
   const iniciarNuevo = () => {
-    setRow({
-      localId: crearIdLocal(),
-      inicio: "",
-      costo_minimo: "",
-      venta_minimo: "",
-      costo: "",
-      venta: "",
-      moneda_costo: null,
-      moneda_venta: null,
-    });
+    // Montos en "" y monedas en null (`inicial` en pricing/shared/lib/metodos/rango.ts).
+    setRow({ localId: crearIdLocal(), ...METODO_RANGO.filaNueva() });
   };
 
   if (readonly) return null;
@@ -55,22 +48,10 @@ export function RangoForm({ value, monedas, onGuardar, onCancelar, readonly = fa
 
   const esEdicion = Boolean(value);
 
-  const errores = (() => {
-    const lista: string[] = [];
+  // Requeridos ("Mínimo de Costo", ...) y venta >= costo: ver la definición del método.
+  const validacion = METODO_RANGO.validar(row);
 
-    if (!row.costo_minimo) lista.push("Mínimo de Costo");
-    if (!row.venta_minimo) lista.push("Mínimo de Venta");
-    if (!row.costo) lista.push("Costo");
-    if (!row.venta) lista.push("Venta");
-    if (!row.moneda_costo) lista.push("Moneda de Costo");
-    if (!row.moneda_venta) lista.push("Moneda de Venta");
-
-    if (row.costo && row.venta && Number(row.costo) > Number(row.venta)) {
-      lista.push("El valor de venta debe ser igual o mayor al valor del costo");
-    }
-
-    return lista;
-  })();
+  const errores = [...validacion.faltantes, ...Object.values(validacion.errores).flat()];
 
   const setNumero = (
     field: "inicio" | "costo_minimo" | "venta_minimo" | "costo" | "venta",

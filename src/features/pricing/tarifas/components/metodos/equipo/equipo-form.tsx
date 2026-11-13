@@ -7,42 +7,12 @@ import { Button } from "@/shared/components/ui/button";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
 import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
-
-export type EquipoOption = {
-  value: string | number;
-  label: string;
-
-  [key: string]: unknown;
-};
-
-export type MonedaEquipoOption = {
-  value: string | number;
-  label: string;
-
-  cod_moneda: string | number;
-
-  simbolo?: string;
-
-  [key: string]: unknown;
-};
-
-export type FilaEquipo = {
-  cod_tarifa_equipo?: string | number | null;
-
-  cod_metodo?: string | number | null;
-
-  cod_equipo: EquipoOption | null;
-
-  costo: string | number | null;
-
-  venta: string | number | null;
-
-  cod_moneda_costo: MonedaEquipoOption | null;
-
-  cod_moneda_venta: MonedaEquipoOption | null;
-
-  cod_estado?: string | number | null;
-};
+import {
+  type EquipoOption,
+  type FilaEquipo,
+  METODO_EQUIPO,
+  type MonedaEquipoOption,
+} from "../../../lib/metodos/equipo";
 
 type Props = {
   value: FilaEquipo;
@@ -74,28 +44,10 @@ export function EquipoForm({
 
   const fetchMonedas = useFiltroOpciones(monedas);
 
-  const ventaMenorCosto = React.useMemo(() => {
-    if (
-      values.costo == null ||
-      values.venta == null ||
-      values.costo === "" ||
-      values.venta === ""
-    ) {
-      return false;
-    }
+  // Requeridos (equipo, monedas, costo, venta) y venta >= costo: ver lib/metodos/equipo.ts.
+  const { valido: puedeGuardar, errores } = METODO_EQUIPO.validar(values);
 
-    return Number(values.costo) > Number(values.venta);
-  }, [values.costo, values.venta]);
-
-  const puedeGuardar =
-    values.cod_equipo != null &&
-    values.cod_moneda_costo != null &&
-    values.cod_moneda_venta != null &&
-    values.costo != null &&
-    values.costo !== "" &&
-    values.venta != null &&
-    values.venta !== "" &&
-    !ventaMenorCosto;
+  const ventaMenorCosto = errores.venta != null;
 
   const esNuevo = values.cod_tarifa_equipo == null || Number(values.cod_tarifa_equipo) === 0;
 

@@ -1,28 +1,17 @@
-import { z } from "zod";
-import { zId } from "@/shared/lib/zod-scalars";
+import {
+  METODO_COSTO_PORCENTAJE,
+  type TarifaCostoPorcentaje,
+  type TarifaCostoPorcentajeMutationPayload,
+} from "../lib/metodos/costo-porcentaje";
 import { crearCatalogoMetodo, type FiltrosMetodo } from "./catalogo-metodo";
 
-export const tarifaCostoPorcentajejeSchema = z
-  .object({
-    cod_tarifa_porcentaje: zId,
-    cod_metodo: zId.nullable(),
+// Campos, tipos y payload: definición única en lib/metodos/costo-porcentaje.ts.
+// (Se conservan los nombres existentes, con "Porcentajeje".)
+export const tarifaCostoPorcentajejeSchema = METODO_COSTO_PORCENTAJE.esquema;
 
-    porcentaje_costo: z.union([z.string(), z.number()]).nullable(),
-    porcentaje_venta: z.union([z.string(), z.number()]).nullable(),
+export type TarifaCostoPorcentajeje = TarifaCostoPorcentaje;
 
-    minimo_costo: z.union([z.string(), z.number()]).nullable(),
-    minimo_venta: z.union([z.string(), z.number()]).nullable(),
-
-    cod_moneda_costo: zId.nullable(),
-    cod_moneda_venta: zId.nullable(),
-
-    es_porcentaje: z.boolean(),
-
-    cod_estado: zId,
-  })
-  .passthrough();
-
-export type TarifaCostoPorcentajeje = z.infer<typeof tarifaCostoPorcentajejeSchema>;
+export type TarifaCostoPorcentajejeMutationPayload = TarifaCostoPorcentajeMutationPayload;
 
 export type FiltrosTarifaCostoPorcentaje = FiltrosMetodo;
 
@@ -33,27 +22,6 @@ export {
   monedasOperativasOptions as monedasPorcentajeOptions,
   useMonedasOperativas as useMonedasPorcentaje,
 } from "./monedas";
-
-export type TarifaCostoPorcentajejeMutationPayload = {
-  cod_tarifa_porcentaje?: string | number | null;
-
-  cod_metodo: string | number;
-
-  porcentaje_costo: number;
-  porcentaje_venta: number;
-
-  minimo_costo: number;
-  minimo_venta: number;
-
-  cod_rubro: string | number | null;
-
-  es_porcentaje: boolean | null;
-
-  cod_moneda_costo: string | number | null;
-  cod_moneda_venta: string | number | null;
-
-  cod_estado: string | number;
-};
 
 /* CONSULTA Y MUTACIONES (createCatalogo vía crearCatalogoMetodo) */
 

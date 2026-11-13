@@ -44,7 +44,7 @@ export function CostoVentaForm({
 
   const puedeGuardar = !readonly && valido;
 
-  const campo = { metodo: METODO_COSTO_VENTA, fila: row, onChange: cambiar, monedas, readonly };
+  const campo = { metodo: METODO_COSTO_VENTA, fila: row, onChange: cambiar, monedas, readonly, errores };
 
   return (
     <div className="space-y-4">
@@ -55,9 +55,7 @@ export function CostoVentaForm({
 
         <CampoMetodo {...campo} campo="cod_moneda_venta" />
 
-        <CampoMetodo {...campo} campo="venta">
-          {errores.venta && <p className="mt-1 text-sm text-destructive">{errores.venta}</p>}
-        </CampoMetodo>
+        <CampoMetodo {...campo} campo="venta" />
       </div>
 
       {!readonly && (
