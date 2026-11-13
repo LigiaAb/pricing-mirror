@@ -7,8 +7,11 @@
  *   api/         consultas de catálogos (métodos, proveedores, clientes) y
  *                lectura de rangos de tarifa.
  *   components/  FichaResumen (resumen de un servicio/método de tarifa).
- *   calculadora-embarque/  CalculadoraMedidas + cálculos de volumen, peso y
- *                CW por transporte (corporativos, sin datos de cotización).
+ *   hooks/       catálogos generales (useCatalogosPricing).
+ *   lib/         funciones puras: formatos y vigencia de métodos.
+ *   calculadora-embarque/  calculadora de embarques corporativa, con sus
+ *                propias components/, hooks/ y lib/ (volumen, peso y CW
+ *                por transporte, sin datos de cotización).
  *
  * Regla: aquí solo entra código que usan AMBOS módulos y que no depende de
  * ninguno de ellos.
@@ -62,27 +65,27 @@ export {
   type DimensionCalculo,
   type TotalesMedidas,
   type Unidad,
-} from "./calculadora-embarque/calculos";
+} from "./calculadora-embarque/lib/calculos";
 export {
   CalculadoraMedidas,
   type CalculadoraMedidasProps,
-} from "./calculadora-embarque/calculadora-medidas";
+} from "./calculadora-embarque/components/calculadora-medidas";
 export {
   TIPO_TRANSPORTE,
   TIPOS_TRANSPORTE,
   type TipoTransporte,
   UNIDAD_DEFAULT,
-} from "./calculadora-embarque/constantes";
+} from "./calculadora-embarque/lib/constantes";
 export {
   type EtiquetasCalculadora,
   obtenerEtiquetasCalculadora,
-} from "./calculadora-embarque/etiquetas";
+} from "./calculadora-embarque/lib/etiquetas";
 export {
   esUnidadEmbarque,
   normalizarUnidades,
   type TipoMedida,
-} from "./calculadora-embarque/unidades";
-export { useUnidadesEmbarque } from "./calculadora-embarque/use-unidades-embarque";
+} from "./calculadora-embarque/lib/unidades";
+export { useUnidadesEmbarque } from "./calculadora-embarque/hooks/use-unidades-embarque";
 export {
   FichaResumen,
   type ItemFichaResumen,
