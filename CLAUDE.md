@@ -31,7 +31,8 @@ TypeScript 7 · React 19 · zod 4 · @tanstack/react-query 5.105 · react-table 
 
 ```bash
 npm install
-npm run check:nuevos            # tsc y SOLO errores nuevos vs .tsc-baseline.txt (usar este)
+npm run check:nuevos            # tsc y SOLO errores nuevos vs .tsc-baseline.txt + check:finales (usar este)
+npm run check:finales           # falla si un archivo cambió CRLF<->LF o si uno nuevo no está en LF
 npm run check                   # tsc completo (incluye ~326 errores previos: stubs any + código existente)
 npm run check:actualizar-base   # tras resolver errores previos, guardar nueva línea base
 npm run diff:guardar            # tras cada commit: diff/[DDMMYY-HHmm]-[commit].diff y amend
@@ -44,6 +45,11 @@ Regla: **ningún cambio debe dejar errores nuevos** en `check:nuevos`. Si se res
 `.gitattributes` tiene `* -text`: git guarda cada archivo tal cual. El proyecto real mezcla **CRLF y LF** por archivo.
 Al editar, **conservar el final de línea que ya tiene el archivo** (no convertir). Archivos nuevos: LF.
 
+- `check:finales` (incluido en `check:nuevos`) **bloquea** cualquier conversión CRLF<->LF; no se hace commit si falla.
+- Los `diff/` son de **texto en LF** (no binarios): no dependen de los finales de línea. Se aplican **solo** con
+  `scripts/aplicar-diff.mjs`, que adapta el diff al final de cada archivo destino y lo deja como estaba
+  (funciona con cualquier `core.autocrlf`). **Nunca** indicar al usuario `git apply` directo.
+
 ## Flujo de trabajo
 
 0. **Al iniciar y en cada iteración, revisar si `main` cambió**: `git fetch origin main` y
@@ -54,10 +60,11 @@ Al editar, **conservar el final de línea que ya tiene el archivo** (no converti
 3. Verificación proporcional al cambio: cambio chico → solo `check:nuevos`; cambio de lógica → además una prueba
    rápida en ejecución (esbuild + node) comparando contra el comportamiento anterior.
 4. **Después de cada commit que cambie `src/features/pricing`: `npm run diff:guardar`.** Genera
-   `diff/[DDMMYY-HHmm]-[nombre-del-commit].diff` (hora de Guatemala, solo `src/features/pricing`, formato binario que
-   conserva CRLF/LF) y lo agrega al mismo commit (amend). Hacerlo antes del push.
-5. El usuario aplica ese archivo en la raíz de su proyecto con `git apply diff/<archivo>.diff`
-   (o copia `src/features/pricing`).
+   `diff/[DDMMYY-HHmm]-[nombre-del-commit].diff` (hora de Guatemala, solo `src/features/pricing`, texto en LF)
+   y lo agrega al mismo commit (amend). Hacerlo antes del push.
+5. El usuario lo aplica desde la raíz de su proyecto con
+   `node <espejo>/scripts/aplicar-diff.mjs <espejo>/diff/<archivo>.diff` (`--check` para solo verificar),
+   o copia `src/features/pricing`.
 6. Actualizar el `ARQUITECTURA.md` del submódulo si cambia dónde vive algo.
 7. **Registrar cada cambio en `CAMBIOS.md`** (log de cambios, en la raíz) en el mismo commit: entrada nueva arriba,
    bajo la fecha del día (`## DD/MM/AAAA`), con rama, módulo/submódulo, qué se hizo y por qué, y el nombre del

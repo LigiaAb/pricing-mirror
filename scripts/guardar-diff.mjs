@@ -4,10 +4,11 @@
  *
  * Genera diff/[DDMMYY-HHmm]-[nombre-del-commit].diff con los cambios de
  * src/features/pricing de un commit (por defecto HEAD), listo para aplicarse
- * en el proyecto real con:  git apply diff/<archivo>.diff
+ * en el proyecto real con scripts/aplicar-diff.mjs (ver ese archivo).
  *
  * - Solo incluye src/features/pricing (los stubs nunca salen del mirror).
- * - Formato binario (--binary --full-index): conserva CRLF/LF byte por byte.
+ * - Diff de TEXTO con todas las líneas en LF: no depende de los finales de
+ *   línea. aplicar-diff.mjs lo adapta a CRLF o LF según cada archivo destino.
  * - Fecha/hora: la del autor del commit, en hora de Guatemala.
  *
  * Uso:
@@ -16,8 +17,7 @@
  *   node scripts/guardar-diff.mjs --amend    # además lo agrega al commit HEAD
  * ========================================================================== */
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const RUTA_CODIGO = "src/features/pricing";
@@ -64,23 +64,14 @@ const slug = asunto
 
 const archivo = join(CARPETA_DIFF, `${fecha}-${slug || "cambio"}.diff`);
 
-/* ---------- Diff binario (conserva finales de línea) ---------- */
-// .gitattributes tiene `* -text`; marcar todo como binary obliga a --binary a
-// codificar el contenido exacto, sin depender de cómo viaje el archivo.
-const dirTemporal = mkdtempSync(join(tmpdir(), "guardar-diff-"));
-const atributos = join(dirTemporal, "attributes");
-writeFileSync(atributos, "* binary\n");
-
-let diff;
-try {
-  diff = execFileSync(
-    "git",
-    ["-c", `core.attributesFile=${atributos}`, "diff", "--binary", "--full-index", `${commit}^`, commit, "--", RUTA_CODIGO],
-    { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 },
-  );
-} finally {
-  rmSync(dirTemporal, { recursive: true, force: true });
-}
+/* ---------- Diff de texto, normalizado a LF ---------- */
+// Antes se usaba --binary: exigía que el archivo destino fuera idéntico byte
+// por byte (hash) y fallaba ante cualquier diferencia de CRLF/LF.
+const diff = execFileSync(
+  "git",
+  ["diff", "--no-color", "--no-ext-diff", "--text", `${commit}^`, commit, "--", RUTA_CODIGO],
+  { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 },
+).replace(/\r\n/g, "\n");
 
 if (!diff.trim()) {
   console.log(`El commit no cambia nada en ${RUTA_CODIGO}; no se genera diff.`);
