@@ -7,7 +7,6 @@ import {
   ChartColumnBig,
   ChevronDown,
   Filter,
-  Loader2,
   Settings2,
   Table2Icon,
   X,
@@ -22,7 +21,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/shared/components/ui/accordion";
-import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Calendar } from "@/shared/components/ui/calendar";
 import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
@@ -75,14 +73,16 @@ export const REPORTES_CRM: readonly ConfiguracionReporte[] = [
 
 const formatearTipos = (array: Tipo[]): SelectOption[] =>
   array.map((i) => ({ ...i, value: i.codTipo, label: i.nomTipo }));
+/** Un usuario por código (conserva el primero), en O(n). */
 const formatearUsuarios = (array: EmpleadoUsuario[]): SelectOption[] => {
-  return array
-    .map((i) => ({ ...i, value: i.codUsuario, label: i.nombreCompleto }))
-    .reduce((acum, curr) => {
-      if (acum.some((i) => i.value === curr.value)) return acum;
-      acum.push(curr);
-      return acum;
-    }, [] as SelectOption[]);
+  const vistos = new Set<unknown>();
+  const usuarios: SelectOption[] = [];
+  for (const i of array) {
+    if (vistos.has(i.codUsuario)) continue;
+    vistos.add(i.codUsuario);
+    usuarios.push({ ...i, value: i.codUsuario, label: i.nombreCompleto });
+  }
+  return usuarios;
 };
 
 export function ListaReportes() {
@@ -143,7 +143,6 @@ export function ListaReportes() {
   } as Filtros);
 
   const [calendarioAbierto, setCalendarioAbierto] = React.useState<string | null>(null);
-  const [reconsultar] = React.useState(0);
   const [descargar, setDescargar] = React.useState(0);
   const [errorPdf, setErrorPdf] = React.useState<string | null>(null);
   const [generandoPdf, setGenerandoPdf] = React.useState(false);
@@ -154,19 +153,6 @@ export function ListaReportes() {
     () => REPORTES_CRM.find((r) => r.value === reporte),
     [reporte],
   );
-
-  React.useEffect(() => {
-    setErrorPdf(null);
-    setGenerandoPdf(false);
-    // setFiltros(
-    //   (old) =>
-    //     ({
-    //       ...defaultFiltros,
-    //       fecha_inicio: old.fecha_inicio,
-    //       fecha_fin: old.fecha_fin,
-    //     }) as Filtros,
-    // );
-  }, []);
 
   const onInput = <K extends keyof Filtros>({ id, val }: { id: K; val: Filtros[K] }) => {
     setFiltros((filtros) => ({
@@ -361,15 +347,6 @@ export function ListaReportes() {
 
   return (
     <section className="w-full max-h-[85vh] overflow-auto bg-surface-1 p-4 md:p-6 space-y-5 relative">
-      {false && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[1px]">
-          <div className="flex items-center gap-2 bg-card rounded-lg px-4 py-3 shadow-lg">
-            <Loader2 className="w-4 h-4 animate-spin text-primary" />
-            <span className="text-sm font-medium text-foreground">Cargando datos...</span>
-          </div>
-        </div>
-      )}
-
       {/* ── Filtros requeridos: Tipo de Seguimiento + Desde + Hasta, misma fila ── */}
       <Panel>
         <SectionHeader
@@ -384,19 +361,6 @@ export function ListaReportes() {
               label: "Reportes",
               options: REPORTES_CRM as unknown as SelectOption[],
             })}
-            {/* <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">Reportes</p>
-            <Select value={reporte} onValueChange={(value: ReporteCrmId) => cambiarReporte(value)}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Selecciona un reporte..." />
-              </SelectTrigger>
-              <SelectContent>
-                {(REPORTES_CRM as unknown as SelectOption[]).map((t) => (
-                  <SelectItem key={t.value} value={String(t.value)}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select> */}
           </div>
 
           <div className="w-full sm:w-1/3">
@@ -427,18 +391,6 @@ export function ListaReportes() {
               </p>
             ) : null}
           </div>
-
-          {reporte && (
-            <Badge
-              className={
-                "" // hayFiltrosActivos ? "bg-amber-100 text-amber-800 border-amber-300 font-semibold" : "bg-brand-50 text-primary border-brand-200 font-semibold"
-              }
-              variant="outline"
-            >
-              {/* {totalRegistros} registro{totalRegistros !== 1 ? "s" : ""} */}
-              {/* {hayFiltrosActivos ? " (filtrado)" : ""} */}
-            </Badge>
-          )}
         </div>
       </Panel>
 
@@ -508,7 +460,6 @@ export function ListaReportes() {
       {reporte === "hit-rate" && (
         <HitRate
           filtros={filtros}
-          reconsultar={reconsultar}
           tipo="descarga"
           descargar={descargar}
           onErrorPdf={setErrorPdf}
@@ -518,7 +469,6 @@ export function ListaReportes() {
       {reporte === "realizacion-de-precio" && (
         <RealizacionDePrecio
           filtros={filtros}
-          reconsultar={reconsultar}
           tipo="descarga"
           descargar={descargar}
           onErrorPdf={setErrorPdf}
@@ -531,17 +481,12 @@ export function ListaReportes() {
             icon={<Table2Icon className="w-4 h-4" />}
             title={reporteSeleccionado?.label ? "Tabla de Datos" : "Seleccione un reporte"}
             subtitle={reporteSeleccionado?.descripcion}
-            // action={<></>}
           />
 
-          {/* <pre>{JSON.stringify({ reporte }, null, 2)}</pre> */}
           <div className="p-4">
-            {reporte === "seleccione" && <div />}
-            {reporte === "hit-rate" && (
-              <HitRate filtros={filtros} reconsultar={reconsultar} tipo="tablas" />
-            )}
+            {reporte === "hit-rate" && <HitRate filtros={filtros} tipo="tablas" />}
             {reporte === "realizacion-de-precio" && (
-              <RealizacionDePrecio filtros={filtros} reconsultar={reconsultar} tipo="tablas" />
+              <RealizacionDePrecio filtros={filtros} tipo="tablas" />
             )}
           </div>
         </Panel>
@@ -553,20 +498,11 @@ export function ListaReportes() {
             icon={<ChartColumnBig className="w-4 h-4" />}
             title={reporteSeleccionado?.label ? "Gráfica de Usuarios" : "Seleccione un reporte"}
             subtitle={reporteSeleccionado?.descripcion}
-            // action={<></>}
           />
-          {/* <pre>{JSON.stringify({ reporte }, null, 2)}</pre> */}
           <div className="p-4">
-            {reporte === "seleccione" && <div />}
-            {reporte === "hit-rate" && (
-              <HitRate filtros={filtros} reconsultar={reconsultar} tipo="grafica-usuario" />
-            )}
+            {reporte === "hit-rate" && <HitRate filtros={filtros} tipo="grafica-usuario" />}
             {reporte === "realizacion-de-precio" && (
-              <RealizacionDePrecio
-                filtros={filtros}
-                reconsultar={reconsultar}
-                tipo="grafica-usuario"
-              />
+              <RealizacionDePrecio filtros={filtros} tipo="grafica-usuario" />
             )}
           </div>
         </Panel>
@@ -584,18 +520,10 @@ export function ListaReportes() {
               options: transportes,
             })}
           />
-          {/* <pre>{JSON.stringify({ reporte }, null, 2)}</pre> */}
           <div className="p-4">
-            {reporte === "seleccione" && <div />}
-            {reporte === "hit-rate" && (
-              <HitRate filtros={filtros} reconsultar={reconsultar} tipo="grafica-transporte" />
-            )}
+            {reporte === "hit-rate" && <HitRate filtros={filtros} tipo="grafica-transporte" />}
             {reporte === "realizacion-de-precio" && (
-              <RealizacionDePrecio
-                filtros={filtros}
-                reconsultar={reconsultar}
-                tipo="grafica-transporte"
-              />
+              <RealizacionDePrecio filtros={filtros} tipo="grafica-transporte" />
             )}
           </div>
         </Panel>
@@ -607,26 +535,15 @@ export function ListaReportes() {
             icon={<ChartColumnBig className="w-4 h-4" />}
             title={reporteSeleccionado?.label ? "Gráfica de Datos" : "Seleccione un reporte"}
             subtitle={reporteSeleccionado?.descripcion}
-            // action={<></>}
           />
-          {/* <pre>{JSON.stringify({ reporte }, null, 2)}</pre> */}
           <div className="p-4">
-            {reporte === "seleccione" && <div />}
-            {reporte === "hit-rate" && (
-              <HitRate filtros={filtros} reconsultar={reconsultar} tipo="grafica-otros" />
-            )}
+            {reporte === "hit-rate" && <HitRate filtros={filtros} tipo="grafica-otros" />}
             {reporte === "realizacion-de-precio" && (
-              <RealizacionDePrecio
-                filtros={filtros}
-                reconsultar={reconsultar}
-                tipo="grafica-otros"
-              />
+              <RealizacionDePrecio filtros={filtros} tipo="grafica-otros" />
             )}
           </div>
         </Panel>
       )}
-      {/* <pre>{JSON.stringify({ reporte }, null, 2)}</pre> */}
-      {/* <pre>{JSON.stringify(filtros, null, 2)}</pre> */}
     </section>
   );
 }

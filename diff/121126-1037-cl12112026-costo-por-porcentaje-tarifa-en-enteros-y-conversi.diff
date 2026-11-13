@@ -1,0 +1,44 @@
+diff --git a/src/features/pricing/cotizacion/calculo/lib/costo-porcentaje.ts b/src/features/pricing/cotizacion/calculo/lib/costo-porcentaje.ts
+index e62b30d2064270ef2aa9ec6ae581a24b87629fd6..a7a7e9aee0d7d8fd6cba72f7c3e10d264dfff615 100644
+GIT binary patch
+delta 218
+zcmaFBIiGvO7N*IsnI6|GDCp}egd`SarX?0Dq?aZZr6ek(<|q{87bU0Wl_X}RDx~HC
+zQAui1ezAgvk*S`MnS!kXgjUs5c+@sYAuTbvB)>?(K+nk3$V`t5Y+`VxLTa%>Sz-=Q
+zA}up3U!gcvp|m(rp(HU!A-Oa$2c#@HKd+d#1fmGyg2}s>49%g&*#Zp+K)AvlS)GEu
+Rf}w$df)%pZ<}=J9i~tcmNE!eD
+
+delta 27
+jcmbQw{eW}B7ACf|#N?9vqRGlEhLg82J>J~QBE$#)lGF+9
+
+diff --git a/src/features/pricing/cotizacion/calculo/lib/rubros-manuales.ts b/src/features/pricing/cotizacion/calculo/lib/rubros-manuales.ts
+index a0f355bd7c29abe6eaf28916692fc4e543e52d50..f1092ce01a2302c8527ccc6a1d3500f4667aa507 100644
+GIT binary patch
+delta 218
+zcmdld`&VwmTh7TUT#xG&6!i5KLK2HI(-Mmn(n}MIQW6zXa})~li;`3GN)oeD6;ktn
+zs3f&0zgR)T$W+hBOu<$GLaS;jJZhVykd~NSl3%1?pl4)iWTwXjHZeF;A+=bcEHMWt
+zk(Qa2uTY$-P+FX*P?DIVkX)LW15%cppI6LV0#O8U!Q{`JhUQS?Y=H&@AY5UOtWH5+
+R!O*}!!3tSyGb{H_W&jIDNG1RP
+
+delta 27
+jcmew>w@-G%TTZsL#N?9vqRBDbhLhiNKHhwcdpk1#sp<>&
+
+diff --git a/src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-form.tsx b/src/features/pricing/tarifas/components/metodos/costo-porcentaje/porcentaje-form.tsx
+index 30da71b99efe308a00c35c7b4ffddc9998c0c899..36a59d44e3e7b11e9dfbbb2fd1c80074dce1c836 100644
+GIT binary patch
+delta 726
+zcmZ`%(P|Sx6s3Yfg0#Acm=uGTm2P*zZqtPpiA@Dl9|}H5g+8j|?#;4wb|#&jjiKq1
+zhkiksC;vjogMyDfsXyT-^b?#(N|R6=78Z8Tx#!$-=F9%~gRj3!qs>itn*e6e<03>R
+z$uUBP5a&ch1d!=RqTm^XoI!+Pk`k)XZm{hKJJ5#dd(C?ajB8BFq3H+P!H!=B(6c*S
+zCZ{A!IMXC*5Uih|kO&02B$OjA!2S6Rwwg^32!)W)FsDQSCD1o^%p6V1By@8WWFHR+
+zi@6qd`-F1Q0+y#AQFzea(@22HSJ;InoSlLDl5>iLxq^T8F?&DT(F4aZ*s9jwo2Wl8
+zUn{AT`s(BMf}lI2c6cVar)uT(#=NCD#E~)XjX#w?+)-P#2T$xbvur0z+0X*}$oQWw
+zX&36^;rZ>M@B6O0Y*eiwq-4-CzM#<9Vd1GqwNv%?{zwn3+;SZC&U&^~sMqy171S*C
+z$MQyl3?vTZMw&~EHo9D3EO^c$dm4-hXL=4;EKqlhbiVZeSB=O1Rn0vj$aUkUnc3M@
+zhn2?ohjn*Jl`1RF@J8YbXv2E}w)$0H@7Oo~=x|=qt0wiW>g5=jODTY1Ok~pMzFjPk
+N)Mecs->a6E{{ag&-1Pte
+
+delta 158
+zcmdntIn!msDbC5)xRi7X@{5vF^GXu4Ql0aQOY#+L6buw<Y823g?Gy|R3?^UX5}mBY
+zErg^g45SxR6GRxSX>%lZ0^4K-DQ?y>klM)~1)C>tmTH<TDO^9fN`QOve(Au?k3@JF
+OCuhibZeB0O$p-+dCO3ru
+

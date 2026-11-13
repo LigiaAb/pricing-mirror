@@ -1,11 +1,13 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 
 import {
   type CotizacionCabecera,
   type CotizacionCabeceraPayload,
   cotizacionCabeceraSchema,
+  cotizacionesCabeceraOptions,
   type FiltrosCotizacionesCabecera,
   useActualizarCotizacionCabecera,
   useConfirmarCotizacionCabecera,
@@ -14,7 +16,8 @@ import {
   useRechazarCotizacionCabecera,
   useValidarElegibilidadCotizacion,
 } from "../api/cotizacion-cabecera";
-import { CAMPOS_FILTRO, CAMPOS_FILTRO_API } from "../lib/cabecera";
+import { VERSIONES_QUERY_KEY } from "../api/versiones";
+import { CAMPOS_CABECERA, CAMPOS_FILTRO, CAMPOS_FILTRO_API } from "../lib/cabecera";
 import { COD_ESTADO_OCULTO_LEGADO, TIPO_PAGO } from "../lib/constantes";
 import type { Id } from "../lib/tipos";
 import { mismoId } from "../lib/utils";
@@ -136,6 +139,34 @@ function obtenerEstadoVisual(payload: CotizacionCabeceraPayload): Id | null {
   return null;
 }
 
+/**
+ * Todos los campos de la cabecera en null. El payload los sobrescribe; así los que
+ * el formulario no envía (estado_nombre, usuario, peso, volumen) cumplen el esquema.
+ */
+const CAMPOS_CABECERA_NULOS = Object.fromEntries(
+  Object.values(CAMPOS_CABECERA).map((campo) => [campo.cod, null]),
+);
+
+/**
+ * Cabecera local tras insertar, usada mientras llega (o si falla) la consulta
+ * al backend. No usa `parse`: un campo que el formulario no envía no debe
+ * impedir salir del modo "ingreso".
+ */
+function construirCotizacionLocal(
+  payload: CotizacionCabeceraPayload,
+  codCotizacionCabecera: Id,
+): CotizacionCabecera {
+  const candidato = {
+    ...CAMPOS_CABECERA_NULOS,
+    ...payload,
+    cod_cotizacion_cabecera: codCotizacionCabecera,
+  };
+
+  const parsed = cotizacionCabeceraSchema.safeParse(candidato);
+
+  return parsed.success ? parsed.data : (candidato as CotizacionCabecera);
+}
+
 export function useGestionCotizaciones({
   filtrosIniciales = {},
   estados,
@@ -253,14 +284,26 @@ export function useGestionCotizaciones({
     onLimpiarPlantillas?.();
   }, [onLimpiarPlantillas]);
 
+  const queryClient = useQueryClient();
+
   const seleccionarCotizacion = React.useCallback(
     (cotizacion: CotizacionCabecera) => {
       setIsNewCotizacion(false);
       setFormResetKey((prev) => prev + 1);
       limpiarPlantilla();
       setCotizacionSeleccionada(cotizacion);
+
+      /*
+       * Al seleccionar una cabecera siempre se reconsultan sus versiones:
+       * otro usuario (o Autorización Spot) pudo crear/activar versiones
+       * y la caché no debe mostrar una lista vieja. También aplica al
+       * volver a seleccionar la misma cabecera.
+       */
+      void queryClient.invalidateQueries({
+        queryKey: [...VERSIONES_QUERY_KEY, cotizacion.cod_cotizacion_cabecera],
+      });
     },
-    [limpiarPlantilla],
+    [limpiarPlantilla, queryClient],
   );
 
   const seleccionarCotizacionPorId = React.useCallback(
@@ -324,6 +367,47 @@ export function useGestionCotizaciones({
   const validarElegibilidadMutateAsync = validarElegibilidadMutation.mutateAsync;
   const confirmarMutateAsync = confirmarMutation.mutateAsync;
 
+  /**
+   * Consulta una cotización recién guardada.
+   *
+   * 1. Busca en el listado actual (onSuccess del insert ya lo invalidó y recargó).
+   * 2. Si no aparece (los filtros activos la excluyen), consulta el listado
+   *    con los filtros de backend que tiene la propia cotización.
+   *
+   * Devuelve null si no se encuentra o si la consulta falla.
+   */
+  const consultarCotizacion = React.useCallback(
+    async (codCotizacionCabecera: Id, payload: CotizacionCabeceraPayload) => {
+      const buscar = (lista: CotizacionCabecera[] | undefined) =>
+        (lista ?? []).find((item) =>
+          mismoId(item.cod_cotizacion_cabecera, codCotizacionCabecera),
+        ) ?? null;
+
+      try {
+        const enListado = buscar(
+          await queryClient.fetchQuery(cotizacionesCabeceraOptions(filtrosConsulta)),
+        );
+
+        if (enListado) return enListado;
+
+        const filtrosPropios: FiltrosCotizacionesCabecera = {};
+
+        for (const cod of CAMPOS_FILTRO_API) {
+          const value = payload[cod];
+
+          if (typeof value === "string" || typeof value === "number") {
+            filtrosPropios[cod] = value;
+          }
+        }
+
+        return buscar(await queryClient.fetchQuery(cotizacionesCabeceraOptions(filtrosPropios)));
+      } catch {
+        return null;
+      }
+    },
+    [queryClient, filtrosConsulta],
+  );
+
   const insertarCotizacion = React.useCallback(
     async (cotizacion: CotizacionCabeceraPayload) => {
       const payload: CotizacionCabeceraPayload = {
@@ -332,18 +416,29 @@ export function useGestionCotizaciones({
       };
 
       const result = await insertarMutation.mutateAsync(payload);
+      const codInsertado = result.cod_cotizacion_cabecera;
 
-      const cotizacionInsertada = cotizacionCabeceraSchema.parse({
-        ...payload,
-        cod_cotizacion_cabecera: result.cod_cotizacion_cabecera,
-      });
+      /*
+       * La cabecera YA existe en el backend: se sale del modo "ingreso" antes
+       * de cualquier otra cosa. Así, aunque la consulta posterior falle, el
+       * siguiente guardado actualiza en vez de insertar otra cotización.
+       */
+      const cotizacionLocal = construirCotizacionLocal(payload, codInsertado);
 
-      setCotizacionSeleccionada(cotizacionInsertada);
       setIsNewCotizacion(false);
+      setCotizacionSeleccionada(cotizacionLocal);
 
-      return cotizacionInsertada;
+      const cotizacionConsultada = await consultarCotizacion(codInsertado, payload);
+
+      if (cotizacionConsultada) {
+        setCotizacionSeleccionada(cotizacionConsultada);
+        // Reconstruye el formulario con lo que devolvió el backend (modo edición).
+        setFormResetKey((prev) => prev + 1);
+      }
+
+      return cotizacionConsultada ?? cotizacionLocal;
     },
-    [estados.ACTIVO, insertarMutation],
+    [estados.ACTIVO, insertarMutation, consultarCotizacion],
   );
 
   const actualizarCotizacion = React.useCallback(

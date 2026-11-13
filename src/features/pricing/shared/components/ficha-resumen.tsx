@@ -48,6 +48,14 @@ function leer(item: Registro, snake: string): unknown {
 
 const esActivo = (item: Registro) => Number(leer(item, "cod_estado")) === 1;
 
+/**
+ * Trata una lista del catálogo como registros genéricos. Las interfaces de
+ * catálogos (`RelacionTipo`, `Tipo`, …) no tienen firma de índice, por eso un
+ * cast directo a `Registro[]` falla; desde `object[]` sí es válido.
+ */
+const comoRegistros = (data: readonly object[] | null | undefined): Registro[] =>
+  (data ?? []) as Registro[];
+
 function useCatalogosFicha() {
   const servicios = catalogoServicios.useLista();
   const metodos = useMetodos();
@@ -55,8 +63,8 @@ function useCatalogosFicha() {
   const relaciones = catalogoRelacionTipo.useLista({ cod_estado: 1 });
 
   return React.useMemo(() => {
-    const listaTipos = (tipos.data ?? []) as Registro[];
-    const listaRelaciones = ((relaciones.data ?? []) as Registro[]).filter(esActivo);
+    const listaTipos = comoRegistros(tipos.data);
+    const listaRelaciones = comoRegistros(relaciones.data).filter(esActivo);
 
     /** Etiqueta de un tipo activo de la tabla `tabla` (tabla genérica de tipos). */
     const etiquetaTipo = (tabla: string, value: unknown) => {
@@ -87,8 +95,8 @@ function useCatalogosFicha() {
     };
 
     return {
-      servicios: (servicios.data ?? []) as Registro[],
-      metodos: (metodos.data ?? []) as Registro[],
+      servicios: comoRegistros(servicios.data),
+      metodos: comoRegistros(metodos.data),
       etiquetaTipo,
       etiquetaRelacionTransporte,
       etiquetaCualquierTipo,

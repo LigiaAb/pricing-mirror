@@ -12,6 +12,7 @@ import { useCriteriosCotizacion } from "../hooks/use-criterios-cotizacion";
 import { useEstadosCalculo } from "../hooks/use-estados-cotizacion";
 import { useGuardarVersionCotizacion } from "../hooks/use-guardar-version-cotizacion";
 import { usePdfCotizacion } from "../hooks/use-pdf-cotizacion";
+import { usePorcentajesRubros } from "../hooks/use-porcentajes-rubros";
 import { useRubrosCotizacion } from "../hooks/use-rubros-cotizacion";
 import { useRubrosDueAgent } from "../hooks/use-rubros-due-agent";
 import { useRubrosDueCarrier } from "../hooks/use-rubros-due-carrier";
@@ -32,6 +33,9 @@ import { SpotDocumentoDialog } from "./spot-documento-dialog";
 import { TotalesRubros } from "./totales-rubros";
 import { SeccionConLoader } from "./utils";
 import { VersionesTable } from "./versiones-table";
+
+/** Arreglo vacío estable (evita recalcular memos en cada render). */
+const SIN_RUBROS: Record<string, unknown>[] = [];
 
 type Props = {
   /** Cabecera de la cotización (campos definidos en lib/cabecera.ts). */
@@ -407,7 +411,7 @@ function DetalleCalculoCotizacion({
     [calculo.calcularDueCarrierBasadoEnDueAgent, entidadEfectivaId],
   );
 
-  const dueAgent = useRubrosDueAgent({
+  const dueAgentBase = useRubrosDueAgent({
     rubros: rubros.rubrosDueAgent as Parameters<typeof useRubrosDueAgent>[0]["rubros"],
 
     lectura: isReadOnly,
@@ -450,13 +454,13 @@ function DetalleCalculoCotizacion({
     [rubros.rubrosDueCarrier, carrier.tarifasSpot],
   );
 
-  const dueCarrier = useRubrosDueCarrier({
+  const dueCarrierBase = useRubrosDueCarrier({
     rubros: rubrosDueCarrierConSpot as Parameters<typeof useRubrosDueCarrier>[0]["rubros"],
 
     lectura: isReadOnly,
   });
 
-  const dueCarrierDesdeAgent = useRubrosDueCarrier({
+  const dueCarrierDesdeAgentBase = useRubrosDueCarrier({
     rubros: calculo.dueCarrierBasadoEnDueAgent as Parameters<
       typeof useRubrosDueCarrier
     >[0]["rubros"],
@@ -521,6 +525,22 @@ function DetalleCalculoCotizacion({
     onCalcularScalling: calcularScalling,
 
     calculoContextKey: calculo.calculoContextKey,
+  });
+
+  /* ==========================================================================
+   * MÉTODO PORCENTAJE (rubro = % de otro rubro, de cualquier sección)
+   * ========================================================================== */
+
+  const rubrosScallingAplicados = tieneScalling ? scalling.rutasProcesadas : SIN_RUBROS;
+
+  const { dueCarrier, dueAgent, dueCarrierDesdeAgent } = usePorcentajesRubros({
+    dueCarrier: dueCarrierBase,
+    dueAgent: dueAgentBase,
+    dueCarrierDesdeAgent: dueCarrierDesdeAgentBase,
+    rubrosScalling: rubrosScallingAplicados as Parameters<
+      typeof usePorcentajesRubros
+    >[0]["rubrosScalling"],
+    lectura: isReadOnly,
   });
 
   /* ==========================================================================

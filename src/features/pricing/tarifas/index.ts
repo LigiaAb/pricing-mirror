@@ -216,18 +216,19 @@ export {
 } from "./components/metodo-pais/pais-columns";
 export { PaisForm } from "./components/metodo-pais/pais-form";
 export { PaisTable } from "./components/metodo-pais/pais-table";
+export { CampoMetodo } from "./components/metodos/campo-metodo";
 export type {
   FilaCobertura,
   MonedaCoberturaOption,
 } from "./components/metodos/cobertura/cobertura-columns";
 export { CoberturaForm } from "./components/metodos/cobertura/cobertura-form";
 export { CoberturaTable } from "./components/metodos/cobertura/cobertura-table";
-export type {
-  FilaCostoVenta,
-  MonedaCostoVentaOption,
-} from "./components/metodos/costoVenta/costo-venta-columns";
+export {
+  MetodoCostoVenta,
+  /** @deprecated Nombre anterior; usar `MetodoCostoVenta`. */
+  MetodoCostoVenta as CostoVentaTable,
+} from "./components/metodos/costoVenta/costo-venta";
 export { CostoVentaForm } from "./components/metodos/costoVenta/costo-venta-form";
-export { CostoVentaTable } from "./components/metodos/costoVenta/costo-venta-table";
 export { default as EquipoColumn } from "./components/metodos/equipo/equipo-columns";
 export {
   EquipoForm,
@@ -273,6 +274,21 @@ export {
   useOpcionesMonedas,
   useOpcionesRubros,
 } from "./hooks/use-opciones-tarifa";
+export {
+  type CampoFijo,
+  type CampoMoneda,
+  type CampoMonto,
+  type CatalogosMetodo,
+  type ContextoMetodo,
+  type DefCampo,
+  definirMetodo,
+  delContexto,
+  fijo,
+  moneda,
+  monto,
+  type ReglaMetodo,
+  ventaNoMenorQueCosto,
+} from "./lib/campos-metodo";
 export type {
   CatalogOption,
   CatalogosProcesados,
@@ -287,6 +303,11 @@ export type {
   UseFormularioOptions,
   VisibleWhenRule,
 } from "./lib/form-types";
+export {
+  type FilaCostoVenta,
+  METODO_COSTO_VENTA,
+  type MonedaCostoVentaOption,
+} from "./lib/metodos/costo-venta";
 export { fieldRules } from "./lib/tarifa-field-rules";
 export {
   CATALOGOS_AGREGAR_TODOS,
