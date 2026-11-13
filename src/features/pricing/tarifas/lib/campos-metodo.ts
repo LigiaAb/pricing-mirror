@@ -12,7 +12,7 @@
  *   - la fila inicial de un registro nuevo                (filaNueva)
  *   - la etiqueta y el input de cada campo                (components/metodos/campo-metodo.tsx)
  *
- * Tipos de campo: monto, moneda, rubro, fijo, delContexto.
+ * Tipos de campo: monto, moneda, rubro, booleano, fijo, delContexto.
  * Si un campo no se comporta como su tipo, se sobrescribe SOLO esa parte en
  * la definición (aPayload, deApi, esquema, ...) en lugar de forzar el tipo.
  *
@@ -60,7 +60,7 @@ export type FormularioCampo = {
 };
 
 export type DefCampo<TPayload = unknown> = {
-  tipo: "monto" | "moneda" | "rubro" | "fijo" | "contexto";
+  tipo: "monto" | "moneda" | "rubro" | "booleano" | "fijo" | "contexto";
   /** Texto que ve el usuario (formulario y mensajes). */
   label?: string;
   /** Validación al leer del API. Sin esquema, el campo no forma parte del registro. */
@@ -69,7 +69,10 @@ export type DefCampo<TPayload = unknown> = {
   en?: string;
   /** Obligatorio para poder guardar. */
   requerido?: boolean;
-  /** Valor con el que empieza un registro nuevo (filaNueva). Sin `inicial`, el campo empieza vacío. */
+  /**
+   * Valor con el que empieza un registro nuevo (filaNueva), en `en` si el campo lo tiene.
+   * Sin `inicial`, el campo empieza vacío.
+   */
   inicial?: unknown;
   /** Valor que se envía al backend. */
   aPayload: (valores: Valores, cod: string, ctx: ContextoMetodo) => TPayload;
@@ -137,13 +140,13 @@ export type CampoMoneda<En extends string, P = Id | null> = Campo<"moneda", P> &
  * opción completa, guardada en `en` (moneda_costo). Se envía opcion.cod_moneda.
  */
 export function moneda<const En extends string>(
-  opciones: Sobrescribir<Id | null> & { en: En; aPayload?: never },
+  opciones: Sobrescribir<Id | null> & { en: En; inicial?: null; aPayload?: never },
 ): CampoMoneda<En>;
 export function moneda<const En extends string, P>(
-  opciones: Sobrescribir<P> & { en: En; aPayload: AlPayload<P> },
+  opciones: Sobrescribir<P> & { en: En; inicial?: null; aPayload: AlPayload<P> },
 ): CampoMoneda<En, P>;
 export function moneda<const En extends string, P>(
-  opciones: Sobrescribir<P> & { en: En },
+  opciones: Sobrescribir<P> & { en: En; inicial?: null },
 ): CampoMoneda<En, P> {
   const { aPayload, ...resto } = opciones;
   const opcionDe = (valores: Valores) => valores[resto.en] as MonedaOpcion | null | undefined;
@@ -167,7 +170,7 @@ export type CampoRubro<En extends string, P = Id | null> = Campo<"rubro", P> & {
 
 /** Rubro: como `moneda`, pero con el catálogo de rubros (código cod_rubro ?? value). */
 export function rubro<const En extends string>(
-  opciones: Sobrescribir<Id | null> & { en: En },
+  opciones: Sobrescribir<Id | null> & { en: En; inicial?: null },
 ): CampoRubro<En> {
   const { aPayload, ...resto } = opciones;
   const opcionDe = (valores: Valores) => valores[resto.en] as RubroOpcion | null | undefined;
@@ -181,6 +184,18 @@ export function rubro<const En extends string>(
     deApi: (registro, cod, catalogos) =>
       catalogos.rubros?.find((item) => String(codigo(item)) === String(registro[cod])) ?? null,
     ...resto,
+  };
+}
+
+export type CampoBooleano = Campo<"booleano", boolean> & { esquema: z.ZodBoolean };
+
+/** Sí / no (ej. es_porcentaje). Se envía Boolean(valor). El input se escribe en el formulario. */
+export function booleano(opciones: { label?: string; inicial?: boolean } = {}): CampoBooleano {
+  return {
+    tipo: "booleano",
+    esquema: z.boolean(),
+    aPayload: (valores, cod) => Boolean(valores[cod]),
+    ...opciones,
   };
 }
 
@@ -201,6 +216,16 @@ export type CampoContexto = Campo<"contexto", Id | null>;
 /** Valor que viene de las props del componente (ej. cod_servicio). Se envía `?? null`. */
 export function delContexto(clave: Exclude<keyof ContextoMetodo, "codMetodo">): CampoContexto {
   return { tipo: "contexto", aPayload: (_valores, _cod, ctx) => ctx[clave] ?? null };
+}
+
+/**
+ * El campo se envía pero no se declara en el esquema de la lista (llega por
+ * passthrough, si llega). Ej. cod_rubro en costo-porcentaje.
+ */
+export function sinEsquema<T extends DefCampo>(campo: T): Omit<T, "esquema"> {
+  const { esquema: _esquema, ...resto } = campo;
+
+  return resto;
 }
 
 /* ==========================================================================
@@ -331,12 +356,12 @@ export function definirMetodo<const IdCod extends string, const C extends Campos
     return payload as Payload;
   };
 
-  /** Fila de un registro nuevo: solo los campos con `inicial`. */
+  /** Fila de un registro nuevo: solo los campos con `inicial`, en el orden de `campos`. */
   const filaNueva = (): Fila => {
     const fila: Valores = {};
 
     for (const [cod, campo] of entradas) {
-      if (campo.inicial !== undefined) fila[cod] = campo.inicial;
+      if (campo.inicial !== undefined) fila[campo.en ?? cod] = campo.inicial;
     }
 
     return fila as Fila;

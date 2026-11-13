@@ -224,6 +224,12 @@ export {
 } from "./components/metodos/cobertura/cobertura";
 export { CoberturaForm } from "./components/metodos/cobertura/cobertura-form";
 export {
+  MetodoCostoPorcentaje,
+  /** @deprecated Nombre anterior; usar `MetodoCostoPorcentaje`. */
+  MetodoCostoPorcentaje as CostoPorcentajeTable,
+} from "./components/metodos/costo-porcentaje/costo-porcentaje";
+export { CostoPorcentajeForm } from "./components/metodos/costo-porcentaje/costo-porcentaje-form";
+export {
   MetodoCostoVenta,
   /** @deprecated Nombre anterior; usar `MetodoCostoVenta`. */
   MetodoCostoVenta as CostoVentaTable,
@@ -274,9 +280,12 @@ export {
   useOpcionesRubros,
 } from "./hooks/use-opciones-tarifa";
 export {
+  booleano,
+  type CampoBooleano,
   type CampoFijo,
   type CampoMoneda,
   type CampoMonto,
+  type CampoRubro,
   type CatalogosMetodo,
   type ContextoMetodo,
   type DefCampo,
@@ -288,6 +297,7 @@ export {
   rangoPermitido,
   type ReglaMetodo,
   rubro,
+  sinEsquema,
   ventaNoMenorQueCosto,
 } from "./lib/campos-metodo";
 export type {
@@ -309,6 +319,12 @@ export {
   METODO_COBERTURA,
   type MonedaCoberturaOption,
 } from "./lib/metodos/cobertura";
+export {
+  type FilaCostoPorcentaje,
+  METODO_COSTO_PORCENTAJE,
+  type MonedaCostoPorcentajeOption,
+  type RubroCostoPorcentajeOption,
+} from "./lib/metodos/costo-porcentaje";
 export {
   type FilaCostoVenta,
   METODO_COSTO_VENTA,

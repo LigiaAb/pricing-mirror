@@ -11,12 +11,13 @@ import {
   useTarifaCostoPorcentajeje,
 } from "../../../api/tarifa-costo-porcentaje";
 import { useOpcionesMonedas, useOpcionesRubros } from "../../../hooks/use-opciones-tarifa";
-import type {
-  FilaPorcentaje,
-  MonedaPorcentajeOption,
-  RubroPorcentajeOption,
-} from "./porcentaje-columns";
-import { CostoPorcentajeForm } from "./porcentaje-form";
+import {
+  type FilaCostoPorcentaje,
+  METODO_COSTO_PORCENTAJE,
+  type MonedaCostoPorcentajeOption,
+  type RubroCostoPorcentajeOption,
+} from "../../../lib/metodos/costo-porcentaje";
+import { CostoPorcentajeForm } from "./costo-porcentaje-form";
 
 type Props = {
   codMetodo?: string | number | null;
@@ -30,7 +31,11 @@ type Props = {
   servicio?: Record<string, unknown>;
 };
 
-export function CostoPorcentajeTable({
+/**
+ * Tarifa de método Costo por Porcentaje: consulta, formulario y guardado.
+ * Componente padre reutilizable: basta con `<MetodoCostoPorcentaje codMetodo={...} />`.
+ */
+export function MetodoCostoPorcentaje({
   codMetodo,
   readonly = false,
   reConsultar = () => {},
@@ -42,7 +47,7 @@ export function CostoPorcentajeTable({
 
   const rubrosFetch = useRubrosFetch.useLista();
 
-  const rubros: RubroPorcentajeOption[] = useOpcionesRubros(rubrosFetch.data);
+  const rubros: RubroCostoPorcentajeOption[] = useOpcionesRubros(rubrosFetch.data);
 
   const monedasQuery = useMonedasPorcentaje();
 
@@ -50,7 +55,7 @@ export function CostoPorcentajeTable({
 
   const actualizarPorcentaje = useActualizarTarifaCostoPorcentajeje();
 
-  const monedas: MonedaPorcentajeOption[] = useOpcionesMonedas(monedasQuery.data);
+  const monedas: MonedaCostoPorcentajeOption[] = useOpcionesMonedas(monedasQuery.data);
 
   /*
    * Igual que el componente viejo:
@@ -60,63 +65,23 @@ export function CostoPorcentajeTable({
 
   const esNuevo = porcentaje == null;
 
-  const value = React.useMemo<FilaPorcentaje | null>(() => {
-    if (!porcentaje) return null;
+  const value = React.useMemo<FilaCostoPorcentaje | null>(
+    () => (porcentaje ? METODO_COSTO_PORCENTAJE.aFila(porcentaje, { monedas, rubros }) : null),
+    [porcentaje, monedas, rubros],
+  );
 
-    return {
-      ...porcentaje,
-
-      moneda_costo:
-        monedas.find(
-          (moneda) => String(moneda.cod_moneda) === String(porcentaje.cod_moneda_costo),
-        ) ?? null,
-
-      moneda_venta:
-        monedas.find(
-          (moneda) => String(moneda.cod_moneda) === String(porcentaje.cod_moneda_venta),
-        ) ?? null,
-
-      rubro:
-        rubros.find(
-          (rubro) => String(rubro.cod_rubro ?? rubro.value) === String(porcentaje.cod_rubro),
-        ) ?? null,
-    };
-  }, [porcentaje, monedas, rubros]);
-
+  // cod_tarifa_porcentaje ?? 0, mínimos vacíos como 0 y Boolean(es_porcentaje): ver la definición.
   const formatearFilaApi = React.useCallback(
-    (fila: FilaPorcentaje): TarifaCostoPorcentajejeMutationPayload | null => {
-      if (codMetodo == null) {
-        return null;
-      }
+    (fila: FilaCostoPorcentaje): TarifaCostoPorcentajejeMutationPayload | null => {
+      if (codMetodo == null) return null;
 
-      return {
-        cod_tarifa_porcentaje: fila.cod_tarifa_porcentaje ?? 0,
-
-        cod_metodo: codMetodo,
-
-        porcentaje_costo: Number(fila.porcentaje_costo),
-
-        porcentaje_venta: Number(fila.porcentaje_venta),
-
-        minimo_costo: Number(fila.minimo_costo ?? 0),
-        minimo_venta: Number(fila.minimo_venta ?? 0),
-
-        es_porcentaje: Boolean(fila.es_porcentaje),
-
-        cod_rubro: fila.rubro?.cod_rubro ?? fila.rubro?.value ?? null,
-
-        cod_moneda_costo: fila.moneda_costo?.cod_moneda ?? null,
-
-        cod_moneda_venta: fila.moneda_venta?.cod_moneda ?? null,
-
-        cod_estado: 1,
-      };
+      return METODO_COSTO_PORCENTAJE.aPayload(fila, { codMetodo });
     },
     [codMetodo],
   );
 
   const handleGuardar = React.useCallback(
-    (fila: FilaPorcentaje) => {
+    (fila: FilaCostoPorcentaje) => {
       const payload = formatearFilaApi(fila);
 
       if (!payload) return;

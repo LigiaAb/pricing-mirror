@@ -15,7 +15,7 @@ tarifas/
 │  └─ use-formulario-tarifas.ts  ← formulario principal de tarifa
 ├─ lib/
 │  ├─ campos-metodo.ts      ← DEFINICIÓN ÚNICA de campos de métodos: tipos de campo y definirMetodo
-│  ├─ metodos/<metodo>.ts   ← campos de cada método (migrados: costo-venta, cobertura, porcentaje)
+│  ├─ metodos/<metodo>.ts   ← campos de cada método (migrados: costo-venta, cobertura, porcentaje, costo-porcentaje)
 │  ├─ tarifa-field-rules.ts ← reglas de campos del formulario principal
 │  └─ tarifa-helpers.ts     ← funciones compartidas (decimales, fechas, ...)
 └─ components/
@@ -75,13 +75,21 @@ Excepción: **equipo** convierte monedas con `value` numérico porque ese valor 
 
 ## Campos de un método (definición única) — en migración
 
-Migrados: **costoVenta**, **cobertura** y **porcentaje** (`lib/metodos/<metodo>.ts`).
+Migrados: **costoVenta**, **cobertura**, **porcentaje** y **costo-porcentaje** (`lib/metodos/<metodo>.ts`).
 De cada `METODO_<X>` salen el esquema, los tipos (registro, fila, payload), `aFila`, `aPayload`, `filaNueva`
 y `validar` (requeridos + `reglas`). El formulario usa `<CampoMetodo>` con el mismo layout; cada campo dibuja
 sus propios mensajes de error. Componentes padre reutilizables: `MetodoCostoVenta`, `MetodoCobertura`,
-`MetodoPorcentaje` (alias viejos `CostoVentaTable`, `CoberturaTable`, `PorcentajeTable` en el barrel).
-Sigue a mano en los formularios: los avisos de más de 8 decimales (cobertura, porcentaje) y el `minimo: 0`
-inicial de porcentaje. Los demás métodos se migran uno por uno.
+`MetodoPorcentaje`, `MetodoCostoPorcentaje` (alias viejos `*Table` en el barrel).
+
+Sigue a mano en los formularios (la definición igual da esquema, payload y validación):
+
+- avisos de más de 8 decimales (cobertura, porcentaje, costo-porcentaje);
+- `minimo: 0` inicial de porcentaje;
+- costo-porcentaje: el input de venta (etiqueta, `max`, `step` y "%" cambian con `es_porcentaje`) y el radio
+  Porcentaje / Valor. Su lado de costo está definido pero oculto; `cod_rubro` se envía sin estar en el esquema
+  (`sinEsquema`).
+
+Los demás métodos se migran uno por uno.
 
 ## Pendiente (no es centralización)
 
