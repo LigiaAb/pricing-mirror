@@ -336,93 +336,91 @@ export function CriteriosForm({
    * ========================================================================== */
 
   return (
-    <>
-      <section className="overflow-hidden rounded-lg border">
-        {/* ================================================================
-            RESUMEN CW / PESO
-        ================================================================= */}
+    <section className="overflow-hidden rounded-lg border">
+      {/* ================================================================
+          RESUMEN CW / PESO
+      ================================================================= */}
 
-        <div className="grid grid-cols-2 border-b">
-          <div className="border-r p-3 text-center">
-            <p className="text-xs text-muted-foreground">CW</p>
+      <div className="grid grid-cols-2 border-b">
+        <div className="border-r p-3 text-center">
+          <p className="text-xs text-muted-foreground">CW</p>
 
-            <p className="font-mono text-lg font-semibold">{numeroMostrar(valorCw)}</p>
-          </div>
-
-          <div className="p-3 text-center">
-            <p className="text-xs text-muted-foreground">PESO</p>
-
-            <p className="font-mono text-lg font-semibold">{numeroMostrar(valorPeso)}</p>
-          </div>
+          <p className="font-mono text-lg font-semibold">{numeroMostrar(valorCw)}</p>
         </div>
 
-        {/* ================================================================
-            CAMPOS
-        ================================================================= */}
+        <div className="p-3 text-center">
+          <p className="text-xs text-muted-foreground">PESO</p>
 
-        <div className="grid gap-4 p-4 md:grid-cols-2">
-          {criteriosVisibles.map((criterio) => {
-            const options = catalogos[criterio.campo] ?? [];
+          <p className="font-mono text-lg font-semibold">{numeroMostrar(valorPeso)}</p>
+        </div>
+      </div>
 
-            return (
-              <div key={String(criterio.cod_criterio)} className="space-y-1">
-                <p className="text-sm font-medium">{criterio.descripcion}</p>
+      {/* ================================================================
+          CAMPOS
+      ================================================================= */}
 
-                <CriterioInput
-                  criterio={criterio}
-                  value={valores[criterio.campo]}
-                  options={options}
-                  lectura={lectura}
-                  onChange={(value) =>
-                    onChange(
-                      criterio.campo,
+      <div className="grid gap-4 p-4 md:grid-cols-2">
+        {criteriosVisibles.map((criterio) => {
+          const options = catalogos[criterio.campo] ?? [];
 
-                      value,
-                    )
-                  }
-                />
-              </div>
-            );
-          })}
+          return (
+            <div key={String(criterio.cod_criterio)} className="space-y-1">
+              <p className="text-sm font-medium">{criterio.descripcion}</p>
 
-          {!criteriosVisibles.length ? (
-            <div className="col-span-full py-4 text-center text-sm text-muted-foreground">
-              No hay criterios editables para mostrar.
+              <CriterioInput
+                criterio={criterio}
+                value={valores[criterio.campo]}
+                options={options}
+                lectura={lectura}
+                onChange={(value) =>
+                  onChange(
+                    criterio.campo,
+
+                    value,
+                  )
+                }
+              />
             </div>
-          ) : null}
-        </div>
+          );
+        })}
 
-        {/* ================================================================
-            ACCIONES
-        ================================================================= */}
+        {!criteriosVisibles.length ? (
+          <div className="col-span-full py-4 text-center text-sm text-muted-foreground">
+            No hay criterios editables para mostrar.
+          </div>
+        ) : null}
+      </div>
 
-        <div className="flex flex-wrap justify-end gap-2 border-t p-3">
-          {/* La calculadora es corporativa (pricing/shared); aquí solo se elige el botón. */}
-          <CalculadoraMedidas
-            trigger={
-              <Button type="button" variant={lectura ? "outline" : "secondary"}>
-                <Ruler className="size-4" />
-                Abrir calculadora
-              </Button>
-            }
-            dimensiones={dimensiones}
-            pesoInicial={obtenerValorInicialCalculadora(
-              valores.total_peso ?? valores.valor_por_peso ?? 0,
-            )}
-            volumenInicial={obtenerValorInicialCalculadora(valores.total_volumen ?? 0)}
-            codTipoTransporte={codTipoTransporte}
-            lectura={lectura}
-            onAplicar={onAplicarMedidas}
-          />
+      {/* ================================================================
+          ACCIONES
+      ================================================================= */}
 
-          {!lectura ? (
-            <Button type="button" onClick={() => void onCalcular()}>
-              <Calculator className="size-4" />
-              Calcular
+      <div className="flex flex-wrap justify-end gap-2 border-t p-3">
+        {/* La calculadora es corporativa (pricing/shared); aquí solo se elige el botón. */}
+        <CalculadoraMedidas
+          trigger={
+            <Button type="button" variant={lectura ? "outline" : "secondary"}>
+              <Ruler className="size-4" />
+              Abrir calculadora
             </Button>
-          ) : null}
-        </div>
-      </section>
-    </>
+          }
+          dimensiones={dimensiones}
+          pesoInicial={obtenerValorInicialCalculadora(
+            valores.total_peso ?? valores.valor_por_peso ?? 0,
+          )}
+          volumenInicial={obtenerValorInicialCalculadora(valores.total_volumen ?? 0)}
+          codTipoTransporte={codTipoTransporte}
+          lectura={lectura}
+          onAplicar={onAplicarMedidas}
+        />
+
+        {!lectura ? (
+          <Button type="button" onClick={() => void onCalcular()}>
+            <Calculator className="size-4" />
+            Calcular
+          </Button>
+        ) : null}
+      </div>
+    </section>
   );
 }

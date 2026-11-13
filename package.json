@@ -5,7 +5,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "check": "tsc --noEmit",
-    "check:nuevos": "node scripts/check-nuevos.mjs",
+    "check:nuevos": "node scripts/check-nuevos.mjs && node scripts/check-finales.mjs",
+    "check:finales": "node scripts/check-finales.mjs",
     "check:actualizar-base": "node scripts/check-nuevos.mjs --actualizar",
     "diff:guardar": "node scripts/guardar-diff.mjs --amend"
   },
