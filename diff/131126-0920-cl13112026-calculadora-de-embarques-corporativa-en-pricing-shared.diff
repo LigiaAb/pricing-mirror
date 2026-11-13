@@ -1,18 +1,3 @@
-diff --git a/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md b/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md
-index b25e57eb1847cf9ec357d44b0546f81a208c215f..9f575e6be7fab7341a668c94db38790f520caab6 100644
-GIT binary patch
-delta 334
-zcmZvXu}T9$5Qf_$klMy#iU`SJE~K?PatQ=97tRZU2-(T*stbF!mz_OOn{+;aZ{Pz2
-zggin@YYSVS#62xyVK>ar_s#qt*Pl0U!(byda8p#Kl%<ovCW_x<CaErD$>0$*LKt$?
-zyw)g;MG&&xlEn(`x|S4%&}E}TdLe}pNbD5&{<UEYc>qRN-o*0hJYD8lJiDBySw3bk
-z0Jhl7rb(PElkp^8oaY|&T3}kO2Hce7&_6|yBi3$N*_RKMu?~9?#Or#$1v1(+fI#p=
-zWlg0_bB`ORo{%eFiq3v*Lis}Uv*{n=$aRQ8_f}~nxU10$^zXyh^9%gx+}owW`|;8L
-K3bq@bbb@bpk9hR}
-
-delta 47
-zcmcZ^b2Vy%AqQjSWCIS_&B2_fWyF&cbCOGQ5>xVv5_NM^Q!-N$ixU(S6gHcxsc--Q
-Dq__|^
-
 diff --git a/src/features/pricing/cotizacion/calculo/components/criterios-form.tsx b/src/features/pricing/cotizacion/calculo/components/criterios-form.tsx
 index fe2fe2c0eabe67774cef2f580ef25b704bebfd2a..9cb2ab53f999fc2b1db3c691ecce388e570ff6f3 100644
 GIT binary patch
@@ -33,21 +18,6 @@ zhJ|;sgM`TBdI_n?S2VR5xh6A8N~>X-pixp(nyOjLr2q$ZT$5R~OefoE$xP0c<eJQ^
 z^B$;qmx9;i91UJUXGb6BP#;GZ{~$+*mdO)kTqd8@;F;W}DdU(Abdqf~n!6EZ=jVak
 z?3|I9m!4`{jp>$JuE|weT9a33nNNPKWz7t9)nrZWn8}^mdXrVvq$c0gRu<B?16ykY
 KrZug(YPkRzHkMBS
-
-diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-catalogos-cotizacion.tsx b/src/features/pricing/cotizacion/calculo/hooks/use-catalogos-cotizacion.tsx
-index ae7b8523e013b9c121751378e4d487c0d8ab01a5..ae5d1d2c025d870326e78f9f4919a9db2f65ecb4 100644
-GIT binary patch
-delta 93
-zcmaFvwBLTi7G`%Y1%;Bzf>Z_P#FE6E{Pg_dfTGOg%)E3RphRANQEp;RW>sQQXkKPY
-eVoGW;NVK##6;tu%2h6WnCLa+H+B~1@gctx?`Xc54
-
-delta 488
-zcmZvY&q~BF5XKMn;<6xK6c6ICrwx=mK$mVo&kKThDn;TZErFPpG!gt$`Vf5)VLb{y
-zj^HbJF=@LkRC7t@`(}Qbna}9!^6lO8K|d7?u81Zg&+_tG@hz8`52j>O5q3Y`_dzXl
-z^*{uFChAslN+>Irrhf!~K=ESlZ5XxLiv(W5NXk+!8ASnfj5vXp8GvHiC<y}(q6p#y
-z;ZzX4A;r=eXZA}3;kqpV;ORacH`)B6?h&!2x#Ota!5DX~_=EIFgkgbg$Blv8Xfy@6
-zXJRnh2*MDg5dxy_3gAX7yRE)oY?Epx(8$od$nWfewgYES+-Qz9NiGOg?4OcRpB7df
-ZAz9h6D&(zZRdalF-mFjOJMZx0<QE5HoMQk0
 
 diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-criterios-cotizacion.ts b/src/features/pricing/cotizacion/calculo/hooks/use-criterios-cotizacion.ts
 index 97bcdb4c0d35bc4c5a47f60a5062d3b3aaed746b..cffbd08d5fc7af2a63a2095639770485351cfcf3 100644
@@ -465,3 +435,67 @@ dK~V(Z+4y$653io4{IlC~Eg$US=f}Sv{sDKbSiS%N
 delta 17
 Zcmdle@mOHPR>sYNOh1@6S95M-0sus-2NM7Q
 
+diff --git a/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md b/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md
+index 4d3062207f00d81ee2b1987f3f3af749a1cbadb2..e33ecffe68dee99447c2fe7508eb6ddf516930fb 100644
+--- a/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md
++++ b/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md
+@@ -31,7 +31,9 @@ se repite va en `components/utils.tsx`. Antes de escribir un helper nuevo, revis
+ 
+ Cotizaciones **no importa nada de Tarifas** (ni Tarifas de Cotizaciones). Lo que ambos usan está en
+ `pricing/shared` (`@/features/pricing/shared`): catálogos base (`useCatalogosPricing`), APIs de métodos,
+-proveedores, clientes y lectura de rangos de tarifa, y el componente `FichaResumen`.
++proveedores, clientes y lectura de rangos de tarifa, el componente `FichaResumen` y la **calculadora de
++embarques** (`CalculadoraMedidas`, cálculos de CW y `TIPO_TRANSPORTE` / `UNIDAD_DEFAULT`, que `lib/constantes.ts`
++re-exporta). Aquí solo queda lo propio de cotizaciones: `lib/dimensiones-cotizacion.ts` (filas guardadas → calculadora).
+ 
+ ## Catálogos
+ 
+@@ -146,7 +148,7 @@ el cálculo y muestra un aviso si faltan estados. Dentro del cálculo se usa `us
+ | #   | Sección           | Hook                             | Lógica (`lib/`)                                  | Componente                    |
+ | --- | ----------------- | -------------------------------- | ------------------------------------------------ | ----------------------------- |
+ | 1   | Versiones         | `use-version-cotizacion`         | `versiones.ts`                                   | `versiones-table`             |
+-| 2   | Criterios         | `use-criterios-cotizacion`       | `criterios-cotizacion`, `calculadora-medidas`    | `criterios-form`              |
++| 2   | Criterios         | `use-criterios-cotizacion`       | `criterios-cotizacion`, `dimensiones-cotizacion` | `criterios-form`              |
+ | 3   | Cálculo (backend) | `use-calculo-cotizacion`         | —                                                | —                             |
+ | 4   | Carrier / Flete   | `use-carrier-flete`              | `carrier-flete.ts`                               | `carrier-selector`            |
+ | 5   | Repartir rubros   | `use-rubros-cotizacion`          | `procesar-rubros-calculados`, `rubros-guardados` | —                             |
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-catalogos-cotizacion.tsx b/src/features/pricing/cotizacion/calculo/hooks/use-catalogos-cotizacion.tsx
+index ae7b8523e013b9c121751378e4d487c0d8ab01a5..ae5d1d2c025d870326e78f9f4919a9db2f65ecb4 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-catalogos-cotizacion.tsx
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-catalogos-cotizacion.tsx
+@@ -22,7 +22,11 @@
+ 
+ import React from "react";
+ 
+-import { type CatalogosPricing, useCatalogosPricing } from "@/features/pricing/shared";
++import {
++  type CatalogosPricing,
++  normalizarUnidades,
++  useCatalogosPricing,
++} from "@/features/pricing/shared";
+ 
+ import { filtrarPorTipoTabla, normalizarOpciones } from "../lib/catalogos";
+ import type {
+@@ -66,22 +70,6 @@ export type CatalogosCalculo = {
+   reasonCodesSpot: ReasonCodeSpot[];
+ };
+ 
+-function normalizarUnidades(unidades: CatalogosPricing["unidadesMedida"] | undefined): Unidad[] {
+-  return (unidades ?? []).flatMap((unidad) => {
+-    if (unidad.value == null) return [];
+-
+-    return [
+-      {
+-        ...unidad,
+-        value: unidad.value,
+-        label: unidad.label == null ? null : String(unidad.label),
+-        tipo_desc: unidad.tipo_desc ?? null,
+-        tipo_padre_desc: unidad.tipo_padre_desc ?? null,
+-      },
+-    ];
+-  });
+-}
+-
+ function construirCatalogosCalculo(base: CatalogosPricing): CatalogosCalculo {
+   return {
+     rubros: base.rubros,
