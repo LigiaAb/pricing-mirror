@@ -2,12 +2,13 @@
 
 import { Plus, Save } from "lucide-react";
 import React from "react";
-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
 import { Button } from "@/shared/components/ui/button";
-import { Field, FieldLabel } from "@/shared/components/ui/field";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/components/ui/input-group";
-import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
-import type { FilaCostoVenta, MonedaCostoVentaOption } from "./costo-venta-columns";
+import {
+  type FilaCostoVenta,
+  METODO_COSTO_VENTA,
+  type MonedaCostoVentaOption,
+} from "../../../lib/metodos/costo-venta";
+import { CampoMetodo } from "../campo-metodo";
 
 type Props = {
   value?: FilaCostoVenta | null;
@@ -34,130 +35,29 @@ export function CostoVentaForm({
     setRow(value ?? {});
   }, [value]);
 
-  const fetchMonedas = useFiltroOpciones(monedas);
+  const cambiar = React.useCallback((cambio: Partial<FilaCostoVenta>) => {
+    setRow((prev) => ({ ...prev, ...cambio }));
+  }, []);
 
-  const faltaCosto = row.costo == null || row.costo === "";
+  // Requeridos (costo, venta y monedas) y venta >= costo: ver lib/metodos/costo-venta.ts.
+  const { valido, errores } = METODO_COSTO_VENTA.validar(row);
 
-  const faltaVenta = row.venta == null || row.venta === "";
+  const puedeGuardar = !readonly && valido;
 
-  const errorVenta = !faltaCosto && !faltaVenta && Number(row.costo) > Number(row.venta);
-
-  const puedeGuardar =
-    !readonly &&
-    !faltaCosto &&
-    !faltaVenta &&
-    Boolean(row.moneda_costo) &&
-    Boolean(row.moneda_venta) &&
-    !errorVenta;
+  const campo = { metodo: METODO_COSTO_VENTA, fila: row, onChange: cambiar, monedas, readonly };
 
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
-        <Field>
-          <FieldLabel>Moneda de costo</FieldLabel>
+        <CampoMetodo {...campo} campo="cod_moneda_costo" />
 
-          <InputGroup>
-            <AsyncComboboxInput<MonedaCostoVentaOption>
-              label="Moneda de costo"
-              value={row.moneda_costo ?? null}
-              onChange={(moneda_costo) =>
-                setRow((prev) => ({
-                  ...prev,
-                  moneda_costo,
-                }))
-              }
-              fetchOptions={fetchMonedas}
-              initialOptions={monedas}
-              getOptionValue={(option) => option.value}
-              getOptionLabel={(option) => option.label}
-              placeholder="Seleccione..."
-              searchPlaceholder="Buscar moneda..."
-              minSearchLength={0}
-              fetchOnEmpty
-              clearable
-              readOnly={readonly}
-            />
-          </InputGroup>
-        </Field>
+        <CampoMetodo {...campo} campo="costo" />
 
-        <Field>
-          <FieldLabel>Costo</FieldLabel>
+        <CampoMetodo {...campo} campo="cod_moneda_venta" />
 
-          <InputGroup>
-            <InputGroupInput
-              type="number"
-              step="0.1"
-              readOnly={readonly}
-              value={row.costo ?? ""}
-              onChange={(event) =>
-                setRow((prev) => ({
-                  ...prev,
-                  costo: event.target.value === "" ? null : Number(event.target.value),
-                }))
-              }
-            />
-
-            {row.moneda_costo?.simbolo && (
-              <InputGroupAddon align="inline-end">{row.moneda_costo.simbolo}</InputGroupAddon>
-            )}
-          </InputGroup>
-        </Field>
-
-        <Field>
-          <FieldLabel>Moneda de venta</FieldLabel>
-
-          <InputGroup>
-            <AsyncComboboxInput<MonedaCostoVentaOption>
-              label="Moneda de venta"
-              value={row.moneda_venta ?? null}
-              onChange={(moneda_venta) =>
-                setRow((prev) => ({
-                  ...prev,
-                  moneda_venta,
-                }))
-              }
-              fetchOptions={fetchMonedas}
-              initialOptions={monedas}
-              getOptionValue={(option) => option.value}
-              getOptionLabel={(option) => option.label}
-              placeholder="Seleccione..."
-              searchPlaceholder="Buscar moneda..."
-              minSearchLength={0}
-              fetchOnEmpty
-              clearable
-              readOnly={readonly}
-            />
-          </InputGroup>
-        </Field>
-
-        <Field>
-          <FieldLabel>Venta</FieldLabel>
-
-          <InputGroup>
-            <InputGroupInput
-              type="number"
-              step="0.1"
-              readOnly={readonly}
-              value={row.venta ?? ""}
-              onChange={(event) =>
-                setRow((prev) => ({
-                  ...prev,
-                  venta: event.target.value === "" ? null : Number(event.target.value),
-                }))
-              }
-            />
-
-            {row.moneda_venta?.simbolo && (
-              <InputGroupAddon align="inline-end">{row.moneda_venta.simbolo}</InputGroupAddon>
-            )}
-          </InputGroup>
-
-          {errorVenta && (
-            <p className="mt-1 text-sm text-destructive">
-              El valor de venta debe ser mayor o igual al valor de costo.
-            </p>
-          )}
-        </Field>
+        <CampoMetodo {...campo} campo="venta">
+          {errores.venta && <p className="mt-1 text-sm text-destructive">{errores.venta}</p>}
+        </CampoMetodo>
       </div>
 
       {!readonly && (
