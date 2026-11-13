@@ -5,7 +5,7 @@ Cada entrada: rama · módulo/submódulo · qué y por qué · diff generado (si
 
 ## 13/11/2026
 
-- **Tarifas / shared** (`claude/13112026-work-pricing-tarifas`): stub tipado de `AsyncComboboxInput` (`value: T | null`, no acepta `undefined`) para detectar en el espejo errores como `EquipoOption | null | undefined` → `?? null` en `equipo-form.tsx` (equipo, moneda costo/venta). Se corrigen las rutas de `pricing/shared/index.ts` hacia `calculadora-embarque/{components,hooks,lib}` (rotas desde el commit RERFACTOR). Línea base: 267 → 209 errores. Diff: `131126-1012-cl13112026-tarifas-value-null-en-combobox-de-equipo-y-rutas.diff`.
+- **Tarifas** (`claude/13112026-work-pricing-tarifas`): stub tipado de `AsyncComboboxInput` (solo espejo; `value: T | null`, no acepta `undefined`) para detectar errores como `EquipoOption | null | undefined`; `?? null` en `equipo-form.tsx` (equipo, moneda costo/venta). Se regresan a LF los 54 archivos que el commit RERFACTOR pasó a CRLF (el proyecto real los guarda en LF; con CRLF los diff no aplicaban). `shared/index.ts` queda con rutas planas de `calculadora-embarque/` como el proyecto real: sus 6 errores quedan en la línea base (pendiente confirmar estructura de la calculadora). Línea base: 215. Diff: `131126-1016-cl13112026-tarifas-value-null-en-combobox-de-equipo.diff`.
 - **Reglas** (`claude/13112026-work-pricing-reglas`): se agrega este log de cambios y la regla de revisar si `main`
   cambió en cada iteración (`CLAUDE.md` → Flujo de trabajo, pasos 0 y 7).
 - **Tarifas** (`claude/12112026-work-pricing-tarifas`, PR #24 y #25): definición única de campos por método
