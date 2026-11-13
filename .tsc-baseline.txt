@@ -239,10 +239,6 @@ src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS70
 src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
 src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx: error TS7006: Parameter 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx: error TS7006: Parameter 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx: error TS7006: Parameter 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.

@@ -9,6 +9,7 @@ import type { DefCampo } from "@/features/pricing/shared";
  *
  *   - monto (y demás campos sin opción): { accessorKey: cod, header: label }
  *   - moneda / rubro / opcion:           { id: en, header: label, cell: opcion.label }
+ *     (con `conAccessor`, también accessorFn: opcion.label, para buscar/ordenar por texto)
  *
  * Las columnas especiales (id con orden, acciones, ...) se escriben a mano.
  * Devuelve objetos de columna de TanStack (ColumnDef) con tipo propio.
@@ -16,11 +17,17 @@ import type { DefCampo } from "@/features/pricing/shared";
 
 export type ColumnaMetodo<F> =
   | { accessorKey: string; header: string }
-  | { id: string; header: string; cell: (contexto: { row: { original: F } }) => string };
+  | {
+      id: string;
+      header: string;
+      cell: (contexto: { row: { original: F } }) => string;
+      accessorFn?: (fila: F) => string;
+    };
 
 export function columnasMetodo<F, C extends Record<string, DefCampo> = Record<string, DefCampo>>(
   metodo: { campos: C },
   codigos: readonly (keyof C & string)[],
+  { conAccessor = false }: { conAccessor?: boolean } = {},
 ): ColumnaMetodo<F>[] {
   return codigos.map((cod): ColumnaMetodo<F> => {
     const def = metodo.campos[cod] as DefCampo;
@@ -28,13 +35,15 @@ export function columnasMetodo<F, C extends Record<string, DefCampo> = Record<st
 
     if (def.en && def.en !== cod) {
       const en = def.en;
+      const texto = (fila: F) =>
+        ((fila as Record<string, unknown>)[en] as { label?: string } | null | undefined)?.label ??
+        "";
 
       return {
         id: en,
+        ...(conAccessor ? { accessorFn: texto } : {}),
         header,
-        cell: ({ row }) =>
-          ((row.original as Record<string, unknown>)[en] as { label?: string } | null | undefined)
-            ?.label ?? "",
+        cell: ({ row }) => texto(row.original),
       };
     }
 

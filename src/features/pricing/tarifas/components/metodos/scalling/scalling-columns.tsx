@@ -1,35 +1,16 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import type { ColumnDef } from "@/shared/lib/tanstack-table";
-import type { TarifaScalling } from "../../../api/tarifa-scalling";
-import type { MonedaOpcion } from "../../../hooks/use-opciones-tarifa";
+import { type FilaMetodoScalling, METODO_SCALLING } from "../../../lib/metodos/scalling";
+import { columnasMetodo } from "../columnas-metodo";
 
-export type TipoPuntoEnlaceScallingOption = {
-  value: string;
-  label: string;
-
-  cod_tipo: string | number;
-
-  [key: string]: unknown;
-};
-
-export type PuntoEnlaceScallingOption = {
-  value: string;
-  label: string;
-
-  cod_puntoenlace: string | number;
-  cod_tipo: string | number;
-
-  [key: string]: unknown;
-};
-
-export type MonedaScallingOption = MonedaOpcion;
-
-export type FilaMetodoScalling = Partial<TarifaScalling> & {
-  tipo_puntoenlace?: TipoPuntoEnlaceScallingOption | null;
-  punto_enlace?: PuntoEnlaceScallingOption | null;
-  moneda?: MonedaScallingOption | null;
-};
+// Tipos: definición única en lib/metodos/scalling.ts (se reexportan con sus nombres de siempre).
+export type {
+  FilaMetodoScalling,
+  MonedaScallingOption,
+  PuntoEnlaceScallingOption,
+  TipoPuntoEnlaceScallingOption,
+} from "../../../lib/metodos/scalling";
 
 type Props = {
   onEditar: (row: FilaMetodoScalling) => void;
@@ -51,30 +32,12 @@ export function crearScallingColumns({
       cell: ({ row }) => row.original.tipo_puntoenlace?.label ?? "",
     },
 
-    {
-      id: "punto_enlace",
-
-      accessorFn: (row) => row.punto_enlace?.label ?? "",
-
-      header: "Aduana/Puerto/Aeropuerto",
-
-      cell: ({ row }) => row.original.punto_enlace?.label ?? "",
-    },
-
-    {
-      id: "moneda",
-
-      accessorFn: (row) => row.moneda?.label ?? "",
-
-      header: "Moneda",
-
-      cell: ({ row }) => row.original.moneda?.label ?? "",
-    },
-
-    {
-      accessorKey: "costo",
-      header: "Valor",
-    },
+    // Encabezados = `label` de cada campo; accessorFn para la búsqueda por texto.
+    ...columnasMetodo<FilaMetodoScalling>(
+      METODO_SCALLING,
+      ["cod_puntoenlace", "cod_moneda", "costo"],
+      { conAccessor: true },
+    ),
 
     {
       id: "acciones",

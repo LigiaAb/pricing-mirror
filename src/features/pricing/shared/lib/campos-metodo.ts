@@ -235,14 +235,20 @@ export type CampoOpcion<En extends string, O, P = Id | null> = Campo<"opcion", P
 /**
  * Select de cualquier catálogo de opciones { value, label } (ej. equipos), con el
  * tipo de opción explícito: `opcion<EquipoOption>()({ en: "cod_equipo", catalogo: "equipos" })`.
- * La opción se busca por `value` en `catalogos[catalogo]` y se envía opcion.value.
+ * La opción se busca en `catalogos[catalogo]` comparando `buscarPor(opcion)` (por defecto
+ * opcion.value) con el código del API, y se envía opcion.value.
  * CampoMetodo no lo dibuja: el select se escribe en el formulario.
  */
 export function opcion<O extends OpcionCatalogo>() {
   return <const En extends string>(
-    opciones: Sobrescribir<Id | null> & { en: En; catalogo: string; inicial?: null },
+    opciones: Sobrescribir<Id | null> & {
+      en: En;
+      catalogo: string;
+      buscarPor?: (opcion: O) => unknown;
+      inicial?: null;
+    },
   ): CampoOpcion<En, O> => {
-    const { aPayload, falta, catalogo, ...resto } = opciones;
+    const { aPayload, falta, catalogo, buscarPor = (item: O) => item.value, ...resto } = opciones;
     const opcionDe = (valores: Valores) => valores[resto.en] as O | null | undefined;
 
     return {
@@ -252,7 +258,7 @@ export function opcion<O extends OpcionCatalogo>() {
       aPayload: aPayload ?? ((valores) => opcionDe(valores)?.value ?? null),
       deApi: (registro, cod, catalogos) =>
         ((catalogos[catalogo] ?? []) as readonly O[]).find(
-          (item) => String(item.value) === String(registro[cod]),
+          (item) => String(buscarPor(item)) === String(registro[cod]),
         ) ?? null,
       ...resto,
     };

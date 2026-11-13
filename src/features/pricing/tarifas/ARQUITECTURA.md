@@ -15,7 +15,7 @@ tarifas/
 │  └─ use-formulario-tarifas.ts  ← formulario principal de tarifa
 ├─ lib/
 │  ├─ campos-metodo.ts      ← reexporta el motor de definición única (vive en pricing/shared/lib/campos-metodo.ts)
-│  ├─ metodos/<metodo>.ts   ← campos de cada método (migrados: costo-venta, cobertura, porcentaje, costo-porcentaje, equipo; rango en pricing/shared)
+│  ├─ metodos/<metodo>.ts   ← campos de cada método (todos; rango en pricing/shared)
 │  ├─ tarifa-field-rules.ts ← reglas de campos del formulario principal
 │  └─ tarifa-helpers.ts     ← funciones compartidas (decimales, fechas, ...)
 └─ components/
@@ -75,8 +75,8 @@ Excepción: **equipo** convierte monedas con `value` numérico porque ese valor 
 
 ## Campos de un método (definición única) — en migración
 
-Migrados: **costoVenta**, **cobertura**, **porcentaje**, **costo-porcentaje**, **equipo** (`lib/metodos/<metodo>.ts`)
-y **rango** (`pricing/shared/lib/metodos/rango.ts`, porque Cotizaciones lee su esquema).
+Migrados: **costoVenta**, **cobertura**, **porcentaje**, **costo-porcentaje**, **equipo**, **scalling**
+(`lib/metodos/<metodo>.ts`) y **rango** (`pricing/shared/lib/metodos/rango.ts`, porque Cotizaciones lee su esquema).
 De cada `METODO_<X>` salen el esquema, los tipos (registro, fila, payload), `aFila`, `aPayload`, `filaNueva`
 y `validar` (requeridos + `reglas`). El formulario usa `<CampoMetodo>` con el mismo layout; cada campo dibuja
 sus propios mensajes de error. Componentes padre reutilizables: `MetodoCostoVenta`, `MetodoCobertura`,
@@ -96,6 +96,8 @@ Sigue a mano en los formularios (la definición igual da esquema, payload y vali
 - rango: el formulario (grilla de 7 columnas, montos en "" en vez de null) y la edición local con "Guardar todo";
   valida con la definición. Sus columnas salen de la definición con `columnasMetodo`
   (`components/metodos/columnas-metodo.ts`); el id, "A partir de..." y las acciones siguen a mano.
+- scalling: el tipo de punto de enlace (no se envía: al leer sale del punto y en el formulario filtra los puntos)
+  y el formulario. Punto, moneda y valor salen de la definición, también sus columnas (con `accessorFn`).
 
 Los demás métodos se migran uno por uno.
 

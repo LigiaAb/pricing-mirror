@@ -17,12 +17,13 @@ import {
 } from "../../../api/tarifa-scalling";
 import { useOpcionesMonedas } from "../../../hooks/use-opciones-tarifa";
 import {
-  crearScallingColumns,
   type FilaMetodoScalling,
+  METODO_SCALLING,
   type MonedaScallingOption,
   type PuntoEnlaceScallingOption,
   type TipoPuntoEnlaceScallingOption,
-} from "./scalling-columns";
+} from "../../../lib/metodos/scalling";
+import { crearScallingColumns } from "./scalling-columns";
 import { ScallingForm } from "./scalling-form";
 
 const TIPO_PUNTO_SEGUN_TRANSPORTE: Record<string, string> = {
@@ -155,11 +156,11 @@ export function ScallingTable({ codMetodo, codTipoTransporte }: Props) {
 
   const data = React.useMemo<FilaMetodoScalling[]>(
     () =>
-      (scallingQuery.data ?? []).map((fila) => {
-        const puntoEnlace =
-          puntosEnlace.find(
-            (punto) => String(punto.cod_puntoenlace) === String(fila.cod_puntoenlace),
-          ) ?? null;
+      (scallingQuery.data ?? []).map((registro) => {
+        // punto_enlace (por cod_puntoenlace) y moneda: ver la definición.
+        const fila = METODO_SCALLING.aFila(registro, { puntosEnlace, monedas });
+
+        const puntoEnlace = fila.punto_enlace ?? null;
 
         const tipoPuntoEnlace =
           puntoEnlace == null
@@ -168,17 +169,10 @@ export function ScallingTable({ codMetodo, codTipoTransporte }: Props) {
                 (tipo) => String(tipo.cod_tipo) === String(puntoEnlace.cod_tipo),
               ) ?? null);
 
-        const moneda =
-          monedas.find((item) => String(item.cod_moneda) === String(fila.cod_moneda)) ?? null;
-
         return {
           ...fila,
 
           tipo_puntoenlace: tipoPuntoEnlace,
-
-          punto_enlace: puntoEnlace,
-
-          moneda,
         };
       }),
     [scallingQuery.data, puntosEnlace, tiposPuntoEnlace, monedas],
@@ -194,23 +188,8 @@ export function ScallingTable({ codMetodo, codTipoTransporte }: Props) {
     (fila: FilaMetodoScalling): TarifaScallingMutationPayload | null => {
       if (codMetodo == null) return null;
 
-      return {
-        cod_tarifa_scalling: fila.cod_tarifa_scalling ?? 0,
-
-        cod_metodo: codMetodo,
-
-        cod_puntoenlace: fila.punto_enlace?.cod_puntoenlace ?? fila.punto_enlace?.value ?? null,
-
-        costo: fila.costo ?? 0,
-
-        /*
-         * Se conserva el comportamiento viejo:
-         * si no existe moneda usa cod_moneda = 1.
-         */
-        cod_moneda: fila.moneda?.cod_moneda ?? fila.moneda?.value ?? 1,
-
-        cod_estado: fila.cod_estado ?? 1,
-      };
+      // id ?? 0, punto, costo ?? 0, cod_moneda ?? value ?? 1 y cod_estado ?? 1: ver la definición.
+      return METODO_SCALLING.aPayload(fila, { codMetodo });
     },
     [codMetodo],
   );
