@@ -15,7 +15,8 @@
  *   - la fila inicial de un registro nuevo                (filaNueva)
  *   - la etiqueta y el input de cada campo                (tarifas/components/metodos/campo-metodo.tsx)
  *
- * Tipos de campo: monto, moneda, rubro, opcion, booleano, fijo, delContexto.
+ * Tipos de campo: monto, moneda, rubro, opcion, booleano, fijo, delContexto y
+ * propio (lógica a mano).
  * Si un campo no se comporta como su tipo, se sobrescribe SOLO esa parte en
  * la definición (aPayload, deApi, esquema, ...) en lugar de forzar el tipo.
  *
@@ -87,9 +88,11 @@ export type FormularioCampo = {
 };
 
 export type DefCampo<TPayload = unknown> = {
-  tipo: "monto" | "moneda" | "rubro" | "opcion" | "booleano" | "fijo" | "contexto";
-  /** Texto que ve el usuario (formulario y mensajes). */
+  tipo: "monto" | "moneda" | "rubro" | "opcion" | "booleano" | "fijo" | "contexto" | "propio";
+  /** Texto que ve el usuario (formulario, columnas y mensajes). */
   label?: string;
+  /** Texto en la lista de faltantes de `validar`, si no es `label` (ej. rango: "Mínimo de Costo"). */
+  labelFaltante?: string;
   /** Validación al leer del API. Sin esquema, el campo no forma parte del registro. */
   esquema?: z.ZodType;
   /** Clave en la fila del formulario cuando no es la del API (ej. la opción de moneda). */
@@ -121,15 +124,19 @@ export type ReglaMetodo = (valores: Valores) => ErrorRegla | null;
 
 const vacio = (valor: unknown) => valor == null || valor === "";
 
-const esquemaMonto = z.union([z.string(), z.number()]).nullable();
+/** Esquema de un número del API (puede venir como texto). */
+export const esquemaMonto = z.union([z.string(), z.number()]).nullable();
 
 type AlPayload<P> = DefCampo<P>["aPayload"];
 
 /** Lo que cualquier campo visible puede sobrescribir. */
 type Sobrescribir<P> = {
   label?: string;
+  labelFaltante?: string;
   requerido?: boolean;
   aPayload?: AlPayload<P>;
+  /** Cuándo cuenta como vacío para `requerido` (por defecto: null, undefined o ""). */
+  falta?: DefCampo["falta"];
 };
 
 type Campo<Tipo extends DefCampo["tipo"], P> = Omit<DefCampo<P>, "tipo" | "aPayload"> & {
@@ -139,18 +146,21 @@ type Campo<Tipo extends DefCampo["tipo"], P> = Omit<DefCampo<P>, "tipo" | "aPayl
 
 export type CampoMonto<P = number> = Campo<"monto", P> & { esquema: typeof esquemaMonto };
 
-type OpcionesMonto<P> = Sobrescribir<P> & { inicial?: number | null; formulario?: FormularioCampo };
+type OpcionesMonto<P> = Sobrescribir<P> & {
+  inicial?: number | string | null;
+  formulario?: FormularioCampo;
+};
 
 /** Número (costo, venta, mínimos, porcentajes). Se envía con Number(valor). */
 export function monto(opciones?: OpcionesMonto<number> & { aPayload?: never }): CampoMonto;
 export function monto<P>(opciones: OpcionesMonto<P> & { aPayload: AlPayload<P> }): CampoMonto<P>;
 export function monto<P>(opciones: OpcionesMonto<P> = {}): CampoMonto<P> {
-  const { aPayload, ...resto } = opciones;
+  const { aPayload, falta, ...resto } = opciones;
 
   return {
     tipo: "monto",
     esquema: esquemaMonto,
-    falta: (valores, cod) => vacio(valores[cod]),
+    falta: falta ?? ((valores, cod) => vacio(valores[cod])),
     aPayload: aPayload ?? ((valores, cod) => Number(valores[cod]) as unknown as P),
     ...resto,
   };
@@ -175,13 +185,13 @@ export function moneda<const En extends string, P>(
 export function moneda<const En extends string, P>(
   opciones: Sobrescribir<P> & { en: En; inicial?: null },
 ): CampoMoneda<En, P> {
-  const { aPayload, ...resto } = opciones;
+  const { aPayload, falta, ...resto } = opciones;
   const opcionDe = (valores: Valores) => valores[resto.en] as MonedaOpcion | null | undefined;
 
   return {
     tipo: "moneda",
     esquema: zId.nullable(),
-    falta: (valores) => !opcionDe(valores),
+    falta: falta ?? ((valores) => !opcionDe(valores)),
     aPayload: aPayload ?? ((valores) => (opcionDe(valores)?.cod_moneda ?? null) as unknown as P),
     deApi: (registro, cod, catalogos) =>
       catalogos.monedas?.find((item) => String(item.cod_moneda) === String(registro[cod])) ?? null,
@@ -199,14 +209,14 @@ export type CampoRubro<En extends string, P = Id | null> = Campo<"rubro", P> & {
 export function rubro<const En extends string>(
   opciones: Sobrescribir<Id | null> & { en: En; inicial?: null },
 ): CampoRubro<En> {
-  const { aPayload, ...resto } = opciones;
+  const { aPayload, falta, ...resto } = opciones;
   const opcionDe = (valores: Valores) => valores[resto.en] as RubroOpcion | null | undefined;
   const codigo = (opcion: RubroOpcion | null | undefined) => opcion?.cod_rubro ?? opcion?.value;
 
   return {
     tipo: "rubro",
     esquema: zId.nullable(),
-    falta: (valores) => !opcionDe(valores),
+    falta: falta ?? ((valores) => !opcionDe(valores)),
     aPayload: aPayload ?? ((valores) => codigo(opcionDe(valores)) ?? null),
     deApi: (registro, cod, catalogos) =>
       catalogos.rubros?.find((item) => String(codigo(item)) === String(registro[cod])) ?? null,
@@ -232,13 +242,13 @@ export function opcion<O extends OpcionCatalogo>() {
   return <const En extends string>(
     opciones: Sobrescribir<Id | null> & { en: En; catalogo: string; inicial?: null },
   ): CampoOpcion<En, O> => {
-    const { aPayload, catalogo, ...resto } = opciones;
+    const { aPayload, falta, catalogo, ...resto } = opciones;
     const opcionDe = (valores: Valores) => valores[resto.en] as O | null | undefined;
 
     return {
       tipo: "opcion",
       esquema: zId.nullable(),
-      falta: (valores) => !opcionDe(valores),
+      falta: falta ?? ((valores) => !opcionDe(valores)),
       aPayload: aPayload ?? ((valores) => opcionDe(valores)?.value ?? null),
       deApi: (registro, cod, catalogos) =>
         ((catalogos[catalogo] ?? []) as readonly O[]).find(
@@ -274,6 +284,32 @@ export function fijo<const V>(
   opciones: { esquema?: z.ZodType; inicial?: unknown } = {},
 ): CampoFijo<V> {
   return { tipo: "fijo", aPayload: () => valor, ...opciones };
+}
+
+export type CampoPropio<P> = Campo<"propio", P>;
+
+/**
+ * Salida a mano: un campo cuyo payload no sigue a ningún tipo (ej. rango:
+ * cod_estado ?? 1). Con `esquema`, también se lee del API. No se dibuja.
+ */
+export function propio<P>(opciones: {
+  aPayload: AlPayload<P>;
+  label?: string;
+  inicial?: unknown;
+}): CampoPropio<P>;
+export function propio<P, E extends z.ZodType>(opciones: {
+  aPayload: AlPayload<P>;
+  esquema: E;
+  label?: string;
+  inicial?: unknown;
+}): CampoPropio<P> & { esquema: E };
+export function propio<P>(opciones: {
+  aPayload: AlPayload<P>;
+  esquema?: z.ZodType;
+  label?: string;
+  inicial?: unknown;
+}): CampoPropio<P> {
+  return { tipo: "propio", ...opciones };
 }
 
 export type CampoContexto = Campo<"contexto", Id | null>;
@@ -401,12 +437,12 @@ export function definirMetodo<const IdCod extends string, const C extends Campos
   >;
   type Payload = PayloadMetodo<IdCod, C>;
 
-  /** Registro del API → fila del formulario (agrega las opciones de select). */
-  const aFila = (registro: Registro, catalogos: CatalogosMetodo): Fila => {
+  /** Registro del API (o fila) → fila del formulario (agrega las opciones de select). */
+  const aFila = (registro: Registro | Fila, catalogos: CatalogosMetodo): Fila => {
     const fila: Valores = { ...registro };
 
     for (const [cod, campo] of entradas) {
-      if (campo.en && campo.deApi) fila[campo.en] = campo.deApi(registro, cod, catalogos);
+      if (campo.en && campo.deApi) fila[campo.en] = campo.deApi(registro as Valores, cod, catalogos);
     }
 
     return fila as Fila;
@@ -443,7 +479,7 @@ export function definirMetodo<const IdCod extends string, const C extends Campos
 
     const faltantes = entradas
       .filter(([cod, campo]) => campo.requerido && campo.falta?.(valores, cod))
-      .map(([cod, campo]) => campo.label ?? cod);
+      .map(([cod, campo]) => campo.labelFaltante ?? campo.label ?? cod);
 
     const errores: Partial<Record<string, string[]>> = {};
 

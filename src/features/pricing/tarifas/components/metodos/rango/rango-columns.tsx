@@ -1,24 +1,16 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { DataTableColumnHeader } from "@/shared/components/data-table/data-table";
 import { Button } from "@/shared/components/ui/button";
+import { type FilaRango, METODO_RANGO } from "@/features/pricing/shared";
 import type { ColumnDef } from "@/shared/lib/tanstack-table";
-import type { TarifaRango } from "../../../api/tarifa-rangos";
+import type { MonedaOpcion } from "../../../hooks/use-opciones-tarifa";
+import { columnasMetodo } from "../columnas-metodo";
 
-export type MonedaRangoOption = {
-  value: string;
-  label: string;
+export type MonedaRangoOption = MonedaOpcion;
 
-  cod_moneda: string | number;
-  simbolo_moneda?: string;
-
-  [key: string]: unknown;
-};
-
-export type FilaMetodoRango = Partial<TarifaRango> & {
+/** Fila de la tabla: la fila del método (pricing/shared/lib/metodos/rango.ts) + id local. */
+export type FilaMetodoRango = FilaRango & {
   localId: string;
-
-  moneda_costo?: MonedaRangoOption | null;
-  moneda_venta?: MonedaRangoOption | null;
 };
 
 type Props = {
@@ -42,32 +34,15 @@ export function crearRangoColumns({
       header: ({ column }) => <DataTableColumnHeader column={column} title="A partir de..." />,
       enableSorting: true,
     },
-    {
-      accessorKey: "costo_minimo",
-      header: "Mínimo costo",
-    },
-    {
-      accessorKey: "venta_minimo",
-      header: "Mínimo venta",
-    },
-    {
-      accessorKey: "costo",
-      header: "Costo",
-    },
-    {
-      id: "moneda_costo",
-      header: "Moneda costo",
-      cell: ({ row }) => row.original.moneda_costo?.label ?? "",
-    },
-    {
-      accessorKey: "venta",
-      header: "Venta",
-    },
-    {
-      id: "moneda_venta",
-      header: "Moneda venta",
-      cell: ({ row }) => row.original.moneda_venta?.label ?? "",
-    },
+    // Encabezados = `label` de cada campo en la definición.
+    ...columnasMetodo<FilaMetodoRango>(METODO_RANGO, [
+      "costo_minimo",
+      "venta_minimo",
+      "costo",
+      "cod_moneda_costo",
+      "venta",
+      "cod_moneda_venta",
+    ]),
   ];
 
   if (!readonly) {

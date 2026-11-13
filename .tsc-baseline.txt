@@ -226,8 +226,6 @@ src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx: error T
 src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'e' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'e' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'e' implicitly has an 'any' type.

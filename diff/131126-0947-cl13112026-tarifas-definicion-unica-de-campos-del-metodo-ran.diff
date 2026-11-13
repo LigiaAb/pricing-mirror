@@ -1,0 +1,232 @@
+diff --git a/src/features/pricing/shared/ARQUITECTURA.md b/src/features/pricing/shared/ARQUITECTURA.md
+index 1d6ec052df8fd7427931912de64435af7586a3cc..f7fdbcf8d1e6dfec88336114d5822b869125d5a4 100644
+GIT binary patch
+delta 158
+zcmZqY>EzwO#H4GjkXl?=nwp!akdms9lbNKSn_7~el3%P}l$e*EuUAs6ppjczl9-&C
+zpO;#^S(3?tF%Cn8g2JP=2@1ZhA^tA@@j;G$?*3K^$%(lI`Ncp(a};t9uLK#X05(xU
+m187fTVd>$u3dM;zsR|{DMVV=dK_JV5lQV$s*zC=`hY0{H8aUVh
+
+delta 41
+xcmeC=ZRgp*#3Zhuk&{@gkXu@kn4FoPms+flT3m8?VcuqaCI`mNx0%;50RS5=4tW3o
+
+diff --git a/src/features/pricing/shared/api/tarifa-rangos.ts b/src/features/pricing/shared/api/tarifa-rangos.ts
+index 45fcc065ed593ea5a9ce78a27d2f7940fd2c10e4..df303b77190aaed0593a1f63f086809568e845ea 100644
+GIT binary patch
+delta 219
+zcmZn>n8C9lmvM3%<8*6Z*ARaf|M(zBKX-o}g_6pGRE3blqRh0!pv1iNe1%$tw4(f6
+z1tmQ_{hZ7s{oK@&{FMA+{UVU$WJe|+FMWLl=fvEC{9>TyOdzFDsZfwunUkNGVx^Fh
+znwFWDnVflebDqNCT|ic%LTa7@Hly@PiuESfu}WG8CugMQCMwt}AiGO1wYabpC~VEe
+Wm0D4dUsM8dXEmxzH;b~qX956xM@$j`
+
+delta 719
+zcmbVKy-ve05LVlX2qZ>E3o#^8Np_&XT8RnR5Q;9&r7?=_%61S0Ratn0EbP1h5|6_>
+z@C?}QPgvW<vhKV4zPtPGWB>i|iw_POvLJ<$oE$eY?_ltG(oFMB>^jjUD9n?JWr<BV
+z)f6gFy1N?QblvEv`yKAJO+ZL2vnQk`e6xQ-sLWFXiWQJ55Hop3Ea`XyaWpbt24hiI
+z6=W5L(Kzr4OfbqE7}tVH5k54rHj0Uv&9FgH^9)rOJx1%&*4H}Of(fX$sO&|l)JCS<
+zYV&QRJwfZFpHUdtkzlnK+rhTIJ7wD1WpgPoht!YZm%Uz2Kceq&CxM=S%`wgY@wY4E
+zoav|ytekarFCzQIbI{t9O4hS7jLw4qU*=L7VqWJ+?){bAx+5VIYcCT8stX6nf-FzS
+XgLkw<4wrp369!cQ6v_8w^fUYe<QeNR
+
+diff --git a/src/features/pricing/shared/index.ts b/src/features/pricing/shared/index.ts
+index 46d051841ef970f255422dec628e47cc300d66be..7e0303bd8a8af8c092245d5c6276e5e159e91b01 100644
+GIT binary patch
+delta 140
+zcmca8`dVzmNe;GvqWpr){K>mHx_DBH3rkaT6MggZO7bT=a^|oWfaE5x;QTRpCo^|g
+zVo+jUdcF>qf`YGWh`)<}e2}A`yFZ9uQdy9y5RzDwnFdkgTUwG>l9`_ukXV_MpO~V<
+iRjZIzl%K1hq^F;gnWUeaT9TiVU#wpQGH>!!E*k(*XEL4u
+
+delta 23
+fcmaDYc2RW0Nsh^PIcg?na%N1v&G~t<6}KS(gsuub
+
+diff --git a/src/features/pricing/shared/lib/campos-metodo.ts b/src/features/pricing/shared/lib/campos-metodo.ts
+index b00ffae8b0e2de1019f3aca5dc09d0f6e16028a9..88dc1bd7941753c3bc0d9bcbf4cec5dd735fbeb8 100644
+GIT binary patch
+delta 1232
+zcmbVMJ#11@7!62cc@3IcS|d&6lOO>~>7Wx((9~j#(U90UXjE?ByO3KS_u~7hAU2)c
+zjLVIyv4e3iO*GG`D~p{PC!>?AE_O9B#_v54O9zK;@8`U8zH`2F-{uqFk7vHOk-!YJ
+z6-YzV5KSf^sdt?^Qwb1g5H3<qBycVmgvSu`0P<>RPRW2Obi2WcDO;h`#xiYL0w@Qa
+zfX+;dfJUK4bc=9{n(j??jp$4xMl}N_1CC%5sybPrdKHp%H46seb&-SEweA*Y4dH&X
+zC`?PlQdvmPD}dApF84W0IWR4Q@p>NL%sVeavm@pCbQ+e-2R3bZ@-_$F-EL6B<<j9|
+z<q9O5Hbvew%9()%P{ncw?<vq$Qy3P=ofDr!Lt66r#KH!uApN4<-Q=18)utRxdK7C!
+z?QRKZ5`#e1pr~&!O`t2JL**J(E%e20UC)5c@d4vh0|BvtGcPD~bcxm$Nuw!l$Gj)8
+zJ9%Y2uP9c#Nu4hfL0<yBGR{;+bVPHzu|f@8OD_n#a5XRw`71o*&nr%3((;XXO!Dc}
+zUB$bCQVEjs`_x&v8%;RpPrf=bK%A0$k=OfC@1jve%{pJF-}{G9MfvUYhXY7wH(Chv
+zQNj4m!MA(ypMi~v*RMjQ2n*mDE%X{CVi~9u(J4mk_V9*Rm45wl7#gT<ESP%R&AF`$
+zqPZ0^S>2`x<Jg1lHV2C#XkVFJE>&pvC>9cz<}a0GJUMslI(|t(V=MM5$tv<=B0Sk^
+zK2DYtO_d2w%^Y;(LU<bY?sZ|PZ~t~+^ZQ&p<hZ9)u4ifBF|YIsRkOKjA!q-16)G86
+z0<0b7nhB4xw}iHg3m#I&J(G&(Q(g{_mjMrpSL+-sxqUy}L~=A0|F6-$2wELXb$GQR
+zbZ}CGTDHNV<E;h{cQ0pLcQ%{-n>1j@*A?eeDmgxy6i{P2Ny*>2>QQWT8E@pvGc&T2
+ee=`QegquVc1~r{T;do%I-2WM1sh!k?mj4e-(VbcV
+
+delta 173
+zcmaFg$GEVSaf1}gW^)!}&dH^`+LKrDYHkkY(_o!^Sor4TZ6XGnV?_lSCl`o`u;!KK
+z<XBJc6O?6C*t}V+gmJQ-M9kzV5~`EuE2?h3FR_#vC?GyLU%_tj1DVXp^@{R939Zd@
+zWw$VaBsS+OurY!}H_unJW|{m@^*ESwN$m&A=2ks1LFPwolO|u_6P>)r-hJ{#N!iKj
+V4yz}ds|#*^=kSktGqY<B69ANqKF0t6
+
+diff --git a/src/features/pricing/shared/lib/metodos/rango.ts b/src/features/pricing/shared/lib/metodos/rango.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..b60a4c60454c0815a084b625fc836e09e8cf33dc
+GIT binary patch
+literal 3392
+zcmb_f&2rl|5Wf2<wmf7ck1VC9&d7CAkCSvf6WOkv`jW}mFbOG0K|%pYHBRCO=()GP
+zK@L9U5%gmHb^%e8o&HX8kVydC{dT`^cahOH?R~X>TeMA+<!>*JpB&Ta{?U)eV|w!R
+z+2PUQ!Qt}vBU=7}r+qBZ!T#jr_zcJSi*vKkq$`?xlbdQb3a^#d1<jp*+h{s)wRx{{
+z<0>7fR^^pheyYf7O;(XLp;lCA@~WD-z}9-T@@A?|dEqR7txH8gS<Q#k+h%#&AJVz@
+z6rGH$xf<oFoV&17>e>}<SchT4b)vi?HS>C=JT(=`xiPOSKh2bNjQKKte7Q@(P|&o{
+z1InFUe$L|oMic>sQSRWU(p4Qs(N`D=?D)Ggb-sl6cXT~qV++Oh5o4{ctin>mw({lY
+z!py|=z3_M7xGAf^MpiMLX~3z1_Apmy+kU?=`i&d2MWP*g?gEvrs__Rg=xVXNRTUiL
+ze1o4}Fclp&<(2k*x~5B0fhb2GKhi@4emOOjvX{WD%emK7HP*6wvHWvN8+i>fy(t_`
+zl?7*r5Pae}IO<(~vp~B1Wq(W$;SwoQfL%HyAz$9Q*4k4`oTbKsVth99#v%(~_B&2G
+zVpm~6Stf~Vm^ExMoW6t=a&NAn0xDG%ZGJW3@6q;XYs-LNU(*MAe^}5BO}#5A`yuIB
+zr1stwI|0&AK4iP=54H$Mkw)VuBEo?z*aJ|a-_?#^bwK_~HDQ+ceQMswU(lut#VbM}
+zKg_+G8`-R{=bBFS%&L{$6{_KIQ}&ETP6PQKh1#PK=_8WIr0>S9bLI%7?ZIU3eDQre
+zHb8CsQn_ENN3b#4-X^dlbgl*DgoO<q4LM^h&6;xG6z=#4Ji&BNKGk7N$sN~IF;0;B
+zwD+hz@)8@b=<(x3u?ht6jM>_R<a8yv@t0I*s@yi$njWGhv|vP?XXcp*^IyS<+SNhe
+zB*$kC?Sbo^TL`3{yHGon&O)SJ8;v%QlGLl*CIUHg<R-du{-;JC@TcQ0i=8ZSKEQa&
+z*)Y0!@St6Y{;&|Mca_|DuuqTfuFLs8ED}A2j#J0WWH}p9sjHyg=rLt2$EdLAq|m4>
+zG#WB9?imhMcI`ajF^WOD566<xjW`&un2IV8`L={{j8<J~yJCKTR)|;dQY%!&YB?o9
+zKJI-GyK;`}fHpsgOKl$-Q|%ia7lrhsk;Hx6kWQxnBFo}}I#JiwDF||{THd+ogL(Z<
+z>OaOadCFt(LdGDX*{E+pYG4E@W^rfuy@+GtLPi2|9aw|4idmwY!4|xXMqFGdJ*WqX
+zx9HbxJc0YEwzA$Cj1n3W7O>Inp6IEOUQ}Al8)M)>!M%OVr&sN#$MDY5PSzJBL~#g=
+zW7|ooPZ>u*`vmFNhCA?ZI84b)A9eFdw9e>Col@~%sC1q;eUdVdWZbN<$OHm^=!rcp
+z{{a%48s>QQFyYP#o)Ua1m5UNll!$gye7$V4yycBpw;-ckK-Q%o+cb#y|IyB>fVy_h
+zxfir{1kZgS(HQ`I!R!6g(IigawOw2wLd=PawHv(MV+}dN@+xX6p*uwcYSW=M6Oju{
+zs0y21H!bU}M!PlF5ra@B-a7QOkR^8#>)$|@L#@L*t)c@tWhjN#g}iCue?r!{juy~U
+z9KpSg3UMVE{0FULs(qWZE}BJ$5#i!8Y86WMrNF&2C0-4-qz}m;e_?Q`MdRTYH>GYn
+z8rHnm&d3=q(cWz|jvmGrU%m^yXtd?)xuyM+!#F5Yn~Pr7mu>hGpD#0j6qDJj<l~u<
+zYg)Je#LIwnxC|W@yO<%qy(gn#q$_dfLVMpe8<kuB+VK=it<&c*g!V$qqX?tP7q}PZ
+e3Nn{YE2IA}BAPU{s_`F>)brPV=5YwHt3Lsx{6Pr-
+
+literal 0
+HcmV?d00001
+
+diff --git a/src/features/pricing/tarifas/ARQUITECTURA.md b/src/features/pricing/tarifas/ARQUITECTURA.md
+index 052b4f6662bf985dd30c9946a353ffd4a3fbe8ef..e74e59778e5e1344120139fc1419d7e719752305 100644
+GIT binary patch
+delta 444
+zcmY+AJx;?w6oeHiRYc*2f^Ou7#Byv=A(0AEP*G9P`r%#7iv2OW-bhK4LvRe5NWK7q
+zhBI&ij=`=&BBj}4-#72g%zN>Du}#Kj3s};P0oQ1)sD*Ay_e_?vJ{fOMM)})ka{e$`
+zA<G6X%P_5u!BUFHQt{3(<H`XlI#=arjeYeTH>MM7s)f<qL2?e~!Cjar>VK1;@n*hr
+za0M>$WUTU%tT321R!B);9G9q#^h%S<p^WZ~i+0mAzDvH2i1t#>utE@U7Giw$8q(Ax
+zgEXMGo-8AaXfj<)fF()6C=NGK!}ycXJ6VBy?+ypyNQNun!Z9_ht@gI=hV)g~I}LxT
+z4Ow;P4yEj|`L3l{&ukIn3YKG@UZW-32^+2yMUf6E9H{>9%!$Sa3j{^l^dF}$qd)RA
+BoznmS
+
+delta 29
+lcmX?MxLR+60Lx}gmJK{i3YC*@38-(56uil@IbJ-I5dfTA3I6~9
+
+diff --git a/src/features/pricing/tarifas/api/tarifa-rangos.ts b/src/features/pricing/tarifas/api/tarifa-rangos.ts
+index 98ce22ebd1aaffafa3dc59d41c7a27b1a29b7048..8f831ed910e9092c4ed15887c23bf6872b9c1046 100644
+GIT binary patch
+delta 114
+zcmZ3)caD2P8Kcf*Zf3=e<r$2D0g074`H3l33Mr{+nR%JXnTI#$DIDGfWF;!3<|z~u
+z0fq9?^@}qSi&9hcb25|kb5l$5Q}T=TixTtF^Yu!K^|(?i3i69e6iO-!QWdHv3oy$t
+Q)^5JZXw10zD~m1@0Dr3~p8x;=
+
+delta 480
+zcmX@dy@+o@*~aOajGIfCbQxJnDhpC42Qtaj+bUFZDJUf8r^J^e7G<U-#up{#rRUpQ
+zDHN9!W#*+T)F|YY<|d^Uff+eD)?854#i>PQnaP>>R6>l+O)be!$;U7cY*1!iJ;)3!
+zk_rlGnR$sh7&55NC@#s5&&|xs%*8YUu24atEH$qr5r?{ZG>-vI#BC?kL-~2BDT(pP
+j`PkHgy#=<AIAfgRu`7m$b82x(VhX-cuH8JH*_;UgEc2!w
+
+diff --git a/src/features/pricing/tarifas/components/metodos/columnas-metodo.ts b/src/features/pricing/tarifas/components/metodos/columnas-metodo.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..8a4390496c7f5446b0c81bd45e71cac0904a0427
+GIT binary patch
+literal 1582
+zcmb_cK~Cc^6y4_(f4V>k%B1_0w$o{0GZdr&B&4cBZsHUVi5=M~P?a8Fjxozw&k=gD
+zd5)8UD%jyg;>7<yzyJQTMNukUQME2PZD_)?F~c9)Ql?cwop0TYvudTe>6Tg~LN2@J
+zo@t(TdY;!krv9f5kB(`4d44m!7+ulil+H(VJ^GF(<~J8K-Tl74oLrKxnOv%nOv3UU
+zbOPkr)R8V2<;+l`@>L-*VN^0*2~8=-0-l+Ws9^U`VxCj6`&+3LNL&&=l}<59S*qd&
+zktm9y7H!IH@X49T+3moeo?0$<w;|0si87VygoH_YS18F-cDMic$YsSk^OhvhS3*do
+z$X|m*vHJtQR&PT_NK$1@FNo0zmL%L5rGM~sjGEGr?m0`jj#0}3e7Cmf1`k_Om-K3(
+z72Xy_$ry|6*pNtL)OmmrQo{2*ZW5wbTnl~vR!VM4o(Pt6L%v8s2VAXQp{0q<xCyOT
+z0U1u*Bw8$>C8L5#6<M$ee_ZkWk&{~df{@0xq*2yRubI56Sn@#rxNaU?7}T3o0#+=w
+zDuu)OG_&>Txa)cR`PKVwXV&(4Kz)zs<**T^((qhw-wXF`n^DJFncolTHCp@7uHw&?
+zvOU)7$-a~pOCcFLafWlZ4X8h8P-u%&*09W0GO3_-E1YSmhBPK1a+w<X$rCi@#Bm7s
+z#~IapxHRxVzNqbO$v8X4z}$vdfb+ysnV2-(r)0h+|ADVnhV`R{WH6hD9z1)f;A~DC
+zAZU*3!?Lb{qJot^L`dIBuyxxEyQ?%6oRNXIqZT<{Gi1&Q)@(1T-kW%LK#+pO#?8Z_
+z-54TTRFRQym*CB#qdEw)Fa5p^37VbTy|LnOxNNfbl{ktupgUDHxcznntZZ($<K@?l
+zc75G15&1saAGN)=H61i>B_E`El7nEzWnJ^e9sObJF_`6r<SNhcT1iwUaQWb>c{7Hu
+cI&?ZMF__ARY@I4ie?Go(tO*ev^t`S29~6b<wg3PC
+
+literal 0
+HcmV?d00001
+
+diff --git a/src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx b/src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx
+index 9c498ac7f075d297cbf3374bccefd6711324b51a..c36a3d2d9f0788e685e4bc8ad43aeb09d6d86f51 100644
+GIT binary patch
+delta 611
+zcmZ9J&x#sB5XM;{ED-|PK+Y-V5LQ>GufhDmKwQbe9gy6DjOBEXHtFsfrrRaEviJ%K
+zK1I$Ra$Y<y<SCNZNKcDK1H&*=^;OkZzxw^`;pw;g?gHFRA>dLf9HN<03kJPU$%iBz
+zzQ5`xa0huw8lo=C1-f}DEGtTxNi$`3hNa-&e<sTT8No3rGD&7%5yx!%%!s~NHn*Zp
+zK_P70VJUNrUe~2AsC2M^jMQ8kv;*OY(_xccrmaKD7uChrP!){(*{lA^*^vh?Va;aP
+z3Ag}-;Bca_Q+?%rQ6E&GH$TFt^W%M(k`uNaWm#DfiJfi01xOBxGE^}%*^z?^-C*_S
+z<jIRYM0g2{I&AeHc?Ya3J+bw?R@9b^LC<735x2<6!dn<C|D(p0(+oNKmxltvRBpM*
+zrSZ5oYZLp10C61efNW8{3F8BraKCrwhxcp2=THU^Wn>+t`jzjeDQfM)*TOhV^?%VI
+f{wK<ar>kF&o;RW(KThay{q!(1YOEihj%t4ap18>u
+
+delta 782
+zcmZ{hzfZzI6vsme3ob?%6GD7xjPVDS#R-%S#=(JLjBzo99Q42o*E@1;AqJcN0WK!}
+zJDgZuh>4s3hO>WycL$ZC&~#|t`+nd1eEU8(zqVec@kZv-x<!I?(G6lf4k2^}cfqu*
+z^6W(eQuejrL@0$9zh(BKaUNiZXn-r=`GT-sRTd~}W4b8FN{2fwmox03qzq5M0=JEY
+zGI+#obIRuuJJD40vUlIdk4d3ffq?ZHAF*malwBM*jAC?+gijDXOX1gG9~2tp9Yn93
+z#IFa=I9eU<`CP85Yb+hQG4Kgznv7D#HJ1)C^U+$VLFwe#7#Q(Kb|(&U+q(}KIapM{
+ztiQi9;&Pc@t};t<AV64(r`f`(9@%n<>d!j>|BPCdHWs7Bq?G<*X@TCO(yNEa@Mb#l
+zif#H2EK$mfVJc5}Fb2U#5FWyLO?_EMT#z1Nh+65Hwxv%Fwhd+)w-BWhq=4_#AN^IX
+b1zzKxoeY+{D}j$k)?Z-lS_M4$&NYo6ubT4=
+
+diff --git a/src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx b/src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx
+index b4e358fe9accc4891cd2c6413ecb26532aa7ca01..3b18fc5202537dc65861816cf02eb1eb0763e995 100644
+GIT binary patch
+delta 432
+zcmY+A%}N6?6opYJ7I$vM<z-eG&_rAoDvEy;YzK-v5u483sgX>sCYcry@ey2f<s*m)
+zLO1UF0=|hpf|=Ra-c`;$=N>-tz4x;F`L(jsJ-JAZlk5Ir?<|2Q$SoBR9f%yIFD*K8
+zXH}}qNVpqmarVCQy80{xbjf&ffCi!n9-ttDnXI)bwFWj&CY(t<s3J=hnb2w|3iOnb
+z6IPlLaqnWj4q+VnK26voXiBB-WGzT7O54fKE6w6<;GAzQBJ*5n*(-4@Sv*~9{8Vs#
+zyf4wJ&<`x?&OeMQ2r`5ta-O2PBM#7GG+x4f8`5gu3fh8}A(+?j^O*^64aNMeVyysE
+zGS0(TYL&@Uk%2ZWu>_|XEXyoSroWBN)60PSALqH$UK)?CW=Mv&nEJ{u(XoXXT1(;U
+PW1eg2S$s8PO}6m|KE#wK
+
+delta 765
+zcmZ`$u}T9$5GA4(R|pms7Q%Q%*o6?p!XhDQ#4;8ZHX($|-5MA6c4c=jK_uJ{2o`>a
+zAf&PP2mAy(OTjPjcK0ssVY1ci%zHEQ-aMUroW8y_mOqWhtvyBbm6)T40L**-+&;`*
+z2$a*9iVlQftIWhgX)#WVLR!nu2-ne?yv6$sEYMG+f|Dc~mq4B|)(Vd7CQz12iYu87
+z4|cxuSa79*NGT*y&;x`p^!ngLxFVxUM;%aFQa&Ay3ea%W4XhA)1L#<adE3{6!7|!+
+znYu;c;QhsjgoMDk5gp>LN6ibauX!W)+89&kR%7d&HAAWyb)fB-|7+>{SSJju!yAMY
+zGklvjF;_B54{|^&`=Hqb^Ra%I&t;ZQi2MU!==(W~!??T^)Lg${FpHRwW?R=UArk_M
+qNTAa!Vjv)m?u9&qBCe1O>=`Rd7VgH9=uC3g-JEWL5ng`nqWxd{pzRL;
+
+diff --git a/src/features/pricing/tarifas/components/metodos/rango/rango-table.tsx b/src/features/pricing/tarifas/components/metodos/rango/rango-table.tsx
+index cbe014d63fa64b47a3251cce1ff6a7d33b4f4eea..6a92eedea7b7b44bca31d09e29dfe9533c52ed3d 100644
+GIT binary patch
+delta 559
+zcmZ9J&q@O^5XQknD@6n^DtH+@XbUB)cx#cW_=keEMZGUEN$bKkQ<7|<v}<2M*f;R*
+zLHY=N2w%aQH_y&)tF+A_B*Qnq`SRtn^mFif!WvhP&C8~Le|~q<gc#ZeyRd)ewH0@f
+zQP%63Km@wu*=KH){5agpwLA}QxrKHR(ynCSxTM2?gEL%du#pAqi2${-RY)~bg>c@g
+zXXmHL3a+7t2E=qCgATH!mh&%$1(+{^+PaJmr?6;`@oO4cG+cME3`6MBgmiLTsurj_
+zc`xjY0T^Scv+_R=AVk5#x~xFf%I4Qa#SG;Ov=0Adi#4d#GDmE+sG~4k0444GX7ZBX
+zW=rb6(vGKyWp!MgdyFSr>u+mg$~DlGHo|BGM`c229?p8ww>q@os30QR1|U%S%2M{2
+zl8-CUSB4U%u&IwI(}`wtzESj-dL_#iAB4zdF$;^*6uT%J%AureiT$8VKl2ioCf^%h
+F`CsNWvXcM+
+
+delta 929
+zcmbtS!AiqG5Cy@u)PwY(=Q&9OB~iQuV$Xt}dhjBICE1phWLJ`HPA&NZ5%L56g7n~L
+zc=Q+i0?%%Cw#l{)UJN<x&dk1f^XC0rd^xYz@9Al;`s_VcAIE3q5X_efPGb^ABA3E%
+zq5v7;3*p*Xm`<%cW^#AVcsw5C&4J(sW-?=ZVIpoM;;=~u!8Ut`@NE_eIL>YpzD$zI
+zu<2^p6qHM1ajiy!^L8MB|4}<&rrUKhLk-uCGub>0-j1rgKPu~)B+1yEgc{0+IZKEZ
+z!VarJVQ;+pWlpn#MNIghZZmUfYqwj|!ci$=EWFo8tyGC6j3bKfjTcz0;L=jl^Wb)|
+zBnhZL66v!t0+$pDMxTV+Xs-546915@vP+mM;8Za%1L{zzV=dzbNXxkU#13`5Ku=oe
+zoi$s384H(KZ>*vrEE8Jeql>UwpZ`X;%WWU-gL|ldy&#%PQZK04KL+YPR}-Vldh>Gf
+G-Twu*HXC>V
+
+diff --git a/src/features/pricing/tarifas/lib/campos-metodo.ts b/src/features/pricing/tarifas/lib/campos-metodo.ts
+index d4888724e37d6f4687f738d0395dfd924cdcbf24..a0298e27191832ccab200f0148c0d8f2b234b3b4 100644
+GIT binary patch
+delta 45
+zcmdnS{)Bx)2oqaCQGP*Y{$w|%E}qol!qU{-MBn_plKjbMn8H~LKys7im}dY0f=v+6
+
+delta 19
+bcmaFDzKwlD2-D;YrkcrLn1Uw<GEW8oO_&FM
+

@@ -81,6 +81,7 @@ export {
   type CampoMoneda,
   type CampoMonto,
   type CampoOpcion,
+  type CampoPropio,
   type CampoRubro,
   type CatalogosMetodo,
   type ContextoMetodo,
@@ -88,6 +89,7 @@ export {
   definirMetodo,
   delContexto,
   type ErrorRegla,
+  esquemaMonto,
   fijo,
   type FormularioCampo,
   moneda,
@@ -95,6 +97,7 @@ export {
   monto,
   opcion,
   type PayloadMetodo,
+  propio,
   rangoPermitido,
   type ReglaMetodo,
   type ResultadoValidacion,
@@ -104,4 +107,9 @@ export {
   ventaNoMenorQueCosto,
 } from "./lib/campos-metodo";
 export { type ConAmbosFormatos, conAmbosFormatos } from "./lib/formatos";
+export {
+  type FilaRango,
+  METODO_RANGO,
+  type TarifaRangoMutationPayload,
+} from "./lib/metodos/rango";
 export { getEstadoMetodo } from "./lib/vigencia-metodo";

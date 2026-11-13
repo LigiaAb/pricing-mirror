@@ -9,11 +9,12 @@ shared/
 │  ├─ metodos.ts         ← catálogo de métodos de tarifa (createCatalogo)
 │  ├─ proveedores.ts     ← proveedores (paginado completo)
 │  ├─ clientes.ts        ← clientes
-│  └─ tarifa-rangos.ts   ← SOLO lectura de rangos (las mutaciones están en tarifas/api/tarifa-rangos.ts)
+│  └─ tarifa-rangos.ts   ← SOLO lectura de rangos; esquema de lib/metodos/rango.ts (mutaciones en tarifas/api/tarifa-rangos.ts)
 ├─ hooks/
 │  └─ use-catalogos-pricing.ts ← carga y normaliza los catálogos generales ({ value, label } + camel/snake)
 ├─ lib/
 │  ├─ campos-metodo.ts   ← motor de definición única de campos de métodos de tarifa (definirMetodo, monto, moneda, ...)
+│  ├─ metodos/rango.ts   ← METODO_RANGO: campos del método rango (de aquí sale tarifaRangoSchema)
 │  ├─ formatos.ts        ← conAmbosFormatos
 │  └─ vigencia-metodo.ts ← getEstadoMetodo (vencida / próxima a vencer)
 └─ components/
