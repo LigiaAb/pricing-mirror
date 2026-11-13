@@ -46,6 +46,9 @@ Al editar, **conservar el final de línea que ya tiene el archivo** (no converti
 
 ## Flujo de trabajo
 
+0. **Al iniciar y en cada iteración, revisar si `main` cambió**: `git fetch origin main` y
+   `git log --oneline HEAD..origin/main`. Si hay commits nuevos, integrarlos a la rama (`git merge origin/main`,
+   conservando finales de línea) **antes** de seguir trabajando, y avisar al usuario qué entró.
 1. Trabajar en una rama; commits pequeños y en español.
 2. `npm run check:nuevos` antes de cada commit.
 3. Verificación proporcional al cambio: cambio chico → solo `check:nuevos`; cambio de lógica → además una prueba
@@ -56,6 +59,9 @@ Al editar, **conservar el final de línea que ya tiene el archivo** (no converti
 5. El usuario aplica ese archivo en la raíz de su proyecto con `git apply diff/<archivo>.diff`
    (o copia `src/features/pricing`).
 6. Actualizar el `ARQUITECTURA.md` del submódulo si cambia dónde vive algo.
+7. **Registrar cada cambio en `CAMBIOS.md`** (log de cambios, en la raíz) en el mismo commit: entrada nueva arriba,
+   bajo la fecha del día (`## DD/MM/AAAA`), con rama, módulo/submódulo, qué se hizo y por qué, y el nombre del
+   archivo `diff/` si se generó. Sirve para dar seguimiento a lo hecho entre sesiones; leerlo al iniciar.
 
 ## Convenciones del módulo
 
