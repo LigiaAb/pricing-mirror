@@ -14,7 +14,7 @@ import { numero } from "./utils";
  *
  * Lo único de la calculadora que es propio de cotizaciones: leer las filas
  * guardadas (columnas cotdetdim_*) y convertirlas a `DimensionCalculo`.
- * Los cálculos viven en pricing/shared/calculadora-embarque.
+ * Los cálculos viven en pricing/shared/calculadora-embarque/lib/calculos.ts.
  * ========================================================================== */
 
 /**

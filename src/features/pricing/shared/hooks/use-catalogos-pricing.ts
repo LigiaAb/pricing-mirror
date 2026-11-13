@@ -47,7 +47,7 @@ import type { Entidad } from "@/features/entidades";
 import { useClientesTarifaSimple } from "../api/clientes";
 import { type Metodo, useMetodos } from "../api/metodos";
 import { useProveedoresTarifa } from "../api/proveedores";
-import { esUnidadEmbarque } from "../calculadora-embarque/unidades";
+import { esUnidadEmbarque } from "../calculadora-embarque/lib/unidades";
 import { conAmbosFormatos } from "../lib/formatos";
 
 export type OpcionEntidad = Partial<Entidad> & {
