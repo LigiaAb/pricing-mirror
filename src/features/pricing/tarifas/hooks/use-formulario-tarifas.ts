@@ -6,7 +6,9 @@ import { useContextoOperativoStore } from "@/features/shell";
 import { useAuthStore } from "@/shared/stores/auth-store";
 import { fieldRules } from "../lib//tarifa-field-rules";
 import {
+  aplicaATodosLosClientes,
   CATALOGOS_AGREGAR_TODOS,
+  COD_TIPO_TARIFA_PUBLICA,
   convertClasificacionServicio,
   DEFAULT_TODOS_VALUE,
 } from "../lib/tarifa-helpers";
@@ -187,6 +189,11 @@ export function useFormulario({
         resultado[campo] = catalogo.find((item) => isRecord(item) && item.value === null) ?? null;
       }
     });
+
+    // Registros anteriores sin todos_los_clientes: se deduce de cod_tipo_tarifa.
+    if (defaultValues?.todos_los_clientes == null && defaultValues?.cod_tipo_tarifa != null) {
+      resultado.aplicaTodosClientes = aplicaATodosLosClientes(defaultValues);
+    }
 
     // ── Defaults desde ctx para empresa y centroCosto ─────────────────────────
     const empresas = Array.isArray(catalogosProcesados?.empresas)
@@ -533,6 +540,21 @@ export function useFormulario({
             next.tipoCalculo = tipoCalculoFijo;
             next.cod_tipo_calculo = getPlainValue(tipoCalculoFijo);
           }
+        }
+
+        if (id === "aplicaTodosClientes") {
+          // El tipo de tarifa ya no se elige: se deriva del checkbox
+          // (todos los clientes → PUBLICA; si no → la otra opción del catálogo, ESPECIAL).
+          const tiposTarifa = (catalogosProcesados?.tiposTarifa || []) as readonly TipoOption[];
+          const tipoTarifa =
+            tiposTarifa.find((tt) =>
+              val === true
+                ? tt.value === COD_TIPO_TARIFA_PUBLICA
+                : tt.value != null && tt.value !== COD_TIPO_TARIFA_PUBLICA,
+            ) ?? null;
+
+          next.tipoTarifa = tipoTarifa;
+          next.cod_tipo_tarifa = getPlainValue(tipoTarifa);
         }
 
         if (!regla) {
