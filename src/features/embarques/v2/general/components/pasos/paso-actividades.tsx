@@ -1,13 +1,14 @@
 "use client";
 
-import { AlertTriangle, ChevronDown } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import type * as React from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { ActividadBodegas } from "../../../bodegas/components/actividad-bodegas";
 import { ActividadCombex } from "../../../combex/components/actividad-combex";
 import { ActividadOperaciones } from "../../../operaciones/components/actividad-operaciones";
 import type { PropsActividad } from "../../../shared/components/tarjeta-actividad";
 import { EncabezadoPaso } from "../../../shared/components/utils";
-import type { ActividadTracking } from "../../../shared/lib/actividades-tracking";
+import type { ActividadTracking, TipoActividad } from "../../../shared/lib/actividades-tracking";
 import type { PerfilEmbarque, ResponsableTracking } from "../../../shared/lib/tipos";
 import {
   actividadesDelPerfil,
@@ -23,8 +24,9 @@ import {
  * Todas las tabs con actividades del Excel se ven igual:
  *   1. Encabezado (título, descripción y paso del tracking).
  *   2. Aviso (si la tab lo define).
- *   3. Actividades del flujo agrupadas por proceso, en el orden de la tab.
- *   4. Excepciones aparte, plegadas (solo se usan si ocurren).
+ *   3. Tabs horizontales por tipo de actividad del Excel (Principal, Opcional,
+ *      Condicional, Transversal, Excepción); solo las que tienen actividades.
+ *      Dentro, agrupadas por proceso, en el orden de la tab.
  *
  * Según el perfil: Operaciones ve todas las actividades (edita solo las de
  * OPS); Bodegas y Combex ven solo las de su área.
@@ -44,6 +46,9 @@ function FormularioActividad(props: PropsActividad) {
   const Formulario = FORMULARIO_DE_RESPONSABLE[props.actividad.responsable];
   return <Formulario {...props} />;
 }
+
+/** Orden de las tabs por tipo (la primera con actividades abre por defecto). */
+const ORDEN_TIPOS: readonly TipoActividad[] = ["Principal", "Opcional", "Condicional", "Transversal", "Excepción"];
 
 /** Agrupa actividades consecutivas con el mismo proceso. */
 function porProceso(actividades: readonly ActividadTracking[]) {
@@ -66,8 +71,10 @@ export function PasoActividades({
   perfil: PerfilEmbarque;
 }) {
   const actividades = actividadesDelPerfil(paso, perfil);
-  const flujo = actividades.filter((actividad) => actividad.tipo !== "Excepción");
-  const excepciones = actividades.filter((actividad) => actividad.tipo === "Excepción");
+  const porTipo = ORDEN_TIPOS.map((tipo) => ({
+    tipo,
+    actividades: actividades.filter((actividad) => actividad.tipo === tipo),
+  })).filter((grupo) => grupo.actividades.length > 0);
   const pasoTracking = pasoDeTab(paso) ?? actividades[0]?.paso;
   const nombrePaso = TRACKING_PASOS.find((item) => item.id === pasoTracking)?.titulo;
 
@@ -89,47 +96,43 @@ export function PasoActividades({
         </div>
       ) : null}
 
-      {porProceso(flujo).map((grupo) => (
-        <section key={grupo.proceso} className="space-y-2">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {grupo.proceso}
-          </h4>
-          {grupo.actividades.map((actividad) => (
-            <FormularioActividad
-              key={actividad.id}
-              actividad={actividad}
-              pasoActual={pasoActual}
-              editable={puedeEditar(actividad, perfil)}
-            />
-          ))}
-        </section>
-      ))}
-
-      {excepciones.length > 0 ? (
-        <details
-          open={flujo.length === 0}
-          className="group space-y-2 rounded-lg border border-amber-500/40 p-3"
-        >
-          <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-amber-800 dark:text-amber-200">
-            <AlertTriangle className="size-4" aria-hidden="true" />
-            Excepciones ({excepciones.length})
-            <span className="text-xs font-normal text-muted-foreground">Solo si aplican</span>
-            <ChevronDown
-              className="ml-auto size-4 transition-transform group-open:rotate-180"
-              aria-hidden="true"
-            />
-          </summary>
-          <div className="space-y-2 pt-2">
-            {excepciones.map((actividad) => (
-              <FormularioActividad
-                key={actividad.id}
-                actividad={actividad}
-                pasoActual={pasoActual}
-                editable={puedeEditar(actividad, perfil)}
-              />
+      {porTipo.length > 0 ? (
+        <Tabs key={perfil} defaultValue={porTipo[0]?.tipo ?? ""} className="space-y-3">
+          <TabsList className="h-auto flex-wrap justify-start">
+            {porTipo.map((grupo) => (
+              <TabsTrigger key={grupo.tipo} value={grupo.tipo} className="gap-1.5">
+                {grupo.tipo === "Excepción" ? (
+                  <AlertTriangle className="size-3.5 text-amber-600" aria-hidden="true" />
+                ) : null}
+                {grupo.tipo}
+                <span className="text-xs text-muted-foreground">({grupo.actividades.length})</span>
+              </TabsTrigger>
             ))}
-          </div>
-        </details>
+          </TabsList>
+
+          {porTipo.map((grupo) => (
+            <TabsContent key={grupo.tipo} value={grupo.tipo} className="space-y-4">
+              {grupo.tipo === "Excepción" ? (
+                <p className="text-xs text-muted-foreground">Solo si aplican.</p>
+              ) : null}
+              {porProceso(grupo.actividades).map((proceso) => (
+                <section key={proceso.proceso} className="space-y-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {proceso.proceso}
+                  </h4>
+                  {proceso.actividades.map((actividad) => (
+                    <FormularioActividad
+                      key={actividad.id}
+                      actividad={actividad}
+                      pasoActual={pasoActual}
+                      editable={puedeEditar(actividad, perfil)}
+                    />
+                  ))}
+                </section>
+              ))}
+            </TabsContent>
+          ))}
+        </Tabs>
       ) : null}
     </div>
   );
