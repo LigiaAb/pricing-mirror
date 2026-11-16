@@ -8,6 +8,7 @@ import { fieldRules } from "../lib//tarifa-field-rules";
 import {
   aplicaATodosLosClientes,
   CATALOGOS_AGREGAR_TODOS,
+  COD_TIPO_TARIFA_ESPECIAL,
   COD_TIPO_TARIFA_PUBLICA,
   convertClasificacionServicio,
   DEFAULT_TODOS_VALUE,
@@ -453,14 +454,17 @@ export function useFormulario({
   }, [obtenerCatalogoById]);
 
   // El tipo de tarifa ya no se elige: se correlaciona con "aplica a todos los clientes"
-  // (todos los clientes → PUBLICA 97; si no → la otra opción del catálogo, ESPECIAL).
+  // (todos los clientes → PUBLICA 97; si no → ESPECIAL 98).
   const obtenerTipoTarifaSegunClientes = React.useCallback(
-    (todosLosClientes: boolean): TipoOption | null =>
-      ((catalogosProcesados?.tiposTarifa || []) as readonly TipoOption[]).find((tt) =>
-        todosLosClientes
-          ? tt.value === COD_TIPO_TARIFA_PUBLICA
-          : tt.value != null && tt.value !== COD_TIPO_TARIFA_PUBLICA,
-      ) ?? null,
+    (todosLosClientes: boolean): TipoOption => {
+      const codTipoTarifa = todosLosClientes ? COD_TIPO_TARIFA_PUBLICA : COD_TIPO_TARIFA_ESPECIAL;
+
+      return (
+        ((catalogosProcesados?.tiposTarifa || []) as readonly TipoOption[]).find(
+          (tt) => tt.value === codTipoTarifa,
+        ) ?? { value: codTipoTarifa }
+      );
+    },
     [catalogosProcesados],
   );
 
@@ -730,7 +734,7 @@ export function useFormulario({
       if (resultado.todos_los_clientes != null) {
         const tipoTarifa = obtenerTipoTarifaSegunClientes(resultado.todos_los_clientes === true);
 
-        if (tipoTarifa) resultado.cod_tipo_tarifa = getPlainValue(tipoTarifa);
+        resultado.cod_tipo_tarifa = getPlainValue(tipoTarifa);
       }
 
       return resultado;
