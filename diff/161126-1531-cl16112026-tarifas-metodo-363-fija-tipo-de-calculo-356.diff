@@ -1,0 +1,56 @@
+diff --git a/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts b/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
+index 424b7dc..0d37550 100644
+--- a/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
++++ b/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
+@@ -64,9 +64,15 @@ const isRecord = (value: unknown): value is UnknownRecord =>
+ 
+ // const isPrimitiveComparable = (value: unknown): value is string | number | boolean => ["string", "number", "boolean"].includes(typeof value);
+ 
+-// Método "COSTO POR PORCENTAJE" siempre se calcula sobre el tipo de cálculo "COSTO".
+-const COD_METODO_COSTO_POR_PORCENTAJE = 504;
+-const COD_TIPO_CALCULO_COSTO = 584;
++// Métodos de cálculo que fijan el tipo de cálculo: cod_tipo (método) → cod_tipo_calculo.
++// Al elegir el método se asigna el tipo y el select queda de solo lectura.
++const TIPO_CALCULO_POR_METODO: Readonly<Record<number, number>> = {
++  504: 584, // COSTO POR PORCENTAJE → COSTO
++  363: 356,
++};
++
++const obtenerTipoCalculoFijo = (codMetodo: unknown): number | undefined =>
++  typeof codMetodo === "number" ? TIPO_CALCULO_POR_METODO[codMetodo] : undefined;
+ 
+ const CAMPOS_SIEMPRE_LECTURA = [
+   "usuario",
+@@ -516,14 +522,16 @@ export function useFormulario({
+         if (id === "metodoCalculo") {
+           const metodoSeleccionado = val as TipoOption | null;
+ 
+-          if (metodoSeleccionado?.value === COD_METODO_COSTO_POR_PORCENTAJE) {
+-            const tipoCalculoCosto =
++          const codTipoCalculoFijo = obtenerTipoCalculoFijo(metodoSeleccionado?.value);
++
++          if (codTipoCalculoFijo !== undefined) {
++            const tipoCalculoFijo =
+               ((catalogosProcesados?.tiposCalculo || []) as readonly TipoOption[]).find(
+-                (tc) => tc.value === COD_TIPO_CALCULO_COSTO,
++                (tc) => tc.value === codTipoCalculoFijo,
+               ) ?? null;
+ 
+-            next.tipoCalculo = tipoCalculoCosto;
+-            next.cod_tipo_calculo = getPlainValue(tipoCalculoCosto);
++            next.tipoCalculo = tipoCalculoFijo;
++            next.cod_tipo_calculo = getPlainValue(tipoCalculoFijo);
+           }
+         }
+ 
+@@ -602,8 +610,8 @@ export function useFormulario({
+           resultadoFinal = true;
+         } else if (fieldRules[id]?.readonly) {
+           resultadoFinal = true;
+-        } else if (id === "tipoCalculo" && values?.cod_tipo === COD_METODO_COSTO_POR_PORCENTAJE) {
+-          // Con "COSTO POR PORCENTAJE" el tipo de cálculo queda fijo en "COSTO".
++        } else if (id === "tipoCalculo" && obtenerTipoCalculoFijo(values?.cod_tipo) !== undefined) {
++          // El método seleccionado fija el tipo de cálculo (TIPO_CALCULO_POR_METODO).
+           resultadoFinal = true;
+         } else {
+           const require = fieldRules[id]?.require;
