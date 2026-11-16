@@ -7,12 +7,16 @@ campos de solo lectura. La funcionalidad se agrega después sin cambiar la estru
 
 1. **Tabla de embarques** — `embarques-table.tsx` (`DataTable`, mismo patrón que Cotizaciones).
 2. **Resumen del seleccionado** (siempre visible) — `resumen-embarque.tsx`: franja con file/estado,
-   botones **Documentos** (va a la tab Documentos) y **Tracking** (abre el Sheet), datos breves y el
+   botones **Documentos** (va a la tab Documentos), **Actividades** (Sheet de detalle) y **Tracking**
+   (Sheet del tracking interactivo), datos breves y el
    **tracking general** de 6 pasos (`tracking-general.tsx`, solo visual).
 3. **Tabs de gestión** — `tabs-embarque.tsx` (tabs verticales como `TarifasTabs`). Cada tab es un
    componente en `components/pasos/`.
-4. **Sheet de tracking interactivo** — `tracking-sheet.tsx`. El componente existente se pasa por la prop
-   `trackingInteractivo` de `VistaGeneral` (o se importa dentro del Sheet cuando se conecte).
+4. **Sheet de tracking interactivo** — `tracking-sheet.tsx`. **Reservado solo para el componente
+   existente** (lo coloca el equipo): se pasa por la prop `trackingInteractivo` de `VistaGeneral` (o se
+   importa dentro del Sheet). Sin él muestra solo un aviso. No agregar otro contenido aquí.
+5. **Sheet de actividades** — `detalle-actividades-sheet.tsx`: detalle del Excel por paso y área,
+   independiente del tracking interactivo.
 
 ## Dónde vive cada cosa
 
@@ -36,9 +40,20 @@ consolidado, alcance (tooltip) y áreas responsables (OPS, Bodega, CBX):
 5. **Salida** — Despacho, salida aérea y complementaria (OPS, CBX)
 6. **Cierre** — Arribo y cierre de la operación (OPS, CBX)
 
-El detalle por actividad (hoja *Detalle original*, 69 actividades con código, responsable y tipo
-Principal/Opcional/Condicional/Excepción/Transversal) corresponde al tracking interactivo del Sheet.
-Si otras operaciones tienen otros pasos, `TRACKING_PASOS` pasa a depender del tipo de operación.
+### Actividades (qué paso original va en cada paso)
+
+`lib/actividades-tracking.ts` (`ACTIVIDADES_TRACKING`) es la hoja *Detalle original*: 69 actividades con
+paso nuevo, responsable, código original, proceso, entrada, actividad, resultado, tipo
+(Principal/Opcional/Condicional/Excepción/Transversal) y control. Cuadra con la hoja *Tracking 6 pasos*.
+El `id` es `"<responsable> <código>"` (ej. `"OPS 4.1"`, `"Bodega 0.1"`) porque los códigos se repiten entre
+áreas. Se usa en:
+
+- el tracking general (cantidad de actividades por paso);
+- cada tab (lista "Actividades del tracking");
+- el Sheet de actividades (`detalle-actividades-sheet.tsx`), por paso y área.
+
+Si otras operaciones tienen otros pasos, `TRACKING_PASOS` y las actividades pasan a depender del tipo de
+operación.
 
 ## Tabs actuales
 
@@ -46,8 +61,17 @@ Flujo: Información · Asignación de guías · Reservas (solicitud y confirmaci
 Tarifas (confirmación de cotización). Separadas al final: **Documentos** (disponible en cualquier paso) y
 **Cancelación / anulación** (opcional).
 
-Cada tab indica en `pasoTracking` en qué paso ocurre (guías y reservas → 1, draft → 2, tarifas → 4);
-se marca con check cuando el embarque ya pasó ese paso.
+Cada tab lista en `actividades` los ids del Excel que trabaja; su paso sale de ahí (`pasoDeTab`):
+
+| Tab          | Actividades                         | Paso |
+| ------------ | ----------------------------------- | ---- |
+| Guías        | OPS 1.1, 1.2, 1.3                   | 1    |
+| Reservas     | OPS 2.1, 2.2, 3.1, 3.2              | 1    |
+| Draft        | OPS 4.1 (draft), 4.2 (preaviso)     | 2    |
+| Tarifas      | OPS 9.2 (confirmar tarifas y gastos)| 4    |
+| Cancelación  | OPS 4.4 (anulación, excepción)      | —    |
+
+La tab se marca con check cuando el embarque ya pasó ese paso.
 
 Agregar una tab = 1 entrada en `PASOS_EMBARQUE` + su componente en `pasos/` + su `case` e icono en
 `tabs-embarque.tsx`.

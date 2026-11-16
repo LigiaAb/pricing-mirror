@@ -14,8 +14,16 @@ import {
 import type * as React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { cn } from "@/shared/lib/utils";
-import { type PasoEmbarque, pasosDelPerfil, type ValorPasoEmbarque } from "../lib/pasos";
+import { actividadesPorId } from "../lib/actividades-tracking";
+import {
+  type PasoEmbarque,
+  pasoDeTab,
+  pasosDelPerfil,
+  TRACKING_PASOS,
+  type ValorPasoEmbarque,
+} from "../lib/pasos";
 import type { EmbarqueMaqueta, PerfilEmbarque } from "../lib/tipos";
+import { ListaActividades } from "./actividades-tracking";
 import { PasoCancelacion } from "./pasos/paso-cancelacion";
 import { PasoDocumentos } from "./pasos/paso-documentos";
 import { PasoDraft } from "./pasos/paso-draft";
@@ -55,7 +63,8 @@ function contenidoPaso(valor: ValorPasoEmbarque, embarque: EmbarqueMaqueta): Rea
 
 function TriggerPaso({ paso, pasoActual }: { paso: PasoEmbarque; pasoActual: number }) {
   const Icono = ICONOS[paso.value];
-  const completado = paso.pasoTracking != null && paso.pasoTracking < pasoActual;
+  const pasoTracking = pasoDeTab(paso);
+  const completado = pasoTracking != null && pasoTracking < pasoActual;
 
   return (
     <TabsTrigger
@@ -66,13 +75,37 @@ function TriggerPaso({ paso, pasoActual }: { paso: PasoEmbarque; pasoActual: num
 
       <div className="flex w-full flex-wrap">
         <span className="text-left">{paso.label}</span>
-        <span className="w-full text-left text-[9px]">{paso.detalle}</span>
+        <span className="w-full text-left text-[9px]">
+          {paso.detalle}
+          {pasoTracking == null ? "" : ` · Paso ${pasoTracking}`}
+        </span>
       </div>
 
       {completado ? (
         <Check className="size-4 shrink-0 text-primary" aria-label="Completado" />
       ) : null}
     </TabsTrigger>
+  );
+}
+
+/** Actividades del Excel que se trabajan en la tab (si tiene). */
+function ActividadesDeTab({ paso }: { paso: PasoEmbarque }) {
+  const actividades = actividadesPorId(paso.actividades);
+  if (actividades.length === 0) return null;
+
+  const pasoTracking = actividades[0]?.paso;
+  const nombrePaso = TRACKING_PASOS.find((item) => item.id === pasoTracking)?.titulo ?? "";
+
+  return (
+    <section className="mt-6 space-y-2">
+      <h4 className="text-sm font-semibold">
+        Actividades del tracking
+        <span className="ml-2 text-xs font-normal text-muted-foreground">
+          Paso {pasoTracking} · {nombrePaso}
+        </span>
+      </h4>
+      <ListaActividades actividades={actividades} />
+    </section>
   );
 }
 
@@ -116,6 +149,7 @@ export function TabsEmbarque({
       {pasos.map((paso) => (
         <TabsContent key={paso.value} value={paso.value} className="min-w-0 grow p-4">
           {contenidoPaso(paso.value, embarque)}
+          <ActividadesDeTab paso={paso} />
         </TabsContent>
       ))}
     </Tabs>
