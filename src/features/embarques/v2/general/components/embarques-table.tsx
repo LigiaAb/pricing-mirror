@@ -59,7 +59,7 @@ function crearColumnas({
       cell: ({ row }) => (
         <span className="text-nowrap">
           {row.original.pasoActual}/{TRACKING_PASOS.length} ·{" "}
-          {TRACKING_PASOS.find((paso) => paso.id === row.original.pasoActual)?.titulo ?? ""}
+          {TRACKING_PASOS.find((paso) => paso.id === row.original.pasoActual)?.corto ?? ""}
         </span>
       ),
     },

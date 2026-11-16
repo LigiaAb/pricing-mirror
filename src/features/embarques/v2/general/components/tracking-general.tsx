@@ -19,8 +19,9 @@ export function TrackingGeneral({ pasoActual }: { pasoActual: number }) {
         return (
           <React.Fragment key={paso.id}>
             <li
-              className="flex min-w-24 flex-col items-center gap-1 text-center"
+              className="flex w-28 shrink-0 flex-col items-center gap-1 text-center"
               aria-current={estado === "actual" ? "step" : undefined}
+              title={`${paso.titulo}: ${paso.alcance}`}
             >
               <span
                 className={cn(
@@ -38,9 +39,19 @@ export function TrackingGeneral({ pasoActual }: { pasoActual: number }) {
                   estado === "pendiente" && "text-muted-foreground",
                 )}
               >
-                {paso.titulo}
+                {paso.corto}
               </span>
-              <span className="text-[11px] text-muted-foreground">{paso.descripcion}</span>
+              <span className="text-[11px] leading-tight text-muted-foreground">{paso.titulo}</span>
+              <span className="flex flex-wrap justify-center gap-1">
+                {paso.responsables.map((responsable) => (
+                  <span
+                    key={responsable}
+                    className="rounded border px-1 text-[9px] font-medium text-muted-foreground"
+                  >
+                    {responsable}
+                  </span>
+                ))}
+              </span>
             </li>
 
             {esUltimo ? null : (

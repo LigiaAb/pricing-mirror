@@ -12,11 +12,20 @@ export type PerfilEmbarque = "operaciones" | "bodegas" | "combex";
 /** Estado visual de un paso del tracking. */
 export type EstadoPaso = "completado" | "actual" | "pendiente";
 
+/** Áreas que ejecutan actividades del tracking (columna "Responsable" del Excel). */
+export type ResponsableTracking = "OPS" | "Bodega" | "CBX";
+
 /** Paso del tracking general (solo visual). */
 export type PasoTracking = {
   id: number;
+  /** Nombre corto para el círculo del tracking y la tabla. */
+  corto: string;
+  /** Estado consolidado (nombre completo del paso). */
   titulo: string;
-  descripcion: string;
+  /** Alcance del paso. */
+  alcance: string;
+  /** Áreas con actividades en el paso. */
+  responsables: readonly ResponsableTracking[];
 };
 
 /** Fila de la tabla de embarques. */

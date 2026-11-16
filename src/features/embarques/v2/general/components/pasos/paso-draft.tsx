@@ -9,7 +9,7 @@ export function PasoDraft() {
     <div className="space-y-4">
       <EncabezadoPaso
         titulo="Draft"
-        descripcion="Elaboración del draft y envío para revisión."
+        descripcion="Borrador de la guía y preaviso de carga al destino."
         acciones={
           <>
             <Button type="button" size="sm" variant="outline" disabled>
@@ -18,7 +18,7 @@ export function PasoDraft() {
             </Button>
             <Button type="button" size="sm" disabled>
               <Send className="size-4" aria-hidden="true" />
-              Enviar draft
+              Enviar preaviso
             </Button>
           </>
         }

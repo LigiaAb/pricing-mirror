@@ -9,7 +9,7 @@ export function PasoTarifas() {
     <div className="space-y-4">
       <EncabezadoPaso
         titulo="Confirmación de tarifas"
-        descripcion="Rubros de la cotización vinculada contra lo real del embarque."
+        descripcion="Tarifas y gastos reales contra la cotización (con el peso oficial de COMBEX)."
         acciones={
           <Button type="button" size="sm" disabled>
             <CheckCircle2 className="size-4" aria-hidden="true" />
