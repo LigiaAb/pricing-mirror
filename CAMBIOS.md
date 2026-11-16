@@ -5,6 +5,7 @@ Cada entrada: rama · módulo/submódulo · qué y por qué · diff generado (si
 
 ## 16/11/2026
 
+- **Reglas** (`claude/16112026-work-embarques-general`): `CLAUDE.md` → Flujo de trabajo: se documenta el proceso del usuario (PR → pull → aplicar) y la regla base: lo que está en `main` es lo aplicado en el proyecto; los diffs se generan sobre `main`. Sin cambios en `src/features`: no genera diff.
 - **Reglas / aplicar-diff** (`claude/16112026-work-embarques-general`): si el `.diff` no existe, el script lo dice (antes mostraba solo el mensaje de uso). Sin cambios en `src/features`: no genera diff.
 - **Embarques v2 / General** (`claude/16112026-work-embarques-general`): se reaplica el Sheet de actividades aparte del tracking (mismo cambio que `…2324…`) sobre el `VistaGeneral.tsx` real. **Aplicar este en lugar de `…2324…`.** Diff: `151126-2331-cl16112026-embarques-reaplicar-sheet-de-actividades-aparte.diff`.
 - **Embarques v2 / General** (`claude/16112026-work-embarques-general`): **sincronización, NO APLICAR en el proyecto.** El diff `…2324…` no aplicaba porque el `VistaGeneral.tsx` real tiene otro formato (props en una línea, `space-y-4 w-full`). Este commit deja el espejo igual al proyecto real (estado con `…2320…` aplicado y sin `…2324…`). Diff: `151126-2331-cl16112026-embarques-sincronizar-con-proyecto-real-no-aplica.diff` (solo registro).
