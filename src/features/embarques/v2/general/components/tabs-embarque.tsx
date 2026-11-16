@@ -68,7 +68,7 @@ function contenidoPaso(
 ): React.ReactNode {
   switch (paso.value) {
     case "informacion":
-      return <PasoInformacion editable={puedeEditarInformacion(perfil)} />;
+      return <PasoInformacion embarque={embarque} editable={puedeEditarInformacion(perfil)} />;
     case "documentos":
       return <PasoDocumentos />;
     default:

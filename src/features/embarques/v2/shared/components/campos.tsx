@@ -327,10 +327,13 @@ export function CampoPorTipo({
   id,
   campo,
   soloLectura,
+  valor,
 }: {
   id: string;
   campo: CampoGestion;
   soloLectura?: boolean | undefined;
+  /** Valor actual (texto, número y catálogo). */
+  valor?: string | undefined;
 }) {
   const base = { id, label: campo.label, requerido: campo.requerido ?? false, soloLectura };
   const opciones = campo.opciones ?? [];
@@ -347,12 +350,12 @@ export function CampoPorTipo({
     case "fecha-hora":
       return <CampoFecha {...base} conHora className="sm:col-span-2" />;
     case "seleccion":
-      return opciones.length > 0 ? <CampoSeleccion {...base} opciones={opciones} /> : <CampoCatalogo {...base} />;
+      return opciones.length > 0 ? <CampoSeleccion {...base} opciones={opciones} /> : <CampoCatalogo {...base} valor={valor} />;
     case "catalogo":
-      return <CampoCatalogo {...base} />;
+      return <CampoCatalogo {...base} valor={valor} />;
     case "numero":
-      return <CampoTexto {...base} tipo="number" />;
+      return <CampoTexto {...base} valor={valor} tipo="number" />;
     case "texto":
-      return <CampoTexto {...base} />;
+      return <CampoTexto {...base} valor={valor} />;
   }
 }

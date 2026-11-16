@@ -148,12 +148,13 @@ agentes, monedas, clientes… → `catalogo`. Fotografías → `acepta: "image/*
 
 ### Campos de Información (`shared/lib/campos-embarque.ts`)
 
-La tab Información **no inventa campos**: usa los que ya tiene el módulo actual de embarques (misma clave,
-nombre, obligatorio y opciones), agrupados en Shipper, Consignatario, Producto, Facturación, Detalles, Rutas y
-Fechas. Solo se toman los campos, **no el diseño** (v2 se está rediseñando): se dibujan con `CampoPorTipo`.
-`key` es el nombre del dato en el módulo actual, para conectar la API sin traducir. El origen de cada sección
-está anotado en el archivo. Las actividades que piden un dato que ya existe ahí usan el mismo nombre
-(p. ej. *Aerolínea*, *Nro. Vuelo*, *Cantidad (bultos)*, *Peso total (kg)*, *Dirección de Recolección*).
+v2 es un **rediseño**: la tab Información conserva su diseño (General · Partes · Ruta y carga, botón Editar) y
+**no** copia la agrupación, pestañas ni formularios del módulo actual. Lo único que se toma de él son los
+**campos**: misma clave, nombre, obligatorio y opciones (`CAMPOS_SHIPPER`, `CAMPOS_CONSIGNATARIO`,
+`CAMPOS_FACTURACION`, `CAMPOS_DETALLES`, `CAMPOS_PRODUCTO`, `CAMPOS_RUTA`, `CAMPOS_FECHAS`, `CAMPO_COD_FILE`).
+`key` es el nombre del dato en el módulo actual, para conectar la API sin traducir; el origen de cada lista
+está anotado en el archivo. Dónde va cada campo lo decide `pasos/paso-informacion.tsx`. Las actividades que
+piden un dato que ya existe usan el mismo nombre (p. ej. *Aerolínea*, *Nro. Vuelo*, *Cantidad (bultos)*).
 
 ### Gestión de cada actividad (`<actor>/lib/gestion-actividades.ts`)
 

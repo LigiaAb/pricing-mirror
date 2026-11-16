@@ -1,70 +1,97 @@
 "use client";
 
-import * as React from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Pencil } from "lucide-react";
+import { Button } from "@/shared/components/ui/button";
 import { CampoPorTipo } from "../../../shared/components/campos";
-import { EncabezadoPaso, Pendiente, SoloConsulta } from "../../../shared/components/utils";
-import { SECCIONES_INFORMACION, type SeccionInformacion } from "../../../shared/lib/campos-embarque";
+import { EncabezadoPaso, SoloConsulta } from "../../../shared/components/utils";
+import {
+  CAMPO_COD_FILE,
+  CAMPOS_CONSIGNATARIO,
+  CAMPOS_DETALLES,
+  CAMPOS_FACTURACION,
+  CAMPOS_FECHAS,
+  CAMPOS_PRODUCTO,
+  CAMPOS_RUTA,
+  CAMPOS_SHIPPER,
+  type CampoEmbarque,
+} from "../../../shared/lib/campos-embarque";
+import type { EmbarqueMaqueta } from "../../../shared/lib/tipos";
 
 /**
- * Información del embarque: los mismos campos que el módulo actual
- * (`shared/lib/campos-embarque.ts`: Shipper, Consignatario, Producto,
- * Facturación, Detalles, Rutas, Fechas) con el diseño de v2.
+ * Detalle completo del embarque (el resumen breve está siempre visible arriba).
+ * Diseño de v2 (General · Partes · Ruta y carga); los campos son los del
+ * módulo actual (`shared/lib/campos-embarque.ts`).
  * La ven todos los perfiles; solo Operaciones la edita (`editable`).
  */
-export function PasoInformacion({ editable }: { editable: boolean }) {
-  const [seccion, setSeccion] = React.useState(SECCIONES_INFORMACION[0]?.value ?? "");
+export function PasoInformacion({ embarque, editable }: { embarque: EmbarqueMaqueta; editable: boolean }) {
+  /** Datos de maqueta por clave del módulo actual. */
+  const valores: Record<string, string> = {
+    cod_file: embarque.codFile,
+    cliente: embarque.cliente,
+    codEntidadProv: embarque.carrier,
+  };
+
+  const campos = (prefijo: string, lista: readonly CampoEmbarque[]) =>
+    lista.map((campo) => (
+      <CampoPorTipo
+        key={`${prefijo}-${campo.key}`}
+        id={`emb-${prefijo}-${campo.key}`}
+        campo={campo}
+        valor={valores[campo.key]}
+        soloLectura
+      />
+    ));
 
   return (
     <div className="space-y-4">
       <EncabezadoPaso
         titulo="Información del embarque"
-        descripcion="Partes, producto, facturación, detalles, rutas y fechas."
-        acciones={editable ? null : <SoloConsulta />}
+        descripcion="Datos generales, partes y carga."
+        acciones={
+          editable ? (
+            <Button type="button" size="sm" variant="outline" disabled>
+              <Pencil className="size-4" aria-hidden="true" />
+              Editar
+            </Button>
+          ) : (
+            <SoloConsulta />
+          )
+        }
       />
 
-      <Tabs value={seccion} onValueChange={setSeccion}>
-        <TabsList className="flex h-auto flex-wrap justify-start">
-          {SECCIONES_INFORMACION.map(({ value, titulo }) => (
-            <TabsTrigger key={value} value={value}>
-              {titulo}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      <fieldset className="grid grid-cols-1 gap-4 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <legend className="px-1 text-sm font-semibold">General</legend>
+        {campos("general", [CAMPO_COD_FILE, ...CAMPOS_DETALLES])}
+      </fieldset>
 
-        {SECCIONES_INFORMACION.map((s) => (
-          <TabsContent key={s.value} value={s.value} className="pt-2">
-            <SeccionCampos seccion={s} editable={editable} />
-          </TabsContent>
-        ))}
-      </Tabs>
+      <fieldset className="grid grid-cols-1 gap-4 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <legend className="px-1 text-sm font-semibold">Partes</legend>
+        <Subtitulo texto="Shipper" />
+        {campos("shipper", CAMPOS_SHIPPER)}
+        <Subtitulo texto="Consignatario" />
+        {campos("consignatario", CAMPOS_CONSIGNATARIO)}
+        <Subtitulo texto="Cliente (facturación)" />
+        {campos("facturacion", CAMPOS_FACTURACION)}
+      </fieldset>
+
+      <fieldset className="grid grid-cols-1 gap-4 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <legend className="px-1 text-sm font-semibold">Ruta y carga</legend>
+        <Subtitulo texto="Ruta" />
+        {campos("ruta", CAMPOS_RUTA)}
+        <Subtitulo texto="Fechas" />
+        {campos("fechas", CAMPOS_FECHAS)}
+        <Subtitulo texto="Carga" />
+        {campos("carga", CAMPOS_PRODUCTO)}
+      </fieldset>
     </div>
   );
 }
 
-function SeccionCampos({ seccion, editable }: { seccion: SeccionInformacion; editable: boolean }) {
+/** Separador dentro de un bloque (ocupa toda la fila). */
+function Subtitulo({ texto }: { texto: string }) {
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">{seccion.descripcion}</p>
-
-      {seccion.lista ? <Pendiente texto={seccion.lista} className="min-h-20" /> : null}
-
-      {seccion.grupos.map((grupo) => (
-        <fieldset
-          key={grupo.titulo}
-          className="grid grid-cols-1 gap-4 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-4"
-        >
-          <legend className="px-1 text-sm font-semibold">{grupo.titulo}</legend>
-          {grupo.campos.map((campo) => (
-            <CampoPorTipo
-              key={campo.key}
-              id={`emb-${seccion.value}-${campo.key}`}
-              campo={campo}
-              soloLectura={!editable || campo.soloLectura === true}
-            />
-          ))}
-        </fieldset>
-      ))}
-    </div>
+    <p className="col-span-full border-b pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      {texto}
+    </p>
   );
 }
