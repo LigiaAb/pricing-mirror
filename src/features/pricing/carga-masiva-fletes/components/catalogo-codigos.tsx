@@ -48,13 +48,15 @@ function registros(value: unknown): UnknownRecord[] {
 }
 
 function aFilaPais(item: UnknownRecord): FilaPais | null {
-  const codigo = texto(item.cod_pais ?? item.codPais);
-  if (!codigo) return null;
+  // En la plantilla va REF_PAIS; cod_pais solo se usa para relacionar las ciudades.
+  const codigo = texto(item.ref_pais ?? item.refPais);
+  const codPais = texto(item.cod_pais ?? item.codPais);
+  if (!codigo || !codPais) return null;
 
   return {
     codigo,
-    codPais: codigo,
-    referencia: texto(item.ref_pais_2 ?? item.refPais2 ?? item.ref_pais ?? item.refPais),
+    codPais,
+    referencia: texto(item.ref_pais_2 ?? item.refPais2),
     nombre: texto(item.nombre_pais ?? item.nombrePais),
   };
 }
@@ -277,7 +279,7 @@ function PaisesYCiudades({ copiado, onCopiar }: { copiado: string | null; onCopi
           vacio="No se encontraron países."
           copiado={copiado}
           onCopiar={onCopiar}
-          seleccionado={codPais}
+          seleccionado={paisSeleccionado?.codigo}
           onSeleccionar={(pais) => {
             setCodPais(pais.codPais);
             setBusquedaCiudad("");
