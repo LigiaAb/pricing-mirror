@@ -1,6 +1,6 @@
 "use client";
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/shared/components/ui/button";
@@ -116,21 +116,31 @@ export function AsyncComboboxInput<T>({
    * Como la caché no se entera de que fetchOptions cambió:
    *   - Solo se consulta con el listado abierto (antes cada combo consultaba al
    *     montarse, a veces antes de que sus opciones hubieran cargado).
-   *   - staleTime 0: cada vez que se abre se vuelven a pedir las opciones. Con 30 s
-   *     el combo seguía mostrando la lista anterior (vacía si el catálogo aún no
-   *     cargaba, o la de otro filtro: países de otro continente, commodities ya
-   *     asignados). Mientras llega la respuesta se ve lo último (keepPreviousData).
+   *   - Al abrir, si las opciones guardadas se obtuvieron con otro fetchOptions
+   *     (o con ninguno de esta instancia), se marcan como viejas y se vuelven a
+   *     pedir. Si no, se usa la caché (30 s): un fetchOptions memoizado que busca
+   *     en el servidor no consulta de nuevo cada vez que se abre. Sin esto el combo
+   *     seguía mostrando la lista anterior (vacía si el catálogo aún no cargaba,
+   *     o la de otro filtro: países de otro continente, commodities ya asignados).
+   *     Mientras llega la respuesta se ve lo último (keepPreviousData).
    */
+  const queryClient = useQueryClient();
   const fetchOptionsRef = React.useRef(fetchOptions);
   fetchOptionsRef.current = fetchOptions;
+  const fetchOptionsUsadaRef = React.useRef<typeof fetchOptions | null>(null);
   const instanceKey = React.useId();
+  const cacheKey = queryKey ?? instanceKey;
 
   const optionsQuery = useQuery({
-    queryKey: ["async-combobox", queryKey ?? instanceKey, search],
-    queryFn: ({ signal }) => fetchOptionsRef.current(search, signal),
+    queryKey: ["async-combobox", cacheKey, search],
+    queryFn: ({ signal }) => {
+      const fetchActual = fetchOptionsRef.current;
+      fetchOptionsUsadaRef.current = fetchActual;
+      return fetchActual(search, signal);
+    },
     enabled: open && !isBlocked && (fetchOnEmpty || search.length >= minSearchLength),
     placeholderData: keepPreviousData,
-    staleTime: 0,
+    staleTime: 30_000,
     retry: false,
     // El error se muestra dentro del propio listado, no como toast global.
     meta: { silent: true },
@@ -201,6 +211,13 @@ export function AsyncComboboxInput<T>({
       <Popover
         open={open}
         onOpenChange={(nextOpen) => {
+          if (nextOpen && !isBlocked && fetchOptionsUsadaRef.current !== fetchOptionsRef.current) {
+            // Solo marca como viejas; la consulta sale al habilitarse con el listado abierto.
+            void queryClient.invalidateQueries({
+              queryKey: ["async-combobox", cacheKey],
+              refetchType: "none",
+            });
+          }
           if (!isBlocked) setOpen(nextOpen);
           if (!nextOpen) onBlur?.();
         }}

@@ -17,9 +17,10 @@ al proyecto completo. Responder siempre en **español**.
 - `src/shared/components/form/fields/async-combobox-input.tsx` contiene el **código real** de `AsyncComboboxInput`,
   idéntico al proyecto (para tipar `onOpenChange` hay stub en `src/shared/components/ui/popover.tsx`). Es la única
   ruta de `src/shared` que **sí** sale en los `diff/` (`RUTAS_CODIGO` de `scripts/guardar-diff.mjs`).
-  Consulta solo con el listado abierto y vuelve a pedir las opciones cada vez que se abre (`staleTime: 0`): con
-  opciones locales basta pasar `fetchOptions` memoizado (`useFiltroOpciones` en Tarifas). Dibuja máximo
-  `maxOptions` (100) opciones.
+  Consulta solo con el listado abierto. Caché de 30 s, pero al abrir vuelve a pedir las opciones si `fetchOptions`
+  cambió desde la última consulta: con opciones locales que cambian, pasar `fetchOptions` memoizado sobre la lista
+  (`useFiltroOpciones` en Tarifas); las búsquedas en servidor memoizadas no consultan de nuevo al reabrir. Dibuja
+  máximo `maxOptions` (100) opciones.
 - Si un cambio necesita un tipo de `@/shared` que no está en los stubs, se agrega al stub (solo tipos) y se avisa.
 - Nunca cambiar lógica dentro de los stubs para "hacer pasar" algo.
 - **Embarques: se trabaja únicamente en `src/features/embarques/v2/`.** Lo demás de `src/features/embarques/`
