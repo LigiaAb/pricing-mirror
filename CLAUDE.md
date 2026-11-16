@@ -9,6 +9,7 @@ al proyecto completo. Responder siempre en **español**.
 | -------------------------------------------- | ----------------------------------------------------- | -------------------------------- |
 | `src/features/pricing/`, `src/features/embarques/` | Código real de los módulos                      | **Sí**, es lo único que se copia |
 | `src/shared/**`, `src/features/catalogos/**` | STUBS: solo tipos de lo que pricing usa               | **No**                           |
+| `src/features/tracking/**`                   | STUB: solo tipos de `TrackingDetalle` (embarques)     | **No**                           |
 | `src/types/stubs-modulos.d.ts`               | Todo lo demás de `@/shared` / `@/features` como `any` | **No**                           |
 | `tsconfig.json`                              | Copia exacta del proyecto real                        | No (ya existe allá)              |
 

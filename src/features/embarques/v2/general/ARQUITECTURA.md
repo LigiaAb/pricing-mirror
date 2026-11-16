@@ -12,9 +12,11 @@ campos de solo lectura. La funcionalidad se agrega después sin cambiar la estru
    **tracking general** de 6 pasos (`tracking-general.tsx`, solo visual).
 3. **Tabs de gestión** — `tabs-embarque.tsx` (tabs verticales como `TarifasTabs`). Cada tab es un
    componente en `components/pasos/`.
-4. **Sheet de tracking interactivo** — `tracking-sheet.tsx`. **Reservado solo para el componente
-   existente** (lo coloca el equipo): se pasa por la prop `trackingInteractivo` de `VistaGeneral` (o se
-   importa dentro del Sheet). Sin él muestra solo un aviso. No agregar otro contenido aquí.
+4. **Sheet de tracking interactivo** — `tracking-sheet.tsx`. Solo el componente existente
+   `TrackingDetalle` (`@/features/tracking`), con los datos del embarque seleccionado
+   (`CoordinacionTracking` en `lib/tipos.ts`: mismos nombres que `Coordinacion`). `puedeRetroceder={false}`;
+   `ocupado` mientras se guarda. `VistaGeneral` recibe `codTipoTracking` y `onActualizarEstadoTracking(embarque,
+   payload)`: ahí la pantalla actualiza el estado (API) y reconsulta. No agregar otro contenido aquí.
 5. **Sheet de actividades** — `detalle-actividades-sheet.tsx`: detalle del Excel por paso y área,
    independiente del tracking interactivo.
 

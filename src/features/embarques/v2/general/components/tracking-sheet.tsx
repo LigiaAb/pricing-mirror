@@ -1,7 +1,8 @@
 "use client";
 
 import { Route } from "lucide-react";
-import type * as React from "react";
+import * as React from "react";
+import { type ActualizarEstadoTrackingPayload, TrackingDetalle } from "@/features/tracking";
 import {
   Sheet,
   SheetContent,
@@ -9,25 +10,49 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/shared/components/ui/sheet";
-import type { EmbarqueMaqueta } from "../lib/tipos";
-import { Pendiente } from "./utils";
+import type { CoordinacionTracking, EmbarqueMaqueta } from "../lib/tipos";
+
+/** Lo que la pantalla hace al mover el tracking (actualizar estado y reconsultar). */
+export type ActualizarEstadoTracking = (
+  embarque: CoordinacionTracking,
+  payload: ActualizarEstadoTrackingPayload,
+) => void | Promise<void>;
 
 /**
- * Sheet lateral con el tracking interactivo (mismo estilo que el filtro de
- * Cotizaciones). El contenido llega por `children`: ahí va el componente de
- * tracking interactivo existente. Sin `children` muestra un aviso de maqueta.
+ * Sheet lateral con el tracking interactivo existente (`TrackingDetalle` de
+ * `@/features/tracking`). No agregar otro contenido aquí.
+ *
+ * - Datos del embarque seleccionado (`CoordinacionTracking`).
+ * - `codTipo`: tipo de tracking, lo pasa la pantalla.
+ * - `onActualizarEstado`: la pantalla actualiza el estado (API) y reconsulta.
+ * - No se permite retroceder (`puedeRetroceder={false}`).
+ * - Mientras se guarda, el componente queda `ocupado`.
  */
 export function TrackingSheet({
   open,
   onOpenChange,
   embarque,
-  children,
+  codTipo,
+  onActualizarEstado,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   embarque: EmbarqueMaqueta | null;
-  children?: React.ReactNode;
+  codTipo: number;
+  onActualizarEstado?: ActualizarEstadoTracking | undefined;
 }) {
+  const [ocupado, setOcupado] = React.useState(false);
+
+  const actualizar = async (payload: ActualizarEstadoTrackingPayload) => {
+    if (!embarque || !onActualizarEstado) return;
+    setOcupado(true);
+    try {
+      await onActualizarEstado(embarque, payload);
+    } finally {
+      setOcupado(false);
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -49,7 +74,17 @@ export function TrackingSheet({
         </SheetHeader>
 
         <div className="space-y-5 p-4 sm:space-y-6 sm:p-6">
-          {children ?? <Pendiente texto="Aquí va el componente de tracking interactivo existente." />}
+          {embarque ? (
+            <TrackingDetalle
+              codInterno={embarque.seg_coord_id ?? 0}
+              codTipo={codTipo}
+              estadoActual={embarque.estado_id_tracking ?? 0}
+              puedeRetroceder={false}
+              ocupado={ocupado}
+              onActualizarEstado={actualizar}
+              coordinacionId={embarque.coordinacion}
+            />
+          ) : null}
         </div>
       </SheetContent>
     </Sheet>

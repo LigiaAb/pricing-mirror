@@ -9,7 +9,7 @@ import { DetalleActividadesSheet } from "./detalle-actividades-sheet";
 import { EmbarquesTable } from "./embarques-table";
 import { ResumenEmbarque } from "./resumen-embarque";
 import { TabsEmbarque } from "./tabs-embarque";
-import { TrackingSheet } from "./tracking-sheet";
+import { type ActualizarEstadoTracking, TrackingSheet } from "./tracking-sheet";
 
 /* ==========================================================================
  * VISTA GENERAL DE EMBARQUES (SOLO MAQUETA)
@@ -17,7 +17,7 @@ import { TrackingSheet } from "./tracking-sheet";
  * 1. Tabla de embarques.
  * 2. Resumen del seleccionado + tracking general de 6 pasos (solo visual).
  * 3. Tabs con los pasos de gestión (según el perfil de la pantalla).
- * 4. Sheet lateral con el tracking interactivo (solo para el componente existente).
+ * 4. Sheet lateral con el tracking interactivo existente (`TrackingDetalle`).
  * 5. Sheet lateral con el detalle de actividades del Excel (aparte).
  *
  * `perfil` permite reutilizar la vista en Operaciones, Bodegas y Combex.
@@ -26,11 +26,20 @@ import { TrackingSheet } from "./tracking-sheet";
 
 type VistaGeneralProps = {
   perfil?: PerfilEmbarque;
-  /** Componente de tracking interactivo existente, para el Sheet. */
-  trackingInteractivo?: React.ReactNode;
+  /** Tipo de tracking para `TrackingDetalle` (en la pantalla original: `tracking?.codTipo`). */
+  codTipoTracking?: number;
+  /**
+   * Al mover el tracking: la pantalla actualiza el estado (API) y reconsulta.
+   * Recibe el embarque seleccionado y el movimiento.
+   */
+  onActualizarEstadoTracking?: ActualizarEstadoTracking;
 };
 
-export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: VistaGeneralProps) => {
+export const VistaGeneral = ({
+  perfil = "operaciones",
+  codTipoTracking = 0,
+  onActualizarEstadoTracking,
+}: VistaGeneralProps) => {
   const [seleccionado, setSeleccionado] = React.useState<EmbarqueMaqueta | null>(null);
   const [tab, setTab] = React.useState<ValorPasoEmbarque>("informacion");
   const [trackingOpen, setTrackingOpen] = React.useState(false);
@@ -81,9 +90,13 @@ export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: Vi
         </div>
       )}
 
-      <TrackingSheet open={trackingOpen} onOpenChange={setTrackingOpen} embarque={seleccionado}>
-        {trackingInteractivo}
-      </TrackingSheet>
+      <TrackingSheet
+        open={trackingOpen}
+        onOpenChange={setTrackingOpen}
+        embarque={seleccionado}
+        codTipo={codTipoTracking}
+        onActualizarEstado={onActualizarEstadoTracking}
+      />
 
       <DetalleActividadesSheet open={actividadesOpen} onOpenChange={setActividadesOpen} embarque={seleccionado} perfil={perfil} />
     </div>
