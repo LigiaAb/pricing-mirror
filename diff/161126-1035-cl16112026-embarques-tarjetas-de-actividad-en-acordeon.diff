@@ -1,0 +1,230 @@
+diff --git a/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx b/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
+index 1d4c34e..ee0c94c 100644
+--- a/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
++++ b/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
+@@ -14,6 +14,12 @@ import {
+   ShoppingCart,
+   TriangleAlert,
+ } from "lucide-react";
++import {
++  Accordion,
++  AccordionContent,
++  AccordionItem,
++  AccordionTrigger,
++} from "@/shared/components/ui/accordion";
+ import { Button } from "@/shared/components/ui/button";
+ import { cn } from "@/shared/lib/utils";
+ import { type ActividadTracking, actividadesPorId } from "../lib/actividades-tracking";
+@@ -36,6 +42,10 @@ import { Dato, Pendiente, SoloConsulta } from "./utils";
+  *
+  * El tipo de interacción es interno: no se muestra su nombre al usuario.
+  *
++ * Plegable (acordeón): el encabezado abre/cierra cuerpo y pie. Abre por
++ * defecto solo la actividad "En curso" y editable; el resto queda plegado
++ * para ahorrar espacio.
++ *
+  * `editable = false` (actividad de otra área): mismos datos en solo consulta,
+  * sin campos de captura ni botón.
+  *
+@@ -112,106 +122,114 @@ export function TarjetaActividad({
+   const estado = ESTADO[estadoActividad(actividad, pasoActual)];
+   const requiere = actividadesPorId(gestion.requiere ?? []);
+   const excepcion = gestion.interaccion === "incidencia";
++  const abierta = editable && estadoActividad(actividad, pasoActual) === "en-curso";
+ 
+   return (
+-    <article
+-      className={cn(
+-        "overflow-hidden rounded-lg border bg-card",
+-        excepcion && "border-amber-500/40",
+-      )}
+-    >
+-      {/* Encabezado */}
+-      <header
++    <Accordion type="single" collapsible {...(abierta ? { defaultValue: actividad.id } : {})}>
++      <AccordionItem
++        value={actividad.id}
+         className={cn(
+-          "flex flex-wrap items-start gap-3 border-b px-4 py-3",
+-          excepcion ? "bg-amber-500/10" : "bg-muted/40",
++          "overflow-hidden rounded-lg border bg-card last:border-b",
++          excepcion && "border-amber-500/40",
+         )}
+       >
+-        <div
++        {/* Encabezado (abre/cierra la tarjeta) */}
++        <AccordionTrigger
+           className={cn(
+-            "flex size-9 shrink-0 items-center justify-center rounded-lg",
+-            excepcion ? "bg-amber-500/20 text-amber-800 dark:text-amber-200" : "bg-primary/10 text-primary",
++            "items-start gap-3 rounded-none px-4 py-3 text-left hover:no-underline data-[state=open]:border-b",
++            excepcion ? "bg-amber-500/10" : "bg-muted/40",
+           )}
+         >
+-          <Icono className="size-5" aria-hidden="true" />
+-        </div>
++          <span className="flex min-w-0 flex-1 flex-wrap items-start gap-3">
++            <span
++              className={cn(
++                "flex size-9 shrink-0 items-center justify-center rounded-lg",
++                excepcion ? "bg-amber-500/20 text-amber-800 dark:text-amber-200" : "bg-primary/10 text-primary",
++              )}
++            >
++              <Icono className="size-5" aria-hidden="true" />
++            </span>
+ 
+-        <div className="min-w-0 flex-1 space-y-1">
+-          <div className="flex flex-wrap items-center gap-1.5">
+-            <span className="rounded border px-1 font-mono text-[10px] text-muted-foreground">
+-              {actividad.id}
++            <span className="flex min-w-0 flex-1 flex-col gap-1">
++              <span className="flex flex-wrap items-center gap-1.5">
++                <span className="rounded border px-1 font-mono text-[10px] text-muted-foreground">
++                  {actividad.id}
++                </span>
++                <span className="text-sm font-semibold">{actividad.actividad}</span>
++              </span>
++              <span className="flex flex-wrap items-center gap-1.5 text-[11px] font-normal text-muted-foreground">
++                <span>Responsable: {actividad.responsable}</span>
++                <EtiquetaTipo tipo={actividad.tipo} />
++              </span>
+             </span>
+-            <h5 className="text-sm font-semibold">{actividad.actividad}</h5>
+-          </div>
+-          <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+-            <span>Responsable: {actividad.responsable}</span>
+-            <EtiquetaTipo tipo={actividad.tipo} />
+-          </div>
+-        </div>
+ 
+-        <div className="flex flex-wrap items-center gap-1.5">
+-          {editable ? null : <SoloConsulta />}
+-          <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", estado.clase)}>
+-            {estado.label}
+-          </span>
+-        </div>
+-      </header>
+-
+-      {/* Cuerpo */}
+-      <div className="space-y-3 p-4">
+-        <p className="text-xs text-muted-foreground">
+-          <span className="font-medium text-foreground">Entrada:</span> {actividad.entrada}
+-        </p>
+-
+-        {requiere.length > 0 ? (
+-          <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+-            <Link2 className="size-3.5" aria-hidden="true" />
+-            Antes:
+-            {requiere.map((previa) => (
+-              <span key={previa.id} className="rounded border px-1.5" title={`${previa.responsable} ${previa.codigo}`}>
+-                {previa.actividad}
++            <span className="flex flex-wrap items-center gap-1.5">
++              {editable ? null : <SoloConsulta />}
++              <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", estado.clase)}>
++                {estado.label}
+               </span>
+-            ))}
++            </span>
++          </span>
++        </AccordionTrigger>
++
++        <AccordionContent className="pb-0">
++          {/* Cuerpo */}
++          <div className="space-y-3 p-4">
++            <p className="text-xs text-muted-foreground">
++              <span className="font-medium text-foreground">Entrada:</span> {actividad.entrada}
++            </p>
++
++            {requiere.length > 0 ? (
++              <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
++                <Link2 className="size-3.5" aria-hidden="true" />
++                Antes:
++                {requiere.map((previa) => (
++                  <span key={previa.id} className="rounded border px-1.5" title={`${previa.responsable} ${previa.codigo}`}>
++                    {previa.actividad}
++                  </span>
++                ))}
++              </div>
++            ) : null}
++
++            {gestion.compara ? (
++              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
++                <Dato label={gestion.compara} valor="—" />
++                <Dato label="Actual" valor="—" />
++                <Dato label="Diferencia" valor="—" />
++              </div>
++            ) : null}
++
++            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
++              {camposDe(gestion).map((campo) =>
++                editable ? (
++                  <CampoPorTipo key={campo.label} id={idCampo(actividad, campo)} campo={campo} />
++                ) : (
++                  <ValorCampo key={campo.label} campo={campo} />
++                ),
++              )}
++            </div>
++
++            {gestion.pendiente ? <Pendiente texto={gestion.pendiente} /> : null}
+           </div>
+-        ) : null}
+ 
+-        {gestion.compara ? (
+-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+-            <Dato label={gestion.compara} valor="—" />
+-            <Dato label="Actual" valor="—" />
+-            <Dato label="Diferencia" valor="—" />
+-          </div>
+-        ) : null}
+-
+-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+-          {camposDe(gestion).map((campo) =>
+-            editable ? (
+-              <CampoPorTipo key={campo.label} id={idCampo(actividad, campo)} campo={campo} />
+-            ) : (
+-              <ValorCampo key={campo.label} campo={campo} />
+-            ),
+-          )}
+-        </div>
+-
+-        {gestion.pendiente ? <Pendiente texto={gestion.pendiente} /> : null}
+-      </div>
+-
+-      {/* Pie */}
+-      <footer className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2">
+-        <div className="space-y-0.5 text-[11px] text-muted-foreground">
+-          <p className="flex items-center gap-1">
+-            <ShieldCheck className="size-3.5" aria-hidden="true" />
+-            Control: {actividad.control}
+-          </p>
+-          <p>Resultado: {actividad.resultado}</p>
+-        </div>
+-        {editable ? (
+-          <Button type="button" size="sm" variant={excepcion ? "outline" : "default"} disabled>
+-            <Icono className="size-4" aria-hidden="true" />
+-            {accionDe(gestion)}
+-          </Button>
+-        ) : null}
+-      </footer>
+-    </article>
++          {/* Pie */}
++          <footer className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2">
++            <div className="space-y-0.5 text-[11px] text-muted-foreground">
++              <p className="flex items-center gap-1">
++                <ShieldCheck className="size-3.5" aria-hidden="true" />
++                Control: {actividad.control}
++              </p>
++              <p>Resultado: {actividad.resultado}</p>
++            </div>
++            {editable ? (
++              <Button type="button" size="sm" variant={excepcion ? "outline" : "default"} disabled>
++                <Icono className="size-4" aria-hidden="true" />
++                {accionDe(gestion)}
++              </Button>
++            ) : null}
++          </footer>
++        </AccordionContent>
++      </AccordionItem>
++    </Accordion>
+   );
+ }
