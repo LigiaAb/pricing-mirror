@@ -33,6 +33,34 @@ function filtrarOpciones<T extends { label: string }>(options: T[], search: stri
   return options.filter((option) => option.label.toLowerCase().includes(busqueda));
 }
 
+/*
+ * El catálogo de commodities es grande: el combobox no virtualiza, así que dibujar
+ * todas las opciones lo vuelve lento. Se muestran las primeras y se busca al escribir.
+ */
+const LIMITE_OPCIONES_COMMODITY = 50;
+
+/*
+ * AsyncComboboxInput guarda en caché (30 s, por queryKey + búsqueda) lo que devuelve
+ * fetchOptions y no vuelve a consultar cuando fetchOptions cambia. Como aquí las
+ * opciones se filtran localmente, la clave debe cambiar cuando llega una lista nueva;
+ * si no, se queda con la lista vacía de antes de que cargara el catálogo, o sigue
+ * ofreciendo commodities que ya se asignaron.
+ */
+const idsListas = new WeakMap<object, number>();
+let siguienteIdLista = 0;
+
+function idDeLista(lista: object): number {
+  let id = idsListas.get(lista);
+
+  if (id === undefined) {
+    siguienteIdLista += 1;
+    id = siguienteIdLista;
+    idsListas.set(lista, id);
+  }
+
+  return id;
+}
+
 export function CommoditiesForm({
   value,
   commodities,
@@ -59,8 +87,17 @@ export function CommoditiesForm({
     });
   }, [value, estadoActivo]);
 
+  const idCombobox = React.useId();
+  const queryKeyCommodities = `tarifas-commodities-${idCombobox}-${idDeLista(commodities)}`;
+
   const fetchCommodities = React.useCallback(
-    async (search: string) => filtrarOpciones(commodities, search),
+    async (search: string) =>
+      filtrarOpciones(commodities, search).slice(0, LIMITE_OPCIONES_COMMODITY),
+    [commodities],
+  );
+
+  const commoditiesIniciales = React.useMemo(
+    () => commodities.slice(0, LIMITE_OPCIONES_COMMODITY),
     [commodities],
   );
 
@@ -101,7 +138,8 @@ export function CommoditiesForm({
               }))
             }
             fetchOptions={fetchCommodities}
-            initialOptions={commodities}
+            queryKey={queryKeyCommodities}
+            initialOptions={commoditiesIniciales}
             getOptionValue={(option) => option.value}
             getOptionLabel={(option) => option.label}
             placeholder="Seleccione..."
