@@ -108,16 +108,3 @@ export function useAutorizarTarifaSpot() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: AUTORIZACION_SPOT_KEY }),
   });
 }
-
-export function useCargarArchivoSpot() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ codTarifaSpot, archivo }: { codTarifaSpot: Id; archivo: File }) => {
-      const formData = new FormData();
-      formData.append("cod_tarifa_spot", String(codTarifaSpot));
-      formData.append("archivo", archivo);
-      return http.post<unknown>("/api/appweb/cargar-archivo-tarifa-spot", formData);
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: AUTORIZACION_SPOT_KEY }),
-  });
-}
