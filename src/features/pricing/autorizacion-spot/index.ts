@@ -8,6 +8,5 @@ export {
   useActualizarTarifaSpot,
   useAutorizacionSpot,
   useAutorizarTarifaSpot,
-  useCargarArchivoSpot,
 } from "./api/autorizacion-spot";
 export { AutorizarTarifaSpot } from "./components/autorizar-tarifa-spot";
