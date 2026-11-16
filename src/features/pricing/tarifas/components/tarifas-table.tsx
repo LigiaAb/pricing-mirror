@@ -38,7 +38,7 @@ const camposDeFiltro = [
   "metodoCalculo",
   "aplicaOrigenesDestinos",
   "aplicaCommodities",
-  "tipoTarifa",
+  "aplicaTodosClientes",
   "fechaInicio",
   "fechaFin",
   "fechaCreacion",

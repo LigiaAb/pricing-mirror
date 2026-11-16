@@ -1,0 +1,201 @@
+diff --git a/src/features/pricing/shared/components/ficha-resumen.tsx b/src/features/pricing/shared/components/ficha-resumen.tsx
+index 6ecbca3..32a6cc0 100644
+--- a/src/features/pricing/shared/components/ficha-resumen.tsx
++++ b/src/features/pricing/shared/components/ficha-resumen.tsx
+@@ -154,7 +154,9 @@ export function FichaResumen({ item, width = "w-[300px]" }: Props) {
+   const aplicaATodosLosOrigenes = metodo?.todos_los_paises ? "Si" : "No";
+   const aplicaATodosLosCommodities = metodo?.todos_los_commodities ? "Si" : "No";
+   const aplicaATodosLosClientes =
+-    etiquetaCualquierTipo(metodo?.cod_tipo_tarifa) === "PUBLICA" ? "Si" : "No";
++    (metodo?.todos_los_clientes ?? etiquetaCualquierTipo(metodo?.cod_tipo_tarifa) === "PUBLICA")
++      ? "Si"
++      : "No";
+ 
+   const ultimaFechaModificacion = formatFechaUTC(servicio?.ultima_fecha_modificacion);
+   const fechaInicio = formatFechaUTC(metodo?.fecha_inicial);
+diff --git a/src/features/pricing/tarifas/components/formulario-tarifa.tsx b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
+index 02bc699..dff4809 100644
+--- a/src/features/pricing/tarifas/components/formulario-tarifa.tsx
++++ b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
+@@ -48,8 +48,7 @@ const camposScale = [
+   "metodoCalculo",
+   "aplicaOrigenesDestinos",
+   "aplicaCommodities",
+-  "aplicaTodosCientes",
+-  "tipoTarifa",
++  "aplicaTodosClientes",
+ ];
+ 
+ export type TarifaSubmitPayload = {
+@@ -785,10 +784,9 @@ export const FormularioTarifa = ({
+             label: "APLICA A TODOS LOS COMMODITIES",
+           })}
+ 
+-          {renderSelectCatalogo({
+-            id: "tipoTarifa",
+-            label: "Tipo de tarifa",
+-            options: catalogos?.tiposTarifa ?? [],
++          {renderizarChebox({
++            id: "aplicaTodosClientes",
++            label: "APLICA A TODOS LOS CLIENTES",
+           })}
+         </FieldGroup>
+ 
+diff --git a/src/features/pricing/tarifas/components/tab-tarifas.tsx b/src/features/pricing/tarifas/components/tab-tarifas.tsx
+index 0f73959..f4fa706 100644
+--- a/src/features/pricing/tarifas/components/tab-tarifas.tsx
++++ b/src/features/pricing/tarifas/components/tab-tarifas.tsx
+@@ -18,7 +18,7 @@ import { useTarifaEquipo } from "../api/tarifa-equipo";
+ import { useTarifaPorcentaje } from "../api/tarifa-porcentaje";
+ import { useTarifaRangos } from "../api/tarifa-rangos";
+ import type { FilaServicioMetodo } from "../api/types-api";
+-import { formatDateForInput } from "../lib/tarifa-helpers";
++import { aplicaATodosLosClientes, formatDateForInput } from "../lib/tarifa-helpers";
+ import { FormularioTarifa, type TarifaSubmitPayload } from "./formulario-tarifa";
+ import { CommoditiesTable } from "./metodo-commodities/commodities-table";
+ import { DetalleTable } from "./metodo-detalle/detalle-table";
+@@ -218,7 +218,7 @@ export function TarifasTabs({
+         break;
+     }
+ 
+-    const detalleCliente = values.cod_tipo_tarifa === 97 ? "No Aplicados" : "Aplicados";
++    const detalleCliente = aplicaATodosLosClientes(values) ? "No Aplicados" : "Aplicados";
+ 
+     const detalleContinente = values.todos_los_paises ? "No Aplicados" : "Aplicados";
+ 
+@@ -276,6 +276,7 @@ export function TarifasTabs({
+     values.cod_tipo,
+     values.cod_servicio,
+     values.cod_tipo_tarifa,
++    values.todos_los_clientes,
+     values.todos_los_paises,
+     values.todos_los_commodities,
+     tiposFetch.data,
+diff --git a/src/features/pricing/tarifas/components/tarifas-table.tsx b/src/features/pricing/tarifas/components/tarifas-table.tsx
+index b062a4f..7bdf84f 100644
+--- a/src/features/pricing/tarifas/components/tarifas-table.tsx
++++ b/src/features/pricing/tarifas/components/tarifas-table.tsx
+@@ -38,7 +38,7 @@ const camposDeFiltro = [
+   "metodoCalculo",
+   "aplicaOrigenesDestinos",
+   "aplicaCommodities",
+-  "tipoTarifa",
++  "aplicaTodosClientes",
+   "fechaInicio",
+   "fechaFin",
+   "fechaCreacion",
+diff --git a/src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts b/src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts
+index 1efda11..a65a450 100644
+--- a/src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts
++++ b/src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts
+@@ -20,7 +20,11 @@ import {
+ import type { FilaServicioMetodo, OptionEntidad } from "../api/types-api";
+ import type { RutaOption } from "../components/metodo-pais/pais-columns";
+ import type { KeysToLowerCase } from "../lib/form-types";
+-import { CATALOGOS_AGREGAR_TODOS, DEFAULT_TODOS_VALUE } from "../lib/tarifa-helpers";
++import {
++  aplicaATodosLosClientes,
++  CATALOGOS_AGREGAR_TODOS,
++  DEFAULT_TODOS_VALUE,
++} from "../lib/tarifa-helpers";
+ 
+ /*
+  * La carga y normalización de catálogos vive en pricing/shared
+@@ -275,6 +279,7 @@ export const useCatalogosTarifas = (props: UseCatalogosTarifaOptions = {}) => {
+         tipoTarifa_nombre: tipoTarifa?.label ?? "",
+         aplicaOrigenesDestinos: item?.todos_los_paises,
+         aplicaCommodities: item?.todos_los_commodities,
++        aplicaTodosClientes: aplicaATodosLosClientes(item),
+         fechaInicio,
+         fechaFin,
+         metodo,
+diff --git a/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts b/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
+index 0d37550..518e02d 100644
+--- a/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
++++ b/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
+@@ -6,7 +6,9 @@ import { useContextoOperativoStore } from "@/features/shell";
+ import { useAuthStore } from "@/shared/stores/auth-store";
+ import { fieldRules } from "../lib//tarifa-field-rules";
+ import {
++  aplicaATodosLosClientes,
+   CATALOGOS_AGREGAR_TODOS,
++  COD_TIPO_TARIFA_PUBLICA,
+   convertClasificacionServicio,
+   DEFAULT_TODOS_VALUE,
+ } from "../lib/tarifa-helpers";
+@@ -188,6 +190,11 @@ export function useFormulario({
+       }
+     });
+ 
++    // Registros anteriores sin todos_los_clientes: se deduce de cod_tipo_tarifa.
++    if (defaultValues?.todos_los_clientes == null && defaultValues?.cod_tipo_tarifa != null) {
++      resultado.aplicaTodosClientes = aplicaATodosLosClientes(defaultValues);
++    }
++
+     // ── Defaults desde ctx para empresa y centroCosto ─────────────────────────
+     const empresas = Array.isArray(catalogosProcesados?.empresas)
+       ? catalogosProcesados.empresas
+@@ -535,6 +542,21 @@ export function useFormulario({
+           }
+         }
+ 
++        if (id === "aplicaTodosClientes") {
++          // El tipo de tarifa ya no se elige: se deriva del checkbox
++          // (todos los clientes → PUBLICA; si no → la otra opción del catálogo, ESPECIAL).
++          const tiposTarifa = (catalogosProcesados?.tiposTarifa || []) as readonly TipoOption[];
++          const tipoTarifa =
++            tiposTarifa.find((tt) =>
++              val === true
++                ? tt.value === COD_TIPO_TARIFA_PUBLICA
++                : tt.value != null && tt.value !== COD_TIPO_TARIFA_PUBLICA,
++            ) ?? null;
++
++          next.tipoTarifa = tipoTarifa;
++          next.cod_tipo_tarifa = getPlainValue(tipoTarifa);
++        }
++
+         if (!regla) {
+           next[id] = val;
+           return next;
+diff --git a/src/features/pricing/tarifas/lib/tarifa-field-rules.ts b/src/features/pricing/tarifas/lib/tarifa-field-rules.ts
+index dd3d3b3..e756d0f 100644
+--- a/src/features/pricing/tarifas/lib/tarifa-field-rules.ts
++++ b/src/features/pricing/tarifas/lib/tarifa-field-rules.ts
+@@ -203,9 +203,11 @@ export const fieldRules: Record<string, FieldRule> = {
+   aplicaTodosClientes: {
+     cod: "todos_los_clientes",
+     payload: ["metodo"],
+-    default: undefined,
++    default: true,
+   },
+ 
++  // Ya no se muestra en el formulario: se deriva de "aplicaTodosClientes"
++  // (true → PUBLICA, false → ESPECIAL) y se sigue enviando por compatibilidad.
+   tipoTarifa: {
+     cod: "cod_tipo_tarifa",
+     catalogo: "tiposTarifa",
+diff --git a/src/features/pricing/tarifas/lib/tarifa-helpers.ts b/src/features/pricing/tarifas/lib/tarifa-helpers.ts
+index 2dcd531..8c38716 100644
+--- a/src/features/pricing/tarifas/lib/tarifa-helpers.ts
++++ b/src/features/pricing/tarifas/lib/tarifa-helpers.ts
+@@ -21,6 +21,20 @@ export const CATALOGOS_AGREGAR_TODOS = {
+   incoterms: true,
+ };
+ 
++// Tipo de tarifa "PUBLICA": equivale a "aplica a todos los clientes".
++export const COD_TIPO_TARIFA_PUBLICA = 97;
++
++/**
++ * ¿El método aplica a todos los clientes?
++ * Usa `todos_los_clientes`; en registros anteriores (sin ese dato) se deduce de
++ * `cod_tipo_tarifa` (PUBLICA = todos los clientes).
++ */
++export const aplicaATodosLosClientes = (metodo: {
++  todos_los_clientes?: boolean | null | undefined;
++  cod_tipo_tarifa?: unknown;
++}): boolean =>
++  metodo.todos_los_clientes ?? Number(metodo.cod_tipo_tarifa) === COD_TIPO_TARIFA_PUBLICA;
++
+ export const eliminarDuplicadosById = <T>(arr: T[], id: keyof T) => {
+   return arr.filter((item, index) => arr.findIndex((i) => i[id] === item[id]) === index);
+ };
