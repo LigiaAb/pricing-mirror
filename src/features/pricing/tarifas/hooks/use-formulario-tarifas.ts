@@ -8,6 +8,7 @@ import { fieldRules } from "../lib//tarifa-field-rules";
 import {
   aplicaATodosLosClientes,
   CATALOGOS_AGREGAR_TODOS,
+  COD_TIPO_TARIFA_ESPECIAL,
   COD_TIPO_TARIFA_PUBLICA,
   convertClasificacionServicio,
   DEFAULT_TODOS_VALUE,
@@ -452,6 +453,21 @@ export function useFormulario({
     obtenerCatalogoByIdRef.current = obtenerCatalogoById;
   }, [obtenerCatalogoById]);
 
+  // El tipo de tarifa ya no se elige: se correlaciona con "aplica a todos los clientes"
+  // (todos los clientes → PUBLICA 97; si no → ESPECIAL 98).
+  const obtenerTipoTarifaSegunClientes = React.useCallback(
+    (todosLosClientes: boolean): TipoOption => {
+      const codTipoTarifa = todosLosClientes ? COD_TIPO_TARIFA_PUBLICA : COD_TIPO_TARIFA_ESPECIAL;
+
+      return (
+        ((catalogosProcesados?.tiposTarifa || []) as readonly TipoOption[]).find(
+          (tt) => tt.value === codTipoTarifa,
+        ) ?? { value: codTipoTarifa }
+      );
+    },
+    [catalogosProcesados],
+  );
+
   const onInput = React.useCallback(
     ({ id, val }: { id: string; val: unknown }) => {
       setValues((prev) => {
@@ -543,15 +559,7 @@ export function useFormulario({
         }
 
         if (id === "aplicaTodosClientes") {
-          // El tipo de tarifa ya no se elige: se deriva del checkbox
-          // (todos los clientes → PUBLICA; si no → la otra opción del catálogo, ESPECIAL).
-          const tiposTarifa = (catalogosProcesados?.tiposTarifa || []) as readonly TipoOption[];
-          const tipoTarifa =
-            tiposTarifa.find((tt) =>
-              val === true
-                ? tt.value === COD_TIPO_TARIFA_PUBLICA
-                : tt.value != null && tt.value !== COD_TIPO_TARIFA_PUBLICA,
-            ) ?? null;
+          const tipoTarifa = obtenerTipoTarifaSegunClientes(val === true);
 
           next.tipoTarifa = tipoTarifa;
           next.cod_tipo_tarifa = getPlainValue(tipoTarifa);
@@ -584,7 +592,7 @@ export function useFormulario({
         return next;
       });
     },
-    [catalogosProcesados],
+    [catalogosProcesados, obtenerTipoTarifaSegunClientes],
   );
 
   // ── Helpers de visibilidad / readonly / require ───────────────────────────
@@ -716,9 +724,22 @@ export function useFormulario({
 
   const valoresSoloCodigos = React.useCallback(
     (payload?: string) => {
-      return { ...buildValoresSoloCodigos(values, fieldRules, payload), cod_usuario };
+      const resultado: Record<string, unknown> = {
+        ...buildValoresSoloCodigos(values, fieldRules, payload),
+        cod_usuario,
+      };
+
+      // Al guardar el método, cod_tipo_tarifa siempre corresponde a todos_los_clientes,
+      // aunque el checkbox no se haya tocado (p. ej. registros anteriores inconsistentes).
+      if (resultado.todos_los_clientes != null) {
+        const tipoTarifa = obtenerTipoTarifaSegunClientes(resultado.todos_los_clientes === true);
+
+        resultado.cod_tipo_tarifa = getPlainValue(tipoTarifa);
+      }
+
+      return resultado;
     },
-    [values, cod_usuario],
+    [values, cod_usuario, obtenerTipoTarifaSegunClientes],
   );
 
   return {

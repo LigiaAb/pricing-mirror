@@ -21,8 +21,9 @@ export const CATALOGOS_AGREGAR_TODOS = {
   incoterms: true,
 };
 
-// Tipo de tarifa "PUBLICA": equivale a "aplica a todos los clientes".
+// Tipos de tarifa: PUBLICA = aplica a todos los clientes; ESPECIAL = solo a clientes asignados.
 export const COD_TIPO_TARIFA_PUBLICA = 97;
+export const COD_TIPO_TARIFA_ESPECIAL = 98;
 
 /**
  * ¿El método aplica a todos los clientes?
