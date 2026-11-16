@@ -1,0 +1,27 @@
+diff --git a/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx b/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx
+index bd58a19..7ec4c10 100644
+--- a/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx
+@@ -439,8 +439,8 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
+ 
+   /*
+    * Al guardar una versión nueva el cálculo pide reactivar la cabecera (p. ej. una
+-   * cotización vencida pasa a activa). El endpoint actualiza la cabecera completa,
+-   * así que se envía la cotización abierta con el estado nuevo.
++   * cotización vencida pasa a activa). El endpoint solo requiere el código de la
++   * cabecera, así que se envían únicamente el código y el estado.
+    */
+   const handleActualizarEstadoCabecera = React.useCallback(
+     async ({
+@@ -457,10 +457,7 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
+         throw new Error("La cotización abierta no coincide con la versión guardada.");
+       }
+ 
+-      await actualizarCotizacion({
+-        ...(cotizacionPersistida as CotizacionCabeceraPayload),
+-        cod_estado,
+-      });
++      await actualizarCotizacion({ cod_cotizacion_cabecera, cod_estado });
+     },
+     [cotizacionPersistida, actualizarCotizacion],
+   );
