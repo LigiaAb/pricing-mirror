@@ -7,12 +7,16 @@ campos de solo lectura. La funcionalidad se agrega después sin cambiar la estru
 
 1. **Tabla de embarques** — `embarques-table.tsx` (`DataTable`, mismo patrón que Cotizaciones).
 2. **Resumen del seleccionado** (siempre visible) — `resumen-embarque.tsx`: franja con file/estado,
-   botones **Documentos** (va a la tab Documentos) y **Tracking** (abre el Sheet), datos breves y el
+   botones **Documentos** (va a la tab Documentos), **Actividades** (Sheet de detalle) y **Tracking**
+   (Sheet del tracking interactivo), datos breves y el
    **tracking general** de 6 pasos (`tracking-general.tsx`, solo visual).
 3. **Tabs de gestión** — `tabs-embarque.tsx` (tabs verticales como `TarifasTabs`). Cada tab es un
    componente en `components/pasos/`.
-4. **Sheet de tracking interactivo** — `tracking-sheet.tsx`. El componente existente se pasa por la prop
-   `trackingInteractivo` de `VistaGeneral` (o se importa dentro del Sheet cuando se conecte).
+4. **Sheet de tracking interactivo** — `tracking-sheet.tsx`. **Reservado solo para el componente
+   existente** (lo coloca el equipo): se pasa por la prop `trackingInteractivo` de `VistaGeneral` (o se
+   importa dentro del Sheet). Sin él muestra solo un aviso. No agregar otro contenido aquí.
+5. **Sheet de actividades** — `detalle-actividades-sheet.tsx`: detalle del Excel por paso y área,
+   independiente del tracking interactivo.
 
 ## Dónde vive cada cosa
 
@@ -46,7 +50,7 @@ El `id` es `"<responsable> <código>"` (ej. `"OPS 4.1"`, `"Bodega 0.1"`) porque 
 
 - el tracking general (cantidad de actividades por paso);
 - cada tab (lista "Actividades del tracking");
-- el Sheet de tracking, mientras no se conecte el componente existente (actividades por paso y área).
+- el Sheet de actividades (`detalle-actividades-sheet.tsx`), por paso y área.
 
 Si otras operaciones tienen otros pasos, `TRACKING_PASOS` y las actividades pasan a depender del tipo de
 operación.

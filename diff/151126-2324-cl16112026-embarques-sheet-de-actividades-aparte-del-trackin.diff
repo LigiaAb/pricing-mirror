@@ -1,0 +1,353 @@
+diff --git a/src/features/embarques/v2/general/ARQUITECTURA.md b/src/features/embarques/v2/general/ARQUITECTURA.md
+index 16fbdc7..3d50a5f 100644
+--- a/src/features/embarques/v2/general/ARQUITECTURA.md
++++ b/src/features/embarques/v2/general/ARQUITECTURA.md
+@@ -7,12 +7,16 @@ campos de solo lectura. La funcionalidad se agrega después sin cambiar la estru
+ 
+ 1. **Tabla de embarques** — `embarques-table.tsx` (`DataTable`, mismo patrón que Cotizaciones).
+ 2. **Resumen del seleccionado** (siempre visible) — `resumen-embarque.tsx`: franja con file/estado,
+-   botones **Documentos** (va a la tab Documentos) y **Tracking** (abre el Sheet), datos breves y el
++   botones **Documentos** (va a la tab Documentos), **Actividades** (Sheet de detalle) y **Tracking**
++   (Sheet del tracking interactivo), datos breves y el
+    **tracking general** de 6 pasos (`tracking-general.tsx`, solo visual).
+ 3. **Tabs de gestión** — `tabs-embarque.tsx` (tabs verticales como `TarifasTabs`). Cada tab es un
+    componente en `components/pasos/`.
+-4. **Sheet de tracking interactivo** — `tracking-sheet.tsx`. El componente existente se pasa por la prop
+-   `trackingInteractivo` de `VistaGeneral` (o se importa dentro del Sheet cuando se conecte).
++4. **Sheet de tracking interactivo** — `tracking-sheet.tsx`. **Reservado solo para el componente
++   existente** (lo coloca el equipo): se pasa por la prop `trackingInteractivo` de `VistaGeneral` (o se
++   importa dentro del Sheet). Sin él muestra solo un aviso. No agregar otro contenido aquí.
++5. **Sheet de actividades** — `detalle-actividades-sheet.tsx`: detalle del Excel por paso y área,
++   independiente del tracking interactivo.
+ 
+ ## Dónde vive cada cosa
+ 
+@@ -46,7 +50,7 @@ El `id` es `"<responsable> <código>"` (ej. `"OPS 4.1"`, `"Bodega 0.1"`) porque
+ 
+ - el tracking general (cantidad de actividades por paso);
+ - cada tab (lista "Actividades del tracking");
+-- el Sheet de tracking, mientras no se conecte el componente existente (actividades por paso y área).
++- el Sheet de actividades (`detalle-actividades-sheet.tsx`), por paso y área.
+ 
+ Si otras operaciones tienen otros pasos, `TRACKING_PASOS` y las actividades pasan a depender del tipo de
+ operación.
+diff --git a/src/features/embarques/v2/general/components/VistaGeneral.tsx b/src/features/embarques/v2/general/components/VistaGeneral.tsx
+index d6193c6..afbc4d1 100644
+--- a/src/features/embarques/v2/general/components/VistaGeneral.tsx
++++ b/src/features/embarques/v2/general/components/VistaGeneral.tsx
+@@ -5,6 +5,7 @@ import * as React from "react";
+ import { EMBARQUES_MAQUETA } from "../lib/datos-maqueta";
+ import type { ValorPasoEmbarque } from "../lib/pasos";
+ import type { EmbarqueMaqueta, PerfilEmbarque } from "../lib/tipos";
++import { DetalleActividadesSheet } from "./detalle-actividades-sheet";
+ import { EmbarquesTable } from "./embarques-table";
+ import { ResumenEmbarque } from "./resumen-embarque";
+ import { TabsEmbarque } from "./tabs-embarque";
+@@ -16,7 +17,8 @@ import { TrackingSheet } from "./tracking-sheet";
+  * 1. Tabla de embarques.
+  * 2. Resumen del seleccionado + tracking general de 6 pasos (solo visual).
+  * 3. Tabs con los pasos de gestión (según el perfil de la pantalla).
+- * 4. Sheet lateral con el tracking interactivo.
++ * 4. Sheet lateral con el tracking interactivo (solo para el componente existente).
++ * 5. Sheet lateral con el detalle de actividades del Excel (aparte).
+  *
+  * `perfil` permite reutilizar la vista en Operaciones, Bodegas y Combex.
+  * Sin API todavía: usa datos de `lib/datos-maqueta.ts`.
+@@ -32,6 +34,7 @@ export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: Vi
+   const [seleccionado, setSeleccionado] = React.useState<EmbarqueMaqueta | null>(null);
+   const [tab, setTab] = React.useState<ValorPasoEmbarque>("informacion");
+   const [trackingOpen, setTrackingOpen] = React.useState(false);
++  const [actividadesOpen, setActividadesOpen] = React.useState(false);
+ 
+   const seccionRef = React.useRef<HTMLDivElement | null>(null);
+ 
+@@ -66,6 +69,7 @@ export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: Vi
+           <ResumenEmbarque
+             embarque={seleccionado}
+             onVerTracking={() => setTrackingOpen(true)}
++            onVerActividades={() => setActividadesOpen(true)}
+             onSubirDocumentos={() => setTab("documentos")}
+           />
+ 
+@@ -88,6 +92,12 @@ export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: Vi
+       <TrackingSheet open={trackingOpen} onOpenChange={setTrackingOpen} embarque={seleccionado}>
+         {trackingInteractivo}
+       </TrackingSheet>
++
++      <DetalleActividadesSheet
++        open={actividadesOpen}
++        onOpenChange={setActividadesOpen}
++        embarque={seleccionado}
++      />
+     </div>
+   );
+ };
+diff --git a/src/features/embarques/v2/general/components/detalle-actividades-sheet.tsx b/src/features/embarques/v2/general/components/detalle-actividades-sheet.tsx
+new file mode 100644
+index 0000000..0d63bc5
+--- /dev/null
++++ b/src/features/embarques/v2/general/components/detalle-actividades-sheet.tsx
+@@ -0,0 +1,120 @@
++"use client";
++
++import { ChevronDown, ListChecks } from "lucide-react";
++import {
++  Sheet,
++  SheetContent,
++  SheetDescription,
++  SheetHeader,
++  SheetTitle,
++} from "@/shared/components/ui/sheet";
++import { cn } from "@/shared/lib/utils";
++import { actividadesDelPaso } from "../lib/actividades-tracking";
++import { estadoPaso, TRACKING_PASOS } from "../lib/pasos";
++import type { EmbarqueMaqueta, ResponsableTracking } from "../lib/tipos";
++import { ListaActividades } from "./actividades-tracking";
++
++/**
++ * Sheet lateral con el detalle de actividades del Excel por paso y área.
++ * Es independiente del Sheet de tracking interactivo (`tracking-sheet.tsx`),
++ * que queda reservado para el componente existente.
++ */
++export function DetalleActividadesSheet({
++  open,
++  onOpenChange,
++  embarque,
++}: {
++  open: boolean;
++  onOpenChange: (open: boolean) => void;
++  embarque: EmbarqueMaqueta | null;
++}) {
++  return (
++    <Sheet open={open} onOpenChange={onOpenChange}>
++      <SheetContent
++        side="right"
++        className="w-full overflow-y-auto border-l bg-card p-0 sm:max-w-2xl"
++      >
++        <SheetHeader className="border-b bg-muted/40 px-4 py-5 pr-12 sm:px-6 sm:py-6 sm:pr-14">
++          <div className="flex items-start gap-3">
++            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
++              <ListChecks className="size-5" aria-hidden="true" />
++            </div>
++            <div className="space-y-1">
++              <SheetTitle>Actividades del tracking</SheetTitle>
++              <SheetDescription>
++                {embarque ? `File #${embarque.codFile} · ${embarque.cliente}` : "Sin embarque"}
++              </SheetDescription>
++            </div>
++          </div>
++        </SheetHeader>
++
++        <div className="space-y-5 p-4 sm:space-y-6 sm:p-6">
++          {embarque ? <ActividadesPorPaso pasoActual={embarque.pasoActual} /> : null}
++        </div>
++      </SheetContent>
++    </Sheet>
++  );
++}
++
++const AREAS: readonly ResponsableTracking[] = ["OPS", "Bodega", "CBX"];
++
++/** Maqueta del detalle: actividades del Excel por paso y por área. */
++function ActividadesPorPaso({ pasoActual }: { pasoActual: number }) {
++  return (
++    <div className="space-y-3">
++      {TRACKING_PASOS.map((paso) => {
++        const estado = estadoPaso(paso.id, pasoActual);
++        const actividades = actividadesDelPaso(paso.id);
++
++        return (
++          <details
++            key={paso.id}
++            open={estado === "actual"}
++            className="group overflow-hidden rounded-lg border"
++          >
++            <summary
++              className={cn(
++                "flex cursor-pointer list-none items-center gap-3 px-3 py-2",
++                estado === "actual" && "bg-primary/10",
++              )}
++            >
++              <span
++                className={cn(
++                  "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
++                  estado === "completado" && "bg-primary text-primary-foreground",
++                  estado === "actual" && "border-2 border-primary text-primary",
++                  estado === "pendiente" && "bg-muted text-muted-foreground",
++                )}
++              >
++                {paso.id}
++              </span>
++              <span className="flex-1 text-sm font-medium">{paso.titulo}</span>
++              <span className="text-xs text-muted-foreground">{actividades.length}</span>
++              <ChevronDown
++                className="size-4 transition-transform group-open:rotate-180"
++                aria-hidden="true"
++              />
++            </summary>
++
++            <div className="space-y-3 border-t p-3">
++              <p className="text-xs text-muted-foreground">{paso.alcance}</p>
++              {AREAS.map((area) => {
++                const delArea = actividades.filter((actividad) => actividad.responsable === area);
++                if (delArea.length === 0) return null;
++
++                return (
++                  <div key={area} className="space-y-1">
++                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
++                      {area}
++                    </span>
++                    <ListaActividades actividades={delArea} />
++                  </div>
++                );
++              })}
++            </div>
++          </details>
++        );
++      })}
++    </div>
++  );
++}
+diff --git a/src/features/embarques/v2/general/components/resumen-embarque.tsx b/src/features/embarques/v2/general/components/resumen-embarque.tsx
+index 1f79b63..715244f 100644
+--- a/src/features/embarques/v2/general/components/resumen-embarque.tsx
++++ b/src/features/embarques/v2/general/components/resumen-embarque.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { FileUp, Route } from "lucide-react";
++import { FileUp, ListChecks, Route } from "lucide-react";
+ import { Button } from "@/shared/components/ui/button";
+ import type { EmbarqueMaqueta } from "../lib/tipos";
+ import { TrackingGeneral } from "./tracking-general";
+@@ -13,10 +13,12 @@ import { Dato, SeccionEmbarque } from "./utils";
+ export function ResumenEmbarque({
+   embarque,
+   onVerTracking,
++  onVerActividades,
+   onSubirDocumentos,
+ }: {
+   embarque: EmbarqueMaqueta;
+   onVerTracking: () => void;
++  onVerActividades: () => void;
+   onSubirDocumentos: () => void;
+ }) {
+   return (
+@@ -37,6 +39,10 @@ export function ResumenEmbarque({
+             <FileUp className="size-4" aria-hidden="true" />
+             Documentos
+           </Button>
++          <Button type="button" size="sm" variant="outline" onClick={onVerActividades}>
++            <ListChecks className="size-4" aria-hidden="true" />
++            Actividades
++          </Button>
+           <Button type="button" size="sm" onClick={onVerTracking}>
+             <Route className="size-4" aria-hidden="true" />
+             Tracking
+diff --git a/src/features/embarques/v2/general/components/tracking-sheet.tsx b/src/features/embarques/v2/general/components/tracking-sheet.tsx
+index c40866c..37d4001 100644
+--- a/src/features/embarques/v2/general/components/tracking-sheet.tsx
++++ b/src/features/embarques/v2/general/components/tracking-sheet.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { ChevronDown, Route } from "lucide-react";
++import { Route } from "lucide-react";
+ import type * as React from "react";
+ import {
+   Sheet,
+@@ -9,17 +9,13 @@ import {
+   SheetHeader,
+   SheetTitle,
+ } from "@/shared/components/ui/sheet";
+-import { cn } from "@/shared/lib/utils";
+-import { actividadesDelPaso } from "../lib/actividades-tracking";
+-import { estadoPaso, TRACKING_PASOS } from "../lib/pasos";
+-import type { EmbarqueMaqueta, ResponsableTracking } from "../lib/tipos";
+-import { ListaActividades } from "./actividades-tracking";
++import type { EmbarqueMaqueta } from "../lib/tipos";
++import { Pendiente } from "./utils";
+ 
+ /**
+  * Sheet lateral con el tracking interactivo (mismo estilo que el filtro de
+  * Cotizaciones). El contenido llega por `children`: ahí va el componente de
+- * tracking interactivo existente. Sin `children` muestra la maqueta de
+- * actividades por paso (`ActividadesPorPaso`).
++ * tracking interactivo existente. Sin `children` muestra un aviso de maqueta.
+  */
+ export function TrackingSheet({
+   open,
+@@ -53,72 +49,9 @@ export function TrackingSheet({
+         </SheetHeader>
+ 
+         <div className="space-y-5 p-4 sm:space-y-6 sm:p-6">
+-          {children ?? (embarque ? <ActividadesPorPaso pasoActual={embarque.pasoActual} /> : null)}
++          {children ?? <Pendiente texto="Aquí va el componente de tracking interactivo existente." />}
+         </div>
+       </SheetContent>
+     </Sheet>
+   );
+ }
+-
+-const AREAS: readonly ResponsableTracking[] = ["OPS", "Bodega", "CBX"];
+-
+-/** Maqueta del detalle: actividades del Excel por paso y por área. */
+-function ActividadesPorPaso({ pasoActual }: { pasoActual: number }) {
+-  return (
+-    <div className="space-y-3">
+-      {TRACKING_PASOS.map((paso) => {
+-        const estado = estadoPaso(paso.id, pasoActual);
+-        const actividades = actividadesDelPaso(paso.id);
+-
+-        return (
+-          <details
+-            key={paso.id}
+-            open={estado === "actual"}
+-            className="group overflow-hidden rounded-lg border"
+-          >
+-            <summary
+-              className={cn(
+-                "flex cursor-pointer list-none items-center gap-3 px-3 py-2",
+-                estado === "actual" && "bg-primary/10",
+-              )}
+-            >
+-              <span
+-                className={cn(
+-                  "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+-                  estado === "completado" && "bg-primary text-primary-foreground",
+-                  estado === "actual" && "border-2 border-primary text-primary",
+-                  estado === "pendiente" && "bg-muted text-muted-foreground",
+-                )}
+-              >
+-                {paso.id}
+-              </span>
+-              <span className="flex-1 text-sm font-medium">{paso.titulo}</span>
+-              <span className="text-xs text-muted-foreground">{actividades.length}</span>
+-              <ChevronDown
+-                className="size-4 transition-transform group-open:rotate-180"
+-                aria-hidden="true"
+-              />
+-            </summary>
+-
+-            <div className="space-y-3 border-t p-3">
+-              <p className="text-xs text-muted-foreground">{paso.alcance}</p>
+-              {AREAS.map((area) => {
+-                const delArea = actividades.filter((actividad) => actividad.responsable === area);
+-                if (delArea.length === 0) return null;
+-
+-                return (
+-                  <div key={area} className="space-y-1">
+-                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+-                      {area}
+-                    </span>
+-                    <ListaActividades actividades={delArea} />
+-                  </div>
+-                );
+-              })}
+-            </div>
+-          </details>
+-        );
+-      })}
+-    </div>
+-  );
+-}
