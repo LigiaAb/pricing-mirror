@@ -11,6 +11,9 @@
  * - Primero corre `git apply --check`: si algo no aplica, NO toca nada y dice
  *   qué archivo falló.
  * - Diffs viejos en formato binario ("GIT binary patch") se pasan tal cual.
+ * - Si un archivo no aplica, dice si es porque YA ESTÁ APLICADO (el diff aplica
+ *   al revés) o porque YA ES IGUAL AL ESPEJO (ej. se copió la carpeta); si todo
+ *   el diff está en ese caso, no hay nada que hacer y termina sin error.
  *
  * Uso (desde la raíz del proyecto real):
  *   node <ruta-al-espejo>/scripts/aplicar-diff.mjs <ruta-al-espejo>/diff/<archivo>.diff
@@ -19,7 +22,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 const args = process.argv.slice(2);
 const soloCheck = args.includes("--check");
@@ -37,6 +40,9 @@ if (!existsSync(rutaDiff)) {
 }
 
 const original = readFileSync(rutaDiff, "utf8").replace(/\r\n/g, "\n");
+
+/** Raíz del espejo: el diff vive en <espejo>/diff/. */
+const raizEspejo = resolve(dirname(rutaDiff), "..");
 
 /* ---------- Separar el diff por archivo ---------- */
 const secciones = original.split(/^(?=diff --git )/m).filter((s) => s.trim());
@@ -72,14 +78,30 @@ function aCrlf(seccion) {
     .join("\n");
 }
 
+/** Contenido sin CR (para comparar sin importar CRLF/LF). */
+function sinCr(ruta) {
+  return readFileSync(ruta, "utf8").replace(/\r\n/g, "\n");
+}
+
+/** Por qué no aplica un archivo: ya aplicado, ya igual al espejo o distinto. */
+function estadoSinAplicar(ruta, variantes) {
+  if (variantes.some((v) => aplica(v, true))) return "YA APLICADO";
+  const enEspejo = join(raizEspejo, ruta);
+  if (existsSync(ruta) && existsSync(enEspejo) && sinCr(ruta) === sinCr(enEspejo)) {
+    return "IGUAL AL ESPEJO";
+  }
+  return "NO APLICA";
+}
+
 const dir = mkdtempSync(join(tmpdir(), "aplicar-diff-"));
 const temporal = join(dir, "adaptado.diff");
 
-/** `git apply --check` de un texto de diff; true si aplica. */
-function aplica(texto) {
+/** `git apply --check` de un texto de diff; true si aplica (`alReves`: si ya está aplicado). */
+function aplica(texto, alReves = false) {
   writeFileSync(temporal, texto);
   try {
-    execFileSync("git", ["apply", "--check", "--whitespace=nowarn", temporal], { stdio: "pipe" });
+    const extra = alReves ? ["--reverse"] : [];
+    execFileSync("git", ["apply", "--check", ...extra, "--whitespace=nowarn", temporal], { stdio: "pipe" });
     return true;
   } catch {
     return false;
@@ -91,6 +113,7 @@ function aplica(texto) {
  * existe porque con core.autocrlf=true (Windows) git convierte al leer. */
 const resumen = [];
 const fallidos = [];
+const yaAplicados = [];
 const finales = new Map(); // ruta -> final original ("LF" | "CRLF" | "MEZCLADO")
 const partes = [];
 
@@ -105,18 +128,37 @@ try {
     const final = finalDe(ruta);
     finales.set(ruta, final);
     const variantes = final === "CRLF" ? [aCrlf(seccion), seccion] : [seccion, aCrlf(seccion)];
-    const elegida = variantes.find(aplica);
-    resumen.push(`  ${ruta}  (${existsSync(ruta) ? final : "nuevo, LF"})${elegida ? "" : "  <-- NO APLICA"}`);
+    const elegida = variantes.find((v) => aplica(v));
+    let motivo = "";
+    if (!elegida) {
+      const estado = estadoSinAplicar(ruta, variantes);
+      motivo = `  <-- ${estado}`;
+      if (estado === "NO APLICA") fallidos.push(ruta);
+      else yaAplicados.push(ruta);
+    }
+    resumen.push(`  ${ruta}  (${existsSync(ruta) ? final : "nuevo, LF"})${motivo}`);
     if (elegida) partes.push(elegida);
-    else fallidos.push(ruta);
   }
 
   console.log(`Archivos en el diff:\n${resumen.join("\n")}`);
 
-  if (fallidos.length) {
+  if (!fallidos.length && yaAplicados.length === secciones.length) {
+    console.log(
+      "\nNada que hacer: este diff ya está aplicado en el proyecto (o los archivos ya son " +
+        "iguales al espejo). No se modificó nada.",
+    );
+  } else if (fallidos.length) {
     console.error(
       "\nNo aplica en los archivos marcados: son distintos a lo que espera el diff " +
         "(otro cambio en esas líneas, no por CRLF/LF). No se modificó nada.",
+    );
+    if (yaAplicados.length) {
+      console.error("Los marcados YA APLICADO / IGUAL AL ESPEJO no necesitan este diff.");
+    }
+    process.exitCode = 1;
+  } else if (yaAplicados.length) {
+    console.error(
+      "\nParte del diff ya está aplicada y parte no: revisar antes de seguir. No se modificó nada.",
     );
     process.exitCode = 1;
   } else if (!aplica(partes.join(""))) {
