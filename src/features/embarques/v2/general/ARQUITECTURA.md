@@ -36,9 +36,20 @@ consolidado, alcance (tooltip) y áreas responsables (OPS, Bodega, CBX):
 5. **Salida** — Despacho, salida aérea y complementaria (OPS, CBX)
 6. **Cierre** — Arribo y cierre de la operación (OPS, CBX)
 
-El detalle por actividad (hoja *Detalle original*, 69 actividades con código, responsable y tipo
-Principal/Opcional/Condicional/Excepción/Transversal) corresponde al tracking interactivo del Sheet.
-Si otras operaciones tienen otros pasos, `TRACKING_PASOS` pasa a depender del tipo de operación.
+### Actividades (qué paso original va en cada paso)
+
+`lib/actividades-tracking.ts` (`ACTIVIDADES_TRACKING`) es la hoja *Detalle original*: 69 actividades con
+paso nuevo, responsable, código original, proceso, entrada, actividad, resultado, tipo
+(Principal/Opcional/Condicional/Excepción/Transversal) y control. Cuadra con la hoja *Tracking 6 pasos*.
+El `id` es `"<responsable> <código>"` (ej. `"OPS 4.1"`, `"Bodega 0.1"`) porque los códigos se repiten entre
+áreas. Se usa en:
+
+- el tracking general (cantidad de actividades por paso);
+- cada tab (lista "Actividades del tracking");
+- el Sheet de tracking, mientras no se conecte el componente existente (actividades por paso y área).
+
+Si otras operaciones tienen otros pasos, `TRACKING_PASOS` y las actividades pasan a depender del tipo de
+operación.
 
 ## Tabs actuales
 
@@ -46,8 +57,17 @@ Flujo: Información · Asignación de guías · Reservas (solicitud y confirmaci
 Tarifas (confirmación de cotización). Separadas al final: **Documentos** (disponible en cualquier paso) y
 **Cancelación / anulación** (opcional).
 
-Cada tab indica en `pasoTracking` en qué paso ocurre (guías y reservas → 1, draft → 2, tarifas → 4);
-se marca con check cuando el embarque ya pasó ese paso.
+Cada tab lista en `actividades` los ids del Excel que trabaja; su paso sale de ahí (`pasoDeTab`):
+
+| Tab          | Actividades                         | Paso |
+| ------------ | ----------------------------------- | ---- |
+| Guías        | OPS 1.1, 1.2, 1.3                   | 1    |
+| Reservas     | OPS 2.1, 2.2, 3.1, 3.2              | 1    |
+| Draft        | OPS 4.1 (draft), 4.2 (preaviso)     | 2    |
+| Tarifas      | OPS 9.2 (confirmar tarifas y gastos)| 4    |
+| Cancelación  | OPS 4.4 (anulación, excepción)      | —    |
+
+La tab se marca con check cuando el embarque ya pasó ese paso.
 
 Agregar una tab = 1 entrada en `PASOS_EMBARQUE` + su componente en `pasos/` + su `case` e icono en
 `tabs-embarque.tsx`.

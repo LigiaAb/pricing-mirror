@@ -3,6 +3,7 @@
 import { Check } from "lucide-react";
 import * as React from "react";
 import { cn } from "@/shared/lib/utils";
+import { actividadesDelPaso } from "../lib/actividades-tracking";
 import { estadoPaso, TRACKING_PASOS } from "../lib/pasos";
 
 /**
@@ -42,6 +43,9 @@ export function TrackingGeneral({ pasoActual }: { pasoActual: number }) {
                 {paso.corto}
               </span>
               <span className="text-[11px] leading-tight text-muted-foreground">{paso.titulo}</span>
+              <span className="text-[10px] text-muted-foreground">
+                {actividadesDelPaso(paso.id).length} actividades
+              </span>
               <span className="flex flex-wrap justify-center gap-1">
                 {paso.responsables.map((responsable) => (
                   <span

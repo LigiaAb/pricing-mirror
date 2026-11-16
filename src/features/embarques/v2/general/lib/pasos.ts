@@ -10,6 +10,7 @@
  * Hoy es una propuesta: se ajusta cuando se definan las otras pantallas.
  * ========================================================================== */
 
+import { actividadesPorId } from "./actividades-tracking";
 import type { EstadoPaso, PasoTracking, PerfilEmbarque } from "./tipos";
 
 /**
@@ -88,11 +89,10 @@ export type PasoEmbarque = {
   label: string;
   detalle: string;
   /**
-   * Paso del tracking donde ocurre (null = no depende de un paso).
-   * Según el Excel: guías y reserva → 1 (1.1–3.2), draft → 2 (4.1–4.2),
-   * confirmación de tarifas → 4 (9.2).
+   * Actividades del Excel que se trabajan en esta tab (ids de
+   * `ACTIVIDADES_TRACKING`). De aquí sale el paso del tracking: ver `pasoDeTab`.
    */
-  pasoTracking: number | null;
+  actividades: readonly string[];
   /** Tabs que van separadas al final (siempre disponibles u opcionales). */
   grupo: "flujo" | "extra";
   perfiles: readonly PerfilEmbarque[];
@@ -105,7 +105,7 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
     value: "informacion",
     label: "Información",
     detalle: "Datos del embarque",
-    pasoTracking: null,
+    actividades: [],
     grupo: "flujo",
     perfiles: TODOS,
   },
@@ -113,7 +113,7 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
     value: "guias",
     label: "Asignación de guías",
     detalle: "HAWB / MAWB",
-    pasoTracking: 1,
+    actividades: ["OPS 1.1", "OPS 1.2", "OPS 1.3"],
     grupo: "flujo",
     perfiles: ["operaciones"],
   },
@@ -121,7 +121,7 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
     value: "reservas",
     label: "Reservas",
     detalle: "Solicitud y confirmación",
-    pasoTracking: 1,
+    actividades: ["OPS 2.1", "OPS 2.2", "OPS 3.1", "OPS 3.2"],
     grupo: "flujo",
     perfiles: ["operaciones"],
   },
@@ -129,7 +129,7 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
     value: "draft",
     label: "Draft",
     detalle: "Elaboración, envío y preaviso",
-    pasoTracking: 2,
+    actividades: ["OPS 4.1", "OPS 4.2"],
     grupo: "flujo",
     perfiles: ["operaciones"],
   },
@@ -137,7 +137,7 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
     value: "tarifas",
     label: "Tarifas",
     detalle: "Confirmación de cotización",
-    pasoTracking: 4,
+    actividades: ["OPS 9.2"],
     grupo: "flujo",
     perfiles: ["operaciones"],
   },
@@ -145,7 +145,7 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
     value: "documentos",
     label: "Documentos",
     detalle: "Disponible siempre",
-    pasoTracking: null,
+    actividades: [],
     grupo: "extra",
     perfiles: TODOS,
   },
@@ -153,7 +153,7 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
     value: "cancelacion",
     label: "Cancelación",
     detalle: "Opcional",
-    pasoTracking: null,
+    actividades: ["OPS 4.4"],
     grupo: "extra",
     perfiles: ["operaciones"],
   },
@@ -161,4 +161,15 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
 
 export function pasosDelPerfil(perfil: PerfilEmbarque): PasoEmbarque[] {
   return PASOS_EMBARQUE.filter((paso) => paso.perfiles.includes(perfil));
+}
+
+/**
+ * Paso del tracking de una tab: el último paso de sus actividades
+ * (null = la tab no depende de un paso, p. ej. Información o Documentos).
+ * Cancelación (OPS 4.4) es una excepción y no se marca como completada.
+ */
+export function pasoDeTab(paso: PasoEmbarque): number | null {
+  if (paso.grupo !== "flujo") return null;
+  const pasos = actividadesPorId(paso.actividades).map((actividad) => actividad.paso);
+  return pasos.length > 0 ? Math.max(...pasos) : null;
 }
