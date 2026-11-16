@@ -45,6 +45,8 @@ export interface AsyncComboboxInputProps<T> {
   debounceMs?: number;
   fetchOnEmpty?: boolean;
   initialOptions?: T[];
+  /** Máximo de opciones dibujadas a la vez (el listado no se virtualiza). Por defecto 100. */
+  maxOptions?: number;
   className?: React.ComponentProps<"div">["className"];
   contentClassName?: React.ComponentProps<"div">["className"];
   onBlur?: (() => void) | undefined;
@@ -52,6 +54,11 @@ export interface AsyncComboboxInputProps<T> {
   "aria-invalid"?: boolean | undefined;
   "aria-describedby"?: string | undefined;
 }
+
+/** Constante para que el default de `searchFields` no sea un arreglo nuevo en cada render. */
+const SIN_CAMPOS_BUSQUEDA: never[] = [];
+
+const MAX_OPCIONES_DEFAULT = 100;
 
 function useDebouncedValue<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = React.useState(value);
@@ -74,7 +81,7 @@ export function AsyncComboboxInput<T>({
   getOptionValue,
   getOptionLabel,
   getOptionDescription,
-  searchFields = [],
+  searchFields = SIN_CAMPOS_BUSQUEDA,
   placeholder = "Seleccione...",
   searchPlaceholder = "Buscar...",
   emptyMessage = "Sin resultados.",
@@ -85,6 +92,7 @@ export function AsyncComboboxInput<T>({
   debounceMs = 300,
   fetchOnEmpty = true,
   initialOptions,
+  maxOptions = MAX_OPCIONES_DEFAULT,
   className,
   contentClassName,
   onBlur,
@@ -104,6 +112,14 @@ export function AsyncComboboxInput<T>({
    * ref evita que su cambio de referencia invalide la consulta en cada render.
    * Sin `queryKey` explícito la caché es por instancia; con él se comparte
    * entre todos los selectores que consulten lo mismo.
+   *
+   * Como la caché no se entera de que fetchOptions cambió:
+   *   - Solo se consulta con el listado abierto (antes cada combo consultaba al
+   *     montarse, a veces antes de que sus opciones hubieran cargado).
+   *   - staleTime 0: cada vez que se abre se vuelven a pedir las opciones. Con 30 s
+   *     el combo seguía mostrando la lista anterior (vacía si el catálogo aún no
+   *     cargaba, o la de otro filtro: países de otro continente, commodities ya
+   *     asignados). Mientras llega la respuesta se ve lo último (keepPreviousData).
    */
   const fetchOptionsRef = React.useRef(fetchOptions);
   fetchOptionsRef.current = fetchOptions;
@@ -112,9 +128,9 @@ export function AsyncComboboxInput<T>({
   const optionsQuery = useQuery({
     queryKey: ["async-combobox", queryKey ?? instanceKey, search],
     queryFn: ({ signal }) => fetchOptionsRef.current(search, signal),
-    enabled: !isBlocked && (fetchOnEmpty || search.length >= minSearchLength),
+    enabled: open && !isBlocked && (fetchOnEmpty || search.length >= minSearchLength),
     placeholderData: keepPreviousData,
-    staleTime: 30_000,
+    staleTime: 0,
     retry: false,
     // El error se muestra dentro del propio listado, no como toast global.
     meta: { silent: true },
@@ -145,6 +161,13 @@ export function AsyncComboboxInput<T>({
       return searchableText.includes(normalizedQuery);
     });
   }, [getOptionLabel, getOptionValue, options, query, searchFields]);
+
+  // Dibujar miles de opciones congela el listado: se muestran las primeras y se busca al escribir.
+  const visibleOptions = React.useMemo(
+    () => filteredOptions.slice(0, maxOptions),
+    [filteredOptions, maxOptions],
+  );
+  const hiddenCount = filteredOptions.length - visibleOptions.length;
 
   const selectedLabel = value ? getOptionLabel(value) : "";
   const canClear = clearable && value !== null && !isBlocked;
@@ -247,7 +270,7 @@ export function AsyncComboboxInput<T>({
               <CommandEmpty>{message}</CommandEmpty>
 
               <CommandGroup>
-                {filteredOptions.map((option) => {
+                {visibleOptions.map((option) => {
                   const optionValue = String(getOptionValue(option));
                   const selected = value !== null && String(getOptionValue(value)) === optionValue;
                   const description = getOptionDescription?.(option);
@@ -279,6 +302,13 @@ export function AsyncComboboxInput<T>({
                   );
                 })}
               </CommandGroup>
+
+              {hiddenCount > 0 && (
+                <p className="px-3 py-2 text-xs text-muted-foreground">
+                  Se muestran {visibleOptions.length} de {filteredOptions.length}. Escriba para
+                  buscar.
+                </p>
+              )}
             </CommandList>
           </Command>
         </PopoverContent>
