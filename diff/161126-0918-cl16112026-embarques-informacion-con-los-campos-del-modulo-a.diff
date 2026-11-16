@@ -1,0 +1,736 @@
+diff --git a/src/features/embarques/v2/bodegas/lib/gestion-actividades.ts b/src/features/embarques/v2/bodegas/lib/gestion-actividades.ts
+index 92edd3b..7eb653d 100644
+--- a/src/features/embarques/v2/bodegas/lib/gestion-actividades.ts
++++ b/src/features/embarques/v2/bodegas/lib/gestion-actividades.ts
+@@ -16,9 +16,9 @@ import type { CampoGestion } from "../../shared/lib/interacciones";
+ 
+ const PESO_MEDIDAS: readonly CampoGestion[] = [
+   { label: "Peso (kg)", tipo: "numero", requerido: true },
+-  { label: "Largo (cm)", tipo: "numero" },
+-  { label: "Ancho (cm)", tipo: "numero" },
+-  { label: "Alto (cm)", tipo: "numero" },
++  { label: "Largo", tipo: "numero" },
++  { label: "Alto", tipo: "numero" },
++  { label: "Ancho", tipo: "numero" },
+ ];
+ 
+ export const GESTION_BODEGAS: DefinicionesGestion = {
+diff --git a/src/features/embarques/v2/general/ARQUITECTURA.md b/src/features/embarques/v2/general/ARQUITECTURA.md
+index ccac00e..e0acd5d 100644
+--- a/src/features/embarques/v2/general/ARQUITECTURA.md
++++ b/src/features/embarques/v2/general/ARQUITECTURA.md
+@@ -47,6 +47,7 @@ Las rutas de abajo sin carpeta son relativas a `general/`.
+ | Datos de ejemplo (borrar con la API)  | `lib/datos-maqueta.ts`                   |
+ | Piezas reutilizables (sección, dato…) | `shared/components/utils.tsx`            |
+ | Campos de captura (input por tipo)    | `shared/components/campos.tsx`           |
++| Campos de Información (corporativos)  | `shared/lib/campos-embarque.ts`          |
+ | Actividades del Excel (69)            | `shared/lib/actividades-tracking.ts`     |
+ | Tipos de interacción (9)              | `shared/lib/interacciones.ts`            |
+ | Motor de gestión (tipo y helpers)     | `shared/lib/gestion-actividades.ts`      |
+@@ -133,6 +134,7 @@ Un componente por tipo de dato, con los mismos componentes que ya usa el proyect
+ 
+ | `tipo` del campo | Componente        | Se ve como                                       | Patrón existente                         |
+ | ---------------- | ----------------- | ------------------------------------------------ | ---------------------------------------- |
++| `casillas`       | `CampoCasillas`   | `Checkbox` por opción                            | embarques `formulario-alternativo`, detalles |
+ | `texto`, `numero`| `CampoTexto`      | `Field` + `InputGroupInput`                      | pricing (`CampoMetodo`)                  |
+ | `seleccion`      | `CampoSeleccion`  | `Select` con `opciones` fijas (obligatorias)     | embarques `ruta-dialog`, `formulario-alternativo` |
+ | `catalogo`       | `CampoCatalogo`   | `Combobox` con búsqueda (catálogo por conectar)  | embarques `ruta-dialog`, `nueva-entidad-captura` |
+@@ -144,6 +146,15 @@ Un componente por tipo de dato, con los mismos componentes que ya usa el proyect
+ Regla: lista corta y fija (Sí/No, PP/CC, estado…) → `seleccion` con `opciones`; proveedores, líneas aéreas,
+ agentes, monedas, clientes… → `catalogo`. Fotografías → `acepta: "image/*"`. `soloLectura` deshabilita el control.
+ 
++### Campos de Información (`shared/lib/campos-embarque.ts`)
++
++La tab Información **no inventa campos**: usa los que ya tiene el módulo actual de embarques (misma clave,
++nombre, obligatorio y opciones), agrupados en Shipper, Consignatario, Producto, Facturación, Detalles, Rutas y
++Fechas. Solo se toman los campos, **no el diseño** (v2 se está rediseñando): se dibujan con `CampoPorTipo`.
++`key` es el nombre del dato en el módulo actual, para conectar la API sin traducir. El origen de cada sección
++está anotado en el archivo. Las actividades que piden un dato que ya existe ahí usan el mismo nombre
++(p. ej. *Aerolínea*, *Nro. Vuelo*, *Cantidad (bultos)*, *Peso total (kg)*, *Dirección de Recolección*).
++
+ ### Gestión de cada actividad (`<actor>/lib/gestion-actividades.ts`)
+ 
+ Cada actor define las suyas: `GESTION_OPERACIONES` (31, OPS), `GESTION_BODEGAS` (16, Bodega) y
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx b/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx
+index 064df85..335257d 100644
+--- a/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx
++++ b/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx
+@@ -1,71 +1,70 @@
+ "use client";
+ 
+-import { parse } from "date-fns";
+-import { Pencil } from "lucide-react";
+-import { Button } from "@/shared/components/ui/button";
+-import { CampoCatalogo, CampoFecha, CampoTexto } from "../../../shared/components/campos";
+-import { EncabezadoPaso, SoloConsulta } from "../../../shared/components/utils";
+-import type { EmbarqueMaqueta } from "../../../shared/lib/tipos";
+-
+-/** Fecha de la maqueta (`dd-MM-yyyy`) → Date. */
+-function fechaMaqueta(valor: string): Date | undefined {
+-  const fecha = parse(valor, "dd-MM-yyyy", new Date());
+-  return Number.isNaN(fecha.getTime()) ? undefined : fecha;
+-}
++import * as React from "react";
++import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
++import { CampoPorTipo } from "../../../shared/components/campos";
++import { EncabezadoPaso, Pendiente, SoloConsulta } from "../../../shared/components/utils";
++import { SECCIONES_INFORMACION, type SeccionInformacion } from "../../../shared/lib/campos-embarque";
+ 
+ /**
+- * Detalle completo del embarque (el resumen breve está siempre visible arriba).
+- * La ven todos los perfiles; solo Operaciones la edita (`editable`, con el
+- * botón Editar). Mientras no se edita, los campos quedan en solo lectura.
++ * Información del embarque: los mismos campos que el módulo actual
++ * (`shared/lib/campos-embarque.ts`: Shipper, Consignatario, Producto,
++ * Facturación, Detalles, Rutas, Fechas) con el diseño de v2.
++ * La ven todos los perfiles; solo Operaciones la edita (`editable`).
+  */
+-export function PasoInformacion({ embarque, editable }: { embarque: EmbarqueMaqueta; editable: boolean }) {
+-  const ro = { soloLectura: true };
++export function PasoInformacion({ editable }: { editable: boolean }) {
++  const [seccion, setSeccion] = React.useState(SECCIONES_INFORMACION[0]?.value ?? "");
++
+   return (
+     <div className="space-y-4">
+       <EncabezadoPaso
+         titulo="Información del embarque"
+-        descripcion="Datos generales, partes y carga."
+-        acciones={
+-          editable ? (
+-            <Button type="button" size="sm" variant="outline" disabled>
+-              <Pencil className="size-4" aria-hidden="true" />
+-              Editar
+-            </Button>
+-          ) : (
+-            <SoloConsulta />
+-          )
+-        }
++        descripcion="Partes, producto, facturación, detalles, rutas y fechas."
++        acciones={editable ? null : <SoloConsulta />}
+       />
+ 
+-      <fieldset className="grid grid-cols-1 gap-4 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-4">
+-        <legend className="px-1 text-sm font-semibold">General</legend>
+-        <CampoTexto {...ro} id="emb-file" label="Código de file" valor={embarque.codFile} />
+-        <CampoCatalogo {...ro} id="emb-transporte" label="Tipo de transporte" valor={embarque.tipoTransporte} />
+-        <CampoCatalogo {...ro} id="emb-servicio" label="Tipo de servicio" />
+-        <CampoCatalogo {...ro} id="emb-incoterm" label="Incoterm" />
+-        <CampoTexto {...ro} id="emb-cotizacion" label="Cotización" />
+-        <CampoCatalogo {...ro} id="emb-ejecutivo" label="Ejecutivo" />
+-      </fieldset>
++      <Tabs value={seccion} onValueChange={setSeccion}>
++        <TabsList className="flex h-auto flex-wrap justify-start">
++          {SECCIONES_INFORMACION.map(({ value, titulo }) => (
++            <TabsTrigger key={value} value={value}>
++              {titulo}
++            </TabsTrigger>
++          ))}
++        </TabsList>
++
++        {SECCIONES_INFORMACION.map((s) => (
++          <TabsContent key={s.value} value={s.value} className="pt-2">
++            <SeccionCampos seccion={s} editable={editable} />
++          </TabsContent>
++        ))}
++      </Tabs>
++    </div>
++  );
++}
++
++function SeccionCampos({ seccion, editable }: { seccion: SeccionInformacion; editable: boolean }) {
++  return (
++    <div className="space-y-4">
++      <p className="text-sm text-muted-foreground">{seccion.descripcion}</p>
+ 
+-      <fieldset className="grid grid-cols-1 gap-4 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-4">
+-        <legend className="px-1 text-sm font-semibold">Partes</legend>
+-        <CampoCatalogo {...ro} id="emb-cliente" label="Cliente" valor={embarque.cliente} />
+-        <CampoCatalogo {...ro} id="emb-shipper" label="Shipper" />
+-        <CampoCatalogo {...ro} id="emb-consignee" label="Consignee" />
+-        <CampoCatalogo {...ro} id="emb-carrier" label="Carrier" valor={embarque.carrier} />
+-      </fieldset>
++      {seccion.lista ? <Pendiente texto={seccion.lista} className="min-h-20" /> : null}
+ 
+-      <fieldset className="grid grid-cols-1 gap-4 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-4">
+-        <legend className="px-1 text-sm font-semibold">Ruta y carga</legend>
+-        <CampoCatalogo {...ro} id="emb-origen" label="Origen" valor={embarque.origen} />
+-        <CampoCatalogo {...ro} id="emb-destino" label="Destino" valor={embarque.destino} />
+-        <CampoFecha {...ro} id="emb-etd" label="ETD" valor={fechaMaqueta(embarque.etd)} />
+-        <CampoFecha {...ro} id="emb-eta" label="ETA" valor={fechaMaqueta(embarque.eta)} />
+-        <CampoCatalogo {...ro} id="emb-commodity" label="Commodity" />
+-        <CampoTexto {...ro} id="emb-bultos" label="Bultos" tipo="number" />
+-        <CampoTexto {...ro} id="emb-peso" label="Peso (kg)" tipo="number" />
+-        <CampoTexto {...ro} id="emb-volumen" label="Volumen (m³)" tipo="number" />
+-      </fieldset>
++      {seccion.grupos.map((grupo) => (
++        <fieldset
++          key={grupo.titulo}
++          className="grid grid-cols-1 gap-4 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-4"
++        >
++          <legend className="px-1 text-sm font-semibold">{grupo.titulo}</legend>
++          {grupo.campos.map((campo) => (
++            <CampoPorTipo
++              key={campo.key}
++              id={`emb-${seccion.value}-${campo.key}`}
++              campo={campo}
++              soloLectura={!editable || campo.soloLectura === true}
++            />
++          ))}
++        </fieldset>
++      ))}
+     </div>
+   );
+ }
+diff --git a/src/features/embarques/v2/general/components/tabs-embarque.tsx b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+index 09489b7..d66c853 100644
+--- a/src/features/embarques/v2/general/components/tabs-embarque.tsx
++++ b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+@@ -68,7 +68,7 @@ function contenidoPaso(
+ ): React.ReactNode {
+   switch (paso.value) {
+     case "informacion":
+-      return <PasoInformacion embarque={embarque} editable={puedeEditarInformacion(perfil)} />;
++      return <PasoInformacion editable={puedeEditarInformacion(perfil)} />;
+     case "documentos":
+       return <PasoDocumentos />;
+     default:
+diff --git a/src/features/embarques/v2/operaciones/lib/gestion-actividades.ts b/src/features/embarques/v2/operaciones/lib/gestion-actividades.ts
+index 50725d2..fc3a284 100644
+--- a/src/features/embarques/v2/operaciones/lib/gestion-actividades.ts
++++ b/src/features/embarques/v2/operaciones/lib/gestion-actividades.ts
+@@ -19,9 +19,9 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
+     interaccion: "formulario",
+     accion: "Programar recolección",
+     campos: [
+-      { label: "Dirección de recolección", requerido: true },
+-      { label: "Contacto" },
+-      { label: "Fecha y hora", tipo: "fecha-hora", requerido: true },
++      { label: "Dirección de Recolección", tipo: "area", requerido: true },
++      { label: "Nombre Contacto" },
++      { label: "Fecha de Recolección", tipo: "fecha-hora", requerido: true },
+       { label: "Proveedor de transporte", tipo: "catalogo" },
+       { label: "Unidad / placa" },
+       { label: "Piloto" },
+@@ -52,7 +52,7 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
+     accion: "Registrar MAWB",
+     campos: [
+       { label: "No. MAWB", requerido: true },
+-      { label: "Línea aérea", tipo: "catalogo", requerido: true },
++      { label: "Aerolínea", tipo: "catalogo", requerido: true },
+       { label: "Booking" },
+     ],
+   },
+@@ -67,12 +67,14 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
+     interaccion: "formulario",
+     accion: "Preparar solicitud",
+     campos: [
+-      { label: "Línea aérea / proveedor", tipo: "catalogo", requerido: true },
+-      { label: "Destino", requerido: true },
++      { label: "Aerolínea", tipo: "catalogo", requerido: true },
++      { label: "Aeropuerto Destino", tipo: "catalogo", requerido: true },
+       { label: "Fecha de vuelo", tipo: "fecha", requerido: true },
+-      { label: "Piezas", tipo: "numero", requerido: true },
+-      { label: "Peso (kg)", tipo: "numero", requerido: true },
+-      { label: "Dimensiones" },
++      { label: "Cantidad (bultos)", tipo: "numero", requerido: true },
++      { label: "Peso total (kg)", tipo: "numero", requerido: true },
++      { label: "Largo", tipo: "numero" },
++      { label: "Alto", tipo: "numero" },
++      { label: "Ancho", tipo: "numero" },
+     ],
+   },
+   "OPS 2.2": {
+@@ -84,7 +86,7 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
+       { label: "PP / CC", tipo: "seleccion", requerido: true, opciones: ["PP", "CC"] },
+       { label: "EORI" },
+       { label: "Partida arancelaria" },
+-      { label: "Descripción de la mercancía" },
++      { label: "Descripción", tipo: "area" },
+     ],
+   },
+   "OPS 3.1": {
+@@ -93,7 +95,7 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
+     compara: "Solicitud de reserva",
+     requiere: ["OPS 2.2"],
+     campos: [
+-      { label: "Vuelo", requerido: true },
++      { label: "Nro. Vuelo", requerido: true },
+       { label: "Fecha de vuelo", tipo: "fecha", requerido: true },
+       { label: "No. de booking" },
+       { label: "Condiciones", tipo: "area" },
+@@ -106,11 +108,11 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
+     interaccion: "documento",
+     accion: "Generar draft",
+     campos: [
+-      { label: "Remitente" },
+-      { label: "Consignatario" },
+-      { label: "Piezas", tipo: "numero" },
+-      { label: "Peso (kg)", tipo: "numero" },
+-      { label: "Destino" },
++      { label: "Shipper", tipo: "catalogo" },
++      { label: "Consignatario", tipo: "catalogo" },
++      { label: "Cantidad (bultos)", tipo: "numero" },
++      { label: "Peso total (kg)", tipo: "numero" },
++      { label: "Aeropuerto Destino", tipo: "catalogo" },
+     ],
+     pendiente: "Vista previa del draft.",
+   },
+@@ -170,7 +172,7 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
+     campos: [
+       { label: "Peso oficial (kg)", tipo: "numero", requerido: true },
+       { label: "Peso cobrable (kg)", tipo: "numero" },
+-      { label: "Piezas", tipo: "numero" },
++      { label: "Cantidad (bultos)", tipo: "numero" },
+     ],
+   },
+   "OPS 9.2": {
+diff --git a/src/features/embarques/v2/shared/components/campos.tsx b/src/features/embarques/v2/shared/components/campos.tsx
+index 1ceb482..1179dcf 100644
+--- a/src/features/embarques/v2/shared/components/campos.tsx
++++ b/src/features/embarques/v2/shared/components/campos.tsx
+@@ -6,6 +6,7 @@ import { CalendarIcon, UploadCloud } from "lucide-react";
+ import { useRef, useState } from "react";
+ import { Button } from "@/shared/components/ui/button";
+ import { Calendar } from "@/shared/components/ui/calendar";
++import { Checkbox } from "@/shared/components/ui/checkbox";
+ import { Combobox } from "@/shared/components/ui/combobox";
+ import { Field, FieldLabel } from "@/shared/components/ui/field";
+ import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
+@@ -19,6 +20,7 @@ import {
+ } from "@/shared/components/ui/select";
+ import { Textarea } from "@/shared/components/ui/textarea";
+ import { cn } from "@/shared/lib/utils";
++import type { CampoGestion } from "../lib/interacciones";
+ 
+ /* ==========================================================================
+  * CAMPOS DE CAPTURA DE EMBARQUES V2 (MAQUETA)
+@@ -30,6 +32,7 @@ import { cn } from "@/shared/lib/utils";
+  *   catálogo       → Combobox con búsqueda           (embarques: ruta-dialog, nueva-entidad-captura)
+  *   fecha          → Popover + Calendar              (embarques: paso-confirmar-destino)
+  *   fecha y hora   → Popover + Calendar + hora
++ *   casillas       → Checkbox                        (embarques: formulario-alternativo, detalles)
+  *   texto largo    → Textarea                        (embarques: formulario-alternativo, fechas)
+  *   archivos       → zona de arrastre                (embarques: public/file-dropzone)
+  *
+@@ -155,6 +158,40 @@ export function CampoCatalogo({
+   );
+ }
+ 
++/** Varias opciones marcables (ej. documentos CROPA). */
++export function CampoCasillas({
++  id,
++  label,
++  requerido,
++  soloLectura,
++  className,
++  opciones,
++}: BaseCampo & { opciones: readonly string[] }) {
++  const [marcadas, setMarcadas] = useState<string[]>([]);
++  return (
++    <Field className={cn(className)}>
++      <Etiqueta id={id} label={label} requerido={requerido} />
++      <div id={id} className="flex flex-wrap gap-3 pt-1">
++        {opciones.map((opcion) => (
++          // biome-ignore lint/a11y/noLabelWithoutControl: Checkbox envuelve un input nativo.
++          <label key={opcion} className="flex items-center gap-2 text-sm">
++            <Checkbox
++              checked={marcadas.includes(opcion)}
++              disabled={soloLectura}
++              onCheckedChange={(c: boolean | "indeterminate") =>
++                setMarcadas((previas) =>
++                  c === true ? [...previas, opcion] : previas.filter((p) => p !== opcion),
++                )
++              }
++            />
++            {opcion}
++          </label>
++        ))}
++      </div>
++    </Field>
++  );
++}
++
+ /** Fecha (y hora, con `conHora`) con el calendario del proyecto. */
+ export function CampoFecha({
+   id,
+@@ -281,3 +318,41 @@ export function CampoArchivos({
+     </Field>
+   );
+ }
++
++/**
++ * Un campo con el componente de su tipo. Lo usan la tarjeta de actividad y la
++ * tab Información: así un mismo tipo de dato se ve igual en toda la pantalla.
++ */
++export function CampoPorTipo({
++  id,
++  campo,
++  soloLectura,
++}: {
++  id: string;
++  campo: CampoGestion;
++  soloLectura?: boolean | undefined;
++}) {
++  const base = { id, label: campo.label, requerido: campo.requerido ?? false, soloLectura };
++  const opciones = campo.opciones ?? [];
++
++  switch (campo.tipo ?? "texto") {
++    case "archivo":
++      return <CampoArchivos {...base} acepta={campo.acepta} className="sm:col-span-2" />;
++    case "area":
++      return <CampoArea {...base} className="sm:col-span-2" />;
++    case "casillas":
++      return <CampoCasillas {...base} opciones={opciones} className="sm:col-span-2" />;
++    case "fecha":
++      return <CampoFecha {...base} />;
++    case "fecha-hora":
++      return <CampoFecha {...base} conHora className="sm:col-span-2" />;
++    case "seleccion":
++      return opciones.length > 0 ? <CampoSeleccion {...base} opciones={opciones} /> : <CampoCatalogo {...base} />;
++    case "catalogo":
++      return <CampoCatalogo {...base} />;
++    case "numero":
++      return <CampoTexto {...base} tipo="number" />;
++    case "texto":
++      return <CampoTexto {...base} />;
++  }
++}
+diff --git a/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx b/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
+index d8d5e37..1d4c34e 100644
+--- a/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
++++ b/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
+@@ -20,14 +20,7 @@ import { type ActividadTracking, actividadesPorId } from "../lib/actividades-tra
+ import { accionDe, camposDe, type GestionActividad } from "../lib/gestion-actividades";
+ import type { CampoGestion, TipoInteraccion } from "../lib/interacciones";
+ import { EtiquetaTipo } from "./actividades-tracking";
+-import {
+-  CampoArchivos,
+-  CampoArea,
+-  CampoCatalogo,
+-  CampoFecha,
+-  CampoSeleccion,
+-  CampoTexto,
+-} from "./campos";
++import { CampoPorTipo } from "./campos";
+ import { Dato, Pendiente, SoloConsulta } from "./utils";
+ 
+ /* ==========================================================================
+@@ -89,37 +82,9 @@ function idCampo(actividad: ActividadTracking, campo: CampoGestion): string {
+   return `${actividad.id.replace(/\s+/g, "-").toLowerCase()}-${slug}`;
+ }
+ 
+-/** Un campo de la actividad con el componente de su tipo (`campos.tsx`). */
+-function CampoActividad({ actividad, campo }: { actividad: ActividadTracking; campo: CampoGestion }) {
+-  const base = {
+-    id: idCampo(actividad, campo),
+-    label: campo.label,
+-    requerido: campo.requerido ?? false,
+-  };
+-
+-  switch (campo.tipo ?? "texto") {
+-    case "archivo":
+-      return <CampoArchivos {...base} acepta={campo.acepta} className="sm:col-span-2" />;
+-    case "area":
+-      return <CampoArea {...base} className="sm:col-span-2" />;
+-    case "fecha":
+-      return <CampoFecha {...base} />;
+-    case "fecha-hora":
+-      return <CampoFecha {...base} conHora className="sm:col-span-2" />;
+-    case "seleccion":
+-      return campo.opciones ? <CampoSeleccion {...base} opciones={campo.opciones} /> : <CampoCatalogo {...base} />;
+-    case "catalogo":
+-      return <CampoCatalogo {...base} />;
+-    case "numero":
+-      return <CampoTexto {...base} tipo="number" />;
+-    case "texto":
+-      return <CampoTexto {...base} />;
+-  }
+-}
+-
+ /** Valor registrado de un campo, en solo consulta (sin datos todavía). */
+ function ValorCampo({ campo }: { campo: CampoGestion }) {
+-  const ancho = campo.tipo === "area" || campo.tipo === "archivo" || campo.tipo === "fecha-hora";
++  const ancho = campo.tipo === "area" || campo.tipo === "archivo" || campo.tipo === "fecha-hora" || campo.tipo === "casillas";
+   return (
+     <div className={cn(ancho && "sm:col-span-2")}>
+       <Dato label={campo.label} valor={campo.tipo === "archivo" ? "Sin archivos" : "—"} />
+@@ -221,7 +186,7 @@ export function TarjetaActividad({
+         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+           {camposDe(gestion).map((campo) =>
+             editable ? (
+-              <CampoActividad key={campo.label} actividad={actividad} campo={campo} />
++              <CampoPorTipo key={campo.label} id={idCampo(actividad, campo)} campo={campo} />
+             ) : (
+               <ValorCampo key={campo.label} campo={campo} />
+             ),
+diff --git a/src/features/embarques/v2/shared/lib/campos-embarque.ts b/src/features/embarques/v2/shared/lib/campos-embarque.ts
+new file mode 100644
+index 0000000..5cf7e9d
+--- /dev/null
++++ b/src/features/embarques/v2/shared/lib/campos-embarque.ts
+@@ -0,0 +1,234 @@
++/* ==========================================================================
++ * CAMPOS DE LA INFORMACIÓN DEL EMBARQUE
++ *
++ * Mismos campos que ya tiene el módulo actual de embarques (clave, nombre,
++ * obligatorio, tipo de dato y opciones fijas); solo se toman los campos, no
++ * el diseño: v2 los dibuja con sus propios componentes (`campos.tsx`).
++ *
++ * Origen de cada sección (módulo actual, solo referencia):
++ *   Shipper / Consignatario → public/secciones/entidad-public-form/fields.ts y model.ts
++ *   Facturación             → public/secciones/facturacion-publica.tsx
++ *   Producto                → secciones/carga-form-dialog.tsx y cargas-publicas-columns.tsx
++ *   Detalles                → public/secciones/detalles-publica-model.ts
++ *   Rutas                   → secciones/ruta-dialog.tsx
++ *   Fechas                  → public/secciones/fechas-publicas.tsx y secciones/fechas.tsx
++ *
++ * `key` = nombre del dato en el módulo actual: al conectar la API se usa tal cual.
++ * ========================================================================== */
++
++import type { CampoGestion } from "./interacciones";
++
++export type CampoEmbarque = CampoGestion & {
++  /** Clave del dato en el módulo actual. */
++  key: string;
++  /** Solo consulta también al editar (en el módulo actual viene del maestro). */
++  soloLectura?: boolean;
++};
++
++export type GrupoCampos = {
++  titulo: string;
++  campos: readonly CampoEmbarque[];
++};
++
++export type SeccionInformacion = {
++  value: string;
++  titulo: string;
++  descripcion: string;
++  grupos: readonly GrupoCampos[];
++  /** La sección es una lista (una fila por registro): los campos son los de cada fila. */
++  lista?: string;
++};
++
++/* --------------------------------------------------------------------------
++ * Entidades (Shipper, Consignatario): `buildEntidadPublicFields`.
++ * Obligatorios: `ENTIDAD_PUBLIC_REQUIRED_FIELDS`.
++ * ------------------------------------------------------------------------ */
++
++function camposEntidad(titulo: string): GrupoCampos[] {
++  return [
++    {
++      titulo,
++      campos: [{ key: "entidad_id", label: `Seleccionar ${titulo}`, tipo: "catalogo", requerido: true }],
++    },
++    {
++      titulo: "Información",
++      campos: [
++        { key: "entidad_nombre", label: "Nombre", requerido: true },
++        { key: "entidad_pais", label: "País", tipo: "catalogo", requerido: true },
++        { key: "direccion_recoleccion_ciudad", label: "Ciudad", tipo: "catalogo" },
++        { key: "entidad_industria", label: "Industria", tipo: "catalogo", requerido: true },
++      ],
++    },
++    {
++      titulo: "Dirección",
++      campos: [
++        { key: "direccion_recoleccion", label: "Dirección de Recolección", tipo: "area", requerido: true },
++        {
++          key: "direccion_recoleccion_pais",
++          label: "País",
++          tipo: "catalogo",
++          requerido: true,
++          soloLectura: true,
++        },
++        { key: "direccion_recoleccion_depto", label: "Departamento", tipo: "catalogo" },
++        { key: "direccion_recoleccion_muni", label: "Municipio", tipo: "catalogo" },
++      ],
++    },
++    {
++      titulo: "Contacto",
++      campos: [
++        { key: "entidadcontacto_id", label: "Seleccionar Contacto", tipo: "catalogo" },
++        { key: "_contacto_tipo_list", label: "Tipo(s) de Contacto", tipo: "casillas" },
++        { key: "entidad_contacto_nombre", label: "Nombre Contacto", requerido: true },
++        { key: "entidad_contacto_email", label: "Email", requerido: true },
++        { key: "entidad_contacto_telefono", label: "Teléfono", requerido: true },
++      ],
++    },
++    {
++      titulo: "Identificación",
++      campos: [{ key: "entidad_nit", label: "NIT", requerido: true }],
++    },
++  ];
++}
++
++/* --------------------------------------------------------------------------
++ * Secciones (mismo orden que `DETALLE_EMBARQUE_STEPS`, sin Gastos,
++ * Documentos ni CCA: Documentos tiene su propia tab).
++ * ------------------------------------------------------------------------ */
++
++export const SECCIONES_INFORMACION: readonly SeccionInformacion[] = [
++  {
++    value: "shipper",
++    titulo: "Shipper",
++    descripcion: "Datos de quien despacha y entrega la mercadería.",
++    grupos: camposEntidad("Shipper"),
++  },
++  {
++    value: "consignatario",
++    titulo: "Consignatario",
++    descripcion: "Datos de quien recibe la mercadería en destino.",
++    grupos: camposEntidad("Consignatario"),
++  },
++  {
++    value: "producto",
++    titulo: "Producto",
++    descripcion: "Productos que componen el embarque.",
++    lista: "Cargas del embarque (columnas: Descripción, Valor, # Bultos, Peso (kg), CW (kg)).",
++    grupos: [
++      {
++        titulo: "Carga",
++        campos: [
++          { key: "cantidad", label: "Cantidad (bultos)", tipo: "numero", requerido: true },
++          { key: "pesoTotal", label: "Peso total (kg)", tipo: "numero", requerido: true },
++          { key: "unidadMedida", label: "Unidad de medida", tipo: "catalogo", requerido: true },
++          { key: "largo", label: "Largo", tipo: "numero" },
++          { key: "alto", label: "Alto", tipo: "numero" },
++          { key: "ancho", label: "Ancho", tipo: "numero" },
++          { key: "descripcion", label: "Descripción", tipo: "area", requerido: true },
++          { key: "valor", label: "Valor declarado", tipo: "numero", requerido: true },
++          { key: "paisOrigenId", label: "País Origen", tipo: "catalogo", requerido: true },
++          { key: "partidaArancelaria", label: "Partida arancelaria", requerido: true },
++        ],
++      },
++    ],
++  },
++  {
++    value: "facturacion",
++    titulo: "Facturación",
++    descripcion: "Datos de facturación del cliente.",
++    // En el módulo actual es siempre de consulta: refleja el maestro del cliente.
++    grupos: [
++      {
++        titulo: "Información",
++        campos: [{ key: "cliente", label: "Nombre", requerido: true, soloLectura: true }],
++      },
++      {
++        titulo: "Dirección Fiscal",
++        campos: [{ key: "direccionFiscal", label: "Dirección Fiscal", tipo: "area", soloLectura: true }],
++      },
++      {
++        titulo: "Contacto",
++        campos: [
++          { key: "clienteContacto", label: "Nombre Contacto", soloLectura: true },
++          { key: "clienteContactoEmail", label: "Email", soloLectura: true },
++          { key: "clienteContactoTelefono", label: "Teléfono", soloLectura: true },
++        ],
++      },
++      {
++        titulo: "Identificación",
++        campos: [{ key: "numero", label: "NIT", requerido: true, soloLectura: true }],
++      },
++    ],
++  },
++  {
++    value: "detalles",
++    titulo: "Detalles",
++    descripcion: "Condiciones y detalles de la carga.",
++    grupos: [
++      {
++        titulo: "Detalles",
++        campos: [
++          { key: "tipoPago", label: "Tipo de pago", tipo: "catalogo", requerido: true },
++          { key: "tipoCarga", label: "Tipo de carga", tipo: "catalogo", requerido: true },
++          { key: "incoterm", label: "Incoterm", tipo: "catalogo" },
++          { key: "servicio", label: "Tipo de servicio", tipo: "catalogo", requerido: true },
++          { key: "clasificacionCarga", label: "Clasificación de carga", tipo: "catalogo" },
++          // PELIGROSIDAD_OPTIONS (V / C); en el módulo actual va sin etiqueta.
++          {
++            key: "peligrosidad",
++            label: "Peligrosidad",
++            tipo: "casillas",
++            opciones: ["Carga Valiosa", "Cobertura de Seguro"],
++          },
++          // CROPA_DOCS (lib/constantes.ts)
++          {
++            key: "documentosCropa",
++            label: "Documentos CROPA",
++            tipo: "casillas",
++            requerido: true,
++            opciones: ["Deprex", "DUA Complementaria", "DUA Definitiva", "DUA Simplificada", "Otros"],
++          },
++          { key: "instruccionesManejo", label: "Instrucciones de manejo", tipo: "area" },
++        ],
++      },
++    ],
++  },
++  {
++    value: "rutas",
++    titulo: "Rutas",
++    descripcion: "Tramos del embarque.",
++    lista: "Tramos del embarque (uno por vuelo).",
++    grupos: [
++      {
++        titulo: "Tramo",
++        campos: [
++          { key: "codEntidadProv", label: "Aerolínea", tipo: "catalogo" },
++          { key: "codPaisOrigen", label: "País Origen", tipo: "catalogo", requerido: true },
++          { key: "puertoIdOrigen", label: "Aeropuerto Origen", tipo: "catalogo", requerido: true },
++          { key: "codPaisDestino", label: "País Destino", tipo: "catalogo", requerido: true },
++          { key: "puertoIdDestino", label: "Aeropuerto Destino", tipo: "catalogo", requerido: true },
++          { key: "flightNumber", label: "Nro. Vuelo" },
++        ],
++      },
++    ],
++  },
++  {
++    value: "fechas",
++    titulo: "Fechas",
++    descripcion: "Fecha de recolección y fechas de movimiento del embarque.",
++    grupos: [
++      {
++        titulo: "Recolección",
++        campos: [{ key: "fecha_recoleccion", label: "Fecha de Recolección", tipo: "fecha", requerido: true }],
++      },
++      {
++        titulo: "Fechas de movimiento",
++        campos: [
++          { key: "id_tipo_fecha", label: "Tipo de Fecha", tipo: "catalogo", requerido: true },
++          { key: "fecha", label: "Fecha", tipo: "fecha", requerido: true },
++          { key: "observacion", label: "Observación", tipo: "area" },
++        ],
++      },
++    ],
++  },
++];
+diff --git a/src/features/embarques/v2/shared/lib/interacciones.ts b/src/features/embarques/v2/shared/lib/interacciones.ts
+index f8b776c..88fb182 100644
+--- a/src/features/embarques/v2/shared/lib/interacciones.ts
++++ b/src/features/embarques/v2/shared/lib/interacciones.ts
+@@ -26,7 +26,8 @@ export type TipoInteraccion =
+ /**
+  * Tipo de dato del campo; define el componente (`shared/components/campos.tsx`):
+  * `seleccion` = lista corta y fija (`opciones`) → Select;
+- * `catalogo` = catálogo del sistema con búsqueda → Combobox.
++ * `catalogo` = catálogo del sistema con búsqueda → Combobox;
++ * `casillas` = varias opciones marcables (`opciones`) → Checkbox.
+  */
+ export type TipoCampo =
+   | "texto"
+@@ -35,6 +36,7 @@ export type TipoCampo =
+   | "fecha-hora"
+   | "seleccion"
+   | "catalogo"
++  | "casillas"
+   | "area"
+   | "archivo";
+ 
+@@ -42,7 +44,7 @@ export type CampoGestion = {
+   label: string;
+   tipo?: TipoCampo;
+   requerido?: boolean;
+-  /** `seleccion`: opciones fijas. */
++  /** `seleccion` y `casillas`: opciones fijas. */
+   opciones?: readonly string[];
+   /** `archivo`: tipos aceptados (`accept`), ej. `"image/*"`. */
+   acepta?: string;

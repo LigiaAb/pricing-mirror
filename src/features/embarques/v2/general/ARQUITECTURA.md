@@ -47,6 +47,7 @@ Las rutas de abajo sin carpeta son relativas a `general/`.
 | Datos de ejemplo (borrar con la API)  | `lib/datos-maqueta.ts`                   |
 | Piezas reutilizables (sección, dato…) | `shared/components/utils.tsx`            |
 | Campos de captura (input por tipo)    | `shared/components/campos.tsx`           |
+| Campos de Información (corporativos)  | `shared/lib/campos-embarque.ts`          |
 | Actividades del Excel (69)            | `shared/lib/actividades-tracking.ts`     |
 | Tipos de interacción (9)              | `shared/lib/interacciones.ts`            |
 | Motor de gestión (tipo y helpers)     | `shared/lib/gestion-actividades.ts`      |
@@ -133,6 +134,7 @@ Un componente por tipo de dato, con los mismos componentes que ya usa el proyect
 
 | `tipo` del campo | Componente        | Se ve como                                       | Patrón existente                         |
 | ---------------- | ----------------- | ------------------------------------------------ | ---------------------------------------- |
+| `casillas`       | `CampoCasillas`   | `Checkbox` por opción                            | embarques `formulario-alternativo`, detalles |
 | `texto`, `numero`| `CampoTexto`      | `Field` + `InputGroupInput`                      | pricing (`CampoMetodo`)                  |
 | `seleccion`      | `CampoSeleccion`  | `Select` con `opciones` fijas (obligatorias)     | embarques `ruta-dialog`, `formulario-alternativo` |
 | `catalogo`       | `CampoCatalogo`   | `Combobox` con búsqueda (catálogo por conectar)  | embarques `ruta-dialog`, `nueva-entidad-captura` |
@@ -143,6 +145,15 @@ Un componente por tipo de dato, con los mismos componentes que ya usa el proyect
 
 Regla: lista corta y fija (Sí/No, PP/CC, estado…) → `seleccion` con `opciones`; proveedores, líneas aéreas,
 agentes, monedas, clientes… → `catalogo`. Fotografías → `acepta: "image/*"`. `soloLectura` deshabilita el control.
+
+### Campos de Información (`shared/lib/campos-embarque.ts`)
+
+La tab Información **no inventa campos**: usa los que ya tiene el módulo actual de embarques (misma clave,
+nombre, obligatorio y opciones), agrupados en Shipper, Consignatario, Producto, Facturación, Detalles, Rutas y
+Fechas. Solo se toman los campos, **no el diseño** (v2 se está rediseñando): se dibujan con `CampoPorTipo`.
+`key` es el nombre del dato en el módulo actual, para conectar la API sin traducir. El origen de cada sección
+está anotado en el archivo. Las actividades que piden un dato que ya existe ahí usan el mismo nombre
+(p. ej. *Aerolínea*, *Nro. Vuelo*, *Cantidad (bultos)*, *Peso total (kg)*, *Dirección de Recolección*).
 
 ### Gestión de cada actividad (`<actor>/lib/gestion-actividades.ts`)
 

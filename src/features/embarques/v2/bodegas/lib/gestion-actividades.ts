@@ -16,9 +16,9 @@ import type { CampoGestion } from "../../shared/lib/interacciones";
 
 const PESO_MEDIDAS: readonly CampoGestion[] = [
   { label: "Peso (kg)", tipo: "numero", requerido: true },
-  { label: "Largo (cm)", tipo: "numero" },
-  { label: "Ancho (cm)", tipo: "numero" },
-  { label: "Alto (cm)", tipo: "numero" },
+  { label: "Largo", tipo: "numero" },
+  { label: "Alto", tipo: "numero" },
+  { label: "Ancho", tipo: "numero" },
 ];
 
 export const GESTION_BODEGAS: DefinicionesGestion = {

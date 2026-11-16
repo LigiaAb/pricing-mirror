@@ -6,6 +6,7 @@ import { CalendarIcon, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/shared/components/ui/button";
 import { Calendar } from "@/shared/components/ui/calendar";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Combobox } from "@/shared/components/ui/combobox";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
@@ -19,6 +20,7 @@ import {
 } from "@/shared/components/ui/select";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { cn } from "@/shared/lib/utils";
+import type { CampoGestion } from "../lib/interacciones";
 
 /* ==========================================================================
  * CAMPOS DE CAPTURA DE EMBARQUES V2 (MAQUETA)
@@ -30,6 +32,7 @@ import { cn } from "@/shared/lib/utils";
  *   catálogo       → Combobox con búsqueda           (embarques: ruta-dialog, nueva-entidad-captura)
  *   fecha          → Popover + Calendar              (embarques: paso-confirmar-destino)
  *   fecha y hora   → Popover + Calendar + hora
+ *   casillas       → Checkbox                        (embarques: formulario-alternativo, detalles)
  *   texto largo    → Textarea                        (embarques: formulario-alternativo, fechas)
  *   archivos       → zona de arrastre                (embarques: public/file-dropzone)
  *
@@ -151,6 +154,40 @@ export function CampoCatalogo({
         emptyMessage="Catálogo pendiente de conectar"
         disabled={soloLectura}
       />
+    </Field>
+  );
+}
+
+/** Varias opciones marcables (ej. documentos CROPA). */
+export function CampoCasillas({
+  id,
+  label,
+  requerido,
+  soloLectura,
+  className,
+  opciones,
+}: BaseCampo & { opciones: readonly string[] }) {
+  const [marcadas, setMarcadas] = useState<string[]>([]);
+  return (
+    <Field className={cn(className)}>
+      <Etiqueta id={id} label={label} requerido={requerido} />
+      <div id={id} className="flex flex-wrap gap-3 pt-1">
+        {opciones.map((opcion) => (
+          // biome-ignore lint/a11y/noLabelWithoutControl: Checkbox envuelve un input nativo.
+          <label key={opcion} className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={marcadas.includes(opcion)}
+              disabled={soloLectura}
+              onCheckedChange={(c: boolean | "indeterminate") =>
+                setMarcadas((previas) =>
+                  c === true ? [...previas, opcion] : previas.filter((p) => p !== opcion),
+                )
+              }
+            />
+            {opcion}
+          </label>
+        ))}
+      </div>
     </Field>
   );
 }
@@ -280,4 +317,42 @@ export function CampoArchivos({
       </button>
     </Field>
   );
+}
+
+/**
+ * Un campo con el componente de su tipo. Lo usan la tarjeta de actividad y la
+ * tab Información: así un mismo tipo de dato se ve igual en toda la pantalla.
+ */
+export function CampoPorTipo({
+  id,
+  campo,
+  soloLectura,
+}: {
+  id: string;
+  campo: CampoGestion;
+  soloLectura?: boolean | undefined;
+}) {
+  const base = { id, label: campo.label, requerido: campo.requerido ?? false, soloLectura };
+  const opciones = campo.opciones ?? [];
+
+  switch (campo.tipo ?? "texto") {
+    case "archivo":
+      return <CampoArchivos {...base} acepta={campo.acepta} className="sm:col-span-2" />;
+    case "area":
+      return <CampoArea {...base} className="sm:col-span-2" />;
+    case "casillas":
+      return <CampoCasillas {...base} opciones={opciones} className="sm:col-span-2" />;
+    case "fecha":
+      return <CampoFecha {...base} />;
+    case "fecha-hora":
+      return <CampoFecha {...base} conHora className="sm:col-span-2" />;
+    case "seleccion":
+      return opciones.length > 0 ? <CampoSeleccion {...base} opciones={opciones} /> : <CampoCatalogo {...base} />;
+    case "catalogo":
+      return <CampoCatalogo {...base} />;
+    case "numero":
+      return <CampoTexto {...base} tipo="number" />;
+    case "texto":
+      return <CampoTexto {...base} />;
+  }
 }

@@ -26,7 +26,8 @@ export type TipoInteraccion =
 /**
  * Tipo de dato del campo; define el componente (`shared/components/campos.tsx`):
  * `seleccion` = lista corta y fija (`opciones`) → Select;
- * `catalogo` = catálogo del sistema con búsqueda → Combobox.
+ * `catalogo` = catálogo del sistema con búsqueda → Combobox;
+ * `casillas` = varias opciones marcables (`opciones`) → Checkbox.
  */
 export type TipoCampo =
   | "texto"
@@ -35,6 +36,7 @@ export type TipoCampo =
   | "fecha-hora"
   | "seleccion"
   | "catalogo"
+  | "casillas"
   | "area"
   | "archivo";
 
@@ -42,7 +44,7 @@ export type CampoGestion = {
   label: string;
   tipo?: TipoCampo;
   requerido?: boolean;
-  /** `seleccion`: opciones fijas. */
+  /** `seleccion` y `casillas`: opciones fijas. */
   opciones?: readonly string[];
   /** `archivo`: tipos aceptados (`accept`), ej. `"image/*"`. */
   acepta?: string;

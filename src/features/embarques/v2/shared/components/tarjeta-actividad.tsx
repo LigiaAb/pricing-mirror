@@ -20,14 +20,7 @@ import { type ActividadTracking, actividadesPorId } from "../lib/actividades-tra
 import { accionDe, camposDe, type GestionActividad } from "../lib/gestion-actividades";
 import type { CampoGestion, TipoInteraccion } from "../lib/interacciones";
 import { EtiquetaTipo } from "./actividades-tracking";
-import {
-  CampoArchivos,
-  CampoArea,
-  CampoCatalogo,
-  CampoFecha,
-  CampoSeleccion,
-  CampoTexto,
-} from "./campos";
+import { CampoPorTipo } from "./campos";
 import { Dato, Pendiente, SoloConsulta } from "./utils";
 
 /* ==========================================================================
@@ -89,37 +82,9 @@ function idCampo(actividad: ActividadTracking, campo: CampoGestion): string {
   return `${actividad.id.replace(/\s+/g, "-").toLowerCase()}-${slug}`;
 }
 
-/** Un campo de la actividad con el componente de su tipo (`campos.tsx`). */
-function CampoActividad({ actividad, campo }: { actividad: ActividadTracking; campo: CampoGestion }) {
-  const base = {
-    id: idCampo(actividad, campo),
-    label: campo.label,
-    requerido: campo.requerido ?? false,
-  };
-
-  switch (campo.tipo ?? "texto") {
-    case "archivo":
-      return <CampoArchivos {...base} acepta={campo.acepta} className="sm:col-span-2" />;
-    case "area":
-      return <CampoArea {...base} className="sm:col-span-2" />;
-    case "fecha":
-      return <CampoFecha {...base} />;
-    case "fecha-hora":
-      return <CampoFecha {...base} conHora className="sm:col-span-2" />;
-    case "seleccion":
-      return campo.opciones ? <CampoSeleccion {...base} opciones={campo.opciones} /> : <CampoCatalogo {...base} />;
-    case "catalogo":
-      return <CampoCatalogo {...base} />;
-    case "numero":
-      return <CampoTexto {...base} tipo="number" />;
-    case "texto":
-      return <CampoTexto {...base} />;
-  }
-}
-
 /** Valor registrado de un campo, en solo consulta (sin datos todavía). */
 function ValorCampo({ campo }: { campo: CampoGestion }) {
-  const ancho = campo.tipo === "area" || campo.tipo === "archivo" || campo.tipo === "fecha-hora";
+  const ancho = campo.tipo === "area" || campo.tipo === "archivo" || campo.tipo === "fecha-hora" || campo.tipo === "casillas";
   return (
     <div className={cn(ancho && "sm:col-span-2")}>
       <Dato label={campo.label} valor={campo.tipo === "archivo" ? "Sin archivos" : "—"} />
@@ -221,7 +186,7 @@ export function TarjetaActividad({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {camposDe(gestion).map((campo) =>
             editable ? (
-              <CampoActividad key={campo.label} actividad={actividad} campo={campo} />
+              <CampoPorTipo key={campo.label} id={idCampo(actividad, campo)} campo={campo} />
             ) : (
               <ValorCampo key={campo.label} campo={campo} />
             ),
