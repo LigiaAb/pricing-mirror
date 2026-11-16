@@ -2,8 +2,8 @@
 
 import { Pencil } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import type { EmbarqueMaqueta } from "../../lib/tipos";
-import { CampoMaqueta, EncabezadoPaso, SoloConsulta } from "../utils";
+import { CampoMaqueta, EncabezadoPaso, SoloConsulta } from "../../../shared/components/utils";
+import type { EmbarqueMaqueta } from "../../../shared/lib/tipos";
 
 /**
  * Detalle completo del embarque (el resumen breve está siempre visible arriba).

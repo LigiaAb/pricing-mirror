@@ -5,7 +5,7 @@
  * Se eliminan cuando exista la API de embarques (`v2/embarques/api`).
  * ========================================================================== */
 
-import type { EmbarqueMaqueta } from "./tipos";
+import type { EmbarqueMaqueta } from "../../shared/lib/tipos";
 
 export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
   {

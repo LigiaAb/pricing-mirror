@@ -1,0 +1,1567 @@
+diff --git a/src/features/embarques/v2/bodegas/components/actividad-bodegas.tsx b/src/features/embarques/v2/bodegas/components/actividad-bodegas.tsx
+new file mode 100644
+index 0000000..a64729f
+--- /dev/null
++++ b/src/features/embarques/v2/bodegas/components/actividad-bodegas.tsx
+@@ -0,0 +1,13 @@
++"use client";
++
++import { type PropsActividad, TarjetaActividad } from "../../shared/components/tarjeta-actividad";
++import { gestionDe } from "../../shared/lib/gestion-actividades";
++import { GESTION_BODEGAS } from "../lib/gestion-actividades";
++
++/**
++ * Formulario de una actividad de Bodega (tarjeta común con las definiciones de
++ * `lib/gestion-actividades.ts` de esta carpeta).
++ */
++export function ActividadBodegas(props: PropsActividad) {
++  return <TarjetaActividad {...props} gestion={gestionDe(GESTION_BODEGAS, props.actividad.id)} />;
++}
+diff --git a/src/features/embarques/v2/bodegas/lib/gestion-actividades.ts b/src/features/embarques/v2/bodegas/lib/gestion-actividades.ts
+new file mode 100644
+index 0000000..d1f0f61
+--- /dev/null
++++ b/src/features/embarques/v2/bodegas/lib/gestion-actividades.ts
+@@ -0,0 +1,121 @@
++/* ==========================================================================
++ * FORMULARIOS DE BODEGAS (SOLO MAQUETA)
++ *
++ * Cómo se trabaja en pantalla cada actividad de Bodega de `ACTIVIDADES_TRACKING`
++ * (hoja "Detalle original" del Excel): tipo de interacción, campos propios,
++ * texto del botón, referencia contra la que se compara y de qué actividades
++ * depende. Los campos `base` del tipo se agregan después de los propios
++ * (ver `shared/lib/gestion-actividades.ts`).
++ *
++ * Todas las actividades de Bodega del Excel deben tener entrada aquí (sin
++ * entrada se muestra como formulario genérico).
++ * ========================================================================== */
++
++import type { DefinicionesGestion } from "../../shared/lib/gestion-actividades";
++import type { CampoGestion } from "../../shared/lib/interacciones";
++
++const PESO_MEDIDAS: readonly CampoGestion[] = [
++  { label: "Peso (kg)", tipo: "numero", requerido: true },
++  { label: "Largo (cm)", tipo: "numero" },
++  { label: "Ancho (cm)", tipo: "numero" },
++  { label: "Alto (cm)", tipo: "numero" },
++];
++
++export const GESTION_BODEGAS: DefinicionesGestion = {
++  /* ---------- Paso 1 · Coordinación y reserva ---------- */
++  "Bodega 0.1": {
++    interaccion: "confirmacion",
++    accion: "Confirmar recepción",
++    campos: [{ label: "Piezas recibidas", tipo: "numero", requerido: true }],
++  },
++  "Bodega 0.2": {
++    interaccion: "dato-especial",
++    accion: "Registrar repeso",
++    compara: "Peso declarado",
++    campos: [{ label: "Peso (kg)", tipo: "numero", requerido: true }],
++  },
++  "Bodega 0.3": {
++    interaccion: "dato-especial",
++    accion: "Registrar medidas",
++    compara: "Dimensiones declaradas",
++    campos: PESO_MEDIDAS.slice(1),
++  },
++  "Bodega 0.4": {
++    interaccion: "confirmacion",
++    accion: "Confirmar empaque",
++    requiere: ["OPS 0.4"],
++    campos: [{ label: "Resultado de la revisión", tipo: "seleccion", requerido: true }],
++  },
++  "Bodega 0.5": {
++    interaccion: "dato-especial",
++    accion: "Actualizar e informar a OPS",
++    compara: "Peso y medidas antes del empaque",
++    requiere: ["Bodega 0.4"],
++    campos: PESO_MEDIDAS,
++  },
++
++  /* ---------- Paso 3 · Liberación y despacho de bodega ---------- */
++  "Bodega 7.1": {
++    interaccion: "confirmacion",
++    accion: "Validar recepción",
++    campos: [
++      { label: "Piezas recibidas", tipo: "numero", requerido: true },
++      { label: "Estado físico", tipo: "seleccion", requerido: true },
++    ],
++  },
++  "Bodega 7.2": {
++    interaccion: "dato-especial",
++    accion: "Registrar repeso y medidas",
++    compara: "Peso y medidas del draft",
++    campos: PESO_MEDIDAS,
++  },
++  "Bodega 7.3": {
++    interaccion: "documento",
++    accion: "Imprimir etiquetas",
++    campos: [{ label: "Cantidad de etiquetas", tipo: "numero" }],
++  },
++  "Bodega 7.4": { interaccion: "documento", accion: "Imprimir manifiesto" },
++  "Bodega 7.5": { interaccion: "evidencia" },
++  "Bodega 7.6": {
++    interaccion: "formulario",
++    accion: "Asignar unidad",
++    campos: [
++      { label: "Proveedor", tipo: "seleccion", requerido: true },
++      { label: "Placa", requerido: true },
++      { label: "Piloto", requerido: true },
++      { label: "Fecha y hora", tipo: "fecha-hora" },
++    ],
++  },
++  "Bodega 7.7": {
++    interaccion: "documento",
++    accion: "Generar pase de salida",
++    requiere: ["OPS 6.1"],
++    campos: [{ label: "No. de pase" }],
++  },
++  "Bodega 7.8": {
++    interaccion: "confirmacion",
++    accion: "Confirmar despacho",
++    requiere: ["Bodega 7.7"],
++    campos: [
++      { label: "Transportista" },
++      { label: "Firma o evidencia de recepción", tipo: "archivo", requerido: true },
++    ],
++  },
++  "Bodega 7.9": {
++    interaccion: "confirmacion",
++    accion: "Descargar inventario",
++    compara: "Piezas en inventario",
++    requiere: ["Bodega 7.8"],
++    campos: [{ label: "Piezas despachadas", tipo: "numero", requerido: true }],
++  },
++  "Bodega E1": {
++    interaccion: "incidencia",
++    accion: "Detener despacho e informar a OPS",
++    campos: [{ label: "Diferencia en (piezas / peso / medidas)", tipo: "seleccion", requerido: true }],
++  },
++  "Bodega E2": {
++    interaccion: "incidencia",
++    accion: "Escalar caso",
++    campos: [{ label: "Fotografías del daño", tipo: "archivo", requerido: true }],
++  },
++};
+diff --git a/src/features/embarques/v2/combex/components/actividad-combex.tsx b/src/features/embarques/v2/combex/components/actividad-combex.tsx
+new file mode 100644
+index 0000000..f7966a8
+--- /dev/null
++++ b/src/features/embarques/v2/combex/components/actividad-combex.tsx
+@@ -0,0 +1,13 @@
++"use client";
++
++import { type PropsActividad, TarjetaActividad } from "../../shared/components/tarjeta-actividad";
++import { gestionDe } from "../../shared/lib/gestion-actividades";
++import { GESTION_COMBEX } from "../lib/gestion-actividades";
++
++/**
++ * Formulario de una actividad de CBX (tarjeta común con las definiciones de
++ * `lib/gestion-actividades.ts` de esta carpeta).
++ */
++export function ActividadCombex(props: PropsActividad) {
++  return <TarjetaActividad {...props} gestion={gestionDe(GESTION_COMBEX, props.actividad.id)} />;
++}
+diff --git a/src/features/embarques/v2/combex/lib/gestion-actividades.ts b/src/features/embarques/v2/combex/lib/gestion-actividades.ts
+new file mode 100644
+index 0000000..b0d0a3d
+--- /dev/null
++++ b/src/features/embarques/v2/combex/lib/gestion-actividades.ts
+@@ -0,0 +1,118 @@
++/* ==========================================================================
++ * FORMULARIOS DE COMBEX (CBX) (SOLO MAQUETA)
++ *
++ * Cómo se trabaja en pantalla cada actividad de CBX de `ACTIVIDADES_TRACKING`
++ * (hoja "Detalle original" del Excel): tipo de interacción, campos propios,
++ * texto del botón, referencia contra la que se compara y de qué actividades
++ * depende. Los campos `base` del tipo se agregan después de los propios
++ * (ver `shared/lib/gestion-actividades.ts`).
++ *
++ * Todas las actividades de CBX del Excel deben tener entrada aquí (sin
++ * entrada se muestra como formulario genérico).
++ * ========================================================================== */
++
++import type { DefinicionesGestion } from "../../shared/lib/gestion-actividades";
++
++export const GESTION_COMBEX: DefinicionesGestion = {
++  /* ---------- Paso 2 · Documentación y gestión aduanera ---------- */
++  "CBX E1": {
++    interaccion: "incidencia",
++    accion: "Solicitar saldo",
++    campos: [{ label: "Monto", tipo: "numero", requerido: true }],
++  },
++
++  /* ---------- Paso 4 · Recepción en COMBEX y documentación final ---------- */
++  "CBX 8.1": { interaccion: "confirmacion", accion: "Confirmar entrega en terminal" },
++  "CBX 8.2": {
++    interaccion: "dato-especial",
++    accion: "Registrar peso oficial",
++    compara: "Peso de bodega",
++    requiere: ["CBX 8.1"],
++    campos: [
++      { label: "Peso oficial (kg)", tipo: "numero", requerido: true },
++      { label: "Volumen (m³)", tipo: "numero" },
++    ],
++  },
++  "CBX 8.3": {
++    interaccion: "formulario",
++    accion: "Registrar pago de boleta",
++    requiere: ["CBX 8.2"],
++    campos: [
++      { label: "No. de boleta", requerido: true },
++      { label: "Monto", tipo: "numero" },
++      { label: "Comprobante", tipo: "archivo", requerido: true },
++    ],
++  },
++  "CBX 8.4": { interaccion: "evidencia" },
++  "CBX 8.5": { interaccion: "notificacion", accion: "Informar al cliente", requiere: ["CBX 8.2", "CBX 8.4"] },
++  "CBX 10.1": {
++    interaccion: "documento",
++    accion: "Adjuntar hojas de seguridad",
++    campos: [
++      { label: "Hojas de seguridad", tipo: "archivo", requerido: true },
++      { label: "Vigencia", tipo: "fecha" },
++    ],
++  },
++  "CBX 10.2": {
++    interaccion: "documento",
++    accion: "Imprimir guías",
++    requiere: ["OPS 9.3"],
++    campos: [{ label: "Copias", tipo: "numero" }],
++  },
++  "CBX 10.3": { interaccion: "documento", accion: "Imprimir manifiestos", requiere: ["OPS 9.3"] },
++  "CBX 10.4": {
++    interaccion: "documento",
++    accion: "Imprimir ND de destino",
++    campos: [{ label: "Destinatario" }, { label: "Monto", tipo: "numero" }],
++  },
++  "CBX 10.5": {
++    interaccion: "documento",
++    accion: "Imprimir NC de profit",
++    requiere: ["OPS 9.2"],
++    campos: [{ label: "Monto", tipo: "numero" }],
++  },
++
++  /* ---------- Paso 5 · Despacho, salida aérea y complementaria ---------- */
++  "CBX 11.1": { interaccion: "notificacion", accion: "Notificar carga a despachar" },
++  "CBX 12.1": {
++    interaccion: "confirmacion",
++    accion: "Confirmar salida",
++    compara: "Reserva confirmada",
++    campos: [
++      { label: "Vuelo real", requerido: true },
++      { label: "Fecha y hora de salida real", tipo: "fecha-hora", requerido: true },
++    ],
++  },
++  "CBX 12.2": { interaccion: "notificacion", accion: "Solicitar complementaria", requiere: ["CBX 12.1"] },
++  "CBX 12.3": { interaccion: "notificacion", accion: "Enviar aviso al cliente", requiere: ["CBX 12.1"] },
++  "CBX 12.4": { interaccion: "notificacion", accion: "Enviar aviso a destino", requiere: ["CBX 12.1"] },
++  "CBX 13.1": { interaccion: "seguimiento", requiere: ["CBX 12.2"] },
++  "CBX 13.2": {
++    interaccion: "notificacion",
++    accion: "Notificar conclusión",
++    requiere: ["CBX 13.1"],
++    campos: [{ label: "Documento final", tipo: "archivo", requerido: true }],
++  },
++  "CBX E2": {
++    interaccion: "incidencia",
++    accion: "Informar no salida",
++    campos: [{ label: "Nueva fecha", tipo: "fecha" }],
++  },
++  "CBX E3": {
++    interaccion: "incidencia",
++    accion: "Informar incidencia",
++    campos: [{ label: "Tipo (cambio / cancelación / descarga)", tipo: "seleccion", requerido: true }],
++  },
++  "CBX E4": {
++    interaccion: "seguimiento",
++    requiere: ["OPS E2"],
++    campos: [{ label: "Confirmación de recepción en destino", tipo: "fecha" }],
++  },
++
++  /* ---------- Paso 6 · Arribo y cierre ---------- */
++  "CBX 14.1": {
++    interaccion: "confirmacion",
++    accion: "Confirmar arribo",
++    campos: [{ label: "Fecha y hora de llegada", tipo: "fecha-hora", requerido: true }],
++  },
++};
+diff --git a/src/features/embarques/v2/embarques/components/embarques.tsx b/src/features/embarques/v2/embarques/components/embarques.tsx
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/src/features/embarques/v2/embarques/hooks/.gitkeep b/src/features/embarques/v2/embarques/hooks/.gitkeep
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/src/features/embarques/v2/embarques/lib/.gitkeep b/src/features/embarques/v2/embarques/lib/.gitkeep
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/src/features/embarques/v2/general/ARQUITECTURA.md b/src/features/embarques/v2/general/ARQUITECTURA.md
+index a392d45..aceae69 100644
+--- a/src/features/embarques/v2/general/ARQUITECTURA.md
++++ b/src/features/embarques/v2/general/ARQUITECTURA.md
+@@ -3,6 +3,24 @@
+ **Estado: solo maquetado.** No hay API ni lógica: datos de `lib/datos-maqueta.ts`, botones deshabilitados y
+ campos de solo lectura. La funcionalidad se agrega después sin cambiar la estructura.
+ 
++## Carpetas de `v2/`
++
++`general/` es **solo la vista general** (tabla, resumen, tracking, tabs y Sheets). Los formularios de las
++actividades van en la carpeta de su actor, y lo que usan todos en `shared/`:
++
++| Carpeta        | Qué tiene                                                                          |
++| -------------- | ---------------------------------------------------------------------------------- |
++| `general/`     | Vista general: `VistaGeneral`, tabla, resumen, tracking general, tabs, Sheets, Información; `lib/pasos.ts` y `lib/datos-maqueta.ts` |
++| `operaciones/` | Formularios de OPS: `lib/gestion-actividades.ts` (`GESTION_OPERACIONES`), `components/actividad-operaciones.tsx`, `components/paso-documentos.tsx` |
++| `bodegas/`     | Formularios de Bodega: `lib/gestion-actividades.ts` (`GESTION_BODEGAS`), `components/actividad-bodegas.tsx` |
++| `combex/`      | Formularios de CBX: `lib/gestion-actividades.ts` (`GESTION_COMBEX`), `components/actividad-combex.tsx` |
++| `shared/`      | Común: tipos, actividades del Excel, tipos de interacción, motor de gestión (`gestionDe`, `camposDe`, `accionDe`), tarjeta genérica y piezas (`utils.tsx`) |
++
++Dependencias: `general` → actores → `shared`. `shared` no importa de `general` ni de los actores, y un actor
++no importa de otro.
++
++Las rutas de abajo sin carpeta son relativas a `general/`.
++
+ ## Pantalla (`components/VistaGeneral.tsx`)
+ 
+ 1. **Tabla de embarques** — `embarques-table.tsx` (`DataTable`, mismo patrón que Cotizaciones).
+@@ -14,7 +32,7 @@ campos de solo lectura. La funcionalidad se agrega después sin cambiar la estru
+    componente en `components/pasos/`.
+ 4. **Sheet de tracking interactivo** — `tracking-sheet.tsx`. Solo el componente existente
+    `TrackingDetalle` (`@/features/tracking`), con los datos del embarque seleccionado
+-   (`CoordinacionTracking` en `lib/tipos.ts`: mismos nombres que `Coordinacion`). `puedeRetroceder={false}`;
++   (`CoordinacionTracking` en `shared/lib/tipos.ts`: mismos nombres que `Coordinacion`). `puedeRetroceder={false}`;
+    `ocupado` mientras se guarda. `VistaGeneral` recibe `codTipoTracking` y `onActualizarEstadoTracking(embarque,
+    payload)`: ahí la pantalla actualiza el estado (API) y reconsulta. No agregar otro contenido aquí.
+ 5. **Sheet de actividades** — `detalle-actividades-sheet.tsx`: detalle del Excel por paso y área,
+@@ -25,14 +43,17 @@ campos de solo lectura. La funcionalidad se agrega después sin cambiar la estru
+ | Qué                                   | Dónde                                    |
+ | ------------------------------------- | ---------------------------------------- |
+ | Pasos del tracking (6) y de las tabs  | `lib/pasos.ts` (definición única)        |
+-| Tipos (`PerfilEmbarque`, embarque)    | `lib/tipos.ts`                           |
++| Tipos (`PerfilEmbarque`, embarque)    | `shared/lib/tipos.ts`                    |
+ | Datos de ejemplo (borrar con la API)  | `lib/datos-maqueta.ts`                   |
+-| Piezas reutilizables (sección, dato…) | `components/utils.tsx`                   |
+-| Tipos de interacción (9)              | `lib/interacciones.ts`                   |
+-| Cómo se trabaja cada actividad        | `lib/gestion-actividades.ts`             |
+-| Tarjeta genérica de una actividad     | `components/tarjeta-actividad.tsx`       |
++| Piezas reutilizables (sección, dato…) | `shared/components/utils.tsx`            |
++| Actividades del Excel (69)            | `shared/lib/actividades-tracking.ts`     |
++| Tipos de interacción (9)              | `shared/lib/interacciones.ts`            |
++| Motor de gestión (tipo y helpers)     | `shared/lib/gestion-actividades.ts`      |
++| Cómo se trabaja cada actividad        | `<actor>/lib/gestion-actividades.ts`     |
++| Formulario de una actividad del actor | `<actor>/components/actividad-<actor>.tsx` |
++| Tarjeta genérica de una actividad     | `shared/components/tarjeta-actividad.tsx` |
+ | Tab genérica (todas las del flujo)    | `components/pasos/paso-actividades.tsx`  |
+-| Tabs con contenido propio             | `pasos/paso-informacion.tsx`, `paso-documentos.tsx` |
++| Tabs con contenido propio             | `pasos/paso-informacion.tsx`, `operaciones/components/paso-documentos.tsx` |
+ 
+ ## Tracking general (Exportación Aérea)
+ 
+@@ -48,7 +69,7 @@ consolidado, alcance (tooltip) y áreas responsables (OPS, Bodega, CBX):
+ 
+ ### Actividades (qué paso original va en cada paso)
+ 
+-`lib/actividades-tracking.ts` (`ACTIVIDADES_TRACKING`) es la hoja *Detalle original*: 69 actividades con
++`shared/lib/actividades-tracking.ts` (`ACTIVIDADES_TRACKING`) es la hoja *Detalle original*: 69 actividades con
+ paso nuevo, responsable, código original, proceso, entrada, actividad, resultado, tipo
+ (Principal/Opcional/Condicional/Excepción/Transversal) y control. Cuadra con la hoja *Tracking 6 pasos*.
+ El `id` es `"<responsable> <código>"` (ej. `"OPS 4.1"`, `"Bodega 0.1"`) porque los códigos se repiten entre
+@@ -87,7 +108,7 @@ tracking (`1 · Reserva`, `2 · Documentación`…); la tab muestra check si su
+ | —    | Documentos (extra)     | —                                                   |
+ | —    | Cancelación (extra)    | OPS 4.4                                             |
+ 
+-### Tipos de interacción (`lib/interacciones.ts`)
++### Tipos de interacción (`shared/lib/interacciones.ts`)
+ 
+ Cada actividad se trabaja con uno de 9 tipos; todos se ven con la misma tarjeta. **Son de uso interno: el
+ nombre del tipo no se muestra al usuario** (solo define icono, campos base y botón). En pantalla no usar
+@@ -105,26 +126,33 @@ términos técnicos: el usuario ve la actividad, sus campos y el botón con la a
+ | Seguimiento     | Trámite hasta que concluye                   | Estado, Fecha, Observaciones                 |
+ | Incidencia      | Excepción con motivo y autorización          | Motivo, Autorizado por, Detalle              |
+ 
+-### Gestión de cada actividad (`lib/gestion-actividades.ts`)
++### Gestión de cada actividad (`<actor>/lib/gestion-actividades.ts`)
++
++Cada actor define las suyas: `GESTION_OPERACIONES` (31, OPS), `GESTION_BODEGAS` (16, Bodega) y
++`GESTION_COMBEX` (22, CBX). Tipo y helpers en `shared/lib/gestion-actividades.ts`.
+ 
+-`GESTION_ACTIVIDADES["<id>"]`: `interaccion`, `campos` propios (van antes de los base), `accion` (texto del
++`GESTION_<ACTOR>["<id>"]`: `interaccion`, `campos` propios (van antes de los base), `accion` (texto del
+ botón), `compara` (referencia del control del Excel: muestra la referencia, "Actual" y "Diferencia"), `requiere`
+ (actividades previas, se muestran como "Antes: <actividad>") y `pendiente` (parte aún sin maquetar, p. ej. la tabla de rubros de OPS 9.2).
+ 
+-### Tarjeta (`components/tarjeta-actividad.tsx`) y tab genérica (`pasos/paso-actividades.tsx`)
++### Tarjeta (`shared/components/tarjeta-actividad.tsx`) y tab genérica (`pasos/paso-actividades.tsx`)
+ 
+ Tarjeta: encabezado (icono, código, actividad, responsable, tipo del Excel, estado), cuerpo (entrada,
+ actividades previas, comparación, campos) y pie (control, resultado y botón). Estado de maqueta según el paso
+ del embarque: Hecha / En curso / Pendiente; las excepciones dicen "Solo si aplica".
+ 
+ Tab genérica: encabezado (título y descripción), aviso (si la tab lo define), actividades agrupadas por
+-proceso y **Excepciones** aparte, plegadas.
++proceso y **Excepciones** aparte, plegadas. Cada actividad se muestra con el formulario de su actor
++(`FORMULARIO_DE_RESPONSABLE`: OPS → `ActividadOperaciones`, Bodega → `ActividadBodegas`, CBX →
++`ActividadCombex`), que es la tarjeta común con las definiciones de esa carpeta.
+ 
+ ### Agregar o mover algo
+ 
+ - Mover una actividad de tab: cambiar su id de lista en `PASOS_EMBARQUE`.
+ - Agregar una tab: 1 entrada en `PASOS_EMBARQUE` + su icono en `ICONOS` de `tabs-embarque.tsx`.
+-- Cambiar cómo se captura una actividad: su entrada en `GESTION_ACTIVIDADES`.
++- Cambiar cómo se captura una actividad: su entrada en `<actor>/lib/gestion-actividades.ts`.
++- Un formulario propio de un actor (fuera de la tarjeta común): en `<actor>/components/`, usado desde
++  `actividad-<actor>.tsx`.
+ - Un campo nuevo para todo un tipo: `base` del tipo en `INTERACCIONES`.
+ 
+ ## Perfiles: Operaciones, Bodegas, Combex
+@@ -146,7 +174,7 @@ Bodega → bodegas, CBX → combex):
+   "Solo consulta", los datos registrados y no tiene botón.
+ - El botón **Documentos** del resumen y el Sheet de actividades también siguen el perfil.
+ 
+-Las carpetas `v2/bodegas` y `v2/combex` montan `VistaGeneral` con su perfil.
++Las pantallas de cada actor montan `VistaGeneral` con su perfil.
+ 
+ **Facturación** (solo visualización): en pausa. Cuando se retome, sería otra entrada `grupo: "extra"` en
+ `PASOS_EMBARQUE`, de solo lectura.
+diff --git a/src/features/embarques/v2/general/components/VistaGeneral.tsx b/src/features/embarques/v2/general/components/VistaGeneral.tsx
+index 160cfa9..124d217 100644
+--- a/src/features/embarques/v2/general/components/VistaGeneral.tsx
++++ b/src/features/embarques/v2/general/components/VistaGeneral.tsx
+@@ -2,9 +2,9 @@
+ 
+ import { MousePointerClick } from "lucide-react";
+ import * as React from "react";
++import type { EmbarqueMaqueta, PerfilEmbarque } from "../../shared/lib/tipos";
+ import { EMBARQUES_MAQUETA } from "../lib/datos-maqueta";
+ import { pasosDelPerfil, type ValorPasoEmbarque } from "../lib/pasos";
+-import type { EmbarqueMaqueta, PerfilEmbarque } from "../lib/tipos";
+ import { DetalleActividadesSheet } from "./detalle-actividades-sheet";
+ import { EmbarquesTable } from "./embarques-table";
+ import { ResumenEmbarque } from "./resumen-embarque";
+diff --git a/src/features/embarques/v2/general/components/detalle-actividades-sheet.tsx b/src/features/embarques/v2/general/components/detalle-actividades-sheet.tsx
+index aaa6620..09fab27 100644
+--- a/src/features/embarques/v2/general/components/detalle-actividades-sheet.tsx
++++ b/src/features/embarques/v2/general/components/detalle-actividades-sheet.tsx
+@@ -9,10 +9,10 @@ import {
+   SheetTitle,
+ } from "@/shared/components/ui/sheet";
+ import { cn } from "@/shared/lib/utils";
+-import { actividadesDelPaso } from "../lib/actividades-tracking";
++import { ListaActividades } from "../../shared/components/actividades-tracking";
++import { actividadesDelPaso } from "../../shared/lib/actividades-tracking";
++import type { EmbarqueMaqueta, PerfilEmbarque, ResponsableTracking } from "../../shared/lib/tipos";
+ import { estadoPaso, PERFIL_DE_RESPONSABLE, TRACKING_PASOS } from "../lib/pasos";
+-import type { EmbarqueMaqueta, PerfilEmbarque, ResponsableTracking } from "../lib/tipos";
+-import { ListaActividades } from "./actividades-tracking";
+ 
+ /**
+  * Sheet lateral con el detalle de actividades del Excel por paso y área.
+diff --git a/src/features/embarques/v2/general/components/embarques-table.tsx b/src/features/embarques/v2/general/components/embarques-table.tsx
+index 75c8a77..21cd446 100644
+--- a/src/features/embarques/v2/general/components/embarques-table.tsx
++++ b/src/features/embarques/v2/general/components/embarques-table.tsx
+@@ -5,8 +5,8 @@ import * as React from "react";
+ import { DataTable, DataTableColumnHeader } from "@/shared/components/data-table/data-table";
+ import { Button } from "@/shared/components/ui/button";
+ import type { ColumnDef } from "@/shared/lib/tanstack-table";
++import type { EmbarqueMaqueta } from "../../shared/lib/tipos";
+ import { TRACKING_PASOS } from "../lib/pasos";
+-import type { EmbarqueMaqueta } from "../lib/tipos";
+ 
+ function crearColumnas({
+   seleccionado,
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx b/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx
+index b791794..5517b86 100644
+--- a/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx
++++ b/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx
+@@ -1,7 +1,14 @@
+ "use client";
+ 
+ import { AlertTriangle, ChevronDown } from "lucide-react";
+-import type { ActividadTracking } from "../../lib/actividades-tracking";
++import type * as React from "react";
++import { ActividadBodegas } from "../../../bodegas/components/actividad-bodegas";
++import { ActividadCombex } from "../../../combex/components/actividad-combex";
++import { ActividadOperaciones } from "../../../operaciones/components/actividad-operaciones";
++import type { PropsActividad } from "../../../shared/components/tarjeta-actividad";
++import { EncabezadoPaso } from "../../../shared/components/utils";
++import type { ActividadTracking } from "../../../shared/lib/actividades-tracking";
++import type { PerfilEmbarque, ResponsableTracking } from "../../../shared/lib/tipos";
+ import {
+   actividadesDelPerfil,
+   type PasoEmbarque,
+@@ -9,9 +16,6 @@ import {
+   puedeEditar,
+   TRACKING_PASOS,
+ } from "../../lib/pasos";
+-import type { PerfilEmbarque } from "../../lib/tipos";
+-import { TarjetaActividad } from "../tarjeta-actividad";
+-import { EncabezadoPaso } from "../utils";
+ 
+ /* ==========================================================================
+  * TAB GENÉRICA DE ACTIVIDADES (SOLO MAQUETA)
+@@ -24,8 +28,23 @@ import { EncabezadoPaso } from "../utils";
+  *
+  * Según el perfil: Operaciones ve todas las actividades (edita solo las de
+  * OPS); Bodegas y Combex ven solo las de su área.
++ *
++ * Los formularios no viven aquí: cada actividad usa el de su actor
++ * (`operaciones/`, `bodegas/`, `combex/`), según su responsable.
+  * ========================================================================== */
+ 
++/** Formulario de cada actor (carpeta del actor). */
++const FORMULARIO_DE_RESPONSABLE: Record<ResponsableTracking, (props: PropsActividad) => React.ReactNode> = {
++  OPS: ActividadOperaciones,
++  Bodega: ActividadBodegas,
++  CBX: ActividadCombex,
++};
++
++function FormularioActividad(props: PropsActividad) {
++  const Formulario = FORMULARIO_DE_RESPONSABLE[props.actividad.responsable];
++  return <Formulario {...props} />;
++}
++
+ /** Agrupa actividades consecutivas con el mismo proceso. */
+ function porProceso(actividades: readonly ActividadTracking[]) {
+   const grupos: { proceso: string; actividades: ActividadTracking[] }[] = [];
+@@ -76,7 +95,7 @@ export function PasoActividades({
+             {grupo.proceso}
+           </h4>
+           {grupo.actividades.map((actividad) => (
+-            <TarjetaActividad
++            <FormularioActividad
+               key={actividad.id}
+               actividad={actividad}
+               pasoActual={pasoActual}
+@@ -102,12 +121,12 @@ export function PasoActividades({
+           </summary>
+           <div className="space-y-2 pt-2">
+             {excepciones.map((actividad) => (
+-              <TarjetaActividad
+-              key={actividad.id}
+-              actividad={actividad}
+-              pasoActual={pasoActual}
+-              editable={puedeEditar(actividad, perfil)}
+-            />
++              <FormularioActividad
++                key={actividad.id}
++                actividad={actividad}
++                pasoActual={pasoActual}
++                editable={puedeEditar(actividad, perfil)}
++              />
+             ))}
+           </div>
+         </details>
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx b/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx
+index 82a37cc..ecc7ae1 100644
+--- a/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx
++++ b/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx
+@@ -2,8 +2,8 @@
+ 
+ import { Pencil } from "lucide-react";
+ import { Button } from "@/shared/components/ui/button";
+-import type { EmbarqueMaqueta } from "../../lib/tipos";
+-import { CampoMaqueta, EncabezadoPaso, SoloConsulta } from "../utils";
++import { CampoMaqueta, EncabezadoPaso, SoloConsulta } from "../../../shared/components/utils";
++import type { EmbarqueMaqueta } from "../../../shared/lib/tipos";
+ 
+ /**
+  * Detalle completo del embarque (el resumen breve está siempre visible arriba).
+diff --git a/src/features/embarques/v2/general/components/resumen-embarque.tsx b/src/features/embarques/v2/general/components/resumen-embarque.tsx
+index e462977..88abba4 100644
+--- a/src/features/embarques/v2/general/components/resumen-embarque.tsx
++++ b/src/features/embarques/v2/general/components/resumen-embarque.tsx
+@@ -2,9 +2,9 @@
+ 
+ import { FileUp, ListChecks, Route } from "lucide-react";
+ import { Button } from "@/shared/components/ui/button";
+-import type { EmbarqueMaqueta } from "../lib/tipos";
++import { Dato, SeccionEmbarque } from "../../shared/components/utils";
++import type { EmbarqueMaqueta } from "../../shared/lib/tipos";
+ import { TrackingGeneral } from "./tracking-general";
+-import { Dato, SeccionEmbarque } from "./utils";
+ 
+ /**
+  * Información breve del embarque seleccionado + tracking general.
+diff --git a/src/features/embarques/v2/general/components/tabs-embarque.tsx b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+index 7d05721..09489b7 100644
+--- a/src/features/embarques/v2/general/components/tabs-embarque.tsx
++++ b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+@@ -23,6 +23,8 @@ import {
+ import type * as React from "react";
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+ import { cn } from "@/shared/lib/utils";
++import { PasoDocumentos } from "../../operaciones/components/paso-documentos";
++import type { EmbarqueMaqueta, PerfilEmbarque } from "../../shared/lib/tipos";
+ import {
+   type PasoEmbarque,
+   pasoDeTab,
+@@ -31,9 +33,7 @@ import {
+   TRACKING_PASOS,
+   type ValorPasoEmbarque,
+ } from "../lib/pasos";
+-import type { EmbarqueMaqueta, PerfilEmbarque } from "../lib/tipos";
+ import { PasoActividades } from "./pasos/paso-actividades";
+-import { PasoDocumentos } from "./pasos/paso-documentos";
+ import { PasoInformacion } from "./pasos/paso-informacion";
+ 
+ const ICONOS: Record<ValorPasoEmbarque, LucideIcon> = {
+@@ -57,8 +57,9 @@ const ICONOS: Record<ValorPasoEmbarque, LucideIcon> = {
+ };
+ 
+ /**
+- * Contenido de la tab: Información y Documentos tienen su propio componente;
+- * las demás usan la tab genérica de actividades.
++ * Contenido de la tab: Información (vista general) y Documentos (Operaciones)
++ * tienen su propio componente; las demás usan la tab genérica de actividades,
++ * que muestra el formulario de cada actor.
+  */
+ function contenidoPaso(
+   paso: PasoEmbarque,
+diff --git a/src/features/embarques/v2/general/components/tracking-general.tsx b/src/features/embarques/v2/general/components/tracking-general.tsx
+index 4a3e0a7..e468f22 100644
+--- a/src/features/embarques/v2/general/components/tracking-general.tsx
++++ b/src/features/embarques/v2/general/components/tracking-general.tsx
+@@ -3,7 +3,7 @@
+ import { Check } from "lucide-react";
+ import * as React from "react";
+ import { cn } from "@/shared/lib/utils";
+-import { actividadesDelPaso } from "../lib/actividades-tracking";
++import { actividadesDelPaso } from "../../shared/lib/actividades-tracking";
+ import { estadoPaso, TRACKING_PASOS } from "../lib/pasos";
+ 
+ /**
+diff --git a/src/features/embarques/v2/general/components/tracking-sheet.tsx b/src/features/embarques/v2/general/components/tracking-sheet.tsx
+index 88bc0e8..6c0c20e 100644
+--- a/src/features/embarques/v2/general/components/tracking-sheet.tsx
++++ b/src/features/embarques/v2/general/components/tracking-sheet.tsx
+@@ -10,7 +10,7 @@ import {
+   SheetHeader,
+   SheetTitle,
+ } from "@/shared/components/ui/sheet";
+-import type { CoordinacionTracking, EmbarqueMaqueta } from "../lib/tipos";
++import type { CoordinacionTracking, EmbarqueMaqueta } from "../../shared/lib/tipos";
+ 
+ /** Lo que la pantalla hace al mover el tracking (actualizar estado y reconsultar). */
+ export type ActualizarEstadoTracking = (
+diff --git a/src/features/embarques/v2/general/lib/datos-maqueta.ts b/src/features/embarques/v2/general/lib/datos-maqueta.ts
+index 941e3fa..bf161b2 100644
+--- a/src/features/embarques/v2/general/lib/datos-maqueta.ts
++++ b/src/features/embarques/v2/general/lib/datos-maqueta.ts
+@@ -5,7 +5,7 @@
+  * Se eliminan cuando exista la API de embarques (`v2/embarques/api`).
+  * ========================================================================== */
+ 
+-import type { EmbarqueMaqueta } from "./tipos";
++import type { EmbarqueMaqueta } from "../../shared/lib/tipos";
+ 
+ export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
+   {
+diff --git a/src/features/embarques/v2/general/lib/gestion-actividades.ts b/src/features/embarques/v2/general/lib/gestion-actividades.ts
+deleted file mode 100644
+index f90a5e4..0000000
+--- a/src/features/embarques/v2/general/lib/gestion-actividades.ts
++++ /dev/null
+@@ -1,458 +0,0 @@
+-/* ==========================================================================
+- * GESTIÓN DE CADA ACTIVIDAD (SOLO MAQUETA)
+- *
+- * Cómo se trabaja en pantalla cada actividad de `ACTIVIDADES_TRACKING`
+- * (hoja "Detalle original" del Excel): tipo de interacción, campos propios,
+- * texto del botón, referencia contra la que se compara y de qué actividades
+- * depende. Los campos `base` del tipo se agregan después de los propios.
+- *
+- * Todas las actividades del Excel deben tener entrada aquí (sin entrada se
+- * muestra como formulario genérico).
+- * ========================================================================== */
+-
+-import type { CampoGestion, TipoInteraccion } from "./interacciones";
+-import { INTERACCIONES } from "./interacciones";
+-
+-export type GestionActividad = {
+-  interaccion: TipoInteraccion;
+-  campos?: readonly CampoGestion[];
+-  /** Texto del botón (si no, el del tipo de interacción). */
+-  accion?: string;
+-  /** Referencia contra la que se compara (control del Excel). */
+-  compara?: string;
+-  /** Ids de actividades que deben estar hechas antes. */
+-  requiere?: readonly string[];
+-  /** Parte que aún no se maqueta en detalle. */
+-  pendiente?: string;
+-};
+-
+-const PESO_MEDIDAS: readonly CampoGestion[] = [
+-  { label: "Peso (kg)", tipo: "numero", requerido: true },
+-  { label: "Largo (cm)", tipo: "numero" },
+-  { label: "Ancho (cm)", tipo: "numero" },
+-  { label: "Alto (cm)", tipo: "numero" },
+-];
+-
+-export const GESTION_ACTIVIDADES: Record<string, GestionActividad> = {
+-  /* ---------- Paso 1 · Coordinación y reserva ---------- */
+-  "OPS 0.1": {
+-    interaccion: "formulario",
+-    accion: "Programar recolección",
+-    campos: [
+-      { label: "Dirección de recolección", requerido: true },
+-      { label: "Contacto" },
+-      { label: "Fecha y hora", tipo: "fecha-hora", requerido: true },
+-      { label: "Proveedor de transporte", tipo: "seleccion" },
+-      { label: "Unidad / placa" },
+-      { label: "Piloto" },
+-    ],
+-  },
+-  "OPS 0.2": { interaccion: "notificacion", accion: "Enviar confirmación", requiere: ["OPS 0.1"] },
+-  "OPS 0.3": { interaccion: "orden-compra", accion: "Generar OC interna" },
+-  "OPS 0.4": {
+-    interaccion: "formulario",
+-    accion: "Solicitar empaque",
+-    campos: [
+-      { label: "Proveedor de empaque", tipo: "seleccion", requerido: true },
+-      { label: "Tipo de empaque" },
+-      { label: "Autorización del cliente", tipo: "seleccion", requerido: true },
+-    ],
+-  },
+-  "OPS 0.5": { interaccion: "orden-compra", accion: "Generar OC de empaque", requiere: ["OPS 0.4"] },
+-  "Bodega 0.1": {
+-    interaccion: "confirmacion",
+-    accion: "Confirmar recepción",
+-    campos: [{ label: "Piezas recibidas", tipo: "numero", requerido: true }],
+-  },
+-  "Bodega 0.2": {
+-    interaccion: "dato-especial",
+-    accion: "Registrar repeso",
+-    compara: "Peso declarado",
+-    campos: [{ label: "Peso (kg)", tipo: "numero", requerido: true }],
+-  },
+-  "Bodega 0.3": {
+-    interaccion: "dato-especial",
+-    accion: "Registrar medidas",
+-    compara: "Dimensiones declaradas",
+-    campos: PESO_MEDIDAS.slice(1),
+-  },
+-  "Bodega 0.4": {
+-    interaccion: "confirmacion",
+-    accion: "Confirmar empaque",
+-    requiere: ["OPS 0.4"],
+-    campos: [{ label: "Resultado de la revisión", tipo: "seleccion", requerido: true }],
+-  },
+-  "Bodega 0.5": {
+-    interaccion: "dato-especial",
+-    accion: "Actualizar e informar a OPS",
+-    compara: "Peso y medidas antes del empaque",
+-    requiere: ["Bodega 0.4"],
+-    campos: PESO_MEDIDAS,
+-  },
+-  "OPS 1.1": {
+-    interaccion: "formulario",
+-    accion: "Asignar HAWB",
+-    campos: [
+-      { label: "No. HAWB", requerido: true },
+-      { label: "Fecha de asignación", tipo: "fecha" },
+-    ],
+-  },
+-  "OPS 1.2": {
+-    interaccion: "formulario",
+-    accion: "Registrar MAWB",
+-    campos: [
+-      { label: "No. MAWB", requerido: true },
+-      { label: "Línea aérea", tipo: "seleccion", requerido: true },
+-      { label: "Booking" },
+-    ],
+-  },
+-  "OPS 1.3": {
+-    interaccion: "dato-especial",
+-    accion: "Ingresar correlativo",
+-    compara: "Último correlativo registrado",
+-    requiere: ["OPS 1.2"],
+-    campos: [{ label: "Correlativo MAWB", requerido: true }],
+-  },
+-  "OPS 2.1": {
+-    interaccion: "formulario",
+-    accion: "Preparar solicitud",
+-    campos: [
+-      { label: "Línea aérea / proveedor", tipo: "seleccion", requerido: true },
+-      { label: "Destino", requerido: true },
+-      { label: "Fecha de vuelo", tipo: "fecha", requerido: true },
+-      { label: "Piezas", tipo: "numero", requerido: true },
+-      { label: "Peso (kg)", tipo: "numero", requerido: true },
+-      { label: "Dimensiones" },
+-    ],
+-  },
+-  "OPS 2.2": {
+-    interaccion: "notificacion",
+-    accion: "Enviar solicitud",
+-    requiere: ["OPS 2.1"],
+-    campos: [
+-      { label: "Tarifa", tipo: "numero" },
+-      { label: "PP / CC", tipo: "seleccion", requerido: true },
+-      { label: "EORI" },
+-      { label: "Partida arancelaria" },
+-      { label: "Descripción de la mercancía" },
+-    ],
+-  },
+-  "OPS 3.1": {
+-    interaccion: "confirmacion",
+-    accion: "Validar reserva",
+-    compara: "Solicitud de reserva",
+-    requiere: ["OPS 2.2"],
+-    campos: [
+-      { label: "Vuelo", requerido: true },
+-      { label: "Fecha de vuelo", tipo: "fecha", requerido: true },
+-      { label: "No. de booking" },
+-      { label: "Condiciones", tipo: "area" },
+-    ],
+-  },
+-  "OPS 3.2": { interaccion: "notificacion", accion: "Enviar confirmación al cliente", requiere: ["OPS 3.1"] },
+-
+-  /* ---------- Paso 2 · Documentación y gestión aduanera ---------- */
+-  "OPS 4.1": {
+-    interaccion: "documento",
+-    accion: "Generar draft",
+-    campos: [
+-      { label: "Remitente" },
+-      { label: "Consignatario" },
+-      { label: "Piezas", tipo: "numero" },
+-      { label: "Peso (kg)", tipo: "numero" },
+-      { label: "Destino" },
+-    ],
+-    pendiente: "Vista previa del draft.",
+-  },
+-  "OPS 4.2": {
+-    interaccion: "notificacion",
+-    accion: "Enviar preaviso",
+-    requiere: ["OPS 4.1"],
+-    campos: [{ label: "Agente en destino", tipo: "seleccion", requerido: true }],
+-  },
+-  "OPS 4.3": {
+-    interaccion: "orden-compra",
+-    accion: "Generar OC de pago aéreo",
+-    compara: "Tarifa negociada",
+-    requiere: ["OPS 3.1"],
+-  },
+-  "OPS 4.4": {
+-    interaccion: "incidencia",
+-    accion: "Solicitar anulación",
+-    campos: [{ label: "Qué se anula (OC / reserva)", tipo: "seleccion", requerido: true }],
+-  },
+-  "OPS 5.1": {
+-    interaccion: "notificacion",
+-    accion: "Solicitar servicio de aduana",
+-    campos: [{ label: "Agente aduanal", tipo: "seleccion", requerido: true }],
+-  },
+-  "OPS 5.2": { interaccion: "orden-compra", accion: "Generar OC de aduana", requiere: ["OPS 5.1"] },
+-  "OPS 5.3": {
+-    interaccion: "formulario",
+-    accion: "Solicitar depósito",
+-    campos: [
+-      { label: "Monto", tipo: "numero", requerido: true },
+-      { label: "Moneda", tipo: "seleccion" },
+-      { label: "Saldo disponible", tipo: "numero" },
+-      { label: "Comprobante", tipo: "archivo" },
+-    ],
+-  },
+-  "OPS 5.4": {
+-    interaccion: "seguimiento",
+-    compara: "Guía (HAWB / MAWB)",
+-    campos: [{ label: "No. DUCA" }],
+-  },
+-  "CBX E1": {
+-    interaccion: "incidencia",
+-    accion: "Solicitar saldo",
+-    campos: [{ label: "Monto", tipo: "numero", requerido: true }],
+-  },
+-
+-  /* ---------- Paso 3 · Liberación y despacho de bodega ---------- */
+-  "OPS 6.1": {
+-    interaccion: "confirmacion",
+-    accion: "Liberar en sistema",
+-    requiere: ["OPS 5.4"],
+-    campos: [{ label: "No. DUCA autorizada", requerido: true }],
+-  },
+-  "Bodega 7.1": {
+-    interaccion: "confirmacion",
+-    accion: "Validar recepción",
+-    campos: [
+-      { label: "Piezas recibidas", tipo: "numero", requerido: true },
+-      { label: "Estado físico", tipo: "seleccion", requerido: true },
+-    ],
+-  },
+-  "Bodega 7.2": {
+-    interaccion: "dato-especial",
+-    accion: "Registrar repeso y medidas",
+-    compara: "Peso y medidas del draft",
+-    campos: PESO_MEDIDAS,
+-  },
+-  "Bodega 7.3": {
+-    interaccion: "documento",
+-    accion: "Imprimir etiquetas",
+-    campos: [{ label: "Cantidad de etiquetas", tipo: "numero" }],
+-  },
+-  "Bodega 7.4": { interaccion: "documento", accion: "Imprimir manifiesto" },
+-  "Bodega 7.5": { interaccion: "evidencia" },
+-  "Bodega 7.6": {
+-    interaccion: "formulario",
+-    accion: "Asignar unidad",
+-    campos: [
+-      { label: "Proveedor", tipo: "seleccion", requerido: true },
+-      { label: "Placa", requerido: true },
+-      { label: "Piloto", requerido: true },
+-      { label: "Fecha y hora", tipo: "fecha-hora" },
+-    ],
+-  },
+-  "Bodega 7.7": {
+-    interaccion: "documento",
+-    accion: "Generar pase de salida",
+-    requiere: ["OPS 6.1"],
+-    campos: [{ label: "No. de pase" }],
+-  },
+-  "Bodega 7.8": {
+-    interaccion: "confirmacion",
+-    accion: "Confirmar despacho",
+-    requiere: ["Bodega 7.7"],
+-    campos: [
+-      { label: "Transportista" },
+-      { label: "Firma o evidencia de recepción", tipo: "archivo", requerido: true },
+-    ],
+-  },
+-  "Bodega 7.9": {
+-    interaccion: "confirmacion",
+-    accion: "Descargar inventario",
+-    compara: "Piezas en inventario",
+-    requiere: ["Bodega 7.8"],
+-    campos: [{ label: "Piezas despachadas", tipo: "numero", requerido: true }],
+-  },
+-  "Bodega E1": {
+-    interaccion: "incidencia",
+-    accion: "Detener despacho e informar a OPS",
+-    campos: [{ label: "Diferencia en (piezas / peso / medidas)", tipo: "seleccion", requerido: true }],
+-  },
+-  "Bodega E2": {
+-    interaccion: "incidencia",
+-    accion: "Escalar caso",
+-    campos: [{ label: "Fotografías del daño", tipo: "archivo", requerido: true }],
+-  },
+-
+-  /* ---------- Paso 4 · Recepción en COMBEX y documentación final ---------- */
+-  "CBX 8.1": { interaccion: "confirmacion", accion: "Confirmar entrega en terminal" },
+-  "CBX 8.2": {
+-    interaccion: "dato-especial",
+-    accion: "Registrar peso oficial",
+-    compara: "Peso de bodega",
+-    requiere: ["CBX 8.1"],
+-    campos: [
+-      { label: "Peso oficial (kg)", tipo: "numero", requerido: true },
+-      { label: "Volumen (m³)", tipo: "numero" },
+-    ],
+-  },
+-  "CBX 8.3": {
+-    interaccion: "formulario",
+-    accion: "Registrar pago de boleta",
+-    requiere: ["CBX 8.2"],
+-    campos: [
+-      { label: "No. de boleta", requerido: true },
+-      { label: "Monto", tipo: "numero" },
+-      { label: "Comprobante", tipo: "archivo", requerido: true },
+-    ],
+-  },
+-  "CBX 8.4": { interaccion: "evidencia" },
+-  "CBX 8.5": { interaccion: "notificacion", accion: "Informar al cliente", requiere: ["CBX 8.2", "CBX 8.4"] },
+-  "OPS 9.1": {
+-    interaccion: "dato-especial",
+-    accion: "Actualizar datos finales",
+-    compara: "Draft",
+-    requiere: ["CBX 8.2"],
+-    campos: [
+-      { label: "Peso oficial (kg)", tipo: "numero", requerido: true },
+-      { label: "Peso cobrable (kg)", tipo: "numero" },
+-      { label: "Piezas", tipo: "numero" },
+-    ],
+-  },
+-  "OPS 9.2": {
+-    interaccion: "confirmacion",
+-    accion: "Confirmar tarifas",
+-    compara: "Cotización",
+-    campos: [
+-      { label: "Total costo", tipo: "numero" },
+-      { label: "Total venta", tipo: "numero" },
+-      { label: "Profit", tipo: "numero" },
+-    ],
+-    pendiente: "Tabla de rubros cotizados (costo / venta) y su confirmación.",
+-  },
+-  "OPS 9.3": {
+-    interaccion: "documento",
+-    accion: "Emitir guía final",
+-    requiere: ["OPS 9.1", "OPS 9.2"],
+-    campos: [{ label: "No. de guía final" }],
+-  },
+-  "OPS 9.4": { interaccion: "notificacion", accion: "Notificar al cliente", requiere: ["OPS 9.3"] },
+-  "OPS 9.5": {
+-    interaccion: "formulario",
+-    accion: "Gestionar seguro",
+-    campos: [
+-      { label: "Aseguradora", tipo: "seleccion" },
+-      { label: "Valor asegurable", tipo: "numero", requerido: true },
+-      { label: "Prima", tipo: "numero" },
+-      { label: "No. de póliza" },
+-    ],
+-  },
+-  "OPS E2": {
+-    interaccion: "incidencia",
+-    accion: "Solicitar CCA",
+-    campos: [{ label: "Dato original", requerido: true }, { label: "Dato corregido", requerido: true }],
+-  },
+-  "CBX 10.1": {
+-    interaccion: "documento",
+-    accion: "Adjuntar hojas de seguridad",
+-    campos: [
+-      { label: "Hojas de seguridad", tipo: "archivo", requerido: true },
+-      { label: "Vigencia", tipo: "fecha" },
+-    ],
+-  },
+-  "CBX 10.2": {
+-    interaccion: "documento",
+-    accion: "Imprimir guías",
+-    requiere: ["OPS 9.3"],
+-    campos: [{ label: "Copias", tipo: "numero" }],
+-  },
+-  "CBX 10.3": { interaccion: "documento", accion: "Imprimir manifiestos", requiere: ["OPS 9.3"] },
+-  "CBX 10.4": {
+-    interaccion: "documento",
+-    accion: "Imprimir ND de destino",
+-    campos: [{ label: "Destinatario" }, { label: "Monto", tipo: "numero" }],
+-  },
+-  "CBX 10.5": {
+-    interaccion: "documento",
+-    accion: "Imprimir NC de profit",
+-    requiere: ["OPS 9.2"],
+-    campos: [{ label: "Monto", tipo: "numero" }],
+-  },
+-
+-  /* ---------- Paso 5 · Despacho, salida aérea y complementaria ---------- */
+-  "CBX 11.1": { interaccion: "notificacion", accion: "Notificar carga a despachar" },
+-  "CBX 12.1": {
+-    interaccion: "confirmacion",
+-    accion: "Confirmar salida",
+-    compara: "Reserva confirmada",
+-    campos: [
+-      { label: "Vuelo real", requerido: true },
+-      { label: "Fecha y hora de salida real", tipo: "fecha-hora", requerido: true },
+-    ],
+-  },
+-  "CBX 12.2": { interaccion: "notificacion", accion: "Solicitar complementaria", requiere: ["CBX 12.1"] },
+-  "CBX 12.3": { interaccion: "notificacion", accion: "Enviar aviso al cliente", requiere: ["CBX 12.1"] },
+-  "CBX 12.4": { interaccion: "notificacion", accion: "Enviar aviso a destino", requiere: ["CBX 12.1"] },
+-  "CBX 13.1": { interaccion: "seguimiento", requiere: ["CBX 12.2"] },
+-  "CBX 13.2": {
+-    interaccion: "notificacion",
+-    accion: "Notificar conclusión",
+-    requiere: ["CBX 13.1"],
+-    campos: [{ label: "Documento final", tipo: "archivo", requerido: true }],
+-  },
+-  "OPS E1": {
+-    interaccion: "incidencia",
+-    accion: "Coordinar nueva reserva",
+-    campos: [
+-      { label: "Nueva fecha de vuelo", tipo: "fecha", requerido: true },
+-      { label: "Nuevo booking" },
+-    ],
+-  },
+-  "CBX E2": {
+-    interaccion: "incidencia",
+-    accion: "Informar no salida",
+-    campos: [{ label: "Nueva fecha", tipo: "fecha" }],
+-  },
+-  "CBX E3": {
+-    interaccion: "incidencia",
+-    accion: "Informar incidencia",
+-    campos: [{ label: "Tipo (cambio / cancelación / descarga)", tipo: "seleccion", requerido: true }],
+-  },
+-  "CBX E4": {
+-    interaccion: "seguimiento",
+-    requiere: ["OPS E2"],
+-    campos: [{ label: "Confirmación de recepción en destino", tipo: "fecha" }],
+-  },
+-
+-  /* ---------- Paso 6 · Arribo y cierre ---------- */
+-  "CBX 14.1": {
+-    interaccion: "confirmacion",
+-    accion: "Confirmar arribo",
+-    campos: [{ label: "Fecha y hora de llegada", tipo: "fecha-hora", requerido: true }],
+-  },
+-  "OPS 15": {
+-    interaccion: "confirmacion",
+-    accion: "Enviar a facturación",
+-    campos: [{ label: "¿Cargos pendientes?", tipo: "seleccion", requerido: true }],
+-  },
+-  "OPS 16": {
+-    interaccion: "seguimiento",
+-    accion: "Actualizar estatus",
+-    campos: [{ label: "Fecha real del paso", tipo: "fecha" }],
+-  },
+-  "OPS 17": {
+-    interaccion: "orden-compra",
+-    accion: "Gestionar OC",
+-    pendiente: "Listado de OC del embarque (recolección, empaque, pago aéreo, aduana).",
+-  },
+-};
+-
+-const GESTION_DEFAULT: GestionActividad = { interaccion: "formulario" };
+-
+-export function gestionDe(idActividad: string): GestionActividad {
+-  return GESTION_ACTIVIDADES[idActividad] ?? GESTION_DEFAULT;
+-}
+-
+-/** Campos de la actividad: los propios y después los base de su tipo. */
+-export function camposDe(gestion: GestionActividad): CampoGestion[] {
+-  return [...(gestion.campos ?? []), ...INTERACCIONES[gestion.interaccion].base];
+-}
+-
+-export function accionDe(gestion: GestionActividad): string {
+-  return gestion.accion ?? INTERACCIONES[gestion.interaccion].accion;
+-}
+diff --git a/src/features/embarques/v2/general/lib/pasos.ts b/src/features/embarques/v2/general/lib/pasos.ts
+index c245df1..1d8579c 100644
+--- a/src/features/embarques/v2/general/lib/pasos.ts
++++ b/src/features/embarques/v2/general/lib/pasos.ts
+@@ -12,8 +12,8 @@
+  * Información y Documentos, que tienen el suyo).
+  * ========================================================================== */
+ 
+-import { type ActividadTracking, actividadesPorId } from "./actividades-tracking";
+-import type { EstadoPaso, PasoTracking, PerfilEmbarque, ResponsableTracking } from "./tipos";
++import { type ActividadTracking, actividadesPorId } from "../../shared/lib/actividades-tracking";
++import type { EstadoPaso, PasoTracking, PerfilEmbarque, ResponsableTracking } from "../../shared/lib/tipos";
+ 
+ /**
+  * Tracking de Exportación Aérea (6 pasos consolidados).
+diff --git a/src/features/embarques/v2/bodegas/.gitkeep b/src/features/embarques/v2/operaciones/api/.gitkeep
+similarity index 100%
+rename from src/features/embarques/v2/bodegas/.gitkeep
+rename to src/features/embarques/v2/operaciones/api/.gitkeep
+diff --git a/src/features/embarques/v2/operaciones/components/actividad-operaciones.tsx b/src/features/embarques/v2/operaciones/components/actividad-operaciones.tsx
+new file mode 100644
+index 0000000..d0ab59d
+--- /dev/null
++++ b/src/features/embarques/v2/operaciones/components/actividad-operaciones.tsx
+@@ -0,0 +1,13 @@
++"use client";
++
++import { type PropsActividad, TarjetaActividad } from "../../shared/components/tarjeta-actividad";
++import { gestionDe } from "../../shared/lib/gestion-actividades";
++import { GESTION_OPERACIONES } from "../lib/gestion-actividades";
++
++/**
++ * Formulario de una actividad de OPS (tarjeta común con las definiciones de
++ * `lib/gestion-actividades.ts` de esta carpeta).
++ */
++export function ActividadOperaciones(props: PropsActividad) {
++  return <TarjetaActividad {...props} gestion={gestionDe(GESTION_OPERACIONES, props.actividad.id)} />;
++}
+diff --git a/src/features/embarques/v2/combex/.gitkeep b/src/features/embarques/v2/operaciones/components/operaciones.tsx
+similarity index 100%
+rename from src/features/embarques/v2/combex/.gitkeep
+rename to src/features/embarques/v2/operaciones/components/operaciones.tsx
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-documentos.tsx b/src/features/embarques/v2/operaciones/components/paso-documentos.tsx
+similarity index 94%
+rename from src/features/embarques/v2/general/components/pasos/paso-documentos.tsx
+rename to src/features/embarques/v2/operaciones/components/paso-documentos.tsx
+index 0f59cf2..f976e95 100644
+--- a/src/features/embarques/v2/general/components/pasos/paso-documentos.tsx
++++ b/src/features/embarques/v2/operaciones/components/paso-documentos.tsx
+@@ -2,7 +2,7 @@
+ 
+ import { Upload } from "lucide-react";
+ import { Button } from "@/shared/components/ui/button";
+-import { EncabezadoPaso, Pendiente } from "../utils";
++import { EncabezadoPaso, Pendiente } from "../../shared/components/utils";
+ 
+ /**
+  * Subida de documentos. No depende del paso del embarque: se puede usar en
+diff --git a/src/features/embarques/v2/embarques/api/.gitkeep b/src/features/embarques/v2/operaciones/hooks/.gitkeep
+similarity index 100%
+rename from src/features/embarques/v2/embarques/api/.gitkeep
+rename to src/features/embarques/v2/operaciones/hooks/.gitkeep
+diff --git a/src/features/embarques/v2/operaciones/lib/gestion-actividades.ts b/src/features/embarques/v2/operaciones/lib/gestion-actividades.ts
+new file mode 100644
+index 0000000..5a7ad42
+--- /dev/null
++++ b/src/features/embarques/v2/operaciones/lib/gestion-actividades.ts
+@@ -0,0 +1,236 @@
++/* ==========================================================================
++ * FORMULARIOS DE OPERACIONES (OPS) (SOLO MAQUETA)
++ *
++ * Cómo se trabaja en pantalla cada actividad de OPS de `ACTIVIDADES_TRACKING`
++ * (hoja "Detalle original" del Excel): tipo de interacción, campos propios,
++ * texto del botón, referencia contra la que se compara y de qué actividades
++ * depende. Los campos `base` del tipo se agregan después de los propios
++ * (ver `shared/lib/gestion-actividades.ts`).
++ *
++ * Todas las actividades de OPS del Excel deben tener entrada aquí (sin
++ * entrada se muestra como formulario genérico).
++ * ========================================================================== */
++
++import type { DefinicionesGestion } from "../../shared/lib/gestion-actividades";
++
++export const GESTION_OPERACIONES: DefinicionesGestion = {
++  /* ---------- Paso 1 · Coordinación y reserva ---------- */
++  "OPS 0.1": {
++    interaccion: "formulario",
++    accion: "Programar recolección",
++    campos: [
++      { label: "Dirección de recolección", requerido: true },
++      { label: "Contacto" },
++      { label: "Fecha y hora", tipo: "fecha-hora", requerido: true },
++      { label: "Proveedor de transporte", tipo: "seleccion" },
++      { label: "Unidad / placa" },
++      { label: "Piloto" },
++    ],
++  },
++  "OPS 0.2": { interaccion: "notificacion", accion: "Enviar confirmación", requiere: ["OPS 0.1"] },
++  "OPS 0.3": { interaccion: "orden-compra", accion: "Generar OC interna" },
++  "OPS 0.4": {
++    interaccion: "formulario",
++    accion: "Solicitar empaque",
++    campos: [
++      { label: "Proveedor de empaque", tipo: "seleccion", requerido: true },
++      { label: "Tipo de empaque" },
++      { label: "Autorización del cliente", tipo: "seleccion", requerido: true },
++    ],
++  },
++  "OPS 0.5": { interaccion: "orden-compra", accion: "Generar OC de empaque", requiere: ["OPS 0.4"] },
++  "OPS 1.1": {
++    interaccion: "formulario",
++    accion: "Asignar HAWB",
++    campos: [
++      { label: "No. HAWB", requerido: true },
++      { label: "Fecha de asignación", tipo: "fecha" },
++    ],
++  },
++  "OPS 1.2": {
++    interaccion: "formulario",
++    accion: "Registrar MAWB",
++    campos: [
++      { label: "No. MAWB", requerido: true },
++      { label: "Línea aérea", tipo: "seleccion", requerido: true },
++      { label: "Booking" },
++    ],
++  },
++  "OPS 1.3": {
++    interaccion: "dato-especial",
++    accion: "Ingresar correlativo",
++    compara: "Último correlativo registrado",
++    requiere: ["OPS 1.2"],
++    campos: [{ label: "Correlativo MAWB", requerido: true }],
++  },
++  "OPS 2.1": {
++    interaccion: "formulario",
++    accion: "Preparar solicitud",
++    campos: [
++      { label: "Línea aérea / proveedor", tipo: "seleccion", requerido: true },
++      { label: "Destino", requerido: true },
++      { label: "Fecha de vuelo", tipo: "fecha", requerido: true },
++      { label: "Piezas", tipo: "numero", requerido: true },
++      { label: "Peso (kg)", tipo: "numero", requerido: true },
++      { label: "Dimensiones" },
++    ],
++  },
++  "OPS 2.2": {
++    interaccion: "notificacion",
++    accion: "Enviar solicitud",
++    requiere: ["OPS 2.1"],
++    campos: [
++      { label: "Tarifa", tipo: "numero" },
++      { label: "PP / CC", tipo: "seleccion", requerido: true },
++      { label: "EORI" },
++      { label: "Partida arancelaria" },
++      { label: "Descripción de la mercancía" },
++    ],
++  },
++  "OPS 3.1": {
++    interaccion: "confirmacion",
++    accion: "Validar reserva",
++    compara: "Solicitud de reserva",
++    requiere: ["OPS 2.2"],
++    campos: [
++      { label: "Vuelo", requerido: true },
++      { label: "Fecha de vuelo", tipo: "fecha", requerido: true },
++      { label: "No. de booking" },
++      { label: "Condiciones", tipo: "area" },
++    ],
++  },
++  "OPS 3.2": { interaccion: "notificacion", accion: "Enviar confirmación al cliente", requiere: ["OPS 3.1"] },
++
++  /* ---------- Paso 2 · Documentación y gestión aduanera ---------- */
++  "OPS 4.1": {
++    interaccion: "documento",
++    accion: "Generar draft",
++    campos: [
++      { label: "Remitente" },
++      { label: "Consignatario" },
++      { label: "Piezas", tipo: "numero" },
++      { label: "Peso (kg)", tipo: "numero" },
++      { label: "Destino" },
++    ],
++    pendiente: "Vista previa del draft.",
++  },
++  "OPS 4.2": {
++    interaccion: "notificacion",
++    accion: "Enviar preaviso",
++    requiere: ["OPS 4.1"],
++    campos: [{ label: "Agente en destino", tipo: "seleccion", requerido: true }],
++  },
++  "OPS 4.3": {
++    interaccion: "orden-compra",
++    accion: "Generar OC de pago aéreo",
++    compara: "Tarifa negociada",
++    requiere: ["OPS 3.1"],
++  },
++  "OPS 4.4": {
++    interaccion: "incidencia",
++    accion: "Solicitar anulación",
++    campos: [{ label: "Qué se anula (OC / reserva)", tipo: "seleccion", requerido: true }],
++  },
++  "OPS 5.1": {
++    interaccion: "notificacion",
++    accion: "Solicitar servicio de aduana",
++    campos: [{ label: "Agente aduanal", tipo: "seleccion", requerido: true }],
++  },
++  "OPS 5.2": { interaccion: "orden-compra", accion: "Generar OC de aduana", requiere: ["OPS 5.1"] },
++  "OPS 5.3": {
++    interaccion: "formulario",
++    accion: "Solicitar depósito",
++    campos: [
++      { label: "Monto", tipo: "numero", requerido: true },
++      { label: "Moneda", tipo: "seleccion" },
++      { label: "Saldo disponible", tipo: "numero" },
++      { label: "Comprobante", tipo: "archivo" },
++    ],
++  },
++  "OPS 5.4": {
++    interaccion: "seguimiento",
++    compara: "Guía (HAWB / MAWB)",
++    campos: [{ label: "No. DUCA" }],
++  },
++
++  /* ---------- Paso 3 · Liberación y despacho de bodega ---------- */
++  "OPS 6.1": {
++    interaccion: "confirmacion",
++    accion: "Liberar en sistema",
++    requiere: ["OPS 5.4"],
++    campos: [{ label: "No. DUCA autorizada", requerido: true }],
++  },
++
++  /* ---------- Paso 4 · Recepción en COMBEX y documentación final ---------- */
++  "OPS 9.1": {
++    interaccion: "dato-especial",
++    accion: "Actualizar datos finales",
++    compara: "Draft",
++    requiere: ["CBX 8.2"],
++    campos: [
++      { label: "Peso oficial (kg)", tipo: "numero", requerido: true },
++      { label: "Peso cobrable (kg)", tipo: "numero" },
++      { label: "Piezas", tipo: "numero" },
++    ],
++  },
++  "OPS 9.2": {
++    interaccion: "confirmacion",
++    accion: "Confirmar tarifas",
++    compara: "Cotización",
++    campos: [
++      { label: "Total costo", tipo: "numero" },
++      { label: "Total venta", tipo: "numero" },
++      { label: "Profit", tipo: "numero" },
++    ],
++    pendiente: "Tabla de rubros cotizados (costo / venta) y su confirmación.",
++  },
++  "OPS 9.3": {
++    interaccion: "documento",
++    accion: "Emitir guía final",
++    requiere: ["OPS 9.1", "OPS 9.2"],
++    campos: [{ label: "No. de guía final" }],
++  },
++  "OPS 9.4": { interaccion: "notificacion", accion: "Notificar al cliente", requiere: ["OPS 9.3"] },
++  "OPS 9.5": {
++    interaccion: "formulario",
++    accion: "Gestionar seguro",
++    campos: [
++      { label: "Aseguradora", tipo: "seleccion" },
++      { label: "Valor asegurable", tipo: "numero", requerido: true },
++      { label: "Prima", tipo: "numero" },
++      { label: "No. de póliza" },
++    ],
++  },
++  "OPS E2": {
++    interaccion: "incidencia",
++    accion: "Solicitar CCA",
++    campos: [{ label: "Dato original", requerido: true }, { label: "Dato corregido", requerido: true }],
++  },
++
++  /* ---------- Paso 5 · Despacho, salida aérea y complementaria ---------- */
++  "OPS E1": {
++    interaccion: "incidencia",
++    accion: "Coordinar nueva reserva",
++    campos: [
++      { label: "Nueva fecha de vuelo", tipo: "fecha", requerido: true },
++      { label: "Nuevo booking" },
++    ],
++  },
++
++  /* ---------- Paso 6 · Arribo y cierre ---------- */
++  "OPS 15": {
++    interaccion: "confirmacion",
++    accion: "Enviar a facturación",
++    campos: [{ label: "¿Cargos pendientes?", tipo: "seleccion", requerido: true }],
++  },
++  "OPS 16": {
++    interaccion: "seguimiento",
++    accion: "Actualizar estatus",
++    campos: [{ label: "Fecha real del paso", tipo: "fecha" }],
++  },
++  "OPS 17": {
++    interaccion: "orden-compra",
++    accion: "Gestionar OC",
++    pendiente: "Listado de OC del embarque (recolección, empaque, pago aéreo, aduana).",
++  },
++};
+diff --git a/src/features/embarques/v2/shared/.gitkeep b/src/features/embarques/v2/shared/.gitkeep
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/src/features/embarques/v2/general/components/actividades-tracking.tsx b/src/features/embarques/v2/shared/components/actividades-tracking.tsx
+similarity index 100%
+rename from src/features/embarques/v2/general/components/actividades-tracking.tsx
+rename to src/features/embarques/v2/shared/components/actividades-tracking.tsx
+diff --git a/src/features/embarques/v2/general/components/tarjeta-actividad.tsx b/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
+similarity index 94%
+rename from src/features/embarques/v2/general/components/tarjeta-actividad.tsx
+rename to src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
+index a1a7acc..1226232 100644
+--- a/src/features/embarques/v2/general/components/tarjeta-actividad.tsx
++++ b/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
+@@ -18,7 +18,7 @@ import {
+ import { Button } from "@/shared/components/ui/button";
+ import { cn } from "@/shared/lib/utils";
+ import { type ActividadTracking, actividadesPorId } from "../lib/actividades-tracking";
+-import { accionDe, camposDe, gestionDe } from "../lib/gestion-actividades";
++import { accionDe, camposDe, type GestionActividad } from "../lib/gestion-actividades";
+ import type { CampoGestion, TipoInteraccion } from "../lib/interacciones";
+ import { EtiquetaTipo } from "./actividades-tracking";
+ import { CampoMaqueta, Dato, Pendiente, SoloConsulta } from "./utils";
+@@ -28,7 +28,7 @@ import { CampoMaqueta, Dato, Pendiente, SoloConsulta } from "./utils";
+  *
+  * Misma estructura para las 69 actividades del Excel; cambia según el tipo
+  * de interacción (`lib/interacciones.ts`) y los campos de la actividad
+- * (`lib/gestion-actividades.ts`):
++ * (`<actor>/lib/gestion-actividades.ts`):
+  *
+  *   encabezado: icono · código · actividad · responsable · tipo del Excel · estado
+  *   cuerpo:     entrada · actividades previas · comparación · campos
+@@ -38,6 +38,9 @@ import { CampoMaqueta, Dato, Pendiente, SoloConsulta } from "./utils";
+  *
+  * `editable = false` (actividad de otra área): mismos datos en solo consulta,
+  * sin campos de captura ni botón.
++ *
++ * La tarjeta es común; cada actor la usa con sus definiciones desde su carpeta
++ * (`operaciones/`, `bodegas/`, `combex/` → `components/actividad-<actor>.tsx`).
+  * ========================================================================== */
+ 
+ export const ICONO_INTERACCION: Record<TipoInteraccion, LucideIcon> = {
+@@ -140,16 +143,22 @@ function ValorCampo({ campo }: { campo: CampoGestion }) {
+   );
+ }
+ 
++/** Props del formulario de una actividad (lo que cada actor recibe de la tab). */
++export type PropsActividad = {
++  actividad: ActividadTracking;
++  pasoActual: number;
++  editable: boolean;
++};
++
+ export function TarjetaActividad({
+   actividad,
+   pasoActual,
+   editable,
+-}: {
+-  actividad: ActividadTracking;
+-  pasoActual: number;
+-  editable: boolean;
++  gestion,
++}: PropsActividad & {
++  /** Cómo se trabaja la actividad (definiciones del actor). */
++  gestion: GestionActividad;
+ }) {
+-  const gestion = gestionDe(actividad.id);
+   const Icono = ICONO_INTERACCION[gestion.interaccion];
+   const estado = ESTADO[estadoActividad(actividad, pasoActual)];
+   const requiere = actividadesPorId(gestion.requiere ?? []);
+diff --git a/src/features/embarques/v2/general/components/utils.tsx b/src/features/embarques/v2/shared/components/utils.tsx
+similarity index 100%
+rename from src/features/embarques/v2/general/components/utils.tsx
+rename to src/features/embarques/v2/shared/components/utils.tsx
+diff --git a/src/features/embarques/v2/general/lib/actividades-tracking.ts b/src/features/embarques/v2/shared/lib/actividades-tracking.ts
+similarity index 100%
+rename from src/features/embarques/v2/general/lib/actividades-tracking.ts
+rename to src/features/embarques/v2/shared/lib/actividades-tracking.ts
+diff --git a/src/features/embarques/v2/shared/lib/gestion-actividades.ts b/src/features/embarques/v2/shared/lib/gestion-actividades.ts
+new file mode 100644
+index 0000000..7a387db
+--- /dev/null
++++ b/src/features/embarques/v2/shared/lib/gestion-actividades.ts
+@@ -0,0 +1,47 @@
++/* ==========================================================================
++ * GESTIÓN DE ACTIVIDADES: MOTOR COMÚN (SOLO MAQUETA)
++ *
++ * Tipo y helpers para definir cómo se trabaja una actividad del tracking.
++ * Las definiciones viven en la carpeta de cada actor:
++ *
++ *   OPS    → operaciones/lib/gestion-actividades.ts (GESTION_OPERACIONES)
++ *   Bodega → bodegas/lib/gestion-actividades.ts     (GESTION_BODEGAS)
++ *   CBX    → combex/lib/gestion-actividades.ts      (GESTION_COMBEX)
++ *
++ * Los campos `base` del tipo de interacción se agregan después de los propios.
++ * ========================================================================== */
++
++import type { CampoGestion, TipoInteraccion } from "./interacciones";
++import { INTERACCIONES } from "./interacciones";
++
++export type GestionActividad = {
++  interaccion: TipoInteraccion;
++  campos?: readonly CampoGestion[];
++  /** Texto del botón (si no, el del tipo de interacción). */
++  accion?: string;
++  /** Referencia contra la que se compara (control del Excel). */
++  compara?: string;
++  /** Ids de actividades que deben estar hechas antes. */
++  requiere?: readonly string[];
++  /** Parte que aún no se maqueta en detalle. */
++  pendiente?: string;
++};
++
++/** Definiciones de un actor: id de la actividad (`"OPS 2.1"`) → cómo se trabaja. */
++export type DefinicionesGestion = Record<string, GestionActividad>;
++
++const GESTION_DEFAULT: GestionActividad = { interaccion: "formulario" };
++
++/** Definición de la actividad (sin entrada: formulario genérico). */
++export function gestionDe(definiciones: DefinicionesGestion, idActividad: string): GestionActividad {
++  return definiciones[idActividad] ?? GESTION_DEFAULT;
++}
++
++/** Campos de la actividad: los propios y después los base de su tipo. */
++export function camposDe(gestion: GestionActividad): CampoGestion[] {
++  return [...(gestion.campos ?? []), ...INTERACCIONES[gestion.interaccion].base];
++}
++
++export function accionDe(gestion: GestionActividad): string {
++  return gestion.accion ?? INTERACCIONES[gestion.interaccion].accion;
++}
+diff --git a/src/features/embarques/v2/general/lib/interacciones.ts b/src/features/embarques/v2/shared/lib/interacciones.ts
+similarity index 100%
+rename from src/features/embarques/v2/general/lib/interacciones.ts
+rename to src/features/embarques/v2/shared/lib/interacciones.ts
+diff --git a/src/features/embarques/v2/general/lib/tipos.ts b/src/features/embarques/v2/shared/lib/tipos.ts
+similarity index 100%
+rename from src/features/embarques/v2/general/lib/tipos.ts
+rename to src/features/embarques/v2/shared/lib/tipos.ts
