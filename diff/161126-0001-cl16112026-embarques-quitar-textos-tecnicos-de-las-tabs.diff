@@ -1,0 +1,328 @@
+diff --git a/src/features/embarques/v2/general/ARQUITECTURA.md b/src/features/embarques/v2/general/ARQUITECTURA.md
+index 2f03f43..4449df4 100644
+--- a/src/features/embarques/v2/general/ARQUITECTURA.md
++++ b/src/features/embarques/v2/general/ARQUITECTURA.md
+@@ -87,7 +87,9 @@ tracking (`1 · Reserva`, `2 · Documentación`…); la tab muestra check si su
+ 
+ ### Tipos de interacción (`lib/interacciones.ts`)
+ 
+-Cada actividad se trabaja con uno de 9 tipos; todos se ven con la misma tarjeta:
++Cada actividad se trabaja con uno de 9 tipos; todos se ven con la misma tarjeta. **Son de uso interno: el
++nombre del tipo no se muestra al usuario** (solo define icono, campos base y botón). En pantalla no usar
++términos técnicos: el usuario ve la actividad, sus campos y el botón con la acción.
+ 
+ | Tipo            | Para qué                                     | Campos base                                  |
+ | --------------- | -------------------------------------------- | -------------------------------------------- |
+@@ -104,16 +106,16 @@ Cada actividad se trabaja con uno de 9 tipos; todos se ven con la misma tarjeta:
+ ### Gestión de cada actividad (`lib/gestion-actividades.ts`)
+ 
+ `GESTION_ACTIVIDADES["<id>"]`: `interaccion`, `campos` propios (van antes de los base), `accion` (texto del
+-botón), `compara` (referencia del control del Excel: muestra Referencia / Registrado / Diferencia), `requiere`
+-(actividades previas) y `pendiente` (parte aún sin maquetar, p. ej. la tabla de rubros de OPS 9.2).
++botón), `compara` (referencia del control del Excel: muestra la referencia, "Actual" y "Diferencia"), `requiere`
++(actividades previas, se muestran como "Antes: <actividad>") y `pendiente` (parte aún sin maquetar, p. ej. la tabla de rubros de OPS 9.2).
+ 
+ ### Tarjeta (`components/tarjeta-actividad.tsx`) y tab genérica (`pasos/paso-actividades.tsx`)
+ 
+-Tarjeta: encabezado (icono del tipo, id, actividad, responsable, tipo del Excel, estado), cuerpo (entrada,
+-requiere, comparación, campos) y pie (control, resultado y botón). Estado de maqueta según el paso del
+-embarque: Hecha / En curso / Pendiente; las excepciones dicen "Si ocurre".
++Tarjeta: encabezado (icono, código, actividad, responsable, tipo del Excel, estado), cuerpo (entrada,
++actividades previas, comparación, campos) y pie (control, resultado y botón). Estado de maqueta según el paso
++del embarque: Hecha / En curso / Pendiente; las excepciones dicen "Solo si aplica".
+ 
+-Tab genérica: encabezado con los tipos que usa, aviso (si la tab lo define), actividades agrupadas por
++Tab genérica: encabezado (título y descripción), aviso (si la tab lo define), actividades agrupadas por
+ proceso y **Excepciones** aparte, plegadas.
+ 
+ ### Agregar o mover algo
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx b/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx
+index a9c6572..c61934c 100644
+--- a/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx
++++ b/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx
+@@ -2,18 +2,15 @@
+ 
+ import { AlertTriangle, ChevronDown } from "lucide-react";
+ import { type ActividadTracking, actividadesPorId } from "../../lib/actividades-tracking";
+-import { gestionDe } from "../../lib/gestion-actividades";
+-import { INTERACCIONES, type TipoInteraccion } from "../../lib/interacciones";
+ import { type PasoEmbarque, pasoDeTab, TRACKING_PASOS } from "../../lib/pasos";
+-import { ICONO_INTERACCION, TarjetaActividad } from "../tarjeta-actividad";
++import { TarjetaActividad } from "../tarjeta-actividad";
+ import { EncabezadoPaso } from "../utils";
+ 
+ /* ==========================================================================
+  * TAB GENÉRICA DE ACTIVIDADES (SOLO MAQUETA)
+  *
+  * Todas las tabs con actividades del Excel se ven igual:
+- *   1. Encabezado (título, descripción, paso del tracking y tipos de
+- *      interacción que usa).
++ *   1. Encabezado (título, descripción y paso del tracking).
+  *   2. Aviso (si la tab lo define).
+  *   3. Actividades del flujo agrupadas por proceso, en el orden de la tab.
+  *   4. Excepciones aparte, plegadas (solo se usan si ocurren).
+@@ -30,29 +27,6 @@ function porProceso(actividades: readonly ActividadTracking[]) {
+   return grupos;
+ }
+ 
+-/** Chips con los tipos de interacción que usa la tab. */
+-function TiposUsados({ actividades }: { actividades: readonly ActividadTracking[] }) {
+-  const tipos = [...new Set(actividades.map((actividad) => gestionDe(actividad.id).interaccion))];
+-
+-  return (
+-    <div className="flex flex-wrap gap-1">
+-      {tipos.map((tipo: TipoInteraccion) => {
+-        const Icono = ICONO_INTERACCION[tipo];
+-        return (
+-          <span
+-            key={tipo}
+-            className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground"
+-            title={INTERACCIONES[tipo].descripcion}
+-          >
+-            <Icono className="size-3.5" aria-hidden="true" />
+-            {INTERACCIONES[tipo].label}
+-          </span>
+-        );
+-      })}
+-    </div>
+-  );
+-}
+-
+ export function PasoActividades({ paso, pasoActual }: { paso: PasoEmbarque; pasoActual: number }) {
+   const actividades = actividadesPorId(paso.actividades);
+   const flujo = actividades.filter((actividad) => actividad.tipo !== "Excepción");
+@@ -62,11 +36,7 @@ export function PasoActividades({ paso, pasoActual }: { paso: PasoEmbarque; paso
+ 
+   return (
+     <div className="space-y-4">
+-      <EncabezadoPaso
+-        titulo={paso.label}
+-        descripcion={paso.descripcion}
+-        acciones={<TiposUsados actividades={actividades} />}
+-      />
++      <EncabezadoPaso titulo={paso.label} descripcion={paso.descripcion} />
+ 
+       {nombrePaso ? (
+         <p className="text-xs text-muted-foreground">
+@@ -101,7 +71,7 @@ export function PasoActividades({ paso, pasoActual }: { paso: PasoEmbarque; paso
+           <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-amber-800 dark:text-amber-200">
+             <AlertTriangle className="size-4" aria-hidden="true" />
+             Excepciones ({excepciones.length})
+-            <span className="text-xs font-normal text-muted-foreground">Solo si ocurren</span>
++            <span className="text-xs font-normal text-muted-foreground">Solo si aplican</span>
+             <ChevronDown
+               className="ml-auto size-4 transition-transform group-open:rotate-180"
+               aria-hidden="true"
+diff --git a/src/features/embarques/v2/general/components/tabs-embarque.tsx b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+index 843f88c..387366b 100644
+--- a/src/features/embarques/v2/general/components/tabs-embarque.tsx
++++ b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+@@ -87,7 +87,6 @@ function TriggerPaso({ paso, pasoActual }: { paso: PasoEmbarque; pasoActual: num
+         <span className="text-left">{paso.label}</span>
+         <span className="w-full text-left text-[9px]">
+           {paso.detalle}
+-          {paso.actividades.length > 0 ? ` · ${paso.actividades.length}` : ""}
+         </span>
+       </div>
+ 
+diff --git a/src/features/embarques/v2/general/components/tarjeta-actividad.tsx b/src/features/embarques/v2/general/components/tarjeta-actividad.tsx
+index 2d6e54a..580d91b 100644
+--- a/src/features/embarques/v2/general/components/tarjeta-actividad.tsx
++++ b/src/features/embarques/v2/general/components/tarjeta-actividad.tsx
+@@ -19,7 +19,7 @@ import { Button } from "@/shared/components/ui/button";
+ import { cn } from "@/shared/lib/utils";
+ import { type ActividadTracking, actividadesPorId } from "../lib/actividades-tracking";
+ import { accionDe, camposDe, gestionDe } from "../lib/gestion-actividades";
+-import { type CampoGestion, INTERACCIONES, type TipoInteraccion } from "../lib/interacciones";
++import type { CampoGestion, TipoInteraccion } from "../lib/interacciones";
+ import { EtiquetaTipo } from "./actividades-tracking";
+ import { CampoMaqueta, Dato, Pendiente } from "./utils";
+ 
+@@ -30,9 +30,11 @@ import { CampoMaqueta, Dato, Pendiente } from "./utils";
+  * de interacción (`lib/interacciones.ts`) y los campos de la actividad
+  * (`lib/gestion-actividades.ts`):
+  *
+- *   encabezado: icono del tipo · id · actividad · tipo del Excel · estado
+- *   cuerpo:     entrada requerida · referencia a comparar · campos
++ *   encabezado: icono · código · actividad · responsable · tipo del Excel · estado
++ *   cuerpo:     entrada · actividades previas · comparación · campos
+  *   pie:        control del Excel · resultado · botón de la acción
++ *
++ * El tipo de interacción es interno: no se muestra su nombre al usuario.
+  * ========================================================================== */
+ 
+ export const ICONO_INTERACCION: Record<TipoInteraccion, LucideIcon> = {
+@@ -53,7 +55,7 @@ const ESTADO: Record<EstadoActividad, { label: string; clase: string }> = {
+   hecha: { label: "Hecha", clase: "bg-primary text-primary-foreground" },
+   "en-curso": { label: "En curso", clase: "border border-primary text-primary" },
+   pendiente: { label: "Pendiente", clase: "bg-muted text-muted-foreground" },
+-  "si-ocurre": { label: "Si ocurre", clase: "border border-amber-500/40 text-amber-800 dark:text-amber-200" },
++  "si-ocurre": { label: "Solo si aplica", clase: "border border-amber-500/40 text-amber-800 dark:text-amber-200" },
+ };
+ 
+ /** Estado de maqueta: sale del paso del embarque (sin datos reales todavía). */
+@@ -118,7 +120,7 @@ function CampoActividad({ actividad, campo }: { actividad: ActividadTracking; ca
+   return (
+     <CampoMaqueta
+       id={id}
+-      label={tipo === "seleccion" ? `${campo.label} ▾` : campo.label}
++      label={campo.label}
+       tipo={tipoInput[tipo]}
+       requerido={campo.requerido ?? false}
+     />
+@@ -133,7 +135,6 @@ export function TarjetaActividad({
+   pasoActual: number;
+ }) {
+   const gestion = gestionDe(actividad.id);
+-  const interaccion = INTERACCIONES[gestion.interaccion];
+   const Icono = ICONO_INTERACCION[gestion.interaccion];
+   const estado = ESTADO[estadoActividad(actividad, pasoActual)];
+   const requiere = actividadesPorId(gestion.requiere ?? []);
+@@ -158,7 +159,6 @@ export function TarjetaActividad({
+             "flex size-9 shrink-0 items-center justify-center rounded-lg",
+             excepcion ? "bg-amber-500/20 text-amber-800 dark:text-amber-200" : "bg-primary/10 text-primary",
+           )}
+-          title={interaccion.descripcion}
+         >
+           <Icono className="size-5" aria-hidden="true" />
+         </div>
+@@ -171,8 +171,6 @@ export function TarjetaActividad({
+             <h5 className="text-sm font-semibold">{actividad.actividad}</h5>
+           </div>
+           <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+-            <span className="font-medium">{interaccion.label}</span>
+-            <span aria-hidden="true">·</span>
+             <span>Responsable: {actividad.responsable}</span>
+             <EtiquetaTipo tipo={actividad.tipo} />
+           </div>
+@@ -192,10 +190,10 @@ export function TarjetaActividad({
+         {requiere.length > 0 ? (
+           <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+             <Link2 className="size-3.5" aria-hidden="true" />
+-            Requiere:
++            Antes:
+             {requiere.map((previa) => (
+-              <span key={previa.id} className="rounded border px-1.5" title={previa.actividad}>
+-                {previa.id} · {previa.actividad}
++              <span key={previa.id} className="rounded border px-1.5" title={`${previa.responsable} ${previa.codigo}`}>
++                {previa.actividad}
+               </span>
+             ))}
+           </div>
+@@ -203,8 +201,8 @@ export function TarjetaActividad({
+ 
+         {gestion.compara ? (
+           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+-            <Dato label={`Referencia: ${gestion.compara}`} valor="—" />
+-            <Dato label="Registrado" valor="—" />
++            <Dato label={gestion.compara} valor="—" />
++            <Dato label="Actual" valor="—" />
+             <Dato label="Diferencia" valor="—" />
+           </div>
+         ) : null}
+diff --git a/src/features/embarques/v2/general/lib/interacciones.ts b/src/features/embarques/v2/general/lib/interacciones.ts
+index 598d4c0..f16b4ec 100644
+--- a/src/features/embarques/v2/general/lib/interacciones.ts
++++ b/src/features/embarques/v2/general/lib/interacciones.ts
+@@ -5,6 +5,9 @@
+  * tabs se arman con las mismas piezas: así una confirmación, un correo o una
+  * OC se ven igual en cualquier paso.
+  *
++ * USO INTERNO: el tipo NO se muestra al usuario (solo define icono, campos
++ * base y texto del botón). En pantalla se ve la actividad y su botón.
++ *
+  * `base` = campos que lleva siempre ese tipo; la actividad agrega los suyos
+  * antes (ver `gestion-actividades.ts`).
+  * ========================================================================== */
+@@ -29,40 +32,32 @@ export type CampoGestion = {
+ };
+ 
+ export type DefinicionInteraccion = {
+-  /** Nombre del tipo (chip en la tarjeta y leyenda). */
+-  label: string;
+-  /** Para qué se usa (leyenda). */
+-  descripcion: string;
+   /** Texto del botón cuando la actividad no define el suyo. */
+   accion: string;
+   base: readonly CampoGestion[];
+ };
+ 
+ export const INTERACCIONES: Record<TipoInteraccion, DefinicionInteraccion> = {
++  /** Registro de datos de la actividad. */
+   formulario: {
+-    label: "Formulario",
+-    descripcion: "Registro de datos de la actividad.",
+     accion: "Guardar",
+     base: [{ label: "Observaciones", tipo: "area" }],
+   },
++  /** Pesos, medidas o correlativos que se comparan contra una referencia. */
+   "dato-especial": {
+-    label: "Dato especial",
+-    descripcion: "Pesos, medidas o correlativos que se comparan contra una referencia.",
+     accion: "Registrar",
+     base: [],
+   },
++  /** Verificar y dejar constancia de quién confirmó y cuándo. */
+   confirmacion: {
+-    label: "Confirmación",
+-    descripcion: "Verificar y dejar constancia de quién confirmó y cuándo.",
+     accion: "Confirmar",
+     base: [
+       { label: "Fecha y hora", tipo: "fecha-hora", requerido: true },
+       { label: "Confirmado por" },
+     ],
+   },
++  /** Correo al cliente, destino o proveedor; queda como evidencia. */
+   notificacion: {
+-    label: "Correo",
+-    descripcion: "Envío de correo al cliente, destino o proveedor; queda como evidencia.",
+     accion: "Enviar correo",
+     base: [
+       { label: "Destinatarios", requerido: true },
+@@ -71,9 +66,8 @@ export const INTERACCIONES: Record<TipoInteraccion, DefinicionInteraccion> = {
+       { label: "Adjuntos", tipo: "archivo" },
+     ],
+   },
++  /** OC relacionada con el embarque. */
+   "orden-compra": {
+-    label: "Orden de compra",
+-    descripcion: "OC relacionada con el embarque.",
+     accion: "Generar OC",
+     base: [
+       { label: "Proveedor", tipo: "seleccion", requerido: true },
+@@ -82,21 +76,18 @@ export const INTERACCIONES: Record<TipoInteraccion, DefinicionInteraccion> = {
+       { label: "Moneda", tipo: "seleccion" },
+     ],
+   },
++  /** Generar, emitir o imprimir un documento. */
+   documento: {
+-    label: "Documento",
+-    descripcion: "Generar, emitir o imprimir un documento.",
+     accion: "Generar",
+     base: [{ label: "Fecha", tipo: "fecha" }],
+   },
++  /** Fotografías de la carga. */
+   evidencia: {
+-    label: "Evidencia",
+-    descripcion: "Fotografías de la carga.",
+     accion: "Subir fotografías",
+     base: [{ label: "Fotografías", tipo: "archivo", requerido: true }],
+   },
++  /** Estado de un trámite hasta que concluye. */
+   seguimiento: {
+-    label: "Seguimiento",
+-    descripcion: "Estado de un trámite hasta que concluye.",
+     accion: "Actualizar seguimiento",
+     base: [
+       { label: "Estado", tipo: "seleccion", requerido: true },
+@@ -104,9 +95,8 @@ export const INTERACCIONES: Record<TipoInteraccion, DefinicionInteraccion> = {
+       { label: "Observaciones", tipo: "area" },
+     ],
+   },
++  /** Excepción: se registra con motivo y autorización. */
+   incidencia: {
+-    label: "Incidencia",
+-    descripcion: "Excepción: se registra con motivo y autorización.",
+     accion: "Registrar incidencia",
+     base: [
+       { label: "Motivo", requerido: true },

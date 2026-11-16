@@ -12,6 +12,15 @@ const ESTILO_TIPO: Record<TipoActividad, string> = {
   Transversal: "border-violet-500/40 bg-violet-500/10 text-violet-700 dark:text-violet-300",
 };
 
+/** Etiqueta del tipo de actividad del Excel (Principal, Opcional, Excepción…). */
+export function EtiquetaTipo({ tipo }: { tipo: TipoActividad }) {
+  return (
+    <span className={cn("rounded-full border px-2 text-[10px] font-medium", ESTILO_TIPO[tipo])}>
+      {tipo}
+    </span>
+  );
+}
+
 /**
  * Lista de actividades del Excel (código, área, actividad, resultado, tipo y
  * control). Solo maqueta: el círculo será el check cuando haya funcionalidad.
@@ -35,14 +44,7 @@ export function ListaActividades({
                 {actividad.id}
               </span>
               <span className="text-sm font-medium">{actividad.actividad}</span>
-              <span
-                className={cn(
-                  "rounded-full border px-2 text-[10px] font-medium",
-                  ESTILO_TIPO[actividad.tipo],
-                )}
-              >
-                {actividad.tipo}
-              </span>
+              <EtiquetaTipo tipo={actividad.tipo} />
             </div>
             <p className="text-xs text-muted-foreground">
               {actividad.proceso} · Resultado: {actividad.resultado}

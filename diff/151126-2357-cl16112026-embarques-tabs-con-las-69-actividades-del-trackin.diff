@@ -1,0 +1,1840 @@
+diff --git a/src/features/embarques/v2/general/ARQUITECTURA.md b/src/features/embarques/v2/general/ARQUITECTURA.md
+index 3d50a5f..2f03f43 100644
+--- a/src/features/embarques/v2/general/ARQUITECTURA.md
++++ b/src/features/embarques/v2/general/ARQUITECTURA.md
+@@ -26,7 +26,11 @@ campos de solo lectura. La funcionalidad se agrega después sin cambiar la estru
+ | Tipos (`PerfilEmbarque`, embarque)    | `lib/tipos.ts`                           |
+ | Datos de ejemplo (borrar con la API)  | `lib/datos-maqueta.ts`                   |
+ | Piezas reutilizables (sección, dato…) | `components/utils.tsx`                   |
+-| Contenido de cada tab                 | `components/pasos/paso-<nombre>.tsx`     |
++| Tipos de interacción (9)              | `lib/interacciones.ts`                   |
++| Cómo se trabaja cada actividad        | `lib/gestion-actividades.ts`             |
++| Tarjeta genérica de una actividad     | `components/tarjeta-actividad.tsx`       |
++| Tab genérica (todas las del flujo)    | `components/pasos/paso-actividades.tsx`  |
++| Tabs con contenido propio             | `pasos/paso-informacion.tsx`, `paso-documentos.tsx` |
+ 
+ ## Tracking general (Exportación Aérea)
+ 
+@@ -49,38 +53,82 @@ El `id` es `"<responsable> <código>"` (ej. `"OPS 4.1"`, `"Bodega 0.1"`) porque
+ áreas. Se usa en:
+ 
+ - el tracking general (cantidad de actividades por paso);
+-- cada tab (lista "Actividades del tracking");
++- las tabs (cada actividad es una tarjeta con su formulario, ver abajo);
+ - el Sheet de actividades (`detalle-actividades-sheet.tsx`), por paso y área.
+ 
+ Si otras operaciones tienen otros pasos, `TRACKING_PASOS` y las actividades pasan a depender del tipo de
+ operación.
+ 
+-## Tabs actuales
+-
+-Flujo: Información · Asignación de guías · Reservas (solicitud y confirmación) · Draft (elaboración y envío) ·
+-Tarifas (confirmación de cotización). Separadas al final: **Documentos** (disponible en cualquier paso) y
+-**Cancelación / anulación** (opcional).
+-
+-Cada tab lista en `actividades` los ids del Excel que trabaja; su paso sale de ahí (`pasoDeTab`):
+-
+-| Tab          | Actividades                         | Paso |
+-| ------------ | ----------------------------------- | ---- |
+-| Guías        | OPS 1.1, 1.2, 1.3                   | 1    |
+-| Reservas     | OPS 2.1, 2.2, 3.1, 3.2              | 1    |
+-| Draft        | OPS 4.1 (draft), 4.2 (preaviso)     | 2    |
+-| Tarifas      | OPS 9.2 (confirmar tarifas y gastos)| 4    |
+-| Cancelación  | OPS 4.4 (anulación, excepción)      | —    |
+-
+-La tab se marca con check cuando el embarque ya pasó ese paso.
+-
+-Agregar una tab = 1 entrada en `PASOS_EMBARQUE` + su componente en `pasos/` + su `case` e icono en
+-`tabs-embarque.tsx`.
++## Tabs: actividades generalizadas
++
++Las tabs cubren **las 69 actividades** de la hoja *Detalle original*, cada una en **exactamente una** tab
++(`PASOS_EMBARQUE[].actividades`, en el orden en que se trabajan). En la lista lateral se agrupan por paso del
++tracking (`1 · Reserva`, `2 · Documentación`…); la tab muestra check si su paso ya pasó y un punto si es el actual.
++
++| Paso | Tab                    | Actividades                                         |
++| ---- | ---------------------- | --------------------------------------------------- |
++| —    | Información            | —                                                   |
++| 1    | Recolección y empaque  | OPS 0.1–0.5, Bodega 0.1–0.5 (opcionales)            |
++| 1    | Asignación de guías    | OPS 1.1–1.3                                         |
++| 1    | Reservas               | OPS 2.1, 2.2, 3.1, 3.2                              |
++| 2    | Draft y preaviso       | OPS 4.1, 4.2, 4.3                                   |
++| 2    | Gestión aduanera       | OPS 5.1–5.4, CBX E1                                 |
++| 3    | Recepción en bodega    | Bodega 7.1–7.5, E1, E2                              |
++| 3    | Liberación y despacho  | OPS 6.1, Bodega 7.6–7.9                             |
++| 4    | Recepción en COMBEX    | CBX 8.1–8.5                                         |
++| 4    | Guía final             | OPS 9.1, 9.3, 9.4, 9.5, E2                          |
++| 4    | Tarifas y cargos       | OPS 9.2                                             |
++| 4    | Documentación final    | CBX 10.1–10.5                                       |
++| 5    | Despacho y salida      | CBX 11.1, 12.1, 12.3, 12.4, E2, E3, E4; OPS E1      |
++| 5    | Complementaria         | CBX 12.2, 13.1, 13.2                                |
++| 6    | Arribo y cierre        | CBX 14.1; OPS 15, 16, 17                            |
++| —    | Documentos (extra)     | —                                                   |
++| —    | Cancelación (extra)    | OPS 4.4                                             |
++
++### Tipos de interacción (`lib/interacciones.ts`)
++
++Cada actividad se trabaja con uno de 9 tipos; todos se ven con la misma tarjeta:
++
++| Tipo            | Para qué                                     | Campos base                                  |
++| --------------- | -------------------------------------------- | -------------------------------------------- |
++| Formulario      | Registro de datos                            | Observaciones                                |
++| Dato especial   | Peso, medidas, correlativo vs. referencia    | — (los de la actividad + comparación)        |
++| Confirmación    | Verificar y dejar constancia                 | Fecha y hora, Confirmado por                 |
++| Correo          | Aviso a cliente, destino o proveedor         | Destinatarios, Asunto, Fecha de envío, Adjuntos |
++| Orden de compra | OC del embarque                              | Proveedor, No. OC, Monto, Moneda             |
++| Documento       | Generar, emitir o imprimir                   | Fecha                                        |
++| Evidencia       | Fotografías                                  | Fotografías                                  |
++| Seguimiento     | Trámite hasta que concluye                   | Estado, Fecha, Observaciones                 |
++| Incidencia      | Excepción con motivo y autorización          | Motivo, Autorizado por, Detalle              |
++
++### Gestión de cada actividad (`lib/gestion-actividades.ts`)
++
++`GESTION_ACTIVIDADES["<id>"]`: `interaccion`, `campos` propios (van antes de los base), `accion` (texto del
++botón), `compara` (referencia del control del Excel: muestra Referencia / Registrado / Diferencia), `requiere`
++(actividades previas) y `pendiente` (parte aún sin maquetar, p. ej. la tabla de rubros de OPS 9.2).
++
++### Tarjeta (`components/tarjeta-actividad.tsx`) y tab genérica (`pasos/paso-actividades.tsx`)
++
++Tarjeta: encabezado (icono del tipo, id, actividad, responsable, tipo del Excel, estado), cuerpo (entrada,
++requiere, comparación, campos) y pie (control, resultado y botón). Estado de maqueta según el paso del
++embarque: Hecha / En curso / Pendiente; las excepciones dicen "Si ocurre".
++
++Tab genérica: encabezado con los tipos que usa, aviso (si la tab lo define), actividades agrupadas por
++proceso y **Excepciones** aparte, plegadas.
++
++### Agregar o mover algo
++
++- Mover una actividad de tab: cambiar su id de lista en `PASOS_EMBARQUE`.
++- Agregar una tab: 1 entrada en `PASOS_EMBARQUE` + su icono en `ICONOS` de `tabs-embarque.tsx`.
++- Cambiar cómo se captura una actividad: su entrada en `GESTION_ACTIVIDADES`.
++- Un campo nuevo para todo un tipo: `base` del tipo en `INTERACCIONES`.
+ 
+ ## Perfiles: Operaciones, Bodegas, Combex
+ 
+-`VistaGeneral` recibe `perfil` (por defecto `"operaciones"`). Cada paso declara en `perfiles` qué pantallas
+-lo ven (`pasosDelPerfil`). Hoy Bodegas y Combex solo ven Información y Documentos: es una propuesta a ajustar
+-cuando se definan esas pantallas. Las carpetas `v2/bodegas` y `v2/combex` pueden montar `VistaGeneral` con su
++`VistaGeneral` recibe `perfil` (por defecto `"operaciones"`). Las tabs que ve cada perfil salen de sus
++actividades (`perfilesDeTab`): Operaciones (coordina el file) ve todas; Bodegas y Combex ven las tabs con
++actividades de su área (`PERFIL_DE_RESPONSABLE`: OPS → operaciones, Bodega → bodegas, CBX → combex), más
++Información y Documentos. Es una propuesta a ajustar cuando se definan esas pantallas. Las carpetas `v2/bodegas` y `v2/combex` pueden montar `VistaGeneral` con su
+ perfil y agregar sus propias tabs.
+ 
+ **Facturación** (solo visualización): en pausa. Cuando se retome, sería otra entrada `grupo: "extra"` en
+diff --git a/src/features/embarques/v2/general/components/actividades-tracking.tsx b/src/features/embarques/v2/general/components/actividades-tracking.tsx
+index b126405..72dbd09 100644
+--- a/src/features/embarques/v2/general/components/actividades-tracking.tsx
++++ b/src/features/embarques/v2/general/components/actividades-tracking.tsx
+@@ -12,6 +12,15 @@ const ESTILO_TIPO: Record<TipoActividad, string> = {
+   Transversal: "border-violet-500/40 bg-violet-500/10 text-violet-700 dark:text-violet-300",
+ };
+ 
++/** Etiqueta del tipo de actividad del Excel (Principal, Opcional, Excepción…). */
++export function EtiquetaTipo({ tipo }: { tipo: TipoActividad }) {
++  return (
++    <span className={cn("rounded-full border px-2 text-[10px] font-medium", ESTILO_TIPO[tipo])}>
++      {tipo}
++    </span>
++  );
++}
++
+ /**
+  * Lista de actividades del Excel (código, área, actividad, resultado, tipo y
+  * control). Solo maqueta: el círculo será el check cuando haya funcionalidad.
+@@ -35,14 +44,7 @@ export function ListaActividades({
+                 {actividad.id}
+               </span>
+               <span className="text-sm font-medium">{actividad.actividad}</span>
+-              <span
+-                className={cn(
+-                  "rounded-full border px-2 text-[10px] font-medium",
+-                  ESTILO_TIPO[actividad.tipo],
+-                )}
+-              >
+-                {actividad.tipo}
+-              </span>
++              <EtiquetaTipo tipo={actividad.tipo} />
+             </div>
+             <p className="text-xs text-muted-foreground">
+               {actividad.proceso} · Resultado: {actividad.resultado}
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx b/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx
+new file mode 100644
+index 0000000..a9c6572
+--- /dev/null
++++ b/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx
+@@ -0,0 +1,119 @@
++"use client";
++
++import { AlertTriangle, ChevronDown } from "lucide-react";
++import { type ActividadTracking, actividadesPorId } from "../../lib/actividades-tracking";
++import { gestionDe } from "../../lib/gestion-actividades";
++import { INTERACCIONES, type TipoInteraccion } from "../../lib/interacciones";
++import { type PasoEmbarque, pasoDeTab, TRACKING_PASOS } from "../../lib/pasos";
++import { ICONO_INTERACCION, TarjetaActividad } from "../tarjeta-actividad";
++import { EncabezadoPaso } from "../utils";
++
++/* ==========================================================================
++ * TAB GENÉRICA DE ACTIVIDADES (SOLO MAQUETA)
++ *
++ * Todas las tabs con actividades del Excel se ven igual:
++ *   1. Encabezado (título, descripción, paso del tracking y tipos de
++ *      interacción que usa).
++ *   2. Aviso (si la tab lo define).
++ *   3. Actividades del flujo agrupadas por proceso, en el orden de la tab.
++ *   4. Excepciones aparte, plegadas (solo se usan si ocurren).
++ * ========================================================================== */
++
++/** Agrupa actividades consecutivas con el mismo proceso. */
++function porProceso(actividades: readonly ActividadTracking[]) {
++  const grupos: { proceso: string; actividades: ActividadTracking[] }[] = [];
++  for (const actividad of actividades) {
++    const ultimo = grupos.at(-1);
++    if (ultimo?.proceso === actividad.proceso) ultimo.actividades.push(actividad);
++    else grupos.push({ proceso: actividad.proceso, actividades: [actividad] });
++  }
++  return grupos;
++}
++
++/** Chips con los tipos de interacción que usa la tab. */
++function TiposUsados({ actividades }: { actividades: readonly ActividadTracking[] }) {
++  const tipos = [...new Set(actividades.map((actividad) => gestionDe(actividad.id).interaccion))];
++
++  return (
++    <div className="flex flex-wrap gap-1">
++      {tipos.map((tipo: TipoInteraccion) => {
++        const Icono = ICONO_INTERACCION[tipo];
++        return (
++          <span
++            key={tipo}
++            className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground"
++            title={INTERACCIONES[tipo].descripcion}
++          >
++            <Icono className="size-3.5" aria-hidden="true" />
++            {INTERACCIONES[tipo].label}
++          </span>
++        );
++      })}
++    </div>
++  );
++}
++
++export function PasoActividades({ paso, pasoActual }: { paso: PasoEmbarque; pasoActual: number }) {
++  const actividades = actividadesPorId(paso.actividades);
++  const flujo = actividades.filter((actividad) => actividad.tipo !== "Excepción");
++  const excepciones = actividades.filter((actividad) => actividad.tipo === "Excepción");
++  const pasoTracking = pasoDeTab(paso) ?? actividades[0]?.paso;
++  const nombrePaso = TRACKING_PASOS.find((item) => item.id === pasoTracking)?.titulo;
++
++  return (
++    <div className="space-y-4">
++      <EncabezadoPaso
++        titulo={paso.label}
++        descripcion={paso.descripcion}
++        acciones={<TiposUsados actividades={actividades} />}
++      />
++
++      {nombrePaso ? (
++        <p className="text-xs text-muted-foreground">
++          Paso {pasoTracking} del tracking · {nombrePaso} · {actividades.length}{" "}
++          {actividades.length === 1 ? "actividad" : "actividades"}
++        </p>
++      ) : null}
++
++      {paso.aviso ? (
++        <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-amber-800 dark:text-amber-200">
++          <AlertTriangle className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
++          <p className="text-sm">{paso.aviso}</p>
++        </div>
++      ) : null}
++
++      {porProceso(flujo).map((grupo) => (
++        <section key={grupo.proceso} className="space-y-2">
++          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
++            {grupo.proceso}
++          </h4>
++          {grupo.actividades.map((actividad) => (
++            <TarjetaActividad key={actividad.id} actividad={actividad} pasoActual={pasoActual} />
++          ))}
++        </section>
++      ))}
++
++      {excepciones.length > 0 ? (
++        <details
++          open={flujo.length === 0}
++          className="group space-y-2 rounded-lg border border-amber-500/40 p-3"
++        >
++          <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-amber-800 dark:text-amber-200">
++            <AlertTriangle className="size-4" aria-hidden="true" />
++            Excepciones ({excepciones.length})
++            <span className="text-xs font-normal text-muted-foreground">Solo si ocurren</span>
++            <ChevronDown
++              className="ml-auto size-4 transition-transform group-open:rotate-180"
++              aria-hidden="true"
++            />
++          </summary>
++          <div className="space-y-2 pt-2">
++            {excepciones.map((actividad) => (
++              <TarjetaActividad key={actividad.id} actividad={actividad} pasoActual={pasoActual} />
++            ))}
++          </div>
++        </details>
++      ) : null}
++    </div>
++  );
++}
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-cancelacion.tsx b/src/features/embarques/v2/general/components/pasos/paso-cancelacion.tsx
+deleted file mode 100644
+index 66e9480..0000000
+--- a/src/features/embarques/v2/general/components/pasos/paso-cancelacion.tsx
++++ /dev/null
+@@ -1,39 +0,0 @@
+-"use client";
+-
+-import { AlertTriangle, Ban } from "lucide-react";
+-import { Button } from "@/shared/components/ui/button";
+-import { CampoMaqueta, EncabezadoPaso } from "../utils";
+-
+-/** Cancelación / anulación del embarque (opcional). */
+-export function PasoCancelacion() {
+-  return (
+-    <div className="space-y-4">
+-      <EncabezadoPaso
+-        titulo="Cancelación o anulación"
+-        descripcion="Opcional. Detiene el flujo del embarque."
+-      />
+-
+-      <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-amber-800 dark:text-amber-200">
+-        <AlertTriangle className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+-        <p className="text-sm">
+-          Al cancelar o anular, el embarque deja de avanzar en el tracking y queda solo para
+-          consulta.
+-        </p>
+-      </div>
+-
+-      <fieldset className="grid grid-cols-1 gap-4 rounded-lg border border-destructive/40 p-4 sm:grid-cols-2">
+-        <legend className="px-1 text-sm font-semibold text-destructive">Datos</legend>
+-        <CampoMaqueta id="can-tipo" label="Tipo (cancelación / anulación)" requerido />
+-        <CampoMaqueta id="can-motivo" label="Motivo" requerido />
+-        <CampoMaqueta id="can-observaciones" label="Observaciones" className="sm:col-span-2" />
+-      </fieldset>
+-
+-      <div className="flex justify-end">
+-        <Button type="button" variant="destructive" disabled>
+-          <Ban className="size-4" aria-hidden="true" />
+-          Cancelar embarque
+-        </Button>
+-      </div>
+-    </div>
+-  );
+-}
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-draft.tsx b/src/features/embarques/v2/general/components/pasos/paso-draft.tsx
+deleted file mode 100644
+index 0265320..0000000
+--- a/src/features/embarques/v2/general/components/pasos/paso-draft.tsx
++++ /dev/null
+@@ -1,36 +0,0 @@
+-"use client";
+-
+-import { FileText, Send } from "lucide-react";
+-import { Button } from "@/shared/components/ui/button";
+-import { EncabezadoPaso, Pendiente } from "../utils";
+-
+-export function PasoDraft() {
+-  return (
+-    <div className="space-y-4">
+-      <EncabezadoPaso
+-        titulo="Draft"
+-        descripcion="Borrador de la guía y preaviso de carga al destino."
+-        acciones={
+-          <>
+-            <Button type="button" size="sm" variant="outline" disabled>
+-              <FileText className="size-4" aria-hidden="true" />
+-              Generar draft
+-            </Button>
+-            <Button type="button" size="sm" disabled>
+-              <Send className="size-4" aria-hidden="true" />
+-              Enviar preaviso
+-            </Button>
+-          </>
+-        }
+-      />
+-
+-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+-        <Pendiente className="min-h-72 lg:col-span-2" texto="Vista previa del draft." />
+-        <div className="flex flex-col gap-3 rounded-lg border p-4">
+-          <span className="text-sm font-semibold">Envíos</span>
+-          <Pendiente className="flex-1" texto="Versiones enviadas, destinatarios y respuestas." />
+-        </div>
+-      </div>
+-    </div>
+-  );
+-}
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-guias.tsx b/src/features/embarques/v2/general/components/pasos/paso-guias.tsx
+deleted file mode 100644
+index 4ea00d8..0000000
+--- a/src/features/embarques/v2/general/components/pasos/paso-guias.tsx
++++ /dev/null
+@@ -1,32 +0,0 @@
+-"use client";
+-
+-import { Plus } from "lucide-react";
+-import { Button } from "@/shared/components/ui/button";
+-import { CampoMaqueta, EncabezadoPaso, Pendiente } from "../utils";
+-
+-export function PasoGuias() {
+-  return (
+-    <div className="space-y-4">
+-      <EncabezadoPaso
+-        titulo="Asignación de guías"
+-        descripcion="Asignación de HAWB y registro de MAWB (sin duplicados ni saltos de correlativo)."
+-        acciones={
+-          <Button type="button" size="sm" disabled>
+-            <Plus className="size-4" aria-hidden="true" />
+-            Asignar guía
+-          </Button>
+-        }
+-      />
+-
+-      <fieldset className="grid grid-cols-1 gap-4 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-4">
+-        <legend className="px-1 text-sm font-semibold">MAWB</legend>
+-        <CampoMaqueta id="guia-tipo" label="Tipo de guía" requerido />
+-        <CampoMaqueta id="guia-numero" label="Número" requerido />
+-        <CampoMaqueta id="guia-fecha" label="Fecha de emisión" tipo="date" />
+-        <CampoMaqueta id="guia-carrier" label="Carrier" />
+-      </fieldset>
+-
+-      <Pendiente texto="Tabla de HAWB asignadas." />
+-    </div>
+-  );
+-}
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-reservas.tsx b/src/features/embarques/v2/general/components/pasos/paso-reservas.tsx
+deleted file mode 100644
+index dd8768e..0000000
+--- a/src/features/embarques/v2/general/components/pasos/paso-reservas.tsx
++++ /dev/null
+@@ -1,48 +0,0 @@
+-"use client";
+-
+-import { CheckCircle2, Send } from "lucide-react";
+-import { Button } from "@/shared/components/ui/button";
+-import { CampoMaqueta, EncabezadoPaso, Pendiente } from "../utils";
+-
+-export function PasoReservas() {
+-  return (
+-    <div className="space-y-4">
+-      <EncabezadoPaso
+-        titulo="Reservas"
+-        descripcion="Solicitud de reserva al carrier y su confirmación."
+-        acciones={
+-          <>
+-            <Button type="button" size="sm" variant="outline" disabled>
+-              <Send className="size-4" aria-hidden="true" />
+-              Solicitar reserva
+-            </Button>
+-            <Button type="button" size="sm" disabled>
+-              <CheckCircle2 className="size-4" aria-hidden="true" />
+-              Confirmar reserva
+-            </Button>
+-          </>
+-        }
+-      />
+-
+-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+-        <fieldset className="grid grid-cols-1 gap-4 rounded-lg border p-4 sm:grid-cols-2">
+-          <legend className="px-1 text-sm font-semibold">Solicitud</legend>
+-          <CampoMaqueta id="res-carrier" label="Carrier" requerido />
+-          <CampoMaqueta id="res-fecha-solicitud" label="Fecha de solicitud" tipo="date" />
+-          <CampoMaqueta id="res-equipo" label="Equipo / espacio" />
+-          <CampoMaqueta id="res-cut-off" label="Cut-off" tipo="date" />
+-        </fieldset>
+-
+-        <fieldset className="grid grid-cols-1 gap-4 rounded-lg border p-4 sm:grid-cols-2">
+-          <legend className="px-1 text-sm font-semibold">Confirmación</legend>
+-          <CampoMaqueta id="res-booking" label="No. de booking" />
+-          <CampoMaqueta id="res-fecha-confirmacion" label="Fecha de confirmación" tipo="date" />
+-          <CampoMaqueta id="res-buque" label="Buque / vuelo" />
+-          <CampoMaqueta id="res-viaje" label="Viaje" />
+-        </fieldset>
+-      </div>
+-
+-      <Pendiente texto="Historial de solicitudes y confirmaciones de reserva." />
+-    </div>
+-  );
+-}
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-tarifas.tsx b/src/features/embarques/v2/general/components/pasos/paso-tarifas.tsx
+deleted file mode 100644
+index 31e7cd1..0000000
+--- a/src/features/embarques/v2/general/components/pasos/paso-tarifas.tsx
++++ /dev/null
+@@ -1,31 +0,0 @@
+-"use client";
+-
+-import { CheckCircle2 } from "lucide-react";
+-import { Button } from "@/shared/components/ui/button";
+-import { Dato, EncabezadoPaso, Pendiente } from "../utils";
+-
+-export function PasoTarifas() {
+-  return (
+-    <div className="space-y-4">
+-      <EncabezadoPaso
+-        titulo="Confirmación de tarifas"
+-        descripcion="Tarifas y gastos reales contra la cotización (con el peso oficial de COMBEX)."
+-        acciones={
+-          <Button type="button" size="sm" disabled>
+-            <CheckCircle2 className="size-4" aria-hidden="true" />
+-            Confirmar tarifas
+-          </Button>
+-        }
+-      />
+-
+-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+-        <Dato label="Cotización" valor="—" />
+-        <Dato label="Total costo" valor="0.00" />
+-        <Dato label="Total venta" valor="0.00" />
+-        <Dato label="Profit" valor="0.00" />
+-      </div>
+-
+-      <Pendiente className="min-h-56" texto="Tabla de rubros cotizados (costo / venta) y su confirmación." />
+-    </div>
+-  );
+-}
+diff --git a/src/features/embarques/v2/general/components/tabs-embarque.tsx b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+index 6de9d52..843f88c 100644
+--- a/src/features/embarques/v2/general/components/tabs-embarque.tsx
++++ b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+@@ -4,17 +4,25 @@ import {
+   Ban,
+   Check,
+   ClipboardList,
++  FileStack,
+   FileText,
+   FolderUp,
++  Landmark,
+   type LucideIcon,
++  PackageCheck,
++  PlaneLanding,
++  PlaneTakeoff,
+   Receipt,
++  Scale,
++  Send,
+   Ship,
+   Tags,
++  Truck,
++  Warehouse,
+ } from "lucide-react";
+ import type * as React from "react";
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+ import { cn } from "@/shared/lib/utils";
+-import { actividadesPorId } from "../lib/actividades-tracking";
+ import {
+   type PasoEmbarque,
+   pasoDeTab,
+@@ -23,41 +31,42 @@ import {
+   type ValorPasoEmbarque,
+ } from "../lib/pasos";
+ import type { EmbarqueMaqueta, PerfilEmbarque } from "../lib/tipos";
+-import { ListaActividades } from "./actividades-tracking";
+-import { PasoCancelacion } from "./pasos/paso-cancelacion";
++import { PasoActividades } from "./pasos/paso-actividades";
+ import { PasoDocumentos } from "./pasos/paso-documentos";
+-import { PasoDraft } from "./pasos/paso-draft";
+-import { PasoGuias } from "./pasos/paso-guias";
+ import { PasoInformacion } from "./pasos/paso-informacion";
+-import { PasoReservas } from "./pasos/paso-reservas";
+-import { PasoTarifas } from "./pasos/paso-tarifas";
+ 
+ const ICONOS: Record<ValorPasoEmbarque, LucideIcon> = {
+   informacion: ClipboardList,
++  recoleccion: Truck,
+   guias: Tags,
+   reservas: Ship,
+   draft: FileText,
++  aduana: Landmark,
++  "recepcion-bodega": Warehouse,
++  "despacho-bodega": PackageCheck,
++  combex: Scale,
++  "guia-final": Send,
+   tarifas: Receipt,
++  "documentacion-final": FileStack,
++  salida: PlaneTakeoff,
++  complementaria: FileText,
++  cierre: PlaneLanding,
+   documentos: FolderUp,
+   cancelacion: Ban,
+ };
+ 
+-function contenidoPaso(valor: ValorPasoEmbarque, embarque: EmbarqueMaqueta): React.ReactNode {
+-  switch (valor) {
++/**
++ * Contenido de la tab: Información y Documentos tienen su propio componente;
++ * las demás usan la tab genérica de actividades.
++ */
++function contenidoPaso(paso: PasoEmbarque, embarque: EmbarqueMaqueta): React.ReactNode {
++  switch (paso.value) {
+     case "informacion":
+       return <PasoInformacion embarque={embarque} />;
+-    case "guias":
+-      return <PasoGuias />;
+-    case "reservas":
+-      return <PasoReservas />;
+-    case "draft":
+-      return <PasoDraft />;
+-    case "tarifas":
+-      return <PasoTarifas />;
+     case "documentos":
+       return <PasoDocumentos />;
+-    case "cancelacion":
+-      return <PasoCancelacion />;
++    default:
++      return <PasoActividades paso={paso} pasoActual={embarque.pasoActual} />;
+   }
+ }
+ 
+@@ -65,6 +74,7 @@ function TriggerPaso({ paso, pasoActual }: { paso: PasoEmbarque; pasoActual: num
+   const Icono = ICONOS[paso.value];
+   const pasoTracking = pasoDeTab(paso);
+   const completado = pasoTracking != null && pasoTracking < pasoActual;
++  const actual = pasoTracking != null && pasoTracking === pasoActual;
+ 
+   return (
+     <TabsTrigger
+@@ -77,36 +87,26 @@ function TriggerPaso({ paso, pasoActual }: { paso: PasoEmbarque; pasoActual: num
+         <span className="text-left">{paso.label}</span>
+         <span className="w-full text-left text-[9px]">
+           {paso.detalle}
+-          {pasoTracking == null ? "" : ` · Paso ${pasoTracking}`}
++          {paso.actividades.length > 0 ? ` · ${paso.actividades.length}` : ""}
+         </span>
+       </div>
+ 
+-      {completado ? (
+-        <Check className="size-4 shrink-0 text-primary" aria-label="Completado" />
++      {completado ? <Check className="size-4 shrink-0 text-primary" aria-label="Completado" /> : null}
++      {actual ? (
++        <span className="size-2 shrink-0 rounded-full bg-primary" role="img" aria-label="Paso actual" />
+       ) : null}
+     </TabsTrigger>
+   );
+ }
+ 
+-/** Actividades del Excel que se trabajan en la tab (si tiene). */
+-function ActividadesDeTab({ paso }: { paso: PasoEmbarque }) {
+-  const actividades = actividadesPorId(paso.actividades);
+-  if (actividades.length === 0) return null;
+-
+-  const pasoTracking = actividades[0]?.paso;
+-  const nombrePaso = TRACKING_PASOS.find((item) => item.id === pasoTracking)?.titulo ?? "";
+-
+-  return (
+-    <section className="mt-6 space-y-2">
+-      <h4 className="text-sm font-semibold">
+-        Actividades del tracking
+-        <span className="ml-2 text-xs font-normal text-muted-foreground">
+-          Paso {pasoTracking} · {nombrePaso}
+-        </span>
+-      </h4>
+-      <ListaActividades actividades={actividades} />
+-    </section>
+-  );
++/** Tabs del flujo agrupadas por paso del tracking (las sin paso van primero). */
++function gruposPorPaso(pasos: readonly PasoEmbarque[]) {
++  const sinPaso = pasos.filter((paso) => pasoDeTab(paso) == null);
++  const grupos = TRACKING_PASOS.map((tracking) => ({
++    tracking,
++    pasos: pasos.filter((paso) => pasoDeTab(paso) === tracking.id),
++  })).filter((grupo) => grupo.pasos.length > 0);
++  return { sinPaso, grupos };
+ }
+ 
+ /**
+@@ -125,7 +125,7 @@ export function TabsEmbarque({
+   onValueChange: (value: ValorPasoEmbarque) => void;
+ }) {
+   const pasos = pasosDelPerfil(perfil);
+-  const flujo = pasos.filter((paso) => paso.grupo === "flujo");
++  const { sinPaso, grupos } = gruposPorPaso(pasos.filter((paso) => paso.grupo === "flujo"));
+   const extra = pasos.filter((paso) => paso.grupo === "extra");
+ 
+   return (
+@@ -134,11 +134,28 @@ export function TabsEmbarque({
+       value={value}
+       onValueChange={(nuevo: string) => onValueChange(nuevo as ValorPasoEmbarque)}
+     >
+-      <TabsList className="h-auto w-full flex-col justify-start md:w-56 md:shrink-0">
+-        {flujo.map((paso) => (
++      <TabsList className="h-auto w-full flex-col justify-start md:w-60 md:shrink-0">
++        {sinPaso.map((paso) => (
+           <TriggerPaso key={paso.value} paso={paso} pasoActual={embarque.pasoActual} />
+         ))}
+ 
++        {grupos.map(({ tracking, pasos: delPaso }) => (
++          <div key={tracking.id} className="flex w-full flex-col">
++            <span
++              className={cn(
++                "mt-2 px-2 pb-1 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground",
++                tracking.id === embarque.pasoActual && "text-primary",
++              )}
++              title={tracking.titulo}
++            >
++              {tracking.id} · {tracking.corto}
++            </span>
++            {delPaso.map((paso) => (
++              <TriggerPaso key={paso.value} paso={paso} pasoActual={embarque.pasoActual} />
++            ))}
++          </div>
++        ))}
++
+         {extra.length > 0 ? <div className="my-1 h-px w-full bg-border" aria-hidden="true" /> : null}
+ 
+         {extra.map((paso) => (
+@@ -148,8 +165,7 @@ export function TabsEmbarque({
+ 
+       {pasos.map((paso) => (
+         <TabsContent key={paso.value} value={paso.value} className="min-w-0 grow p-4">
+-          {contenidoPaso(paso.value, embarque)}
+-          <ActividadesDeTab paso={paso} />
++          {contenidoPaso(paso, embarque)}
+         </TabsContent>
+       ))}
+     </Tabs>
+diff --git a/src/features/embarques/v2/general/components/tarjeta-actividad.tsx b/src/features/embarques/v2/general/components/tarjeta-actividad.tsx
+new file mode 100644
+index 0000000..2d6e54a
+--- /dev/null
++++ b/src/features/embarques/v2/general/components/tarjeta-actividad.tsx
+@@ -0,0 +1,237 @@
++"use client";
++
++import {
++  Activity,
++  BadgeCheck,
++  Camera,
++  ClipboardPen,
++  FileText,
++  Link2,
++  type LucideIcon,
++  Mail,
++  Paperclip,
++  Scale,
++  ShieldCheck,
++  ShoppingCart,
++  TriangleAlert,
++} from "lucide-react";
++import { Button } from "@/shared/components/ui/button";
++import { cn } from "@/shared/lib/utils";
++import { type ActividadTracking, actividadesPorId } from "../lib/actividades-tracking";
++import { accionDe, camposDe, gestionDe } from "../lib/gestion-actividades";
++import { type CampoGestion, INTERACCIONES, type TipoInteraccion } from "../lib/interacciones";
++import { EtiquetaTipo } from "./actividades-tracking";
++import { CampoMaqueta, Dato, Pendiente } from "./utils";
++
++/* ==========================================================================
++ * TARJETA DE UNA ACTIVIDAD (SOLO MAQUETA)
++ *
++ * Misma estructura para las 69 actividades del Excel; cambia según el tipo
++ * de interacción (`lib/interacciones.ts`) y los campos de la actividad
++ * (`lib/gestion-actividades.ts`):
++ *
++ *   encabezado: icono del tipo · id · actividad · tipo del Excel · estado
++ *   cuerpo:     entrada requerida · referencia a comparar · campos
++ *   pie:        control del Excel · resultado · botón de la acción
++ * ========================================================================== */
++
++export const ICONO_INTERACCION: Record<TipoInteraccion, LucideIcon> = {
++  formulario: ClipboardPen,
++  "dato-especial": Scale,
++  confirmacion: BadgeCheck,
++  notificacion: Mail,
++  "orden-compra": ShoppingCart,
++  documento: FileText,
++  evidencia: Camera,
++  seguimiento: Activity,
++  incidencia: TriangleAlert,
++};
++
++export type EstadoActividad = "hecha" | "en-curso" | "pendiente" | "si-ocurre";
++
++const ESTADO: Record<EstadoActividad, { label: string; clase: string }> = {
++  hecha: { label: "Hecha", clase: "bg-primary text-primary-foreground" },
++  "en-curso": { label: "En curso", clase: "border border-primary text-primary" },
++  pendiente: { label: "Pendiente", clase: "bg-muted text-muted-foreground" },
++  "si-ocurre": { label: "Si ocurre", clase: "border border-amber-500/40 text-amber-800 dark:text-amber-200" },
++};
++
++/** Estado de maqueta: sale del paso del embarque (sin datos reales todavía). */
++export function estadoActividad(actividad: ActividadTracking, pasoActual: number): EstadoActividad {
++  if (actividad.tipo === "Excepción") return "si-ocurre";
++  if (actividad.paso < pasoActual) return "hecha";
++  if (actividad.paso === pasoActual) return "en-curso";
++  return "pendiente";
++}
++
++function idCampo(actividad: ActividadTracking, campo: CampoGestion): string {
++  const slug = campo.label
++    .normalize("NFD")
++    .replace(/[̀-ͯ]/g, "")
++    .toLowerCase()
++    .replace(/[^a-z0-9]+/g, "-")
++    .replace(/^-|-$/g, "");
++  return `${actividad.id.replace(/\s+/g, "-").toLowerCase()}-${slug}`;
++}
++
++/** Un campo de la actividad según su tipo (solo lectura, sin lógica). */
++function CampoActividad({ actividad, campo }: { actividad: ActividadTracking; campo: CampoGestion }) {
++  const id = idCampo(actividad, campo);
++  const tipo = campo.tipo ?? "texto";
++  const etiqueta = `${campo.label}${campo.requerido ? " *" : ""}`;
++
++  if (tipo === "archivo") {
++    return (
++      <div className="flex flex-col gap-1 sm:col-span-2">
++        <span className="text-sm font-medium">{etiqueta}</span>
++        <div className="flex items-center gap-2 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
++          <Paperclip className="size-4 text-primary" aria-hidden="true" />
++          Arrastrar archivos aquí o seleccionar
++        </div>
++      </div>
++    );
++  }
++
++  if (tipo === "area") {
++    return (
++      <label htmlFor={id} className="flex flex-col gap-1 sm:col-span-2">
++        <span className="text-sm font-medium">{etiqueta}</span>
++        <textarea
++          id={id}
++          readOnly
++          rows={2}
++          placeholder={campo.label}
++          className="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm"
++        />
++      </label>
++    );
++  }
++
++  const tipoInput = {
++    texto: "text",
++    seleccion: "text",
++    numero: "number",
++    fecha: "date",
++    "fecha-hora": "datetime-local",
++  } as const;
++
++  return (
++    <CampoMaqueta
++      id={id}
++      label={tipo === "seleccion" ? `${campo.label} ▾` : campo.label}
++      tipo={tipoInput[tipo]}
++      requerido={campo.requerido ?? false}
++    />
++  );
++}
++
++export function TarjetaActividad({
++  actividad,
++  pasoActual,
++}: {
++  actividad: ActividadTracking;
++  pasoActual: number;
++}) {
++  const gestion = gestionDe(actividad.id);
++  const interaccion = INTERACCIONES[gestion.interaccion];
++  const Icono = ICONO_INTERACCION[gestion.interaccion];
++  const estado = ESTADO[estadoActividad(actividad, pasoActual)];
++  const requiere = actividadesPorId(gestion.requiere ?? []);
++  const excepcion = gestion.interaccion === "incidencia";
++
++  return (
++    <article
++      className={cn(
++        "overflow-hidden rounded-lg border bg-card",
++        excepcion && "border-amber-500/40",
++      )}
++    >
++      {/* Encabezado */}
++      <header
++        className={cn(
++          "flex flex-wrap items-start gap-3 border-b px-4 py-3",
++          excepcion ? "bg-amber-500/10" : "bg-muted/40",
++        )}
++      >
++        <div
++          className={cn(
++            "flex size-9 shrink-0 items-center justify-center rounded-lg",
++            excepcion ? "bg-amber-500/20 text-amber-800 dark:text-amber-200" : "bg-primary/10 text-primary",
++          )}
++          title={interaccion.descripcion}
++        >
++          <Icono className="size-5" aria-hidden="true" />
++        </div>
++
++        <div className="min-w-0 flex-1 space-y-1">
++          <div className="flex flex-wrap items-center gap-1.5">
++            <span className="rounded border px-1 font-mono text-[10px] text-muted-foreground">
++              {actividad.id}
++            </span>
++            <h5 className="text-sm font-semibold">{actividad.actividad}</h5>
++          </div>
++          <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
++            <span className="font-medium">{interaccion.label}</span>
++            <span aria-hidden="true">·</span>
++            <span>Responsable: {actividad.responsable}</span>
++            <EtiquetaTipo tipo={actividad.tipo} />
++          </div>
++        </div>
++
++        <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", estado.clase)}>
++          {estado.label}
++        </span>
++      </header>
++
++      {/* Cuerpo */}
++      <div className="space-y-3 p-4">
++        <p className="text-xs text-muted-foreground">
++          <span className="font-medium text-foreground">Entrada:</span> {actividad.entrada}
++        </p>
++
++        {requiere.length > 0 ? (
++          <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
++            <Link2 className="size-3.5" aria-hidden="true" />
++            Requiere:
++            {requiere.map((previa) => (
++              <span key={previa.id} className="rounded border px-1.5" title={previa.actividad}>
++                {previa.id} · {previa.actividad}
++              </span>
++            ))}
++          </div>
++        ) : null}
++
++        {gestion.compara ? (
++          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
++            <Dato label={`Referencia: ${gestion.compara}`} valor="—" />
++            <Dato label="Registrado" valor="—" />
++            <Dato label="Diferencia" valor="—" />
++          </div>
++        ) : null}
++
++        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
++          {camposDe(gestion).map((campo) => (
++            <CampoActividad key={campo.label} actividad={actividad} campo={campo} />
++          ))}
++        </div>
++
++        {gestion.pendiente ? <Pendiente texto={gestion.pendiente} /> : null}
++      </div>
++
++      {/* Pie */}
++      <footer className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2">
++        <div className="space-y-0.5 text-[11px] text-muted-foreground">
++          <p className="flex items-center gap-1">
++            <ShieldCheck className="size-3.5" aria-hidden="true" />
++            Control: {actividad.control}
++          </p>
++          <p>Resultado: {actividad.resultado}</p>
++        </div>
++        <Button type="button" size="sm" variant={excepcion ? "outline" : "default"} disabled>
++          <Icono className="size-4" aria-hidden="true" />
++          {accionDe(gestion)}
++        </Button>
++      </footer>
++    </article>
++  );
++}
+diff --git a/src/features/embarques/v2/general/components/utils.tsx b/src/features/embarques/v2/general/components/utils.tsx
+index a2f58b8..b15878d 100644
+--- a/src/features/embarques/v2/general/components/utils.tsx
++++ b/src/features/embarques/v2/general/components/utils.tsx
+@@ -57,7 +57,7 @@ export function CampoMaqueta({
+   id: string;
+   label: string;
+   valor?: string;
+-  tipo?: "text" | "date" | "number";
++  tipo?: "text" | "date" | "number" | "datetime-local";
+   requerido?: boolean;
+   className?: string | undefined;
+ }) {
+diff --git a/src/features/embarques/v2/general/lib/actividades-tracking.ts b/src/features/embarques/v2/general/lib/actividades-tracking.ts
+index 678d35c..cc57d7e 100644
+--- a/src/features/embarques/v2/general/lib/actividades-tracking.ts
++++ b/src/features/embarques/v2/general/lib/actividades-tracking.ts
+@@ -861,6 +861,7 @@ export function actividadesDelPaso(paso: number): ActividadTracking[] {
+   return ACTIVIDADES_TRACKING.filter((actividad) => actividad.paso === paso);
+ }
+ 
++/** Actividades de esos ids, en el orden de `ids` (los que no existen se omiten). */
+ export function actividadesPorId(ids: readonly string[]): ActividadTracking[] {
+-  return ACTIVIDADES_TRACKING.filter((actividad) => ids.includes(actividad.id));
++  return ids.flatMap((id) => ACTIVIDADES_TRACKING.find((actividad) => actividad.id === id) ?? []);
+ }
+diff --git a/src/features/embarques/v2/general/lib/gestion-actividades.ts b/src/features/embarques/v2/general/lib/gestion-actividades.ts
+new file mode 100644
+index 0000000..f90a5e4
+--- /dev/null
++++ b/src/features/embarques/v2/general/lib/gestion-actividades.ts
+@@ -0,0 +1,458 @@
++/* ==========================================================================
++ * GESTIÓN DE CADA ACTIVIDAD (SOLO MAQUETA)
++ *
++ * Cómo se trabaja en pantalla cada actividad de `ACTIVIDADES_TRACKING`
++ * (hoja "Detalle original" del Excel): tipo de interacción, campos propios,
++ * texto del botón, referencia contra la que se compara y de qué actividades
++ * depende. Los campos `base` del tipo se agregan después de los propios.
++ *
++ * Todas las actividades del Excel deben tener entrada aquí (sin entrada se
++ * muestra como formulario genérico).
++ * ========================================================================== */
++
++import type { CampoGestion, TipoInteraccion } from "./interacciones";
++import { INTERACCIONES } from "./interacciones";
++
++export type GestionActividad = {
++  interaccion: TipoInteraccion;
++  campos?: readonly CampoGestion[];
++  /** Texto del botón (si no, el del tipo de interacción). */
++  accion?: string;
++  /** Referencia contra la que se compara (control del Excel). */
++  compara?: string;
++  /** Ids de actividades que deben estar hechas antes. */
++  requiere?: readonly string[];
++  /** Parte que aún no se maqueta en detalle. */
++  pendiente?: string;
++};
++
++const PESO_MEDIDAS: readonly CampoGestion[] = [
++  { label: "Peso (kg)", tipo: "numero", requerido: true },
++  { label: "Largo (cm)", tipo: "numero" },
++  { label: "Ancho (cm)", tipo: "numero" },
++  { label: "Alto (cm)", tipo: "numero" },
++];
++
++export const GESTION_ACTIVIDADES: Record<string, GestionActividad> = {
++  /* ---------- Paso 1 · Coordinación y reserva ---------- */
++  "OPS 0.1": {
++    interaccion: "formulario",
++    accion: "Programar recolección",
++    campos: [
++      { label: "Dirección de recolección", requerido: true },
++      { label: "Contacto" },
++      { label: "Fecha y hora", tipo: "fecha-hora", requerido: true },
++      { label: "Proveedor de transporte", tipo: "seleccion" },
++      { label: "Unidad / placa" },
++      { label: "Piloto" },
++    ],
++  },
++  "OPS 0.2": { interaccion: "notificacion", accion: "Enviar confirmación", requiere: ["OPS 0.1"] },
++  "OPS 0.3": { interaccion: "orden-compra", accion: "Generar OC interna" },
++  "OPS 0.4": {
++    interaccion: "formulario",
++    accion: "Solicitar empaque",
++    campos: [
++      { label: "Proveedor de empaque", tipo: "seleccion", requerido: true },
++      { label: "Tipo de empaque" },
++      { label: "Autorización del cliente", tipo: "seleccion", requerido: true },
++    ],
++  },
++  "OPS 0.5": { interaccion: "orden-compra", accion: "Generar OC de empaque", requiere: ["OPS 0.4"] },
++  "Bodega 0.1": {
++    interaccion: "confirmacion",
++    accion: "Confirmar recepción",
++    campos: [{ label: "Piezas recibidas", tipo: "numero", requerido: true }],
++  },
++  "Bodega 0.2": {
++    interaccion: "dato-especial",
++    accion: "Registrar repeso",
++    compara: "Peso declarado",
++    campos: [{ label: "Peso (kg)", tipo: "numero", requerido: true }],
++  },
++  "Bodega 0.3": {
++    interaccion: "dato-especial",
++    accion: "Registrar medidas",
++    compara: "Dimensiones declaradas",
++    campos: PESO_MEDIDAS.slice(1),
++  },
++  "Bodega 0.4": {
++    interaccion: "confirmacion",
++    accion: "Confirmar empaque",
++    requiere: ["OPS 0.4"],
++    campos: [{ label: "Resultado de la revisión", tipo: "seleccion", requerido: true }],
++  },
++  "Bodega 0.5": {
++    interaccion: "dato-especial",
++    accion: "Actualizar e informar a OPS",
++    compara: "Peso y medidas antes del empaque",
++    requiere: ["Bodega 0.4"],
++    campos: PESO_MEDIDAS,
++  },
++  "OPS 1.1": {
++    interaccion: "formulario",
++    accion: "Asignar HAWB",
++    campos: [
++      { label: "No. HAWB", requerido: true },
++      { label: "Fecha de asignación", tipo: "fecha" },
++    ],
++  },
++  "OPS 1.2": {
++    interaccion: "formulario",
++    accion: "Registrar MAWB",
++    campos: [
++      { label: "No. MAWB", requerido: true },
++      { label: "Línea aérea", tipo: "seleccion", requerido: true },
++      { label: "Booking" },
++    ],
++  },
++  "OPS 1.3": {
++    interaccion: "dato-especial",
++    accion: "Ingresar correlativo",
++    compara: "Último correlativo registrado",
++    requiere: ["OPS 1.2"],
++    campos: [{ label: "Correlativo MAWB", requerido: true }],
++  },
++  "OPS 2.1": {
++    interaccion: "formulario",
++    accion: "Preparar solicitud",
++    campos: [
++      { label: "Línea aérea / proveedor", tipo: "seleccion", requerido: true },
++      { label: "Destino", requerido: true },
++      { label: "Fecha de vuelo", tipo: "fecha", requerido: true },
++      { label: "Piezas", tipo: "numero", requerido: true },
++      { label: "Peso (kg)", tipo: "numero", requerido: true },
++      { label: "Dimensiones" },
++    ],
++  },
++  "OPS 2.2": {
++    interaccion: "notificacion",
++    accion: "Enviar solicitud",
++    requiere: ["OPS 2.1"],
++    campos: [
++      { label: "Tarifa", tipo: "numero" },
++      { label: "PP / CC", tipo: "seleccion", requerido: true },
++      { label: "EORI" },
++      { label: "Partida arancelaria" },
++      { label: "Descripción de la mercancía" },
++    ],
++  },
++  "OPS 3.1": {
++    interaccion: "confirmacion",
++    accion: "Validar reserva",
++    compara: "Solicitud de reserva",
++    requiere: ["OPS 2.2"],
++    campos: [
++      { label: "Vuelo", requerido: true },
++      { label: "Fecha de vuelo", tipo: "fecha", requerido: true },
++      { label: "No. de booking" },
++      { label: "Condiciones", tipo: "area" },
++    ],
++  },
++  "OPS 3.2": { interaccion: "notificacion", accion: "Enviar confirmación al cliente", requiere: ["OPS 3.1"] },
++
++  /* ---------- Paso 2 · Documentación y gestión aduanera ---------- */
++  "OPS 4.1": {
++    interaccion: "documento",
++    accion: "Generar draft",
++    campos: [
++      { label: "Remitente" },
++      { label: "Consignatario" },
++      { label: "Piezas", tipo: "numero" },
++      { label: "Peso (kg)", tipo: "numero" },
++      { label: "Destino" },
++    ],
++    pendiente: "Vista previa del draft.",
++  },
++  "OPS 4.2": {
++    interaccion: "notificacion",
++    accion: "Enviar preaviso",
++    requiere: ["OPS 4.1"],
++    campos: [{ label: "Agente en destino", tipo: "seleccion", requerido: true }],
++  },
++  "OPS 4.3": {
++    interaccion: "orden-compra",
++    accion: "Generar OC de pago aéreo",
++    compara: "Tarifa negociada",
++    requiere: ["OPS 3.1"],
++  },
++  "OPS 4.4": {
++    interaccion: "incidencia",
++    accion: "Solicitar anulación",
++    campos: [{ label: "Qué se anula (OC / reserva)", tipo: "seleccion", requerido: true }],
++  },
++  "OPS 5.1": {
++    interaccion: "notificacion",
++    accion: "Solicitar servicio de aduana",
++    campos: [{ label: "Agente aduanal", tipo: "seleccion", requerido: true }],
++  },
++  "OPS 5.2": { interaccion: "orden-compra", accion: "Generar OC de aduana", requiere: ["OPS 5.1"] },
++  "OPS 5.3": {
++    interaccion: "formulario",
++    accion: "Solicitar depósito",
++    campos: [
++      { label: "Monto", tipo: "numero", requerido: true },
++      { label: "Moneda", tipo: "seleccion" },
++      { label: "Saldo disponible", tipo: "numero" },
++      { label: "Comprobante", tipo: "archivo" },
++    ],
++  },
++  "OPS 5.4": {
++    interaccion: "seguimiento",
++    compara: "Guía (HAWB / MAWB)",
++    campos: [{ label: "No. DUCA" }],
++  },
++  "CBX E1": {
++    interaccion: "incidencia",
++    accion: "Solicitar saldo",
++    campos: [{ label: "Monto", tipo: "numero", requerido: true }],
++  },
++
++  /* ---------- Paso 3 · Liberación y despacho de bodega ---------- */
++  "OPS 6.1": {
++    interaccion: "confirmacion",
++    accion: "Liberar en sistema",
++    requiere: ["OPS 5.4"],
++    campos: [{ label: "No. DUCA autorizada", requerido: true }],
++  },
++  "Bodega 7.1": {
++    interaccion: "confirmacion",
++    accion: "Validar recepción",
++    campos: [
++      { label: "Piezas recibidas", tipo: "numero", requerido: true },
++      { label: "Estado físico", tipo: "seleccion", requerido: true },
++    ],
++  },
++  "Bodega 7.2": {
++    interaccion: "dato-especial",
++    accion: "Registrar repeso y medidas",
++    compara: "Peso y medidas del draft",
++    campos: PESO_MEDIDAS,
++  },
++  "Bodega 7.3": {
++    interaccion: "documento",
++    accion: "Imprimir etiquetas",
++    campos: [{ label: "Cantidad de etiquetas", tipo: "numero" }],
++  },
++  "Bodega 7.4": { interaccion: "documento", accion: "Imprimir manifiesto" },
++  "Bodega 7.5": { interaccion: "evidencia" },
++  "Bodega 7.6": {
++    interaccion: "formulario",
++    accion: "Asignar unidad",
++    campos: [
++      { label: "Proveedor", tipo: "seleccion", requerido: true },
++      { label: "Placa", requerido: true },
++      { label: "Piloto", requerido: true },
++      { label: "Fecha y hora", tipo: "fecha-hora" },
++    ],
++  },
++  "Bodega 7.7": {
++    interaccion: "documento",
++    accion: "Generar pase de salida",
++    requiere: ["OPS 6.1"],
++    campos: [{ label: "No. de pase" }],
++  },
++  "Bodega 7.8": {
++    interaccion: "confirmacion",
++    accion: "Confirmar despacho",
++    requiere: ["Bodega 7.7"],
++    campos: [
++      { label: "Transportista" },
++      { label: "Firma o evidencia de recepción", tipo: "archivo", requerido: true },
++    ],
++  },
++  "Bodega 7.9": {
++    interaccion: "confirmacion",
++    accion: "Descargar inventario",
++    compara: "Piezas en inventario",
++    requiere: ["Bodega 7.8"],
++    campos: [{ label: "Piezas despachadas", tipo: "numero", requerido: true }],
++  },
++  "Bodega E1": {
++    interaccion: "incidencia",
++    accion: "Detener despacho e informar a OPS",
++    campos: [{ label: "Diferencia en (piezas / peso / medidas)", tipo: "seleccion", requerido: true }],
++  },
++  "Bodega E2": {
++    interaccion: "incidencia",
++    accion: "Escalar caso",
++    campos: [{ label: "Fotografías del daño", tipo: "archivo", requerido: true }],
++  },
++
++  /* ---------- Paso 4 · Recepción en COMBEX y documentación final ---------- */
++  "CBX 8.1": { interaccion: "confirmacion", accion: "Confirmar entrega en terminal" },
++  "CBX 8.2": {
++    interaccion: "dato-especial",
++    accion: "Registrar peso oficial",
++    compara: "Peso de bodega",
++    requiere: ["CBX 8.1"],
++    campos: [
++      { label: "Peso oficial (kg)", tipo: "numero", requerido: true },
++      { label: "Volumen (m³)", tipo: "numero" },
++    ],
++  },
++  "CBX 8.3": {
++    interaccion: "formulario",
++    accion: "Registrar pago de boleta",
++    requiere: ["CBX 8.2"],
++    campos: [
++      { label: "No. de boleta", requerido: true },
++      { label: "Monto", tipo: "numero" },
++      { label: "Comprobante", tipo: "archivo", requerido: true },
++    ],
++  },
++  "CBX 8.4": { interaccion: "evidencia" },
++  "CBX 8.5": { interaccion: "notificacion", accion: "Informar al cliente", requiere: ["CBX 8.2", "CBX 8.4"] },
++  "OPS 9.1": {
++    interaccion: "dato-especial",
++    accion: "Actualizar datos finales",
++    compara: "Draft",
++    requiere: ["CBX 8.2"],
++    campos: [
++      { label: "Peso oficial (kg)", tipo: "numero", requerido: true },
++      { label: "Peso cobrable (kg)", tipo: "numero" },
++      { label: "Piezas", tipo: "numero" },
++    ],
++  },
++  "OPS 9.2": {
++    interaccion: "confirmacion",
++    accion: "Confirmar tarifas",
++    compara: "Cotización",
++    campos: [
++      { label: "Total costo", tipo: "numero" },
++      { label: "Total venta", tipo: "numero" },
++      { label: "Profit", tipo: "numero" },
++    ],
++    pendiente: "Tabla de rubros cotizados (costo / venta) y su confirmación.",
++  },
++  "OPS 9.3": {
++    interaccion: "documento",
++    accion: "Emitir guía final",
++    requiere: ["OPS 9.1", "OPS 9.2"],
++    campos: [{ label: "No. de guía final" }],
++  },
++  "OPS 9.4": { interaccion: "notificacion", accion: "Notificar al cliente", requiere: ["OPS 9.3"] },
++  "OPS 9.5": {
++    interaccion: "formulario",
++    accion: "Gestionar seguro",
++    campos: [
++      { label: "Aseguradora", tipo: "seleccion" },
++      { label: "Valor asegurable", tipo: "numero", requerido: true },
++      { label: "Prima", tipo: "numero" },
++      { label: "No. de póliza" },
++    ],
++  },
++  "OPS E2": {
++    interaccion: "incidencia",
++    accion: "Solicitar CCA",
++    campos: [{ label: "Dato original", requerido: true }, { label: "Dato corregido", requerido: true }],
++  },
++  "CBX 10.1": {
++    interaccion: "documento",
++    accion: "Adjuntar hojas de seguridad",
++    campos: [
++      { label: "Hojas de seguridad", tipo: "archivo", requerido: true },
++      { label: "Vigencia", tipo: "fecha" },
++    ],
++  },
++  "CBX 10.2": {
++    interaccion: "documento",
++    accion: "Imprimir guías",
++    requiere: ["OPS 9.3"],
++    campos: [{ label: "Copias", tipo: "numero" }],
++  },
++  "CBX 10.3": { interaccion: "documento", accion: "Imprimir manifiestos", requiere: ["OPS 9.3"] },
++  "CBX 10.4": {
++    interaccion: "documento",
++    accion: "Imprimir ND de destino",
++    campos: [{ label: "Destinatario" }, { label: "Monto", tipo: "numero" }],
++  },
++  "CBX 10.5": {
++    interaccion: "documento",
++    accion: "Imprimir NC de profit",
++    requiere: ["OPS 9.2"],
++    campos: [{ label: "Monto", tipo: "numero" }],
++  },
++
++  /* ---------- Paso 5 · Despacho, salida aérea y complementaria ---------- */
++  "CBX 11.1": { interaccion: "notificacion", accion: "Notificar carga a despachar" },
++  "CBX 12.1": {
++    interaccion: "confirmacion",
++    accion: "Confirmar salida",
++    compara: "Reserva confirmada",
++    campos: [
++      { label: "Vuelo real", requerido: true },
++      { label: "Fecha y hora de salida real", tipo: "fecha-hora", requerido: true },
++    ],
++  },
++  "CBX 12.2": { interaccion: "notificacion", accion: "Solicitar complementaria", requiere: ["CBX 12.1"] },
++  "CBX 12.3": { interaccion: "notificacion", accion: "Enviar aviso al cliente", requiere: ["CBX 12.1"] },
++  "CBX 12.4": { interaccion: "notificacion", accion: "Enviar aviso a destino", requiere: ["CBX 12.1"] },
++  "CBX 13.1": { interaccion: "seguimiento", requiere: ["CBX 12.2"] },
++  "CBX 13.2": {
++    interaccion: "notificacion",
++    accion: "Notificar conclusión",
++    requiere: ["CBX 13.1"],
++    campos: [{ label: "Documento final", tipo: "archivo", requerido: true }],
++  },
++  "OPS E1": {
++    interaccion: "incidencia",
++    accion: "Coordinar nueva reserva",
++    campos: [
++      { label: "Nueva fecha de vuelo", tipo: "fecha", requerido: true },
++      { label: "Nuevo booking" },
++    ],
++  },
++  "CBX E2": {
++    interaccion: "incidencia",
++    accion: "Informar no salida",
++    campos: [{ label: "Nueva fecha", tipo: "fecha" }],
++  },
++  "CBX E3": {
++    interaccion: "incidencia",
++    accion: "Informar incidencia",
++    campos: [{ label: "Tipo (cambio / cancelación / descarga)", tipo: "seleccion", requerido: true }],
++  },
++  "CBX E4": {
++    interaccion: "seguimiento",
++    requiere: ["OPS E2"],
++    campos: [{ label: "Confirmación de recepción en destino", tipo: "fecha" }],
++  },
++
++  /* ---------- Paso 6 · Arribo y cierre ---------- */
++  "CBX 14.1": {
++    interaccion: "confirmacion",
++    accion: "Confirmar arribo",
++    campos: [{ label: "Fecha y hora de llegada", tipo: "fecha-hora", requerido: true }],
++  },
++  "OPS 15": {
++    interaccion: "confirmacion",
++    accion: "Enviar a facturación",
++    campos: [{ label: "¿Cargos pendientes?", tipo: "seleccion", requerido: true }],
++  },
++  "OPS 16": {
++    interaccion: "seguimiento",
++    accion: "Actualizar estatus",
++    campos: [{ label: "Fecha real del paso", tipo: "fecha" }],
++  },
++  "OPS 17": {
++    interaccion: "orden-compra",
++    accion: "Gestionar OC",
++    pendiente: "Listado de OC del embarque (recolección, empaque, pago aéreo, aduana).",
++  },
++};
++
++const GESTION_DEFAULT: GestionActividad = { interaccion: "formulario" };
++
++export function gestionDe(idActividad: string): GestionActividad {
++  return GESTION_ACTIVIDADES[idActividad] ?? GESTION_DEFAULT;
++}
++
++/** Campos de la actividad: los propios y después los base de su tipo. */
++export function camposDe(gestion: GestionActividad): CampoGestion[] {
++  return [...(gestion.campos ?? []), ...INTERACCIONES[gestion.interaccion].base];
++}
++
++export function accionDe(gestion: GestionActividad): string {
++  return gestion.accion ?? INTERACCIONES[gestion.interaccion].accion;
++}
+diff --git a/src/features/embarques/v2/general/lib/interacciones.ts b/src/features/embarques/v2/general/lib/interacciones.ts
+new file mode 100644
+index 0000000..598d4c0
+--- /dev/null
++++ b/src/features/embarques/v2/general/lib/interacciones.ts
+@@ -0,0 +1,117 @@
++/* ==========================================================================
++ * TIPOS DE INTERACCIÓN (SOLO MAQUETA)
++ *
++ * Cada actividad del tracking se trabaja con uno de estos tipos. Todas las
++ * tabs se arman con las mismas piezas: así una confirmación, un correo o una
++ * OC se ven igual en cualquier paso.
++ *
++ * `base` = campos que lleva siempre ese tipo; la actividad agrega los suyos
++ * antes (ver `gestion-actividades.ts`).
++ * ========================================================================== */
++
++export type TipoInteraccion =
++  | "formulario"
++  | "dato-especial"
++  | "confirmacion"
++  | "notificacion"
++  | "orden-compra"
++  | "documento"
++  | "evidencia"
++  | "seguimiento"
++  | "incidencia";
++
++export type TipoCampo = "texto" | "numero" | "fecha" | "fecha-hora" | "seleccion" | "area" | "archivo";
++
++export type CampoGestion = {
++  label: string;
++  tipo?: TipoCampo;
++  requerido?: boolean;
++};
++
++export type DefinicionInteraccion = {
++  /** Nombre del tipo (chip en la tarjeta y leyenda). */
++  label: string;
++  /** Para qué se usa (leyenda). */
++  descripcion: string;
++  /** Texto del botón cuando la actividad no define el suyo. */
++  accion: string;
++  base: readonly CampoGestion[];
++};
++
++export const INTERACCIONES: Record<TipoInteraccion, DefinicionInteraccion> = {
++  formulario: {
++    label: "Formulario",
++    descripcion: "Registro de datos de la actividad.",
++    accion: "Guardar",
++    base: [{ label: "Observaciones", tipo: "area" }],
++  },
++  "dato-especial": {
++    label: "Dato especial",
++    descripcion: "Pesos, medidas o correlativos que se comparan contra una referencia.",
++    accion: "Registrar",
++    base: [],
++  },
++  confirmacion: {
++    label: "Confirmación",
++    descripcion: "Verificar y dejar constancia de quién confirmó y cuándo.",
++    accion: "Confirmar",
++    base: [
++      { label: "Fecha y hora", tipo: "fecha-hora", requerido: true },
++      { label: "Confirmado por" },
++    ],
++  },
++  notificacion: {
++    label: "Correo",
++    descripcion: "Envío de correo al cliente, destino o proveedor; queda como evidencia.",
++    accion: "Enviar correo",
++    base: [
++      { label: "Destinatarios", requerido: true },
++      { label: "Asunto" },
++      { label: "Fecha y hora de envío", tipo: "fecha-hora" },
++      { label: "Adjuntos", tipo: "archivo" },
++    ],
++  },
++  "orden-compra": {
++    label: "Orden de compra",
++    descripcion: "OC relacionada con el embarque.",
++    accion: "Generar OC",
++    base: [
++      { label: "Proveedor", tipo: "seleccion", requerido: true },
++      { label: "No. OC" },
++      { label: "Monto", tipo: "numero", requerido: true },
++      { label: "Moneda", tipo: "seleccion" },
++    ],
++  },
++  documento: {
++    label: "Documento",
++    descripcion: "Generar, emitir o imprimir un documento.",
++    accion: "Generar",
++    base: [{ label: "Fecha", tipo: "fecha" }],
++  },
++  evidencia: {
++    label: "Evidencia",
++    descripcion: "Fotografías de la carga.",
++    accion: "Subir fotografías",
++    base: [{ label: "Fotografías", tipo: "archivo", requerido: true }],
++  },
++  seguimiento: {
++    label: "Seguimiento",
++    descripcion: "Estado de un trámite hasta que concluye.",
++    accion: "Actualizar seguimiento",
++    base: [
++      { label: "Estado", tipo: "seleccion", requerido: true },
++      { label: "Fecha", tipo: "fecha" },
++      { label: "Observaciones", tipo: "area" },
++    ],
++  },
++  incidencia: {
++    label: "Incidencia",
++    descripcion: "Excepción: se registra con motivo y autorización.",
++    accion: "Registrar incidencia",
++    base: [
++      { label: "Motivo", requerido: true },
++      { label: "Autorizado por" },
++      { label: "Detalle", tipo: "area" },
++    ],
++  },
++};
+diff --git a/src/features/embarques/v2/general/lib/pasos.ts b/src/features/embarques/v2/general/lib/pasos.ts
+index 0b9d662..20a4edf 100644
+--- a/src/features/embarques/v2/general/lib/pasos.ts
++++ b/src/features/embarques/v2/general/lib/pasos.ts
+@@ -2,16 +2,18 @@
+  * DEFINICIÓN ÚNICA DE PASOS
+  *
+  * - TRACKING_PASOS: los 6 pasos del tracking general (solo visual).
+- * - PASOS_EMBARQUE: las tabs de gestión del embarque. Agregar/quitar una tab
+- *   = 1 entrada aquí + su componente en `components/pasos/` registrado en
+- *   `tabs-embarque.tsx`.
++ * - PASOS_EMBARQUE: las tabs de gestión del embarque. Cada tab agrupa
++ *   actividades del Excel (ids de `ACTIVIDADES_TRACKING`); de ellas salen su
++ *   paso (`pasoDeTab`) y qué perfiles la ven (`perfilesDeTab`). Las 69
++ *   actividades están en exactamente una tab.
+  *
+- * `perfiles` indica qué pantallas (Operaciones, Bodegas, Combex) ven la tab.
+- * Hoy es una propuesta: se ajusta cuando se definan las otras pantallas.
++ * Agregar una tab = 1 entrada aquí + su icono en `tabs-embarque.tsx`. Se
++ * muestra con el componente genérico `pasos/paso-actividades.tsx` (salvo
++ * Información y Documentos, que tienen el suyo).
+  * ========================================================================== */
+ 
+ import { actividadesPorId } from "./actividades-tracking";
+-import type { EstadoPaso, PasoTracking, PerfilEmbarque } from "./tipos";
++import type { EstadoPaso, PasoTracking, PerfilEmbarque, ResponsableTracking } from "./tipos";
+ 
+ /**
+  * Tracking de Exportación Aérea (6 pasos consolidados).
+@@ -77,90 +79,238 @@ export function estadoPaso(idPaso: number, pasoActual: number): EstadoPaso {
+ 
+ export type ValorPasoEmbarque =
+   | "informacion"
++  | "recoleccion"
+   | "guias"
+   | "reservas"
+   | "draft"
++  | "aduana"
++  | "recepcion-bodega"
++  | "despacho-bodega"
++  | "combex"
++  | "guia-final"
+   | "tarifas"
++  | "documentacion-final"
++  | "salida"
++  | "complementaria"
++  | "cierre"
+   | "documentos"
+   | "cancelacion";
+ 
+ export type PasoEmbarque = {
+   value: ValorPasoEmbarque;
+   label: string;
++  /** Subtítulo corto en la tab. */
+   detalle: string;
++  /** Descripción en el encabezado del contenido. */
++  descripcion: string;
+   /**
+    * Actividades del Excel que se trabajan en esta tab (ids de
+-   * `ACTIVIDADES_TRACKING`). De aquí sale el paso del tracking: ver `pasoDeTab`.
++   * `ACTIVIDADES_TRACKING`). De aquí salen el paso y los perfiles.
+    */
+   actividades: readonly string[];
+   /** Tabs que van separadas al final (siempre disponibles u opcionales). */
+   grupo: "flujo" | "extra";
+-  perfiles: readonly PerfilEmbarque[];
++  /** Aviso destacado arriba del contenido. */
++  aviso?: string;
+ };
+ 
+-const TODOS: readonly PerfilEmbarque[] = ["operaciones", "bodegas", "combex"];
+-
+ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
+   {
+     value: "informacion",
+     label: "Información",
+     detalle: "Datos del embarque",
++    descripcion: "Datos generales, partes y carga.",
+     actividades: [],
+     grupo: "flujo",
+-    perfiles: TODOS,
++  },
++  /* ---------- Paso 1 · Coordinación y reserva ---------- */
++  {
++    value: "recoleccion",
++    label: "Recolección y empaque",
++    detalle: "Cuando apliquen",
++    descripcion: "Recolección de la carga, recepción en bodega y empaque. Solo si el servicio los incluye.",
++    actividades: [
++      "OPS 0.1",
++      "OPS 0.2",
++      "OPS 0.3",
++      "Bodega 0.1",
++      "Bodega 0.2",
++      "Bodega 0.3",
++      "OPS 0.4",
++      "OPS 0.5",
++      "Bodega 0.4",
++      "Bodega 0.5",
++    ],
++    grupo: "flujo",
+   },
+   {
+     value: "guias",
+     label: "Asignación de guías",
+     detalle: "HAWB / MAWB",
++    descripcion: "Asignación de HAWB y registro de MAWB (sin duplicados ni saltos de correlativo).",
+     actividades: ["OPS 1.1", "OPS 1.2", "OPS 1.3"],
+     grupo: "flujo",
+-    perfiles: ["operaciones"],
+   },
+   {
+     value: "reservas",
+     label: "Reservas",
+     detalle: "Solicitud y confirmación",
++    descripcion: "Solicitud de reserva a la línea aérea, validación y confirmación al cliente.",
+     actividades: ["OPS 2.1", "OPS 2.2", "OPS 3.1", "OPS 3.2"],
+     grupo: "flujo",
+-    perfiles: ["operaciones"],
+   },
++  /* ---------- Paso 2 · Documentación y gestión aduanera ---------- */
+   {
+     value: "draft",
+-    label: "Draft",
+-    detalle: "Elaboración, envío y preaviso",
+-    actividades: ["OPS 4.1", "OPS 4.2"],
++    label: "Draft y preaviso",
++    detalle: "Borrador, preaviso y pago aéreo",
++    descripcion: "Borrador de la guía, preaviso al destino y OC para autorizar el pago a la línea aérea.",
++    actividades: ["OPS 4.1", "OPS 4.2", "OPS 4.3"],
++    grupo: "flujo",
++  },
++  {
++    value: "aduana",
++    label: "Gestión aduanera",
++    detalle: "Aduana, DEPREX y DUCA",
++    descripcion: "Servicio aduanero, depósito DEPREX y seguimiento de la DUCA.",
++    actividades: ["OPS 5.1", "OPS 5.2", "OPS 5.3", "OPS 5.4", "CBX E1"],
++    grupo: "flujo",
++  },
++  /* ---------- Paso 3 · Liberación y despacho de bodega ---------- */
++  {
++    value: "recepcion-bodega",
++    label: "Recepción en bodega",
++    detalle: "Ingreso, repeso y etiquetado",
++    descripcion: "Ingreso de la carga, verificación física, etiquetas, manifiesto y fotografías.",
++    actividades: [
++      "Bodega 7.1",
++      "Bodega 7.2",
++      "Bodega 7.3",
++      "Bodega 7.4",
++      "Bodega 7.5",
++      "Bodega E1",
++      "Bodega E2",
++    ],
++    grupo: "flujo",
++  },
++  {
++    value: "despacho-bodega",
++    label: "Liberación y despacho",
++    detalle: "Salida, pase y despacho",
++    descripcion: "Salida en sistema, transporte, pase de salida, entrega e inventario.",
++    actividades: ["OPS 6.1", "Bodega 7.6", "Bodega 7.7", "Bodega 7.8", "Bodega 7.9"],
++    grupo: "flujo",
++  },
++  /* ---------- Paso 4 · Recepción en COMBEX y documentación final ---------- */
++  {
++    value: "combex",
++    label: "Recepción en COMBEX",
++    detalle: "Repeso oficial y boleta",
++    descripcion: "Entrega en terminal, peso oficial, boleta, fotografías y aviso al cliente.",
++    actividades: ["CBX 8.1", "CBX 8.2", "CBX 8.3", "CBX 8.4", "CBX 8.5"],
++    grupo: "flujo",
++  },
++  {
++    value: "guia-final",
++    label: "Guía final",
++    detalle: "Datos definitivos y emisión",
++    descripcion: "Datos finales con el peso oficial, emisión de la guía, aviso al cliente y seguro.",
++    actividades: ["OPS 9.1", "OPS 9.3", "OPS 9.4", "OPS 9.5", "OPS E2"],
+     grupo: "flujo",
+-    perfiles: ["operaciones"],
+   },
+   {
+     value: "tarifas",
+-    label: "Tarifas",
++    label: "Tarifas y cargos",
+     detalle: "Confirmación de cotización",
++    descripcion: "Tarifas y gastos reales contra la cotización (con el peso oficial de COMBEX).",
+     actividades: ["OPS 9.2"],
+     grupo: "flujo",
+-    perfiles: ["operaciones"],
+   },
++  {
++    value: "documentacion-final",
++    label: "Documentación final",
++    detalle: "Impresión en COMBEX",
++    descripcion: "Hojas de seguridad, guías, manifiestos y notas de débito / crédito.",
++    actividades: ["CBX 10.1", "CBX 10.2", "CBX 10.3", "CBX 10.4", "CBX 10.5"],
++    grupo: "flujo",
++  },
++  /* ---------- Paso 5 · Despacho, salida aérea y complementaria ---------- */
++  {
++    value: "salida",
++    label: "Despacho y salida",
++    detalle: "Vuelo y avisos de salida",
++    descripcion: "Confirmación de despacho, verificación de salida y avisos al cliente y destino.",
++    actividades: [
++      "CBX 11.1",
++      "CBX 12.1",
++      "CBX 12.3",
++      "CBX 12.4",
++      "OPS E1",
++      "CBX E2",
++      "CBX E3",
++      "CBX E4",
++    ],
++    grupo: "flujo",
++  },
++  {
++    value: "complementaria",
++    label: "Complementaria",
++    detalle: "Solicitud y seguimiento",
++    descripcion: "Solicitud, seguimiento y cierre de la complementaria.",
++    actividades: ["CBX 12.2", "CBX 13.1", "CBX 13.2"],
++    grupo: "flujo",
++  },
++  /* ---------- Paso 6 · Arribo y cierre ---------- */
++  {
++    value: "cierre",
++    label: "Arribo y cierre",
++    detalle: "Llegada, facturación y reportes",
++    descripcion: "Confirmación de llegada, facturación, estatus y órdenes de compra.",
++    actividades: ["CBX 14.1", "OPS 15", "OPS 16", "OPS 17"],
++    grupo: "flujo",
++  },
++  /* ---------- Separadas ---------- */
+   {
+     value: "documentos",
+     label: "Documentos",
+     detalle: "Disponible siempre",
++    descripcion: "Disponible en cualquier paso del embarque.",
+     actividades: [],
+     grupo: "extra",
+-    perfiles: TODOS,
+   },
+   {
+     value: "cancelacion",
+     label: "Cancelación",
+     detalle: "Opcional",
++    descripcion: "Anulación de OC o reserva. Opcional: detiene el flujo del embarque.",
+     actividades: ["OPS 4.4"],
+     grupo: "extra",
+-    perfiles: ["operaciones"],
++    aviso: "Al cancelar o anular, el embarque deja de avanzar en el tracking y queda solo para consulta.",
+   },
+ ];
+ 
++/** Perfil (pantalla) de cada área responsable del Excel. */
++export const PERFIL_DE_RESPONSABLE: Record<ResponsableTracking, PerfilEmbarque> = {
++  OPS: "operaciones",
++  Bodega: "bodegas",
++  CBX: "combex",
++};
++
++/**
++ * Perfiles que ven la tab. Sin actividades (Información, Documentos): todos.
++ * Con actividades: Operaciones (coordina el file) + las áreas responsables.
++ * Es una propuesta: se ajusta cuando se definan Bodegas y Combex.
++ */
++export function perfilesDeTab(paso: PasoEmbarque): PerfilEmbarque[] {
++  const actividades = actividadesPorId(paso.actividades);
++  if (actividades.length === 0) return ["operaciones", "bodegas", "combex"];
++  const perfiles = new Set<PerfilEmbarque>(["operaciones"]);
++  for (const actividad of actividades) perfiles.add(PERFIL_DE_RESPONSABLE[actividad.responsable]);
++  return [...perfiles];
++}
++
+ export function pasosDelPerfil(perfil: PerfilEmbarque): PasoEmbarque[] {
+-  return PASOS_EMBARQUE.filter((paso) => paso.perfiles.includes(perfil));
++  return PASOS_EMBARQUE.filter((paso) => perfilesDeTab(paso).includes(perfil));
+ }
+ 
+ /**

@@ -52,6 +52,21 @@ Al editar, **conservar el final de línea que ya tiene el archivo** (no converti
 
 ## Flujo de trabajo
 
+**Proceso del usuario (no cambia):** Claude sube a la rama → el usuario hace el pull request y lo acepta →
+`git pull` del espejo en su PC → aplica los `diff/` en su proyecto.
+
+**Regla base: lo que está en `main` es lo que el usuario ya aplicó en su proyecto.** Lo que no está en `main`
+no lo ha aplicado.
+
+- Cada iteración empieza desde `origin/main` actualizado; los diffs se generan sobre ese estado.
+- Si un PR ya se aceptó, lo nuevo va en commits nuevos sobre `main` (nuevo PR del usuario).
+- Al terminar, decir **qué diffs aplicar y en qué orden** (solo los de esa iteración) y cuáles no.
+  No pasar rutas de diffs que aún no están en `main` como si ya pudieran aplicarse: el usuario los
+  aplica después de aceptar el PR y hacer pull.
+- Si el usuario reporta que un diff no aplicó, su proyecto quedó como estaba `main` antes de ese diff:
+  la corrección se hace con un diff nuevo sobre el estado real que reporte (pedir el archivo si hace falta).
+
+
 0. **Al iniciar y en cada iteración, revisar si `main` cambió**: `git fetch origin main` y
    `git log --oneline HEAD..origin/main`. Si hay commits nuevos, integrarlos a la rama (`git merge origin/main`,
    conservando finales de línea) **antes** de seguir trabajando, y avisar al usuario qué entró.
