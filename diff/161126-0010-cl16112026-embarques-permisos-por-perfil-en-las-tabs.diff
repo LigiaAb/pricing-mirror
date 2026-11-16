@@ -1,0 +1,554 @@
+diff --git a/src/features/embarques/v2/general/ARQUITECTURA.md b/src/features/embarques/v2/general/ARQUITECTURA.md
+index 4449df4..d9dcb82 100644
+--- a/src/features/embarques/v2/general/ARQUITECTURA.md
++++ b/src/features/embarques/v2/general/ARQUITECTURA.md
+@@ -127,11 +127,24 @@ proceso y **Excepciones** aparte, plegadas.
+ 
+ ## Perfiles: Operaciones, Bodegas, Combex
+ 
+-`VistaGeneral` recibe `perfil` (por defecto `"operaciones"`). Las tabs que ve cada perfil salen de sus
+-actividades (`perfilesDeTab`): Operaciones (coordina el file) ve todas; Bodegas y Combex ven las tabs con
+-actividades de su área (`PERFIL_DE_RESPONSABLE`: OPS → operaciones, Bodega → bodegas, CBX → combex), más
+-Información y Documentos. Es una propuesta a ajustar cuando se definan esas pantallas. Las carpetas `v2/bodegas` y `v2/combex` pueden montar `VistaGeneral` con su
+-perfil y agregar sus propias tabs.
++`VistaGeneral` recibe `perfil` (por defecto `"operaciones"`). Reglas en `lib/pasos.ts` (sección *Permisos por
++perfil*), según el responsable de cada actividad del Excel (`PERFIL_DE_RESPONSABLE`: OPS → operaciones,
++Bodega → bodegas, CBX → combex):
++
++| Perfil      | Tabs                                                   | Actividades                                  | Información |
++| ----------- | ------------------------------------------------------ | -------------------------------------------- | ----------- |
++| Operaciones | Todas (incluye Documentos y Cancelación)               | Ve las 69; edita las 31 de OPS; las de Bodega y Combex en **solo consulta** | Edita |
++| Bodegas     | Información + tabs con actividades de Bodega (3)       | Solo las 16 de Bodega                        | Solo consulta |
++| Combex      | Información + tabs con actividades de CBX (6)          | Solo las 22 de CBX                           | Solo consulta |
++
++- `perfilesDeTab`: qué perfiles ven la tab (`paraTodos` = Información; sin actividades y sin `paraTodos` =
++  solo Operaciones).
++- `actividadesDelPerfil`: actividades de la tab que ve el perfil.
++- `puedeEditar` / `puedeEditarInformacion`: si edita la actividad / Información. Sin edición la tarjeta muestra
++  "Solo consulta", los datos registrados y no tiene botón.
++- El botón **Documentos** del resumen y el Sheet de actividades también siguen el perfil.
++
++Las carpetas `v2/bodegas` y `v2/combex` montan `VistaGeneral` con su perfil.
+ 
+ **Facturación** (solo visualización): en pausa. Cuando se retome, sería otra entrada `grupo: "extra"` en
+ `PASOS_EMBARQUE`, de solo lectura.
+diff --git a/src/features/embarques/v2/general/components/VistaGeneral.tsx b/src/features/embarques/v2/general/components/VistaGeneral.tsx
+index c08490b..4710c92 100644
+--- a/src/features/embarques/v2/general/components/VistaGeneral.tsx
++++ b/src/features/embarques/v2/general/components/VistaGeneral.tsx
+@@ -3,7 +3,7 @@
+ import { MousePointerClick } from "lucide-react";
+ import * as React from "react";
+ import { EMBARQUES_MAQUETA } from "../lib/datos-maqueta";
+-import type { ValorPasoEmbarque } from "../lib/pasos";
++import { pasosDelPerfil, type ValorPasoEmbarque } from "../lib/pasos";
+ import type { EmbarqueMaqueta, PerfilEmbarque } from "../lib/tipos";
+ import { DetalleActividadesSheet } from "./detalle-actividades-sheet";
+ import { EmbarquesTable } from "./embarques-table";
+@@ -37,6 +37,7 @@ export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: Vi
+   const [actividadesOpen, setActividadesOpen] = React.useState(false);
+ 
+   const seccionRef = React.useRef<HTMLDivElement | null>(null);
++  const veDocumentos = pasosDelPerfil(perfil).some((paso) => paso.value === "documentos");
+ 
+   const seleccionar = React.useCallback((embarque: EmbarqueMaqueta) => {
+     setSeleccionado(embarque);
+@@ -66,7 +67,7 @@ export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: Vi
+             embarque={seleccionado}
+             onVerTracking={() => setTrackingOpen(true)}
+             onVerActividades={() => setActividadesOpen(true)}
+-            onSubirDocumentos={() => setTab("documentos")}
++            onSubirDocumentos={veDocumentos ? () => setTab("documentos") : undefined}
+           />
+ 
+           <section className="rounded-lg border bg-card p-2 shadow-sm">
+@@ -84,7 +85,7 @@ export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: Vi
+         {trackingInteractivo}
+       </TrackingSheet>
+ 
+-      <DetalleActividadesSheet open={actividadesOpen} onOpenChange={setActividadesOpen} embarque={seleccionado} />
++      <DetalleActividadesSheet open={actividadesOpen} onOpenChange={setActividadesOpen} embarque={seleccionado} perfil={perfil} />
+     </div>
+   );
+ };
+diff --git a/src/features/embarques/v2/general/components/detalle-actividades-sheet.tsx b/src/features/embarques/v2/general/components/detalle-actividades-sheet.tsx
+index 0d63bc5..aaa6620 100644
+--- a/src/features/embarques/v2/general/components/detalle-actividades-sheet.tsx
++++ b/src/features/embarques/v2/general/components/detalle-actividades-sheet.tsx
+@@ -10,23 +10,26 @@ import {
+ } from "@/shared/components/ui/sheet";
+ import { cn } from "@/shared/lib/utils";
+ import { actividadesDelPaso } from "../lib/actividades-tracking";
+-import { estadoPaso, TRACKING_PASOS } from "../lib/pasos";
+-import type { EmbarqueMaqueta, ResponsableTracking } from "../lib/tipos";
++import { estadoPaso, PERFIL_DE_RESPONSABLE, TRACKING_PASOS } from "../lib/pasos";
++import type { EmbarqueMaqueta, PerfilEmbarque, ResponsableTracking } from "../lib/tipos";
+ import { ListaActividades } from "./actividades-tracking";
+ 
+ /**
+  * Sheet lateral con el detalle de actividades del Excel por paso y área.
+  * Es independiente del Sheet de tracking interactivo (`tracking-sheet.tsx`),
+  * que queda reservado para el componente existente.
++ * Operaciones ve todas las áreas; Bodegas y Combex solo la suya.
+  */
+ export function DetalleActividadesSheet({
+   open,
+   onOpenChange,
+   embarque,
++  perfil,
+ }: {
+   open: boolean;
+   onOpenChange: (open: boolean) => void;
+   embarque: EmbarqueMaqueta | null;
++  perfil: PerfilEmbarque;
+ }) {
+   return (
+     <Sheet open={open} onOpenChange={onOpenChange}>
+@@ -49,7 +52,7 @@ export function DetalleActividadesSheet({
+         </SheetHeader>
+ 
+         <div className="space-y-5 p-4 sm:space-y-6 sm:p-6">
+-          {embarque ? <ActividadesPorPaso pasoActual={embarque.pasoActual} /> : null}
++          {embarque ? <ActividadesPorPaso pasoActual={embarque.pasoActual} perfil={perfil} /> : null}
+         </div>
+       </SheetContent>
+     </Sheet>
+@@ -59,12 +62,18 @@ export function DetalleActividadesSheet({
+ const AREAS: readonly ResponsableTracking[] = ["OPS", "Bodega", "CBX"];
+ 
+ /** Maqueta del detalle: actividades del Excel por paso y por área. */
+-function ActividadesPorPaso({ pasoActual }: { pasoActual: number }) {
++function ActividadesPorPaso({ pasoActual, perfil }: { pasoActual: number; perfil: PerfilEmbarque }) {
++  const areas =
++    perfil === "operaciones" ? AREAS : AREAS.filter((area) => PERFIL_DE_RESPONSABLE[area] === perfil);
++
+   return (
+     <div className="space-y-3">
+       {TRACKING_PASOS.map((paso) => {
+         const estado = estadoPaso(paso.id, pasoActual);
+-        const actividades = actividadesDelPaso(paso.id);
++        const actividades = actividadesDelPaso(paso.id).filter((actividad) =>
++          areas.includes(actividad.responsable),
++        );
++        if (actividades.length === 0) return null;
+ 
+         return (
+           <details
+@@ -98,7 +107,7 @@ function ActividadesPorPaso({ pasoActual }: { pasoActual: number }) {
+ 
+             <div className="space-y-3 border-t p-3">
+               <p className="text-xs text-muted-foreground">{paso.alcance}</p>
+-              {AREAS.map((area) => {
++              {areas.map((area) => {
+                 const delArea = actividades.filter((actividad) => actividad.responsable === area);
+                 if (delArea.length === 0) return null;
+ 
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx b/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx
+index c61934c..b791794 100644
+--- a/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx
++++ b/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx
+@@ -1,8 +1,15 @@
+ "use client";
+ 
+ import { AlertTriangle, ChevronDown } from "lucide-react";
+-import { type ActividadTracking, actividadesPorId } from "../../lib/actividades-tracking";
+-import { type PasoEmbarque, pasoDeTab, TRACKING_PASOS } from "../../lib/pasos";
++import type { ActividadTracking } from "../../lib/actividades-tracking";
++import {
++  actividadesDelPerfil,
++  type PasoEmbarque,
++  pasoDeTab,
++  puedeEditar,
++  TRACKING_PASOS,
++} from "../../lib/pasos";
++import type { PerfilEmbarque } from "../../lib/tipos";
+ import { TarjetaActividad } from "../tarjeta-actividad";
+ import { EncabezadoPaso } from "../utils";
+ 
+@@ -14,6 +21,9 @@ import { EncabezadoPaso } from "../utils";
+  *   2. Aviso (si la tab lo define).
+  *   3. Actividades del flujo agrupadas por proceso, en el orden de la tab.
+  *   4. Excepciones aparte, plegadas (solo se usan si ocurren).
++ *
++ * Según el perfil: Operaciones ve todas las actividades (edita solo las de
++ * OPS); Bodegas y Combex ven solo las de su área.
+  * ========================================================================== */
+ 
+ /** Agrupa actividades consecutivas con el mismo proceso. */
+@@ -27,8 +37,16 @@ function porProceso(actividades: readonly ActividadTracking[]) {
+   return grupos;
+ }
+ 
+-export function PasoActividades({ paso, pasoActual }: { paso: PasoEmbarque; pasoActual: number }) {
+-  const actividades = actividadesPorId(paso.actividades);
++export function PasoActividades({
++  paso,
++  pasoActual,
++  perfil,
++}: {
++  paso: PasoEmbarque;
++  pasoActual: number;
++  perfil: PerfilEmbarque;
++}) {
++  const actividades = actividadesDelPerfil(paso, perfil);
+   const flujo = actividades.filter((actividad) => actividad.tipo !== "Excepción");
+   const excepciones = actividades.filter((actividad) => actividad.tipo === "Excepción");
+   const pasoTracking = pasoDeTab(paso) ?? actividades[0]?.paso;
+@@ -58,7 +76,12 @@ export function PasoActividades({ paso, pasoActual }: { paso: PasoEmbarque; paso
+             {grupo.proceso}
+           </h4>
+           {grupo.actividades.map((actividad) => (
+-            <TarjetaActividad key={actividad.id} actividad={actividad} pasoActual={pasoActual} />
++            <TarjetaActividad
++              key={actividad.id}
++              actividad={actividad}
++              pasoActual={pasoActual}
++              editable={puedeEditar(actividad, perfil)}
++            />
+           ))}
+         </section>
+       ))}
+@@ -79,7 +102,12 @@ export function PasoActividades({ paso, pasoActual }: { paso: PasoEmbarque; paso
+           </summary>
+           <div className="space-y-2 pt-2">
+             {excepciones.map((actividad) => (
+-              <TarjetaActividad key={actividad.id} actividad={actividad} pasoActual={pasoActual} />
++              <TarjetaActividad
++              key={actividad.id}
++              actividad={actividad}
++              pasoActual={pasoActual}
++              editable={puedeEditar(actividad, perfil)}
++            />
+             ))}
+           </div>
+         </details>
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx b/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx
+index 15a28c6..82a37cc 100644
+--- a/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx
++++ b/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx
+@@ -3,20 +3,27 @@
+ import { Pencil } from "lucide-react";
+ import { Button } from "@/shared/components/ui/button";
+ import type { EmbarqueMaqueta } from "../../lib/tipos";
+-import { CampoMaqueta, EncabezadoPaso } from "../utils";
++import { CampoMaqueta, EncabezadoPaso, SoloConsulta } from "../utils";
+ 
+-/** Detalle completo del embarque (el resumen breve está siempre visible arriba). */
+-export function PasoInformacion({ embarque }: { embarque: EmbarqueMaqueta }) {
++/**
++ * Detalle completo del embarque (el resumen breve está siempre visible arriba).
++ * La ven todos los perfiles; solo Operaciones la edita (`editable`).
++ */
++export function PasoInformacion({ embarque, editable }: { embarque: EmbarqueMaqueta; editable: boolean }) {
+   return (
+     <div className="space-y-4">
+       <EncabezadoPaso
+         titulo="Información del embarque"
+         descripcion="Datos generales, partes y carga."
+         acciones={
+-          <Button type="button" size="sm" variant="outline" disabled>
+-            <Pencil className="size-4" aria-hidden="true" />
+-            Editar
+-          </Button>
++          editable ? (
++            <Button type="button" size="sm" variant="outline" disabled>
++              <Pencil className="size-4" aria-hidden="true" />
++              Editar
++            </Button>
++          ) : (
++            <SoloConsulta />
++          )
+         }
+       />
+ 
+diff --git a/src/features/embarques/v2/general/components/resumen-embarque.tsx b/src/features/embarques/v2/general/components/resumen-embarque.tsx
+index 715244f..e462977 100644
+--- a/src/features/embarques/v2/general/components/resumen-embarque.tsx
++++ b/src/features/embarques/v2/general/components/resumen-embarque.tsx
+@@ -19,7 +19,8 @@ export function ResumenEmbarque({
+   embarque: EmbarqueMaqueta;
+   onVerTracking: () => void;
+   onVerActividades: () => void;
+-  onSubirDocumentos: () => void;
++  /** Sin él no se muestra el botón (perfiles que no ven Documentos). */
++  onSubirDocumentos?: (() => void) | undefined;
+ }) {
+   return (
+     <section className="space-y-4">
+@@ -35,10 +36,12 @@ export function ResumenEmbarque({
+           <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+             {embarque.estado}
+           </span>
+-          <Button type="button" size="sm" variant="outline" onClick={onSubirDocumentos}>
+-            <FileUp className="size-4" aria-hidden="true" />
+-            Documentos
+-          </Button>
++          {onSubirDocumentos ? (
++            <Button type="button" size="sm" variant="outline" onClick={onSubirDocumentos}>
++              <FileUp className="size-4" aria-hidden="true" />
++              Documentos
++            </Button>
++          ) : null}
+           <Button type="button" size="sm" variant="outline" onClick={onVerActividades}>
+             <ListChecks className="size-4" aria-hidden="true" />
+             Actividades
+diff --git a/src/features/embarques/v2/general/components/tabs-embarque.tsx b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+index 387366b..7d05721 100644
+--- a/src/features/embarques/v2/general/components/tabs-embarque.tsx
++++ b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+@@ -27,6 +27,7 @@ import {
+   type PasoEmbarque,
+   pasoDeTab,
+   pasosDelPerfil,
++  puedeEditarInformacion,
+   TRACKING_PASOS,
+   type ValorPasoEmbarque,
+ } from "../lib/pasos";
+@@ -59,14 +60,18 @@ const ICONOS: Record<ValorPasoEmbarque, LucideIcon> = {
+  * Contenido de la tab: Información y Documentos tienen su propio componente;
+  * las demás usan la tab genérica de actividades.
+  */
+-function contenidoPaso(paso: PasoEmbarque, embarque: EmbarqueMaqueta): React.ReactNode {
++function contenidoPaso(
++  paso: PasoEmbarque,
++  embarque: EmbarqueMaqueta,
++  perfil: PerfilEmbarque,
++): React.ReactNode {
+   switch (paso.value) {
+     case "informacion":
+-      return <PasoInformacion embarque={embarque} />;
++      return <PasoInformacion embarque={embarque} editable={puedeEditarInformacion(perfil)} />;
+     case "documentos":
+       return <PasoDocumentos />;
+     default:
+-      return <PasoActividades paso={paso} pasoActual={embarque.pasoActual} />;
++      return <PasoActividades paso={paso} pasoActual={embarque.pasoActual} perfil={perfil} />;
+   }
+ }
+ 
+@@ -164,7 +169,7 @@ export function TabsEmbarque({
+ 
+       {pasos.map((paso) => (
+         <TabsContent key={paso.value} value={paso.value} className="min-w-0 grow p-4">
+-          {contenidoPaso(paso, embarque)}
++          {contenidoPaso(paso, embarque, perfil)}
+         </TabsContent>
+       ))}
+     </Tabs>
+diff --git a/src/features/embarques/v2/general/components/tarjeta-actividad.tsx b/src/features/embarques/v2/general/components/tarjeta-actividad.tsx
+index 580d91b..a1a7acc 100644
+--- a/src/features/embarques/v2/general/components/tarjeta-actividad.tsx
++++ b/src/features/embarques/v2/general/components/tarjeta-actividad.tsx
+@@ -21,7 +21,7 @@ import { type ActividadTracking, actividadesPorId } from "../lib/actividades-tra
+ import { accionDe, camposDe, gestionDe } from "../lib/gestion-actividades";
+ import type { CampoGestion, TipoInteraccion } from "../lib/interacciones";
+ import { EtiquetaTipo } from "./actividades-tracking";
+-import { CampoMaqueta, Dato, Pendiente } from "./utils";
++import { CampoMaqueta, Dato, Pendiente, SoloConsulta } from "./utils";
+ 
+ /* ==========================================================================
+  * TARJETA DE UNA ACTIVIDAD (SOLO MAQUETA)
+@@ -35,6 +35,9 @@ import { CampoMaqueta, Dato, Pendiente } from "./utils";
+  *   pie:        control del Excel · resultado · botón de la acción
+  *
+  * El tipo de interacción es interno: no se muestra su nombre al usuario.
++ *
++ * `editable = false` (actividad de otra área): mismos datos en solo consulta,
++ * sin campos de captura ni botón.
+  * ========================================================================== */
+ 
+ export const ICONO_INTERACCION: Record<TipoInteraccion, LucideIcon> = {
+@@ -127,12 +130,24 @@ function CampoActividad({ actividad, campo }: { actividad: ActividadTracking; ca
+   );
+ }
+ 
++/** Valor registrado de un campo, en solo consulta (sin datos todavía). */
++function ValorCampo({ campo }: { campo: CampoGestion }) {
++  const ancho = campo.tipo === "area" || campo.tipo === "archivo";
++  return (
++    <div className={cn(ancho && "sm:col-span-2")}>
++      <Dato label={campo.label} valor={campo.tipo === "archivo" ? "Sin archivos" : "—"} />
++    </div>
++  );
++}
++
+ export function TarjetaActividad({
+   actividad,
+   pasoActual,
++  editable,
+ }: {
+   actividad: ActividadTracking;
+   pasoActual: number;
++  editable: boolean;
+ }) {
+   const gestion = gestionDe(actividad.id);
+   const Icono = ICONO_INTERACCION[gestion.interaccion];
+@@ -176,9 +191,12 @@ export function TarjetaActividad({
+           </div>
+         </div>
+ 
+-        <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", estado.clase)}>
+-          {estado.label}
+-        </span>
++        <div className="flex flex-wrap items-center gap-1.5">
++          {editable ? null : <SoloConsulta />}
++          <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", estado.clase)}>
++            {estado.label}
++          </span>
++        </div>
+       </header>
+ 
+       {/* Cuerpo */}
+@@ -208,9 +226,13 @@ export function TarjetaActividad({
+         ) : null}
+ 
+         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+-          {camposDe(gestion).map((campo) => (
+-            <CampoActividad key={campo.label} actividad={actividad} campo={campo} />
+-          ))}
++          {camposDe(gestion).map((campo) =>
++            editable ? (
++              <CampoActividad key={campo.label} actividad={actividad} campo={campo} />
++            ) : (
++              <ValorCampo key={campo.label} campo={campo} />
++            ),
++          )}
+         </div>
+ 
+         {gestion.pendiente ? <Pendiente texto={gestion.pendiente} /> : null}
+@@ -225,10 +247,12 @@ export function TarjetaActividad({
+           </p>
+           <p>Resultado: {actividad.resultado}</p>
+         </div>
+-        <Button type="button" size="sm" variant={excepcion ? "outline" : "default"} disabled>
+-          <Icono className="size-4" aria-hidden="true" />
+-          {accionDe(gestion)}
+-        </Button>
++        {editable ? (
++          <Button type="button" size="sm" variant={excepcion ? "outline" : "default"} disabled>
++            <Icono className="size-4" aria-hidden="true" />
++            {accionDe(gestion)}
++          </Button>
++        ) : null}
+       </footer>
+     </article>
+   );
+diff --git a/src/features/embarques/v2/general/components/utils.tsx b/src/features/embarques/v2/general/components/utils.tsx
+index b15878d..b9342b8 100644
+--- a/src/features/embarques/v2/general/components/utils.tsx
++++ b/src/features/embarques/v2/general/components/utils.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { Construction } from "lucide-react";
++import { Construction, Eye } from "lucide-react";
+ import type * as React from "react";
+ import { Field, FieldLabel } from "@/shared/components/ui/field";
+ import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
+@@ -95,6 +95,21 @@ export function EncabezadoPaso({
+   );
+ }
+ 
++/** Indicador de que el usuario solo puede ver (no editar). */
++export function SoloConsulta({ className }: { className?: string | undefined }) {
++  return (
++    <span
++      className={cn(
++        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium text-muted-foreground",
++        className,
++      )}
++    >
++      <Eye className="size-3" aria-hidden="true" />
++      Solo consulta
++    </span>
++  );
++}
++
+ /** Bloque punteado para lo que aún no se maqueta en detalle. */
+ export function Pendiente({ texto, className }: { texto: string; className?: string | undefined }) {
+   return (
+diff --git a/src/features/embarques/v2/general/lib/pasos.ts b/src/features/embarques/v2/general/lib/pasos.ts
+index 20a4edf..c245df1 100644
+--- a/src/features/embarques/v2/general/lib/pasos.ts
++++ b/src/features/embarques/v2/general/lib/pasos.ts
+@@ -12,7 +12,7 @@
+  * Información y Documentos, que tienen el suyo).
+  * ========================================================================== */
+ 
+-import { actividadesPorId } from "./actividades-tracking";
++import { type ActividadTracking, actividadesPorId } from "./actividades-tracking";
+ import type { EstadoPaso, PasoTracking, PerfilEmbarque, ResponsableTracking } from "./tipos";
+ 
+ /**
+@@ -112,6 +112,8 @@ export type PasoEmbarque = {
+   grupo: "flujo" | "extra";
+   /** Aviso destacado arriba del contenido. */
+   aviso?: string;
++  /** Tab sin actividades que ven todos los perfiles (Información). */
++  paraTodos?: boolean;
+ };
+ 
+ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
+@@ -122,6 +124,7 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
+     descripcion: "Datos generales, partes y carga.",
+     actividades: [],
+     grupo: "flujo",
++    paraTodos: true,
+   },
+   /* ---------- Paso 1 · Coordinación y reserva ---------- */
+   {
+@@ -296,14 +299,24 @@ export const PERFIL_DE_RESPONSABLE: Record<ResponsableTracking, PerfilEmbarque>
+   CBX: "combex",
+ };
+ 
+-/**
+- * Perfiles que ven la tab. Sin actividades (Información, Documentos): todos.
+- * Con actividades: Operaciones (coordina el file) + las áreas responsables.
+- * Es una propuesta: se ajusta cuando se definan Bodegas y Combex.
+- */
++/* --------------------------------------------------------------------------
++ * PERMISOS POR PERFIL
++ *
++ * - Operaciones orquesta el embarque: ve todas las tabs y todas las
++ *   actividades, pero solo edita las de OPS; las de Bodega y Combex las ve
++ *   en solo consulta.
++ * - Bodegas y Combex ven solo su parte: las tabs con actividades de su área
++ *   y, dentro de ellas, solo sus actividades.
++ * - Información la ven todos; solo Operaciones la edita.
++ * - Documentos y Cancelación: solo Operaciones.
++ * ------------------------------------------------------------------------ */
++
++/** Perfiles que ven la tab. */
+ export function perfilesDeTab(paso: PasoEmbarque): PerfilEmbarque[] {
+   const actividades = actividadesPorId(paso.actividades);
+-  if (actividades.length === 0) return ["operaciones", "bodegas", "combex"];
++  if (actividades.length === 0) {
++    return paso.paraTodos ? ["operaciones", "bodegas", "combex"] : ["operaciones"];
++  }
+   const perfiles = new Set<PerfilEmbarque>(["operaciones"]);
+   for (const actividad of actividades) perfiles.add(PERFIL_DE_RESPONSABLE[actividad.responsable]);
+   return [...perfiles];
+@@ -313,6 +326,23 @@ export function pasosDelPerfil(perfil: PerfilEmbarque): PasoEmbarque[] {
+   return PASOS_EMBARQUE.filter((paso) => perfilesDeTab(paso).includes(perfil));
+ }
+ 
++/** Actividades de la tab que ve el perfil (Operaciones: todas; los demás: las de su área). */
++export function actividadesDelPerfil(paso: PasoEmbarque, perfil: PerfilEmbarque): ActividadTracking[] {
++  const actividades = actividadesPorId(paso.actividades);
++  if (perfil === "operaciones") return actividades;
++  return actividades.filter((actividad) => PERFIL_DE_RESPONSABLE[actividad.responsable] === perfil);
++}
++
++/** El perfil edita solo las actividades de su área. */
++export function puedeEditar(actividad: ActividadTracking, perfil: PerfilEmbarque): boolean {
++  return PERFIL_DE_RESPONSABLE[actividad.responsable] === perfil;
++}
++
++/** Información: la edita solo Operaciones. */
++export function puedeEditarInformacion(perfil: PerfilEmbarque): boolean {
++  return perfil === "operaciones";
++}
++
+ /**
+  * Paso del tracking de una tab: el último paso de sus actividades
+  * (null = la tab no depende de un paso, p. ej. Información o Documentos).

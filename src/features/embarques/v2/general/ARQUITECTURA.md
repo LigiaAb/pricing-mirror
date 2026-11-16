@@ -127,11 +127,24 @@ proceso y **Excepciones** aparte, plegadas.
 
 ## Perfiles: Operaciones, Bodegas, Combex
 
-`VistaGeneral` recibe `perfil` (por defecto `"operaciones"`). Las tabs que ve cada perfil salen de sus
-actividades (`perfilesDeTab`): Operaciones (coordina el file) ve todas; Bodegas y Combex ven las tabs con
-actividades de su área (`PERFIL_DE_RESPONSABLE`: OPS → operaciones, Bodega → bodegas, CBX → combex), más
-Información y Documentos. Es una propuesta a ajustar cuando se definan esas pantallas. Las carpetas `v2/bodegas` y `v2/combex` pueden montar `VistaGeneral` con su
-perfil y agregar sus propias tabs.
+`VistaGeneral` recibe `perfil` (por defecto `"operaciones"`). Reglas en `lib/pasos.ts` (sección *Permisos por
+perfil*), según el responsable de cada actividad del Excel (`PERFIL_DE_RESPONSABLE`: OPS → operaciones,
+Bodega → bodegas, CBX → combex):
+
+| Perfil      | Tabs                                                   | Actividades                                  | Información |
+| ----------- | ------------------------------------------------------ | -------------------------------------------- | ----------- |
+| Operaciones | Todas (incluye Documentos y Cancelación)               | Ve las 69; edita las 31 de OPS; las de Bodega y Combex en **solo consulta** | Edita |
+| Bodegas     | Información + tabs con actividades de Bodega (3)       | Solo las 16 de Bodega                        | Solo consulta |
+| Combex      | Información + tabs con actividades de CBX (6)          | Solo las 22 de CBX                           | Solo consulta |
+
+- `perfilesDeTab`: qué perfiles ven la tab (`paraTodos` = Información; sin actividades y sin `paraTodos` =
+  solo Operaciones).
+- `actividadesDelPerfil`: actividades de la tab que ve el perfil.
+- `puedeEditar` / `puedeEditarInformacion`: si edita la actividad / Información. Sin edición la tarjeta muestra
+  "Solo consulta", los datos registrados y no tiene botón.
+- El botón **Documentos** del resumen y el Sheet de actividades también siguen el perfil.
+
+Las carpetas `v2/bodegas` y `v2/combex` montan `VistaGeneral` con su perfil.
 
 **Facturación** (solo visualización): en pausa. Cuando se retome, sería otra entrada `grupo: "extra"` en
 `PASOS_EMBARQUE`, de solo lectura.

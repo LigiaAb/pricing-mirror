@@ -27,6 +27,7 @@ import {
   type PasoEmbarque,
   pasoDeTab,
   pasosDelPerfil,
+  puedeEditarInformacion,
   TRACKING_PASOS,
   type ValorPasoEmbarque,
 } from "../lib/pasos";
@@ -59,14 +60,18 @@ const ICONOS: Record<ValorPasoEmbarque, LucideIcon> = {
  * Contenido de la tab: Información y Documentos tienen su propio componente;
  * las demás usan la tab genérica de actividades.
  */
-function contenidoPaso(paso: PasoEmbarque, embarque: EmbarqueMaqueta): React.ReactNode {
+function contenidoPaso(
+  paso: PasoEmbarque,
+  embarque: EmbarqueMaqueta,
+  perfil: PerfilEmbarque,
+): React.ReactNode {
   switch (paso.value) {
     case "informacion":
-      return <PasoInformacion embarque={embarque} />;
+      return <PasoInformacion embarque={embarque} editable={puedeEditarInformacion(perfil)} />;
     case "documentos":
       return <PasoDocumentos />;
     default:
-      return <PasoActividades paso={paso} pasoActual={embarque.pasoActual} />;
+      return <PasoActividades paso={paso} pasoActual={embarque.pasoActual} perfil={perfil} />;
   }
 }
 
@@ -164,7 +169,7 @@ export function TabsEmbarque({
 
       {pasos.map((paso) => (
         <TabsContent key={paso.value} value={paso.value} className="min-w-0 grow p-4">
-          {contenidoPaso(paso, embarque)}
+          {contenidoPaso(paso, embarque, perfil)}
         </TabsContent>
       ))}
     </Tabs>
