@@ -4,13 +4,13 @@ import React from "react";
 import {
   agregarEstadoBloqueado,
   aplicarValoresManualDueAgent,
+  calcularCoberturaMercaderia,
   calcularTotalDueAgent,
   obtenerAutoSeleccionObligatorios,
   obtenerObligatoriosPendientes,
   type RubroDueAgent,
   type ValoresManualDueAgent,
 } from "../lib/due-agent";
-import { calcularCoberturaMercaderia, claveValorFactura } from "../lib/rubros-manuales";
 import type { Id } from "../lib/tipos";
 import { limpiarNumero } from "../lib/utils";
 import { useCatalogosCotizacion } from "./use-catalogos-cotizacion";
@@ -305,7 +305,7 @@ export function useRubrosDueAgent({
 
         [item.value]: calculado,
 
-        [claveValorFactura(item.value)]: value,
+        [`${item.value}_a_calcular`]: value,
       }));
 
       onValorFacturaChange?.(factura);

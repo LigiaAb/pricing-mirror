@@ -20,11 +20,7 @@ import {
 import type { FilaServicioMetodo, OptionEntidad } from "../api/types-api";
 import type { RutaOption } from "../components/metodo-pais/pais-columns";
 import type { KeysToLowerCase } from "../lib/form-types";
-import {
-  aplicaATodosLosClientes,
-  CATALOGOS_AGREGAR_TODOS,
-  DEFAULT_TODOS_VALUE,
-} from "../lib/tarifa-helpers";
+import { CATALOGOS_AGREGAR_TODOS, DEFAULT_TODOS_VALUE } from "../lib/tarifa-helpers";
 
 /*
  * La carga y normalización de catálogos vive en pricing/shared
@@ -279,7 +275,6 @@ export const useCatalogosTarifas = (props: UseCatalogosTarifaOptions = {}) => {
         tipoTarifa_nombre: tipoTarifa?.label ?? "",
         aplicaOrigenesDestinos: item?.todos_los_paises,
         aplicaCommodities: item?.todos_los_commodities,
-        aplicaTodosClientes: aplicaATodosLosClientes(item),
         fechaInicio,
         fechaFin,
         metodo,

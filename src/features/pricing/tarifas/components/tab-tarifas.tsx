@@ -18,7 +18,7 @@ import { useTarifaEquipo } from "../api/tarifa-equipo";
 import { useTarifaPorcentaje } from "../api/tarifa-porcentaje";
 import { useTarifaRangos } from "../api/tarifa-rangos";
 import type { FilaServicioMetodo } from "../api/types-api";
-import { aplicaATodosLosClientes, formatDateForInput } from "../lib/tarifa-helpers";
+import { formatDateForInput } from "../lib/tarifa-helpers";
 import { FormularioTarifa, type TarifaSubmitPayload } from "./formulario-tarifa";
 import { CommoditiesTable } from "./metodo-commodities/commodities-table";
 import { DetalleTable } from "./metodo-detalle/detalle-table";
@@ -218,7 +218,7 @@ export function TarifasTabs({
         break;
     }
 
-    const detalleCliente = aplicaATodosLosClientes(values) ? "No Aplicados" : "Aplicados";
+    const detalleCliente = values.cod_tipo_tarifa === 97 ? "No Aplicados" : "Aplicados";
 
     const detalleContinente = values.todos_los_paises ? "No Aplicados" : "Aplicados";
 
@@ -276,7 +276,6 @@ export function TarifasTabs({
     values.cod_tipo,
     values.cod_servicio,
     values.cod_tipo_tarifa,
-    values.todos_los_clientes,
     values.todos_los_paises,
     values.todos_los_commodities,
     tiposFetch.data,

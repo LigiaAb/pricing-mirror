@@ -2,13 +2,11 @@
  * RUBROS CON VALOR MANUAL (Due Agent y Due Carrier)
  *
  * Lectura del método de un rubro y cálculo de los rubros que el usuario
- * completa a mano: tipo de cálculo ABIERTO, COBERTURA DE MERCADERÍA o método
- * COSTO_PORCENTAJE. Cualquiera de ellos puede llegar en Due Agent o en Due
- * Carrier; cada tabla solo decide cómo escribe el valor en su rubro.
+ * completa a mano (tipo de cálculo ABIERTO o método COSTO_PORCENTAJE).
  * Antes esta lógica estaba copiada en lib/due-agent.ts y lib/due-carrier.ts.
  * ========================================================================== */
 
-import { TIPO_CALCULO, TIPO_METODO } from "./constantes";
+import { TIPO_METODO } from "./constantes";
 import type { Id, Registro } from "./tipos";
 import { registro } from "./utils";
 
@@ -105,81 +103,5 @@ export function aplicarCostoPorcentaje<T extends RubroConMetodo>(
     venta,
     metodo,
     servicio: { ...(item.servicio ?? {}), metodo },
-  };
-}
-
-/* ==========================================================================
- * QUÉ RUBROS SON MANUALES
- * ========================================================================== */
-
-/** Tipo de cálculo ABIERTO: el usuario escribe la venta. */
-export function esTipoCalculoAbierto(item: RubroConMetodo): boolean {
-  return Number(getCodTipoCalculo(item)) === TIPO_CALCULO.ABIERTO;
-}
-
-/** Tipo de cálculo COBERTURA DE MERCADERÍA: el usuario escribe el valor de factura. */
-export function esCoberturaMercaderia(item: RubroConMetodo): boolean {
-  return Number(getCodTipoCalculo(item)) === TIPO_CALCULO.COBERTURA_MERCADERIA;
-}
-
-/** Rubro que se completa a mano (en Due Agent o en Due Carrier). */
-export function esRubroManual(item: RubroConMetodo): boolean {
-  return esMetodoCostoPorcentaje(item) || esTipoCalculoAbierto(item) || esCoberturaMercaderia(item);
-}
-
-/* ==========================================================================
- * COBERTURA DE MERCADERÍA
- * ========================================================================== */
-
-/** Llave, dentro de los valores manuales, del valor de factura que escribió el usuario. */
-export function claveValorFactura(value: unknown): string {
-  return `${String(value ?? "")}_a_calcular`;
-}
-
-/**
- * Cobertura = MAX(mínimo venta, techo((flete + factura) × 1.1 × porcentaje venta / 100)).
- * Sin factura (≤ 0) la cobertura es 0. `valorFlete` es el `valor_flete` de los
- * criterios, que es el flete del carrier seleccionado.
- */
-export function calcularCoberturaMercaderia({
-  item,
-  valorFactura,
-  valorFlete,
-}: {
-  item: RubroConMetodo;
-
-  valorFactura: string | number | null;
-
-  valorFlete: string | number | null;
-}) {
-  const factura = Number(valorFactura ?? 0);
-
-  const flete = Number(valorFlete ?? 0);
-
-  const metodoCalculo = registro(item.metodo ?? item.cobertura);
-
-  const porcentaje = Number(metodoCalculo.porcentaje_venta ?? 0) / 100;
-
-  const minimo = Number(metodoCalculo.minimo_venta ?? 0);
-
-  const calculado = (flete + factura) * 1.1 * porcentaje;
-
-  const redondeado = Math.ceil(calculado);
-
-  if (factura <= 0) {
-    return 0;
-  }
-
-  return Math.max(minimo, redondeado);
-}
-
-/** Detalle "Sobre valor de factura" que acompaña a la cobertura. */
-export function detalleCoberturaFactura(simbolo: string, valorFactura: string | number) {
-  return {
-    tipo_desc: "",
-
-    tarifadetalle_descripcion: `Sobre valor de factura ${simbolo} ${valorFactura}`,
-
-    tarifadetalle_valor: valorFactura,
   };
 }

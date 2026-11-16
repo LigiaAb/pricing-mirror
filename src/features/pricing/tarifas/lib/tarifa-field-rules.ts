@@ -203,11 +203,9 @@ export const fieldRules: Record<string, FieldRule> = {
   aplicaTodosClientes: {
     cod: "todos_los_clientes",
     payload: ["metodo"],
-    default: true,
+    default: undefined,
   },
 
-  // Ya no se muestra en el formulario: se deriva de "aplicaTodosClientes"
-  // (true → PUBLICA, false → ESPECIAL) y se sigue enviando por compatibilidad.
   tipoTarifa: {
     cod: "cod_tipo_tarifa",
     catalogo: "tiposTarifa",

@@ -154,9 +154,7 @@ export function FichaResumen({ item, width = "w-[300px]" }: Props) {
   const aplicaATodosLosOrigenes = metodo?.todos_los_paises ? "Si" : "No";
   const aplicaATodosLosCommodities = metodo?.todos_los_commodities ? "Si" : "No";
   const aplicaATodosLosClientes =
-    (metodo?.todos_los_clientes ?? etiquetaCualquierTipo(metodo?.cod_tipo_tarifa) === "PUBLICA")
-      ? "Si"
-      : "No";
+    etiquetaCualquierTipo(metodo?.cod_tipo_tarifa) === "PUBLICA" ? "Si" : "No";
 
   const ultimaFechaModificacion = formatFechaUTC(servicio?.ultima_fecha_modificacion);
   const fechaInicio = formatFechaUTC(metodo?.fecha_inicial);

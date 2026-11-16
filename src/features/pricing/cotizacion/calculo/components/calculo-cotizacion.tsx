@@ -411,21 +411,6 @@ function DetalleCalculoCotizacion({
     [calculo.calcularDueCarrierBasadoEnDueAgent, entidadEfectivaId],
   );
 
-  /*
-   * No escribir en criterios generales:
-   * hacerlo cambia criteriosParaFlete y reinicia el pipeline Carrier.
-   *
-   * Igual que en el legado, valor_factura vive en criterioCobertura.
-   * La cobertura puede venir en Due Agent o en Due Carrier.
-   */
-  const cambiarValorFacturaCobertura = React.useCallback((valorFactura: number) => {
-    setCriterioCobertura({
-      valor_factura: valorFactura,
-    });
-  }, []);
-
-  const valorFleteCriterios = getValorNumericoOTexto(criterios.valores.valor_flete);
-
   const dueAgentBase = useRubrosDueAgent({
     rubros: rubros.rubrosDueAgent as Parameters<typeof useRubrosDueAgent>[0]["rubros"],
 
@@ -435,11 +420,21 @@ function DetalleCalculoCotizacion({
 
     codMonedaPadre: carrier.servicioSeleccionado?.metodo?.cod_moneda_venta ?? null,
 
-    valorFlete: valorFleteCriterios,
+    valorFlete: getValorNumericoOTexto(criterios.valores.valor_flete),
 
     entidadSeleccionadaId: entidadEfectivaId,
 
-    onValorFacturaChange: cambiarValorFacturaCobertura,
+    onValorFacturaChange: (valorFactura) => {
+      /*
+       * No escribir en criterios generales:
+       * hacerlo cambia criteriosParaFlete y reinicia el pipeline Carrier.
+       *
+       * Igual que en el legado, valor_factura vive en criterioCobertura.
+       */
+      setCriterioCobertura({
+        valor_factura: valorFactura,
+      });
+    },
 
     onCalcularDueCarrier: calcularDueCarrierDesdeAgent,
 
@@ -463,10 +458,6 @@ function DetalleCalculoCotizacion({
     rubros: rubrosDueCarrierConSpot as Parameters<typeof useRubrosDueCarrier>[0]["rubros"],
 
     lectura: isReadOnly,
-
-    valorFlete: valorFleteCriterios,
-
-    onValorFacturaChange: cambiarValorFacturaCobertura,
   });
 
   const dueCarrierDesdeAgentBase = useRubrosDueCarrier({
@@ -475,10 +466,6 @@ function DetalleCalculoCotizacion({
     >[0]["rubros"],
 
     lectura: isReadOnly,
-
-    valorFlete: valorFleteCriterios,
-
-    onValorFacturaChange: cambiarValorFacturaCobertura,
   });
 
   /* ==========================================================================

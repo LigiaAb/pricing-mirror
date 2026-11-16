@@ -1,12 +1,10 @@
 import type { MonedaFlete } from "./carrier-flete";
+import { TIPO_CALCULO } from "./constantes";
 import {
   aplicarCostoPorcentaje,
-  claveValorFactura,
-  detalleCoberturaFactura,
-  esCoberturaMercaderia,
   esMetodoCostoPorcentaje,
-  esRubroManual,
   getCodMonedaVenta,
+  getCodTipoCalculo,
   primeraMonedaDefinida,
 } from "./rubros-manuales";
 import type { Id } from "./tipos";
@@ -228,15 +226,51 @@ export function agregarEstadoBloqueado({
   }));
 }
 
-/*
- * Rubros manuales (ABIERTO, COBERTURA, COSTO_PORCENTAJE): definición única en
- * lib/rubros-manuales.ts. Se reexportan aquí para no romper el barrel.
- */
-export {
-  calcularCoberturaMercaderia,
-  esCoberturaMercaderia,
-  esRubroManual as esTipoCalculoManual,
-} from "./rubros-manuales";
+export function esTipoCalculoManual(item: RubroDueAgent) {
+  const codTipo = getCodTipoCalculo(item);
+
+  return (
+    esMetodoCostoPorcentaje(item) ||
+    Number(codTipo) === TIPO_CALCULO.ABIERTO ||
+    Number(codTipo) === TIPO_CALCULO.COBERTURA_MERCADERIA
+  );
+}
+
+export function esCoberturaMercaderia(item: RubroDueAgent) {
+  return Number(getCodTipoCalculo(item)) === TIPO_CALCULO.COBERTURA_MERCADERIA;
+}
+
+export function calcularCoberturaMercaderia({
+  item,
+  valorFactura,
+  valorFlete,
+}: {
+  item: RubroDueAgent;
+
+  valorFactura: string | number | null;
+
+  valorFlete: string | number | null;
+}) {
+  const factura = Number(valorFactura ?? 0);
+
+  const flete = Number(valorFlete ?? 0);
+
+  const metodoCalculo = item.metodo ?? item.cobertura ?? {};
+
+  const porcentaje = Number(metodoCalculo.porcentaje_venta ?? 0) / 100;
+
+  const minimo = Number(metodoCalculo.minimo_venta ?? 0);
+
+  const calculado = (flete + factura) * 1.1 * porcentaje;
+
+  const redondeado = Math.ceil(calculado);
+
+  if (factura <= 0) {
+    return 0;
+  }
+
+  return Math.max(minimo, redondeado);
+}
 
 export type ValoresManualDueAgent = Record<string, string | number>;
 
@@ -271,7 +305,7 @@ export function aplicarValoresManualDueAgent({
   const codMonedaDefault = primeraMonedaDefinida(seleccionados);
 
   return seleccionados.map((item) => {
-    if (!esRubroManual(item)) {
+    if (!esTipoCalculoManual(item)) {
       return item;
     }
 
@@ -309,14 +343,20 @@ export function aplicarValoresManualDueAgent({
      * sobre valor de factura.
      */
     if (esCoberturaMercaderia(item)) {
-      const valorFactura = valores[claveValorFactura(item.value)] ?? 0;
+      const valorFactura = valores[`${item.value}_a_calcular`] ?? 0;
 
       const moneda = buscarMoneda(monedas, codMoneda);
 
       servicio.metodo.detalles = [
         ...(item.servicio?.metodo?.detalles ?? []),
 
-        detalleCoberturaFactura(simboloDeMoneda(moneda), valorFactura),
+        {
+          tipo_desc: "",
+
+          tarifadetalle_descripcion: `Sobre valor de factura ${simboloDeMoneda(moneda)} ${valorFactura}`,
+
+          tarifadetalle_valor: valorFactura,
+        },
       ];
     }
 

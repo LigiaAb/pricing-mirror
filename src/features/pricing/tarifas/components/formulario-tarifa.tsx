@@ -48,7 +48,8 @@ const camposScale = [
   "metodoCalculo",
   "aplicaOrigenesDestinos",
   "aplicaCommodities",
-  "aplicaTodosClientes",
+  "aplicaTodosCientes",
+  "tipoTarifa",
 ];
 
 export type TarifaSubmitPayload = {
@@ -784,9 +785,10 @@ export const FormularioTarifa = ({
             label: "APLICA A TODOS LOS COMMODITIES",
           })}
 
-          {renderizarChebox({
-            id: "aplicaTodosClientes",
-            label: "APLICA A TODOS LOS CLIENTES",
+          {renderSelectCatalogo({
+            id: "tipoTarifa",
+            label: "Tipo de tarifa",
+            options: catalogos?.tiposTarifa ?? [],
           })}
         </FieldGroup>
 
