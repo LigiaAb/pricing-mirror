@@ -16,6 +16,10 @@ al proyecto completo. Responder siempre en **español**.
 - `src/features/catalogos/create-catalogo.ts` contiene el **código real** de `createCatalogo` del proyecto.
 - Si un cambio necesita un tipo de `@/shared` que no está en los stubs, se agrega al stub (solo tipos) y se avisa.
 - Nunca cambiar lógica dentro de los stubs para "hacer pasar" algo.
+- **Embarques: se trabaja únicamente en `src/features/embarques/v2/`.** Lo demás de `src/features/embarques/`
+  (`api/`, `components/`, `hooks/`, `lib/`, `index.ts`) es el módulo actual y sirve **solo como referencia** de la
+  estructura existente: se lee para seguir sus patrones, pero no se modifica, no se corrigen sus errores de `tsc`
+  (están en la línea base) y ningún diff lo toca.
 
 ## Versiones (iguales al proyecto real)
 
@@ -92,6 +96,7 @@ Leer primero la guía del submódulo:
 
 - `src/features/pricing/cotizacion/calculo/ARQUITECTURA.md`
 - `src/features/pricing/tarifas/ARQUITECTURA.md`
+- `src/features/embarques/v2/general/ARQUITECTURA.md` (embarques: solo `v2/`, el resto es referencia)
 
 Resumen:
 
