@@ -26,7 +26,11 @@ import {
   getMetodoDueCarrier,
   type RubroDueCarrier,
 } from "../lib/due-carrier";
-import { esMetodoCostoPorcentaje } from "../lib/rubros-manuales";
+import {
+  claveValorFactura,
+  esCoberturaMercaderia,
+  esMetodoCostoPorcentaje,
+} from "../lib/rubros-manuales";
 import { formatNumero, getSimboloMoneda } from "../lib/utils";
 import { DialogoSpot } from "./dialogo-spot";
 import { Detalles } from "./utils";
@@ -90,6 +94,7 @@ export function DueCarrier({
     valoresManual,
     totalPorMoneda,
     cambiarValorManual,
+    cambiarValorFactura,
   } = controller;
 
   const [rubroSpot, setRubroSpot] = React.useState<RubroDueCarrier | null>(null);
@@ -308,6 +313,26 @@ export function DueCarrier({
                                 />
                                 <span className="font-medium tabular-nums">
                                   Venta: {simbolo} {formatNumero(metodo?.venta)}
+                                </span>
+                              </div>
+                            ) : esCoberturaMercaderia(item) && !lectura ? (
+                              <div className="ml-auto grid max-w-[220px] gap-1">
+                                <span className="text-left text-xs text-muted-foreground">
+                                  Valor factura comercial
+                                </span>
+
+                                <Input
+                                  value={valoresManual[claveValorFactura(item.value)] ?? ""}
+                                  inputMode="decimal"
+                                  className="text-right"
+                                  onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                                    cambiarValorFactura(item, event.target.value)
+                                  }
+                                />
+
+                                <span className="font-medium tabular-nums">
+                                  {simbolo}{" "}
+                                  {formatNumero(valoresManual[String(item.value)] ?? metodo?.venta)}
                                 </span>
                               </div>
                             ) : manual && !lectura ? (

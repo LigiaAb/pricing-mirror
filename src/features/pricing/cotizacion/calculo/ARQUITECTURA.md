@@ -8,7 +8,9 @@ cotizacion/calculo/
 │  ├─ tipos.ts          ← TIPOS compartidos (Id, MonedaCatalogo, RubroCatalogo, ...)
 │  ├─ constantes.ts     ← CÓDIGOS de negocio (TIPO_PAGO.COLLECT = 127, RUBRO.SCALLING = 134, ...)
 │  ├─ utils.ts          ← FUNCIONES pequeñas compartidas (mismoId, numero, normalizarBoolean, limpiarNumero, buscarMoneda, ...)
-│  ├─ rubros-manuales.ts← rubros con valor manual (ABIERTO / COSTO_PORCENTAJE), compartido por Due Agent y Due Carrier
+│  ├─ rubros-manuales.ts← rubros con valor manual (ABIERTO / COBERTURA / COSTO_PORCENTAJE): qué rubro es manual,
+│  │                      fórmula de cobertura y detalle "Sobre valor de factura". Compartido por Due Agent y Due
+│  │                      Carrier (cualquiera puede traerlos); cada tabla solo decide cómo escribe el valor en su rubro
 │  ├─ porcentajes-rubros.ts ← método PORCENTAJE: rubro = % (entero) de otro rubro (cod_rubro), con mínimos
 │  ├─ catalogos.ts      ← normalización de catálogos a { value, label }
 │  ├─ cabecera.ts       ← CAMPOS DE LA CABECERA (definición única)

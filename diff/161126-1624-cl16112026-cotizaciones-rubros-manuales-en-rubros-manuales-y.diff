@@ -1,0 +1,696 @@
+diff --git a/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md b/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md
+index e33ecff..16da3d6 100644
+--- a/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md
++++ b/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md
+@@ -8,7 +8,9 @@ cotizacion/calculo/
+ │  ├─ tipos.ts          ← TIPOS compartidos (Id, MonedaCatalogo, RubroCatalogo, ...)
+ │  ├─ constantes.ts     ← CÓDIGOS de negocio (TIPO_PAGO.COLLECT = 127, RUBRO.SCALLING = 134, ...)
+ │  ├─ utils.ts          ← FUNCIONES pequeñas compartidas (mismoId, numero, normalizarBoolean, limpiarNumero, buscarMoneda, ...)
+-│  ├─ rubros-manuales.ts← rubros con valor manual (ABIERTO / COSTO_PORCENTAJE), compartido por Due Agent y Due Carrier
++│  ├─ rubros-manuales.ts← rubros con valor manual (ABIERTO / COBERTURA / COSTO_PORCENTAJE): qué rubro es manual,
++│  │                      fórmula de cobertura y detalle "Sobre valor de factura". Compartido por Due Agent y Due
++│  │                      Carrier (cualquiera puede traerlos); cada tabla solo decide cómo escribe el valor en su rubro
+ │  ├─ porcentajes-rubros.ts ← método PORCENTAJE: rubro = % (entero) de otro rubro (cod_rubro), con mínimos
+ │  ├─ catalogos.ts      ← normalización de catálogos a { value, label }
+ │  ├─ cabecera.ts       ← CAMPOS DE LA CABECERA (definición única)
+diff --git a/src/features/pricing/cotizacion/calculo/components/calculo-cotizacion.tsx b/src/features/pricing/cotizacion/calculo/components/calculo-cotizacion.tsx
+index 3a76860..2676981 100644
+--- a/src/features/pricing/cotizacion/calculo/components/calculo-cotizacion.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/calculo-cotizacion.tsx
+@@ -411,6 +411,21 @@ function DetalleCalculoCotizacion({
+     [calculo.calcularDueCarrierBasadoEnDueAgent, entidadEfectivaId],
+   );
+ 
++  /*
++   * No escribir en criterios generales:
++   * hacerlo cambia criteriosParaFlete y reinicia el pipeline Carrier.
++   *
++   * Igual que en el legado, valor_factura vive en criterioCobertura.
++   * La cobertura puede venir en Due Agent o en Due Carrier.
++   */
++  const cambiarValorFacturaCobertura = React.useCallback((valorFactura: number) => {
++    setCriterioCobertura({
++      valor_factura: valorFactura,
++    });
++  }, []);
++
++  const valorFleteCriterios = getValorNumericoOTexto(criterios.valores.valor_flete);
++
+   const dueAgentBase = useRubrosDueAgent({
+     rubros: rubros.rubrosDueAgent as Parameters<typeof useRubrosDueAgent>[0]["rubros"],
+ 
+@@ -420,21 +435,11 @@ function DetalleCalculoCotizacion({
+ 
+     codMonedaPadre: carrier.servicioSeleccionado?.metodo?.cod_moneda_venta ?? null,
+ 
+-    valorFlete: getValorNumericoOTexto(criterios.valores.valor_flete),
++    valorFlete: valorFleteCriterios,
+ 
+     entidadSeleccionadaId: entidadEfectivaId,
+ 
+-    onValorFacturaChange: (valorFactura) => {
+-      /*
+-       * No escribir en criterios generales:
+-       * hacerlo cambia criteriosParaFlete y reinicia el pipeline Carrier.
+-       *
+-       * Igual que en el legado, valor_factura vive en criterioCobertura.
+-       */
+-      setCriterioCobertura({
+-        valor_factura: valorFactura,
+-      });
+-    },
++    onValorFacturaChange: cambiarValorFacturaCobertura,
+ 
+     onCalcularDueCarrier: calcularDueCarrierDesdeAgent,
+ 
+@@ -458,6 +463,10 @@ function DetalleCalculoCotizacion({
+     rubros: rubrosDueCarrierConSpot as Parameters<typeof useRubrosDueCarrier>[0]["rubros"],
+ 
+     lectura: isReadOnly,
++
++    valorFlete: valorFleteCriterios,
++
++    onValorFacturaChange: cambiarValorFacturaCobertura,
+   });
+ 
+   const dueCarrierDesdeAgentBase = useRubrosDueCarrier({
+@@ -466,6 +475,10 @@ function DetalleCalculoCotizacion({
+     >[0]["rubros"],
+ 
+     lectura: isReadOnly,
++
++    valorFlete: valorFleteCriterios,
++
++    onValorFacturaChange: cambiarValorFacturaCobertura,
+   });
+ 
+   /* ==========================================================================
+diff --git a/src/features/pricing/cotizacion/calculo/components/due-agent.tsx b/src/features/pricing/cotizacion/calculo/components/due-agent.tsx
+index d309f29..8cf7e3d 100644
+--- a/src/features/pricing/cotizacion/calculo/components/due-agent.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/due-agent.tsx
+@@ -21,9 +21,14 @@ import { useCatalogosCotizacion } from "../hooks/use-catalogos-cotizacion";
+ import type { useRubrosDueAgent } from "../hooks/use-rubros-due-agent";
+ import type { MonedaFlete } from "../lib/carrier-flete";
+ import { TIPO_CALCULO } from "../lib/constantes";
+-import { esCoberturaMercaderia, esTipoCalculoManual, type RubroDueAgent } from "../lib/due-agent";
++import type { RubroDueAgent } from "../lib/due-agent";
+ import { getCodServicioDueCarrier } from "../lib/due-carrier";
+-import { esMetodoCostoPorcentaje } from "../lib/rubros-manuales";
++import {
++  claveValorFactura,
++  esCoberturaMercaderia,
++  esMetodoCostoPorcentaje,
++  esRubroManual,
++} from "../lib/rubros-manuales";
+ import { buscarMoneda, formatNumero, getSimboloMoneda } from "../lib/utils";
+ import { Detalles } from "./utils";
+ 
+@@ -370,7 +375,7 @@ export function DueAgent({ controller, lectura = false, entidadNombre }: Props)
+ 
+                     const metodo = item.servicio?.metodo;
+ 
+-                    const manual = esTipoCalculoManual(item);
++                    const manual = esRubroManual(item);
+ 
+                     const cobertura = esCoberturaMercaderia(item);
+ 
+@@ -491,7 +496,7 @@ export function DueAgent({ controller, lectura = false, entidadNombre }: Props)
+                                 </span>
+ 
+                                 <Input
+-                                  value={valoresManual[`${item.value}_a_calcular`] ?? ""}
++                                  value={valoresManual[claveValorFactura(item.value)] ?? ""}
+                                   inputMode="decimal"
+                                   className="text-right"
+                                   onChange={(event) =>
+diff --git a/src/features/pricing/cotizacion/calculo/components/due-carrier.tsx b/src/features/pricing/cotizacion/calculo/components/due-carrier.tsx
+index aca83b5..ff47e3b 100644
+--- a/src/features/pricing/cotizacion/calculo/components/due-carrier.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/due-carrier.tsx
+@@ -26,7 +26,11 @@ import {
+   getMetodoDueCarrier,
+   type RubroDueCarrier,
+ } from "../lib/due-carrier";
+-import { esMetodoCostoPorcentaje } from "../lib/rubros-manuales";
++import {
++  claveValorFactura,
++  esCoberturaMercaderia,
++  esMetodoCostoPorcentaje,
++} from "../lib/rubros-manuales";
+ import { formatNumero, getSimboloMoneda } from "../lib/utils";
+ import { DialogoSpot } from "./dialogo-spot";
+ import { Detalles } from "./utils";
+@@ -90,6 +94,7 @@ export function DueCarrier({
+     valoresManual,
+     totalPorMoneda,
+     cambiarValorManual,
++    cambiarValorFactura,
+   } = controller;
+ 
+   const [rubroSpot, setRubroSpot] = React.useState<RubroDueCarrier | null>(null);
+@@ -310,6 +315,26 @@ export function DueCarrier({
+                                   Venta: {simbolo} {formatNumero(metodo?.venta)}
+                                 </span>
+                               </div>
++                            ) : esCoberturaMercaderia(item) && !lectura ? (
++                              <div className="ml-auto grid max-w-[220px] gap-1">
++                                <span className="text-left text-xs text-muted-foreground">
++                                  Valor factura comercial
++                                </span>
++
++                                <Input
++                                  value={valoresManual[claveValorFactura(item.value)] ?? ""}
++                                  inputMode="decimal"
++                                  className="text-right"
++                                  onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
++                                    cambiarValorFactura(item, event.target.value)
++                                  }
++                                />
++
++                                <span className="font-medium tabular-nums">
++                                  {simbolo}{" "}
++                                  {formatNumero(valoresManual[String(item.value)] ?? metodo?.venta)}
++                                </span>
++                              </div>
+                             ) : manual && !lectura ? (
+                               <div className="ml-auto grid max-w-[140px] gap-1">
+                                 <Input
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-rubros-due-agent.ts b/src/features/pricing/cotizacion/calculo/hooks/use-rubros-due-agent.ts
+index cb5106e..9f48142 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-rubros-due-agent.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-rubros-due-agent.ts
+@@ -4,13 +4,13 @@ import React from "react";
+ import {
+   agregarEstadoBloqueado,
+   aplicarValoresManualDueAgent,
+-  calcularCoberturaMercaderia,
+   calcularTotalDueAgent,
+   obtenerAutoSeleccionObligatorios,
+   obtenerObligatoriosPendientes,
+   type RubroDueAgent,
+   type ValoresManualDueAgent,
+ } from "../lib/due-agent";
++import { calcularCoberturaMercaderia, claveValorFactura } from "../lib/rubros-manuales";
+ import type { Id } from "../lib/tipos";
+ import { limpiarNumero } from "../lib/utils";
+ import { useCatalogosCotizacion } from "./use-catalogos-cotizacion";
+@@ -305,7 +305,7 @@ export function useRubrosDueAgent({
+ 
+         [item.value]: calculado,
+ 
+-        [`${item.value}_a_calcular`]: value,
++        [claveValorFactura(item.value)]: value,
+       }));
+ 
+       onValorFacturaChange?.(factura);
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-rubros-due-carrier.ts b/src/features/pricing/cotizacion/calculo/hooks/use-rubros-due-carrier.ts
+index 6648f56..c4b59bb 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-rubros-due-carrier.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-rubros-due-carrier.ts
+@@ -6,6 +6,11 @@ import {
+   type RubroDueCarrier,
+   type ValoresManualDueCarrier,
+ } from "../lib/due-carrier";
++import {
++  calcularCoberturaMercaderia,
++  claveValorFactura,
++  esCoberturaMercaderia,
++} from "../lib/rubros-manuales";
+ import { limpiarNumero } from "../lib/utils";
+ import { useCatalogosCotizacion } from "./use-catalogos-cotizacion";
+ 
+@@ -17,6 +22,15 @@ type Props = {
+   onRubrosProcesados?: (rubros: RubroDueCarrier[]) => void;
+ 
+   onValoresManualChange?: (valores: ValoresManualDueCarrier) => void;
++
++  /**
++   * `valor_flete` de los criterios (flete del carrier seleccionado).
++   * Lo usa la cobertura de mercadería.
++   */
++  valorFlete?: string | number | null;
++
++  /** Valor de factura escrito en una cobertura (se guarda en criterioCobertura). */
++  onValorFacturaChange?: (value: number) => void;
+ };
+ 
+ export function useRubrosDueCarrier({
+@@ -24,6 +38,8 @@ export function useRubrosDueCarrier({
+   lectura = false,
+   onRubrosProcesados,
+   onValoresManualChange,
++  valorFlete = 0,
++  onValorFacturaChange,
+ }: Props) {
+   const { monedas } = useCatalogosCotizacion().calculo;
+ 
+@@ -61,6 +77,9 @@ export function useRubrosDueCarrier({
+     setValoresManual((prev) => {
+       const valuesActuales = new Set(firmaRubros ? firmaRubros.split("|") : []);
+ 
++      // El valor de factura de una cobertura vive en su propia llave.
++      for (const value of [...valuesActuales]) valuesActuales.add(claveValorFactura(value));
++
+       const keysActuales = Object.keys(prev);
+       const hayObsoletos = keysActuales.some((key) => !valuesActuales.has(key));
+ 
+@@ -87,8 +106,10 @@ export function useRubrosDueCarrier({
+         valores: valoresManual,
+ 
+         lectura,
++
++        monedas,
+       }),
+-    [rubros, valoresManual, lectura],
++    [rubros, valoresManual, lectura, monedas],
+   );
+ 
+   /* ===========================================
+@@ -138,6 +159,41 @@ export function useRubrosDueCarrier({
+     [],
+   );
+ 
++  /*
++   * Cobertura: el usuario escribe el valor de factura y la venta
++   * se calcula con el flete del carrier seleccionado (igual que Due Agent).
++   */
++  const cambiarValorFactura = React.useCallback(
++    (item: RubroDueCarrier, raw: string) => {
++      if (!esCoberturaMercaderia(item)) {
++        return;
++      }
++
++      const value = limpiarNumero(raw);
++
++      const factura = Number(value);
++
++      const calculado = calcularCoberturaMercaderia({
++        item,
++
++        valorFactura: factura,
++
++        valorFlete,
++      });
++
++      setValoresManual((prev) => ({
++        ...prev,
++
++        [String(item.value)]: calculado,
++
++        [claveValorFactura(item.value)]: value,
++      }));
++
++      onValorFacturaChange?.(factura);
++    },
++    [valorFlete, onValorFacturaChange],
++  );
++
+   /* ===========================================
+    * NOTIFICACIONES
+    * =========================================== */
+@@ -160,5 +216,7 @@ export function useRubrosDueCarrier({
+     total,
+ 
+     cambiarValorManual,
++
++    cambiarValorFactura,
+   };
+ }
+diff --git a/src/features/pricing/cotizacion/calculo/lib/costo-porcentaje.ts b/src/features/pricing/cotizacion/calculo/lib/costo-porcentaje.ts
+deleted file mode 100644
+index e46c3a5..0000000
+--- a/src/features/pricing/cotizacion/calculo/lib/costo-porcentaje.ts
++++ /dev/null
+@@ -1,35 +0,0 @@
+-import { TIPO_METODO } from "./constantes";
+-import { registro } from "./utils";
+-
+-type Registro = Record<string, unknown>;
+-
+-export function esMetodoCostoPorcentaje(item: Registro): boolean {
+-  const servicio = registro(item.servicio);
+-  const metodoServicio = registro(servicio.metodo);
+-  const codTipo =
+-    metodoServicio.cod_tipo_metodo ?? servicio.cod_tipo_metodo ?? item.cod_tipo_metodo;
+-  return Number(codTipo) === TIPO_METODO.COSTO_PORCENTAJE;
+-}
+-
+-export function calcularVentaCostoPorcentaje(item: Registro, valorCosto: string | number) {
+-  const servicio = registro(item.servicio);
+-  const metodo = registro(servicio.metodo ?? item.metodo);
+-  const costo = Number(valorCosto);
+-  const minimo = Number(metodo.minimo_venta ?? 0);
+-  const tipo = metodo.es_porcentaje;
+-  const esPorcentaje =
+-    tipo === true ||
+-    tipo === 1 ||
+-    (typeof tipo === "string" && ["1", "true"].includes(tipo.trim().toLowerCase()));
+-  // Tarifas guarda el porcentaje en enteros (25.26 = 25.26 %) → factor 0.2526.
+-  // Si es valor fijo se usa tal cual.
+-  const valorTarifa = Number(metodo.porcentaje_venta ?? 0);
+-  const factor = esPorcentaje ? valorTarifa / 100 : valorTarifa;
+-
+-  if (!Number.isFinite(costo) || !Number.isFinite(factor) || !Number.isFinite(minimo)) {
+-    return { costo: 0, venta: 0 };
+-  }
+-
+-  const valorCalculado = esPorcentaje ? costo + costo * factor : costo + factor;
+-  return { costo, venta: Math.max(valorCalculado, minimo) };
+-}
+diff --git a/src/features/pricing/cotizacion/calculo/lib/due-agent.ts b/src/features/pricing/cotizacion/calculo/lib/due-agent.ts
+index 0c6b3ff..d62c92c 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/due-agent.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/due-agent.ts
+@@ -1,10 +1,12 @@
+ import type { MonedaFlete } from "./carrier-flete";
+-import { TIPO_CALCULO } from "./constantes";
+ import {
+   aplicarCostoPorcentaje,
++  claveValorFactura,
++  detalleCoberturaFactura,
++  esCoberturaMercaderia,
+   esMetodoCostoPorcentaje,
++  esRubroManual,
+   getCodMonedaVenta,
+-  getCodTipoCalculo,
+   primeraMonedaDefinida,
+ } from "./rubros-manuales";
+ import type { Id } from "./tipos";
+@@ -226,51 +228,15 @@ export function agregarEstadoBloqueado({
+   }));
+ }
+ 
+-export function esTipoCalculoManual(item: RubroDueAgent) {
+-  const codTipo = getCodTipoCalculo(item);
+-
+-  return (
+-    esMetodoCostoPorcentaje(item) ||
+-    Number(codTipo) === TIPO_CALCULO.ABIERTO ||
+-    Number(codTipo) === TIPO_CALCULO.COBERTURA_MERCADERIA
+-  );
+-}
+-
+-export function esCoberturaMercaderia(item: RubroDueAgent) {
+-  return Number(getCodTipoCalculo(item)) === TIPO_CALCULO.COBERTURA_MERCADERIA;
+-}
+-
+-export function calcularCoberturaMercaderia({
+-  item,
+-  valorFactura,
+-  valorFlete,
+-}: {
+-  item: RubroDueAgent;
+-
+-  valorFactura: string | number | null;
+-
+-  valorFlete: string | number | null;
+-}) {
+-  const factura = Number(valorFactura ?? 0);
+-
+-  const flete = Number(valorFlete ?? 0);
+-
+-  const metodoCalculo = item.metodo ?? item.cobertura ?? {};
+-
+-  const porcentaje = Number(metodoCalculo.porcentaje_venta ?? 0) / 100;
+-
+-  const minimo = Number(metodoCalculo.minimo_venta ?? 0);
+-
+-  const calculado = (flete + factura) * 1.1 * porcentaje;
+-
+-  const redondeado = Math.ceil(calculado);
+-
+-  if (factura <= 0) {
+-    return 0;
+-  }
+-
+-  return Math.max(minimo, redondeado);
+-}
++/*
++ * Rubros manuales (ABIERTO, COBERTURA, COSTO_PORCENTAJE): definición única en
++ * lib/rubros-manuales.ts. Se reexportan aquí para no romper el barrel.
++ */
++export {
++  calcularCoberturaMercaderia,
++  esCoberturaMercaderia,
++  esRubroManual as esTipoCalculoManual,
++} from "./rubros-manuales";
+ 
+ export type ValoresManualDueAgent = Record<string, string | number>;
+ 
+@@ -305,7 +271,7 @@ export function aplicarValoresManualDueAgent({
+   const codMonedaDefault = primeraMonedaDefinida(seleccionados);
+ 
+   return seleccionados.map((item) => {
+-    if (!esTipoCalculoManual(item)) {
++    if (!esRubroManual(item)) {
+       return item;
+     }
+ 
+@@ -343,20 +309,14 @@ export function aplicarValoresManualDueAgent({
+      * sobre valor de factura.
+      */
+     if (esCoberturaMercaderia(item)) {
+-      const valorFactura = valores[`${item.value}_a_calcular`] ?? 0;
++      const valorFactura = valores[claveValorFactura(item.value)] ?? 0;
+ 
+       const moneda = buscarMoneda(monedas, codMoneda);
+ 
+       servicio.metodo.detalles = [
+         ...(item.servicio?.metodo?.detalles ?? []),
+ 
+-        {
+-          tipo_desc: "",
+-
+-          tarifadetalle_descripcion: `Sobre valor de factura ${simboloDeMoneda(moneda)} ${valorFactura}`,
+-
+-          tarifadetalle_valor: valorFactura,
+-        },
++        detalleCoberturaFactura(simboloDeMoneda(moneda), valorFactura),
+       ];
+     }
+ 
+diff --git a/src/features/pricing/cotizacion/calculo/lib/due-carrier.ts b/src/features/pricing/cotizacion/calculo/lib/due-carrier.ts
+index 975882b..2d68c2a 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/due-carrier.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/due-carrier.ts
+@@ -1,14 +1,16 @@
+ import type { MonedaFlete } from "./carrier-flete";
+-import { TIPO_CALCULO } from "./constantes";
+ import {
+   aplicarCostoPorcentaje,
++  claveValorFactura,
++  detalleCoberturaFactura,
++  esCoberturaMercaderia,
+   esMetodoCostoPorcentaje,
++  esRubroManual,
+   getCodMonedaVenta,
+-  getCodTipoCalculo,
+   primeraMonedaDefinida,
+ } from "./rubros-manuales";
+ import type { Id } from "./tipos";
+-import { buscarMoneda, numero } from "./utils";
++import { buscarMoneda, numero, simboloDeMoneda } from "./utils";
+ 
+ export type RubroDueCarrier = {
+   value?: string | null;
+@@ -95,8 +97,9 @@ export function getMetodoDueCarrier(item: RubroDueCarrier) {
+   return item.servicio?.metodo ?? item.metodo ?? null;
+ }
+ 
++/** ABIERTO, COBERTURA o COSTO_PORCENTAJE (definición única en lib/rubros-manuales.ts). */
+ export function esDueCarrierManual(item: RubroDueCarrier) {
+-  return esMetodoCostoPorcentaje(item) || Number(getCodTipoCalculo(item)) === TIPO_CALCULO.ABIERTO;
++  return esRubroManual(item);
+ }
+ export function crearKeyRubroDueCarrier(item: RubroDueCarrier) {
+   const codRubro = item.cod_rubro ?? "";
+@@ -170,17 +173,20 @@ export function aplicarValoresManualDueCarrier({
+   rubros,
+   valores,
+   lectura,
++  monedas,
+ }: {
+   rubros: RubroDueCarrier[];
+ 
+   valores: ValoresManualDueCarrier;
+ 
+   lectura: boolean;
++
++  monedas: MonedaFlete[];
+ }) {
+   const codMonedaDefault = obtenerCodMonedaDefaultDueCarrier(rubros);
+ 
+-  return rubros.map((item) => {
+-    if (!esDueCarrierManual(item)) {
++  return rubros.map((item): RubroDueCarrier => {
++    if (!esRubroManual(item)) {
+       return item;
+     }
+ 
+@@ -203,7 +209,7 @@ export function aplicarValoresManualDueCarrier({
+       codMonedaDefault,
+     });
+ 
+-    return {
++    const resultado = {
+       ...item,
+ 
+       venta: valor,
+@@ -239,6 +245,23 @@ export function aplicarValoresManualDueCarrier({
+         },
+       },
+     };
++
++    /*
++     * Cobertura: `valor` ya es la cobertura calculada; además se agrega
++     * el detalle sobre el valor de factura (igual que en Due Agent).
++     */
++    if (esCoberturaMercaderia(item)) {
++      const detalle = detalleCoberturaFactura(
++        simboloDeMoneda(buscarMoneda(monedas, codMoneda)),
++        valores[claveValorFactura(item.value)] ?? 0,
++      );
++
++      resultado.metodo.detalles = [...(item.metodo?.detalles ?? []), detalle];
++
++      resultado.servicio.metodo.detalles = [...(item.servicio?.metodo?.detalles ?? []), detalle];
++    }
++
++    return resultado;
+   });
+ }
+ export type TotalDueCarrierMoneda = {
+@@ -284,12 +307,15 @@ export function procesarRubrosDueCarrier({
+   rubros,
+   valores,
+   lectura,
++  monedas,
+ }: {
+   rubros: RubroDueCarrier[];
+ 
+   valores: ValoresManualDueCarrier;
+ 
+   lectura: boolean;
++
++  monedas: MonedaFlete[];
+ }) {
+   /*
+    * 1. eliminar duplicados
+@@ -302,7 +328,7 @@ export function procesarRubrosDueCarrier({
+   const conFleteActivo = filtrarFleteActivoDueCarrier(sinDuplicados);
+ 
+   /*
+-   * 3. aplicar abiertos
++   * 3. aplicar manuales (abiertos, cobertura, costo por porcentaje)
+    */
+   return aplicarValoresManualDueCarrier({
+     rubros: conFleteActivo,
+@@ -310,5 +336,7 @@ export function procesarRubrosDueCarrier({
+     valores,
+ 
+     lectura,
++
++    monedas,
+   });
+ }
+diff --git a/src/features/pricing/cotizacion/calculo/lib/rubros-manuales.ts b/src/features/pricing/cotizacion/calculo/lib/rubros-manuales.ts
+index f1092ce..3258925 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/rubros-manuales.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/rubros-manuales.ts
+@@ -2,11 +2,13 @@
+  * RUBROS CON VALOR MANUAL (Due Agent y Due Carrier)
+  *
+  * Lectura del método de un rubro y cálculo de los rubros que el usuario
+- * completa a mano (tipo de cálculo ABIERTO o método COSTO_PORCENTAJE).
++ * completa a mano: tipo de cálculo ABIERTO, COBERTURA DE MERCADERÍA o método
++ * COSTO_PORCENTAJE. Cualquiera de ellos puede llegar en Due Agent o en Due
++ * Carrier; cada tabla solo decide cómo escribe el valor en su rubro.
+  * Antes esta lógica estaba copiada en lib/due-agent.ts y lib/due-carrier.ts.
+  * ========================================================================== */
+ 
+-import { TIPO_METODO } from "./constantes";
++import { TIPO_CALCULO, TIPO_METODO } from "./constantes";
+ import type { Id, Registro } from "./tipos";
+ import { registro } from "./utils";
+ 
+@@ -105,3 +107,79 @@ export function aplicarCostoPorcentaje<T extends RubroConMetodo>(
+     servicio: { ...(item.servicio ?? {}), metodo },
+   };
+ }
++
++/* ==========================================================================
++ * QUÉ RUBROS SON MANUALES
++ * ========================================================================== */
++
++/** Tipo de cálculo ABIERTO: el usuario escribe la venta. */
++export function esTipoCalculoAbierto(item: RubroConMetodo): boolean {
++  return Number(getCodTipoCalculo(item)) === TIPO_CALCULO.ABIERTO;
++}
++
++/** Tipo de cálculo COBERTURA DE MERCADERÍA: el usuario escribe el valor de factura. */
++export function esCoberturaMercaderia(item: RubroConMetodo): boolean {
++  return Number(getCodTipoCalculo(item)) === TIPO_CALCULO.COBERTURA_MERCADERIA;
++}
++
++/** Rubro que se completa a mano (en Due Agent o en Due Carrier). */
++export function esRubroManual(item: RubroConMetodo): boolean {
++  return esMetodoCostoPorcentaje(item) || esTipoCalculoAbierto(item) || esCoberturaMercaderia(item);
++}
++
++/* ==========================================================================
++ * COBERTURA DE MERCADERÍA
++ * ========================================================================== */
++
++/** Llave, dentro de los valores manuales, del valor de factura que escribió el usuario. */
++export function claveValorFactura(value: unknown): string {
++  return `${String(value ?? "")}_a_calcular`;
++}
++
++/**
++ * Cobertura = MAX(mínimo venta, techo((flete + factura) × 1.1 × porcentaje venta / 100)).
++ * Sin factura (≤ 0) la cobertura es 0. `valorFlete` es el `valor_flete` de los
++ * criterios, que es el flete del carrier seleccionado.
++ */
++export function calcularCoberturaMercaderia({
++  item,
++  valorFactura,
++  valorFlete,
++}: {
++  item: RubroConMetodo;
++
++  valorFactura: string | number | null;
++
++  valorFlete: string | number | null;
++}) {
++  const factura = Number(valorFactura ?? 0);
++
++  const flete = Number(valorFlete ?? 0);
++
++  const metodoCalculo = registro(item.metodo ?? item.cobertura);
++
++  const porcentaje = Number(metodoCalculo.porcentaje_venta ?? 0) / 100;
++
++  const minimo = Number(metodoCalculo.minimo_venta ?? 0);
++
++  const calculado = (flete + factura) * 1.1 * porcentaje;
++
++  const redondeado = Math.ceil(calculado);
++
++  if (factura <= 0) {
++    return 0;
++  }
++
++  return Math.max(minimo, redondeado);
++}
++
++/** Detalle "Sobre valor de factura" que acompaña a la cobertura. */
++export function detalleCoberturaFactura(simbolo: string, valorFactura: string | number) {
++  return {
++    tipo_desc: "",
++
++    tarifadetalle_descripcion: `Sobre valor de factura ${simbolo} ${valorFactura}`,
++
++    tarifadetalle_valor: valorFactura,
++  };
++}
