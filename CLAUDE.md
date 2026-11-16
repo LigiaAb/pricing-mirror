@@ -7,7 +7,7 @@ al proyecto completo. Responder siempre en **español**.
 
 | Ruta                                         | Qué es                                                | ¿Se copia al proyecto real?      |
 | -------------------------------------------- | ----------------------------------------------------- | -------------------------------- |
-| `src/features/pricing/`                      | Código real del módulo                                | **Sí**, es lo único que se copia |
+| `src/features/pricing/`, `src/features/embarques/` | Código real de los módulos                      | **Sí**, es lo único que se copia |
 | `src/shared/**`, `src/features/catalogos/**` | STUBS: solo tipos de lo que pricing usa               | **No**                           |
 | `src/types/stubs-modulos.d.ts`               | Todo lo demás de `@/shared` / `@/features` como `any` | **No**                           |
 | `tsconfig.json`                              | Copia exacta del proyecto real                        | No (ya existe allá)              |
@@ -59,8 +59,8 @@ Al editar, **conservar el final de línea que ya tiene el archivo** (no converti
 2. `npm run check:nuevos` antes de cada commit.
 3. Verificación proporcional al cambio: cambio chico → solo `check:nuevos`; cambio de lógica → además una prueba
    rápida en ejecución (esbuild + node) comparando contra el comportamiento anterior.
-4. **Después de cada commit que cambie `src/features/pricing`: `npm run diff:guardar`.** Genera
-   `diff/[DDMMYY-HHmm]-[nombre-del-commit].diff` (hora de Guatemala, solo `src/features/pricing`, texto en LF)
+4. **Después de cada commit que cambie `src/features/pricing` o `src/features/embarques`: `npm run diff:guardar`.** Genera
+   `diff/[DDMMYY-HHmm]-[nombre-del-commit].diff` (hora de Guatemala, solo `src/features/pricing` y `src/features/embarques`, texto en LF)
    y lo agrega al mismo commit (amend). Hacerlo antes del push.
 5. El usuario lo aplica desde la raíz de su proyecto con
    `node <espejo>/scripts/aplicar-diff.mjs <espejo>/diff/<archivo>.diff` (`--check` para solo verificar),

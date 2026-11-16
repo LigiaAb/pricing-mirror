@@ -3,10 +3,10 @@
  * GUARDAR DIFF DE UN COMMIT
  *
  * Genera diff/[DDMMYY-HHmm]-[nombre-del-commit].diff con los cambios de
- * src/features/pricing de un commit (por defecto HEAD), listo para aplicarse
+ * src/features/pricing y src/features/embarques de un commit (por defecto HEAD), listo para aplicarse
  * en el proyecto real con scripts/aplicar-diff.mjs (ver ese archivo).
  *
- * - Solo incluye src/features/pricing (los stubs nunca salen del mirror).
+ * - Solo incluye RUTAS_CODIGO (los stubs nunca salen del mirror).
  * - Diff de TEXTO con todas las líneas en LF: no depende de los finales de
  *   línea. aplicar-diff.mjs lo adapta a CRLF o LF según cada archivo destino.
  * - Fecha/hora: la del autor del commit, en hora de Guatemala.
@@ -20,7 +20,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-const RUTA_CODIGO = "src/features/pricing";
+const RUTAS_CODIGO = ["src/features/pricing", "src/features/embarques"];
 const CARPETA_DIFF = "diff";
 const ZONA_HORARIA = "America/Guatemala";
 
@@ -69,12 +69,12 @@ const archivo = join(CARPETA_DIFF, `${fecha}-${slug || "cambio"}.diff`);
 // por byte (hash) y fallaba ante cualquier diferencia de CRLF/LF.
 const diff = execFileSync(
   "git",
-  ["diff", "--no-color", "--no-ext-diff", "--text", `${commit}^`, commit, "--", RUTA_CODIGO],
+  ["diff", "--no-color", "--no-ext-diff", "--text", `${commit}^`, commit, "--", ...RUTAS_CODIGO],
   { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 },
 ).replace(/\r\n/g, "\n");
 
 if (!diff.trim()) {
-  console.log(`El commit no cambia nada en ${RUTA_CODIGO}; no se genera diff.`);
+  console.log(`El commit no cambia nada en ${RUTAS_CODIGO.join(", ")}; no se genera diff.`);
   process.exit(0);
 }
 
