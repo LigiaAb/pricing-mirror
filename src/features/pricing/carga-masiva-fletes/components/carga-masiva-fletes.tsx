@@ -1,9 +1,9 @@
 "use client";
 
-import { Book, CheckCircle2, Download, FileSpreadsheet, Loader2, Plane, SearchIcon, Send, Ship, Truck, XCircle } from "lucide-react";
+import { Book, CheckCircle2, Download, FileSpreadsheet, Loader2, Plane, Send, Ship, Truck, XCircle } from "lucide-react";
 import * as React from "react";
 
-import { centrosCosto, ciudades, empresas, paises } from "@/features/catalogos";
+import { centrosCosto, empresas } from "@/features/catalogos";
 import { useContextoOperativoStore } from "@/features/shell";
 import { Alert } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
@@ -17,7 +17,7 @@ import { Tooltip } from "@/shared/components/ui/tooltip";
 import { Separator } from "@/shared/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/shared/components/ui/sheet";
-import { ArbolAccesos } from "@/features/accesos/components/estructura/arbol-accesos";
+import { CatalogoCodigos } from "./catalogo-codigos";
 
 type Id = string | number;
 type UnknownRecord = Record<string, unknown>;
@@ -233,12 +233,7 @@ export function CargaMasivaFletes() {
   const empresaInicial = obtenerId(empresaContexto, ["cod_empresa", "empresaId"]);
   const centroCostoInicial = obtenerId(centroCostoContexto, ["cod_cc", "centroCostoId"]);
 
-  const { data: listaPaises } = paises.useLista({ cod_estado: 1 });
-  const { data: listaCiudades } = ciudades.useLista({ cod_estado: 1 });
-  const [terminoBusqueda, setTerminoBusqueda] = React.useState<string | null>(null);
   const [mostrarCatalogos, setMostrarCatalogos] = React.useState(false);
-  const [expandidas, setExpandidas] = React.useState<Set<string>>(new Set());
-  const [seleccionada, setSeleccionada] = React.useState<string | null>(null);
 
   const [metodo, setMetodo] = React.useState<MetodoCargaFlete>("AIRFREIGTH");
   const [codEmpresa, setCodEmpresa] = React.useState<Id | null>(empresaInicial);
@@ -331,7 +326,7 @@ export function CargaMasivaFletes() {
           </TabsList>
           <Button onClick={() => setMostrarCatalogos(true)} variant="outline" size="sm">
             <Book className="size-5" aria-hidden="true" />
-            <span>Catalogo de Código</span>
+            <span>Catálogo de códigos</span>
           </Button>
         </div>
 
@@ -448,58 +443,12 @@ export function CargaMasivaFletes() {
                 <Book className="size-5" aria-hidden="true" />
               </div>
               <div className="space-y-1">
-                <SheetTitle>Catalogos</SheetTitle>
-                <SheetDescription>En esta sección se muestran los catalogos disponibles.</SheetDescription>
+                <SheetTitle>Catálogo de códigos</SheetTitle>
+                <SheetDescription>Consulte y copie los códigos del sistema para completar la plantilla.</SheetDescription>
               </div>
             </div>
           </SheetHeader>
-          {/* <div className="space-y-5 p-4 sm:space-y-6 sm:p-6 overflow-auto">
-            <div className="flex items-center gap-2">
-              <span className="font-medium w-20">Países:</span>
-              <Input type="text" value={terminoBusqueda ?? ""} className="w-full" onChange={(e) => setTerminoBusqueda(e.target.value)} />
-            </div>
-          </div>
-          <Arbol
-            raices={(listaPaises ?? [])
-              .filter((pais) => `${pais.nombre_pais ?? ""}`.toLowerCase().includes(terminoBusqueda?.toLowerCase() ?? ""))
-              .map((pais) => ({
-                ...pais,
-                clave: `pais:${pais.cod_pais}`,
-                nombre: `${pais.ref_pais_2}: ${pais.nombre_pais ?? ""}`,
-                hijos: (listaCiudades ?? [])
-                  .filter((ciudad) => String(ciudad.cod_pais) === String(pais.cod_pais))
-                  .map((ciudad) => ({
-                    ...ciudad,
-                    clave: `pais:${pais.cod_pais}/ciudad:${ciudad.cod_ciudad}`,
-                    nombre: `${ciudad.siglas_ciudad}: ${ciudad.nombre_ciudad ?? ""}`,
-                    hijos: [],
-                  })),
-              }))}
-            expandidas={expandidas}
-            seleccionada={seleccionada}
-            onAlternar={(clave) => {
-              setExpandidas((actuales) => {
-                const nuevas = new Set(actuales);
-
-                if (nuevas.has(clave)) {
-                  nuevas.delete(clave);
-                } else {
-                  nuevas.add(clave);
-                }
-
-                return nuevas;
-              });
-            }}
-            onSeleccionar={setSeleccionada}
-          />
-          <pre>
-            {JSON.stringify(
-              listaPaises?.filter((i) => `${i.nombre_pais ?? ""}`.toLowerCase().includes(terminoBusqueda?.toLowerCase() ?? "")),
-              null,
-              2,
-            )}
-          </pre>
-          <pre>{JSON.stringify(listaCiudades, null, 2)}</pre> */}
+          {mostrarCatalogos ? <CatalogoCodigos metodo={metodo} /> : null}
         </SheetContent>
       </Sheet>
 
