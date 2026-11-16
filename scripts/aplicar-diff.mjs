@@ -25,8 +25,14 @@ const args = process.argv.slice(2);
 const soloCheck = args.includes("--check");
 const rutaDiff = args.find((a) => !a.startsWith("--"));
 
-if (!rutaDiff || !existsSync(rutaDiff)) {
+if (!rutaDiff) {
   console.error("Uso: node aplicar-diff.mjs <archivo.diff> [--check]");
+  process.exit(1);
+}
+
+if (!existsSync(rutaDiff)) {
+  console.error(`No existe el archivo: ${rutaDiff}`);
+  console.error("¿Ya se hizo git pull del espejo en la rama donde se generó el diff?");
   process.exit(1);
 }
 

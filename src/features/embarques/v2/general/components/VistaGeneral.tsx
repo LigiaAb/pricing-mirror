@@ -49,16 +49,12 @@ export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: Vi
   }, [seleccionado]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full">
       {/* ================================================================
           LISTADO
       ================================================================= */}
       <section className="rounded-lg border bg-card p-4 shadow-sm">
-        <EmbarquesTable
-          data={EMBARQUES_MAQUETA}
-          seleccionado={seleccionado}
-          onSeleccionar={seleccionar}
-        />
+        <EmbarquesTable data={EMBARQUES_MAQUETA} seleccionado={seleccionado} onSeleccionar={seleccionar} />
       </section>
 
       {/* ================================================================
@@ -74,12 +70,7 @@ export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: Vi
           />
 
           <section className="rounded-lg border bg-card p-2 shadow-sm">
-            <TabsEmbarque
-              embarque={seleccionado}
-              perfil={perfil}
-              value={tab}
-              onValueChange={setTab}
-            />
+            <TabsEmbarque embarque={seleccionado} perfil={perfil} value={tab} onValueChange={setTab} />
           </section>
         </div>
       ) : (
@@ -93,11 +84,7 @@ export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: Vi
         {trackingInteractivo}
       </TrackingSheet>
 
-      <DetalleActividadesSheet
-        open={actividadesOpen}
-        onOpenChange={setActividadesOpen}
-        embarque={seleccionado}
-      />
+      <DetalleActividadesSheet open={actividadesOpen} onOpenChange={setActividadesOpen} embarque={seleccionado} />
     </div>
   );
 };
