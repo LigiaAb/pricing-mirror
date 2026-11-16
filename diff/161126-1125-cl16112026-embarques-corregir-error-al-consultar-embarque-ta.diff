@@ -1,0 +1,13 @@
+diff --git a/src/features/embarques/v2/general/components/tabs-embarque.tsx b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+index d66c853..09489b7 100644
+--- a/src/features/embarques/v2/general/components/tabs-embarque.tsx
++++ b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+@@ -68,7 +68,7 @@ function contenidoPaso(
+ ): React.ReactNode {
+   switch (paso.value) {
+     case "informacion":
+-      return <PasoInformacion editable={puedeEditarInformacion(perfil)} />;
++      return <PasoInformacion embarque={embarque} editable={puedeEditarInformacion(perfil)} />;
+     case "documentos":
+       return <PasoDocumentos />;
+     default:
