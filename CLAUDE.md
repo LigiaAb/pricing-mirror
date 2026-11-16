@@ -52,8 +52,38 @@ Al editar, **conservar el final de línea que ya tiene el archivo** (no converti
 
 - `check:finales` (incluido en `check:nuevos`) **bloquea** cualquier conversión CRLF<->LF; no se hace commit si falla.
 - Los `diff/` son de **texto en LF** (no binarios): no dependen de los finales de línea. Se aplican **solo** con
-  `scripts/aplicar-diff.mjs`, que adapta el diff al final de cada archivo destino y lo deja como estaba
-  (funciona con cualquier `core.autocrlf`). **Nunca** indicar al usuario `git apply` directo.
+  `scripts/aplicar-diff.mjs` (ver *Aplicar diffs*).
+
+## Aplicar diffs (en el proyecto real)
+
+Única forma de aplicar un `diff/`: `scripts/aplicar-diff.mjs`. Adapta el diff al final de línea de cada archivo
+destino y lo deja como estaba (funciona con cualquier `core.autocrlf`). **Nunca** indicar `git apply`, `patch`
+ni copiar carpetas como alternativa.
+
+**Comando (siempre con este formato)**, desde la raíz del proyecto real, con rutas al espejo:
+
+```bash
+node <espejo>/scripts/aplicar-diff.mjs <espejo>/diff/<archivo>.diff --check
+node <espejo>/scripts/aplicar-diff.mjs <espejo>/diff/<archivo>.diff
+```
+
+- Primero `--check` (no toca nada); si dice `OK`, el mismo comando sin `--check`.
+- Varios diffs: **uno por uno, en orden cronológico** (el nombre `DDMMYY-HHmm` ya los ordena), cada uno con su
+  `--check` antes. Si uno falla, no seguir con los siguientes.
+- El script no toca nada si algo no aplica. Marca cada archivo de `Archivos en el diff:` así:
+  - Sin marca → ese archivo aplica (al final dice `OK: …`).
+  - **YA APLICADO** / **IGUAL AL ESPEJO** → ese archivo no necesita el diff. Si todo el diff está así dice
+    "Nada que hacer" y termina sin error: seguir con el siguiente.
+  - **NO APLICA** → el proyecto difiere de `main`. No forzar: pedir al usuario el archivo real y hacer un diff
+    nuevo sobre ese estado (ver *Flujo de trabajo*).
+
+**Al cerrar cada iteración**, la respuesta al usuario incluye siempre este bloque (solo diffs de esa iteración):
+
+1. Tras aceptar el PR: `git pull` del espejo en `main`.
+2. Lista numerada de diffs **en el orden de aplicación**, con el nombre completo del archivo, y para cada uno
+   el par de comandos de arriba (`--check` y aplicar) en bloques `bash` separados.
+3. Diffs que **no** se aplican (reemplazados, `obsoletos/`, ya aplicados) y por qué.
+4. Si no hubo cambios en `src/features`: decirlo ("no hay diff que aplicar").
 
 ## Flujo de trabajo
 
@@ -65,7 +95,8 @@ no lo ha aplicado.
 
 - Cada iteración empieza desde `origin/main` actualizado; los diffs se generan sobre ese estado.
 - Si un PR ya se aceptó, lo nuevo va en commits nuevos sobre `main` (nuevo PR del usuario).
-- Al terminar, decir **qué diffs aplicar y en qué orden** (solo los de esa iteración) y cuáles no.
+- Al terminar, decir **qué diffs aplicar y en qué orden** (solo los de esa iteración) y cuáles no, con el
+  bloque de cierre de *Aplicar diffs*.
   No pasar rutas de diffs que aún no están en `main` como si ya pudieran aplicarse: el usuario los
   aplica después de aceptar el PR y hacer pull.
 - Si el usuario reporta que un diff no aplicó, su proyecto quedó como estaba `main` antes de ese diff:
@@ -82,9 +113,8 @@ no lo ha aplicado.
 4. **Después de cada commit que cambie `src/features/pricing` o `src/features/embarques`: `npm run diff:guardar`.** Genera
    `diff/[DDMMYY-HHmm]-[nombre-del-commit].diff` (hora de Guatemala, solo `src/features/pricing` y `src/features/embarques`, texto en LF)
    y lo agrega al mismo commit (amend). Hacerlo antes del push.
-5. El usuario lo aplica desde la raíz de su proyecto con
-   `node <espejo>/scripts/aplicar-diff.mjs <espejo>/diff/<archivo>.diff` (`--check` para solo verificar),
-   o copia `src/features/pricing`.
+5. El usuario lo aplica con `scripts/aplicar-diff.mjs`, siguiendo *Aplicar diffs* (formato fijo del comando
+   y del bloque de cierre).
 6. Actualizar el `ARQUITECTURA.md` del submódulo si cambia dónde vive algo.
 7. **Registrar cada cambio en `CAMBIOS.md`** (log de cambios, en la raíz) en el mismo commit: entrada nueva arriba,
    bajo la fecha del día (`## DD/MM/AAAA`), con rama, módulo/submódulo, qué se hizo y por qué, y el nombre del
