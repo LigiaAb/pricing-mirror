@@ -8,16 +8,18 @@ al proyecto completo. Responder siempre en **español**.
 | Ruta                                         | Qué es                                                | ¿Se copia al proyecto real?      |
 | -------------------------------------------- | ----------------------------------------------------- | -------------------------------- |
 | `src/features/pricing/`, `src/features/embarques/` | Código real de los módulos                      | **Sí**, es lo único que se copia |
-| `src/shared/**`, `src/features/catalogos/**` | STUBS: solo tipos de lo que pricing usa               | **No**                           |
+| `src/shared/**`, `src/features/catalogos/**` | STUBS: solo tipos de lo que pricing usa (salvo `async-combobox-input.tsx`, real) | **No** (salvo ese archivo) |
 | `src/features/tracking/**`                   | STUB: solo tipos de `TrackingDetalle` (embarques)     | **No**                           |
 | `src/types/stubs-modulos.d.ts`               | Todo lo demás de `@/shared` / `@/features` como `any` | **No**                           |
 | `tsconfig.json`                              | Copia exacta del proyecto real                        | No (ya existe allá)              |
 
 - `src/features/catalogos/create-catalogo.ts` contiene el **código real** de `createCatalogo` del proyecto.
-- `src/shared/components/form/fields/async-combobox-input.tsx` contiene el **código real** de `AsyncComboboxInput`
-  (solo se anotó `nextOpen: boolean` porque `Popover` es `any` en el espejo). Guarda en caché lo que devuelve
-  `fetchOptions` por `queryKey` + búsqueda (30 s) y **no** vuelve a consultar si `fetchOptions` cambia: con opciones
-  locales que cambian (catálogo que carga después, listas filtradas), pasar un `queryKey` que cambie con la lista.
+- `src/shared/components/form/fields/async-combobox-input.tsx` contiene el **código real** de `AsyncComboboxInput`,
+  idéntico al proyecto (para tipar `onOpenChange` hay stub en `src/shared/components/ui/popover.tsx`). Es la única
+  ruta de `src/shared` que **sí** sale en los `diff/` (`RUTAS_CODIGO` de `scripts/guardar-diff.mjs`).
+  Consulta solo con el listado abierto y vuelve a pedir las opciones cada vez que se abre (`staleTime: 0`): con
+  opciones locales basta pasar `fetchOptions` memoizado (`useFiltroOpciones` en Tarifas). Dibuja máximo
+  `maxOptions` (100) opciones.
 - Si un cambio necesita un tipo de `@/shared` que no está en los stubs, se agrega al stub (solo tipos) y se avisa.
 - Nunca cambiar lógica dentro de los stubs para "hacer pasar" algo.
 - **Embarques: se trabaja únicamente en `src/features/embarques/v2/`.** Lo demás de `src/features/embarques/`

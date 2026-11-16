@@ -6,6 +6,7 @@ import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combob
 import { Button } from "@/shared/components/ui/button";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { InputGroup } from "@/shared/components/ui/input-group";
+import { useFiltroOpciones } from "../../hooks/use-opciones-tarifa";
 import type { FilaMetodoPais, RutaOption } from "./pais-columns";
 
 type Props = {
@@ -25,19 +26,6 @@ type Props = {
 
   isPending?: boolean;
 };
-
-function useFetchOptionsLocal(options: RutaOption[]) {
-  return React.useCallback(
-    async (search: string): Promise<RutaOption[]> => {
-      const busqueda = search.trim().toLowerCase();
-
-      if (!busqueda) return options;
-
-      return options.filter((option) => option.label.toLowerCase().includes(busqueda));
-    },
-    [options],
-  );
-}
 
 export function PaisForm({
   value,
@@ -80,12 +68,12 @@ export function PaisForm({
     );
   }, [puntosEnlace, row.pais, row.tipo_puntoenlace]);
 
-  const fetchTiposRuta = useFetchOptionsLocal(tiposRuta);
-  const fetchContinentes = useFetchOptionsLocal(continentes);
-  const fetchPaises = useFetchOptionsLocal(paisesFiltrados);
-  const fetchTiposPuntoEnlace = useFetchOptionsLocal(tiposPuntoEnlace);
-  const fetchPuntosEnlace = useFetchOptionsLocal(puntosFiltrados);
-  const fetchCiudades = useFetchOptionsLocal(ciudadesFiltradas);
+  const fetchTiposRuta = useFiltroOpciones(tiposRuta);
+  const fetchContinentes = useFiltroOpciones(continentes);
+  const fetchPaises = useFiltroOpciones(paisesFiltrados);
+  const fetchTiposPuntoEnlace = useFiltroOpciones(tiposPuntoEnlace);
+  const fetchPuntosEnlace = useFiltroOpciones(puntosFiltrados);
+  const fetchCiudades = useFiltroOpciones(ciudadesFiltradas);
 
   const guardar = () => {
     if (!row.tipo) return;
