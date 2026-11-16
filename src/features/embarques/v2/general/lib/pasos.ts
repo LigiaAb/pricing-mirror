@@ -2,16 +2,18 @@
  * DEFINICIÓN ÚNICA DE PASOS
  *
  * - TRACKING_PASOS: los 6 pasos del tracking general (solo visual).
- * - PASOS_EMBARQUE: las tabs de gestión del embarque. Agregar/quitar una tab
- *   = 1 entrada aquí + su componente en `components/pasos/` registrado en
- *   `tabs-embarque.tsx`.
+ * - PASOS_EMBARQUE: las tabs de gestión del embarque. Cada tab agrupa
+ *   actividades del Excel (ids de `ACTIVIDADES_TRACKING`); de ellas salen su
+ *   paso (`pasoDeTab`) y qué perfiles la ven (`perfilesDeTab`). Las 69
+ *   actividades están en exactamente una tab.
  *
- * `perfiles` indica qué pantallas (Operaciones, Bodegas, Combex) ven la tab.
- * Hoy es una propuesta: se ajusta cuando se definan las otras pantallas.
+ * Agregar una tab = 1 entrada aquí + su icono en `tabs-embarque.tsx`. Se
+ * muestra con el componente genérico `pasos/paso-actividades.tsx` (salvo
+ * Información y Documentos, que tienen el suyo).
  * ========================================================================== */
 
 import { actividadesPorId } from "./actividades-tracking";
-import type { EstadoPaso, PasoTracking, PerfilEmbarque } from "./tipos";
+import type { EstadoPaso, PasoTracking, PerfilEmbarque, ResponsableTracking } from "./tipos";
 
 /**
  * Tracking de Exportación Aérea (6 pasos consolidados).
@@ -77,90 +79,238 @@ export function estadoPaso(idPaso: number, pasoActual: number): EstadoPaso {
 
 export type ValorPasoEmbarque =
   | "informacion"
+  | "recoleccion"
   | "guias"
   | "reservas"
   | "draft"
+  | "aduana"
+  | "recepcion-bodega"
+  | "despacho-bodega"
+  | "combex"
+  | "guia-final"
   | "tarifas"
+  | "documentacion-final"
+  | "salida"
+  | "complementaria"
+  | "cierre"
   | "documentos"
   | "cancelacion";
 
 export type PasoEmbarque = {
   value: ValorPasoEmbarque;
   label: string;
+  /** Subtítulo corto en la tab. */
   detalle: string;
+  /** Descripción en el encabezado del contenido. */
+  descripcion: string;
   /**
    * Actividades del Excel que se trabajan en esta tab (ids de
-   * `ACTIVIDADES_TRACKING`). De aquí sale el paso del tracking: ver `pasoDeTab`.
+   * `ACTIVIDADES_TRACKING`). De aquí salen el paso y los perfiles.
    */
   actividades: readonly string[];
   /** Tabs que van separadas al final (siempre disponibles u opcionales). */
   grupo: "flujo" | "extra";
-  perfiles: readonly PerfilEmbarque[];
+  /** Aviso destacado arriba del contenido. */
+  aviso?: string;
 };
-
-const TODOS: readonly PerfilEmbarque[] = ["operaciones", "bodegas", "combex"];
 
 export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
   {
     value: "informacion",
     label: "Información",
     detalle: "Datos del embarque",
+    descripcion: "Datos generales, partes y carga.",
     actividades: [],
     grupo: "flujo",
-    perfiles: TODOS,
+  },
+  /* ---------- Paso 1 · Coordinación y reserva ---------- */
+  {
+    value: "recoleccion",
+    label: "Recolección y empaque",
+    detalle: "Cuando apliquen",
+    descripcion: "Recolección de la carga, recepción en bodega y empaque. Solo si el servicio los incluye.",
+    actividades: [
+      "OPS 0.1",
+      "OPS 0.2",
+      "OPS 0.3",
+      "Bodega 0.1",
+      "Bodega 0.2",
+      "Bodega 0.3",
+      "OPS 0.4",
+      "OPS 0.5",
+      "Bodega 0.4",
+      "Bodega 0.5",
+    ],
+    grupo: "flujo",
   },
   {
     value: "guias",
     label: "Asignación de guías",
     detalle: "HAWB / MAWB",
+    descripcion: "Asignación de HAWB y registro de MAWB (sin duplicados ni saltos de correlativo).",
     actividades: ["OPS 1.1", "OPS 1.2", "OPS 1.3"],
     grupo: "flujo",
-    perfiles: ["operaciones"],
   },
   {
     value: "reservas",
     label: "Reservas",
     detalle: "Solicitud y confirmación",
+    descripcion: "Solicitud de reserva a la línea aérea, validación y confirmación al cliente.",
     actividades: ["OPS 2.1", "OPS 2.2", "OPS 3.1", "OPS 3.2"],
     grupo: "flujo",
-    perfiles: ["operaciones"],
   },
+  /* ---------- Paso 2 · Documentación y gestión aduanera ---------- */
   {
     value: "draft",
-    label: "Draft",
-    detalle: "Elaboración, envío y preaviso",
-    actividades: ["OPS 4.1", "OPS 4.2"],
+    label: "Draft y preaviso",
+    detalle: "Borrador, preaviso y pago aéreo",
+    descripcion: "Borrador de la guía, preaviso al destino y OC para autorizar el pago a la línea aérea.",
+    actividades: ["OPS 4.1", "OPS 4.2", "OPS 4.3"],
     grupo: "flujo",
-    perfiles: ["operaciones"],
+  },
+  {
+    value: "aduana",
+    label: "Gestión aduanera",
+    detalle: "Aduana, DEPREX y DUCA",
+    descripcion: "Servicio aduanero, depósito DEPREX y seguimiento de la DUCA.",
+    actividades: ["OPS 5.1", "OPS 5.2", "OPS 5.3", "OPS 5.4", "CBX E1"],
+    grupo: "flujo",
+  },
+  /* ---------- Paso 3 · Liberación y despacho de bodega ---------- */
+  {
+    value: "recepcion-bodega",
+    label: "Recepción en bodega",
+    detalle: "Ingreso, repeso y etiquetado",
+    descripcion: "Ingreso de la carga, verificación física, etiquetas, manifiesto y fotografías.",
+    actividades: [
+      "Bodega 7.1",
+      "Bodega 7.2",
+      "Bodega 7.3",
+      "Bodega 7.4",
+      "Bodega 7.5",
+      "Bodega E1",
+      "Bodega E2",
+    ],
+    grupo: "flujo",
+  },
+  {
+    value: "despacho-bodega",
+    label: "Liberación y despacho",
+    detalle: "Salida, pase y despacho",
+    descripcion: "Salida en sistema, transporte, pase de salida, entrega e inventario.",
+    actividades: ["OPS 6.1", "Bodega 7.6", "Bodega 7.7", "Bodega 7.8", "Bodega 7.9"],
+    grupo: "flujo",
+  },
+  /* ---------- Paso 4 · Recepción en COMBEX y documentación final ---------- */
+  {
+    value: "combex",
+    label: "Recepción en COMBEX",
+    detalle: "Repeso oficial y boleta",
+    descripcion: "Entrega en terminal, peso oficial, boleta, fotografías y aviso al cliente.",
+    actividades: ["CBX 8.1", "CBX 8.2", "CBX 8.3", "CBX 8.4", "CBX 8.5"],
+    grupo: "flujo",
+  },
+  {
+    value: "guia-final",
+    label: "Guía final",
+    detalle: "Datos definitivos y emisión",
+    descripcion: "Datos finales con el peso oficial, emisión de la guía, aviso al cliente y seguro.",
+    actividades: ["OPS 9.1", "OPS 9.3", "OPS 9.4", "OPS 9.5", "OPS E2"],
+    grupo: "flujo",
   },
   {
     value: "tarifas",
-    label: "Tarifas",
+    label: "Tarifas y cargos",
     detalle: "Confirmación de cotización",
+    descripcion: "Tarifas y gastos reales contra la cotización (con el peso oficial de COMBEX).",
     actividades: ["OPS 9.2"],
     grupo: "flujo",
-    perfiles: ["operaciones"],
   },
+  {
+    value: "documentacion-final",
+    label: "Documentación final",
+    detalle: "Impresión en COMBEX",
+    descripcion: "Hojas de seguridad, guías, manifiestos y notas de débito / crédito.",
+    actividades: ["CBX 10.1", "CBX 10.2", "CBX 10.3", "CBX 10.4", "CBX 10.5"],
+    grupo: "flujo",
+  },
+  /* ---------- Paso 5 · Despacho, salida aérea y complementaria ---------- */
+  {
+    value: "salida",
+    label: "Despacho y salida",
+    detalle: "Vuelo y avisos de salida",
+    descripcion: "Confirmación de despacho, verificación de salida y avisos al cliente y destino.",
+    actividades: [
+      "CBX 11.1",
+      "CBX 12.1",
+      "CBX 12.3",
+      "CBX 12.4",
+      "OPS E1",
+      "CBX E2",
+      "CBX E3",
+      "CBX E4",
+    ],
+    grupo: "flujo",
+  },
+  {
+    value: "complementaria",
+    label: "Complementaria",
+    detalle: "Solicitud y seguimiento",
+    descripcion: "Solicitud, seguimiento y cierre de la complementaria.",
+    actividades: ["CBX 12.2", "CBX 13.1", "CBX 13.2"],
+    grupo: "flujo",
+  },
+  /* ---------- Paso 6 · Arribo y cierre ---------- */
+  {
+    value: "cierre",
+    label: "Arribo y cierre",
+    detalle: "Llegada, facturación y reportes",
+    descripcion: "Confirmación de llegada, facturación, estatus y órdenes de compra.",
+    actividades: ["CBX 14.1", "OPS 15", "OPS 16", "OPS 17"],
+    grupo: "flujo",
+  },
+  /* ---------- Separadas ---------- */
   {
     value: "documentos",
     label: "Documentos",
     detalle: "Disponible siempre",
+    descripcion: "Disponible en cualquier paso del embarque.",
     actividades: [],
     grupo: "extra",
-    perfiles: TODOS,
   },
   {
     value: "cancelacion",
     label: "Cancelación",
     detalle: "Opcional",
+    descripcion: "Anulación de OC o reserva. Opcional: detiene el flujo del embarque.",
     actividades: ["OPS 4.4"],
     grupo: "extra",
-    perfiles: ["operaciones"],
+    aviso: "Al cancelar o anular, el embarque deja de avanzar en el tracking y queda solo para consulta.",
   },
 ];
 
+/** Perfil (pantalla) de cada área responsable del Excel. */
+export const PERFIL_DE_RESPONSABLE: Record<ResponsableTracking, PerfilEmbarque> = {
+  OPS: "operaciones",
+  Bodega: "bodegas",
+  CBX: "combex",
+};
+
+/**
+ * Perfiles que ven la tab. Sin actividades (Información, Documentos): todos.
+ * Con actividades: Operaciones (coordina el file) + las áreas responsables.
+ * Es una propuesta: se ajusta cuando se definan Bodegas y Combex.
+ */
+export function perfilesDeTab(paso: PasoEmbarque): PerfilEmbarque[] {
+  const actividades = actividadesPorId(paso.actividades);
+  if (actividades.length === 0) return ["operaciones", "bodegas", "combex"];
+  const perfiles = new Set<PerfilEmbarque>(["operaciones"]);
+  for (const actividad of actividades) perfiles.add(PERFIL_DE_RESPONSABLE[actividad.responsable]);
+  return [...perfiles];
+}
+
 export function pasosDelPerfil(perfil: PerfilEmbarque): PasoEmbarque[] {
-  return PASOS_EMBARQUE.filter((paso) => paso.perfiles.includes(perfil));
+  return PASOS_EMBARQUE.filter((paso) => perfilesDeTab(paso).includes(perfil));
 }
 
 /**

@@ -861,6 +861,7 @@ export function actividadesDelPaso(paso: number): ActividadTracking[] {
   return ACTIVIDADES_TRACKING.filter((actividad) => actividad.paso === paso);
 }
 
+/** Actividades de esos ids, en el orden de `ids` (los que no existen se omiten). */
 export function actividadesPorId(ids: readonly string[]): ActividadTracking[] {
-  return ACTIVIDADES_TRACKING.filter((actividad) => ids.includes(actividad.id));
+  return ids.flatMap((id) => ACTIVIDADES_TRACKING.find((actividad) => actividad.id === id) ?? []);
 }

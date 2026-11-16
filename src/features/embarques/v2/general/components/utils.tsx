@@ -57,7 +57,7 @@ export function CampoMaqueta({
   id: string;
   label: string;
   valor?: string;
-  tipo?: "text" | "date" | "number";
+  tipo?: "text" | "date" | "number" | "datetime-local";
   requerido?: boolean;
   className?: string | undefined;
 }) {
