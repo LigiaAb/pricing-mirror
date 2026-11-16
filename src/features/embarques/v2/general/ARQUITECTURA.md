@@ -1,7 +1,7 @@
 # Embarques v2 · Vista general (maqueta)
 
 **Estado: solo maquetado.** No hay API ni lógica: datos de `lib/datos-maqueta.ts`, botones deshabilitados y
-campos de solo lectura. La funcionalidad se agrega después sin cambiar la estructura.
+campos sin guardado (los de las actividades se pueden llenar solo en pantalla; los de Información, en solo lectura). La funcionalidad se agrega después sin cambiar la estructura.
 
 ## Carpetas de `v2/`
 
@@ -46,6 +46,8 @@ Las rutas de abajo sin carpeta son relativas a `general/`.
 | Tipos (`PerfilEmbarque`, embarque)    | `shared/lib/tipos.ts`                    |
 | Datos de ejemplo (borrar con la API)  | `lib/datos-maqueta.ts`                   |
 | Piezas reutilizables (sección, dato…) | `shared/components/utils.tsx`            |
+| Campos de captura (input por tipo)    | `shared/components/campos.tsx`           |
+| Campos de Información (corporativos)  | `shared/lib/campos-embarque.ts`          |
 | Actividades del Excel (69)            | `shared/lib/actividades-tracking.ts`     |
 | Tipos de interacción (9)              | `shared/lib/interacciones.ts`            |
 | Motor de gestión (tipo y helpers)     | `shared/lib/gestion-actividades.ts`      |
@@ -125,6 +127,34 @@ términos técnicos: el usuario ve la actividad, sus campos y el botón con la a
 | Evidencia       | Fotografías                                  | Fotografías                                  |
 | Seguimiento     | Trámite hasta que concluye                   | Estado, Fecha, Observaciones                 |
 | Incidencia      | Excepción con motivo y autorización          | Motivo, Autorizado por, Detalle              |
+
+### Campos de captura (`shared/components/campos.tsx`)
+
+Un componente por tipo de dato, con los mismos componentes que ya usa el proyecto (no inputs a mano):
+
+| `tipo` del campo | Componente        | Se ve como                                       | Patrón existente                         |
+| ---------------- | ----------------- | ------------------------------------------------ | ---------------------------------------- |
+| `casillas`       | `CampoCasillas`   | `Checkbox` por opción                            | embarques `formulario-alternativo`, detalles |
+| `texto`, `numero`| `CampoTexto`      | `Field` + `InputGroupInput`                      | pricing (`CampoMetodo`)                  |
+| `seleccion`      | `CampoSeleccion`  | `Select` con `opciones` fijas (obligatorias)     | embarques `ruta-dialog`, `formulario-alternativo` |
+| `catalogo`       | `CampoCatalogo`   | `Combobox` con búsqueda (catálogo por conectar)  | embarques `ruta-dialog`, `nueva-entidad-captura` |
+| `fecha`          | `CampoFecha`      | `Popover` + `Calendar` (fecha en español, `PPP`) | embarques `paso-confirmar-destino`       |
+| `fecha-hora`     | `CampoFecha conHora` | lo mismo + hora (`type="time"`)               | —                                        |
+| `area`           | `CampoArea`       | `Textarea`                                       | embarques `formulario-alternativo`       |
+| `archivo`        | `CampoArchivos`   | zona de arrastrar o seleccionar (`acepta`)       | embarques `public/file-dropzone`         |
+
+Regla: lista corta y fija (Sí/No, PP/CC, estado…) → `seleccion` con `opciones`; proveedores, líneas aéreas,
+agentes, monedas, clientes… → `catalogo`. Fotografías → `acepta: "image/*"`. `soloLectura` deshabilita el control.
+
+### Campos de Información (`shared/lib/campos-embarque.ts`)
+
+v2 es un **rediseño**: la tab Información conserva su diseño (General · Partes · Ruta y carga, botón Editar) y
+**no** copia la agrupación, pestañas ni formularios del módulo actual. Lo único que se toma de él son los
+**campos**: misma clave, nombre, obligatorio y opciones (`CAMPOS_SHIPPER`, `CAMPOS_CONSIGNATARIO`,
+`CAMPOS_FACTURACION`, `CAMPOS_DETALLES`, `CAMPOS_PRODUCTO`, `CAMPOS_RUTA`, `CAMPOS_FECHAS`, `CAMPO_COD_FILE`).
+`key` es el nombre del dato en el módulo actual, para conectar la API sin traducir; el origen de cada lista
+está anotado en el archivo. Dónde va cada campo lo decide `pasos/paso-informacion.tsx`. Las actividades que
+piden un dato que ya existe usan el mismo nombre (p. ej. *Aerolínea*, *Nro. Vuelo*, *Cantidad (bultos)*).
 
 ### Gestión de cada actividad (`<actor>/lib/gestion-actividades.ts`)
 

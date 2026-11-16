@@ -9,7 +9,6 @@ import {
   Link2,
   type LucideIcon,
   Mail,
-  Paperclip,
   Scale,
   ShieldCheck,
   ShoppingCart,
@@ -21,7 +20,8 @@ import { type ActividadTracking, actividadesPorId } from "../lib/actividades-tra
 import { accionDe, camposDe, type GestionActividad } from "../lib/gestion-actividades";
 import type { CampoGestion, TipoInteraccion } from "../lib/interacciones";
 import { EtiquetaTipo } from "./actividades-tracking";
-import { CampoMaqueta, Dato, Pendiente, SoloConsulta } from "./utils";
+import { CampoPorTipo } from "./campos";
+import { Dato, Pendiente, SoloConsulta } from "./utils";
 
 /* ==========================================================================
  * TARJETA DE UNA ACTIVIDAD (SOLO MAQUETA)
@@ -82,60 +82,9 @@ function idCampo(actividad: ActividadTracking, campo: CampoGestion): string {
   return `${actividad.id.replace(/\s+/g, "-").toLowerCase()}-${slug}`;
 }
 
-/** Un campo de la actividad según su tipo (solo lectura, sin lógica). */
-function CampoActividad({ actividad, campo }: { actividad: ActividadTracking; campo: CampoGestion }) {
-  const id = idCampo(actividad, campo);
-  const tipo = campo.tipo ?? "texto";
-  const etiqueta = `${campo.label}${campo.requerido ? " *" : ""}`;
-
-  if (tipo === "archivo") {
-    return (
-      <div className="flex flex-col gap-1 sm:col-span-2">
-        <span className="text-sm font-medium">{etiqueta}</span>
-        <div className="flex items-center gap-2 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
-          <Paperclip className="size-4 text-primary" aria-hidden="true" />
-          Arrastrar archivos aquí o seleccionar
-        </div>
-      </div>
-    );
-  }
-
-  if (tipo === "area") {
-    return (
-      <label htmlFor={id} className="flex flex-col gap-1 sm:col-span-2">
-        <span className="text-sm font-medium">{etiqueta}</span>
-        <textarea
-          id={id}
-          readOnly
-          rows={2}
-          placeholder={campo.label}
-          className="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm"
-        />
-      </label>
-    );
-  }
-
-  const tipoInput = {
-    texto: "text",
-    seleccion: "text",
-    numero: "number",
-    fecha: "date",
-    "fecha-hora": "datetime-local",
-  } as const;
-
-  return (
-    <CampoMaqueta
-      id={id}
-      label={campo.label}
-      tipo={tipoInput[tipo]}
-      requerido={campo.requerido ?? false}
-    />
-  );
-}
-
 /** Valor registrado de un campo, en solo consulta (sin datos todavía). */
 function ValorCampo({ campo }: { campo: CampoGestion }) {
-  const ancho = campo.tipo === "area" || campo.tipo === "archivo";
+  const ancho = campo.tipo === "area" || campo.tipo === "archivo" || campo.tipo === "fecha-hora" || campo.tipo === "casillas";
   return (
     <div className={cn(ancho && "sm:col-span-2")}>
       <Dato label={campo.label} valor={campo.tipo === "archivo" ? "Sin archivos" : "—"} />
@@ -237,7 +186,7 @@ export function TarjetaActividad({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {camposDe(gestion).map((campo) =>
             editable ? (
-              <CampoActividad key={campo.label} actividad={actividad} campo={campo} />
+              <CampoPorTipo key={campo.label} id={idCampo(actividad, campo)} campo={campo} />
             ) : (
               <ValorCampo key={campo.label} campo={campo} />
             ),

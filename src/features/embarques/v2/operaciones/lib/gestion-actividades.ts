@@ -19,10 +19,10 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
     interaccion: "formulario",
     accion: "Programar recolección",
     campos: [
-      { label: "Dirección de recolección", requerido: true },
-      { label: "Contacto" },
-      { label: "Fecha y hora", tipo: "fecha-hora", requerido: true },
-      { label: "Proveedor de transporte", tipo: "seleccion" },
+      { label: "Dirección de Recolección", tipo: "area", requerido: true },
+      { label: "Nombre Contacto" },
+      { label: "Fecha de Recolección", tipo: "fecha-hora", requerido: true },
+      { label: "Proveedor de transporte", tipo: "catalogo" },
       { label: "Unidad / placa" },
       { label: "Piloto" },
     ],
@@ -33,9 +33,9 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
     interaccion: "formulario",
     accion: "Solicitar empaque",
     campos: [
-      { label: "Proveedor de empaque", tipo: "seleccion", requerido: true },
+      { label: "Proveedor de empaque", tipo: "catalogo", requerido: true },
       { label: "Tipo de empaque" },
-      { label: "Autorización del cliente", tipo: "seleccion", requerido: true },
+      { label: "Autorización del cliente", tipo: "seleccion", requerido: true, opciones: ["Autorizado", "No autorizado"] },
     ],
   },
   "OPS 0.5": { interaccion: "orden-compra", accion: "Generar OC de empaque", requiere: ["OPS 0.4"] },
@@ -52,7 +52,7 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
     accion: "Registrar MAWB",
     campos: [
       { label: "No. MAWB", requerido: true },
-      { label: "Línea aérea", tipo: "seleccion", requerido: true },
+      { label: "Aerolínea", tipo: "catalogo", requerido: true },
       { label: "Booking" },
     ],
   },
@@ -67,12 +67,14 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
     interaccion: "formulario",
     accion: "Preparar solicitud",
     campos: [
-      { label: "Línea aérea / proveedor", tipo: "seleccion", requerido: true },
-      { label: "Destino", requerido: true },
+      { label: "Aerolínea", tipo: "catalogo", requerido: true },
+      { label: "Aeropuerto Destino", tipo: "catalogo", requerido: true },
       { label: "Fecha de vuelo", tipo: "fecha", requerido: true },
-      { label: "Piezas", tipo: "numero", requerido: true },
-      { label: "Peso (kg)", tipo: "numero", requerido: true },
-      { label: "Dimensiones" },
+      { label: "Cantidad (bultos)", tipo: "numero", requerido: true },
+      { label: "Peso total (kg)", tipo: "numero", requerido: true },
+      { label: "Largo", tipo: "numero" },
+      { label: "Alto", tipo: "numero" },
+      { label: "Ancho", tipo: "numero" },
     ],
   },
   "OPS 2.2": {
@@ -81,10 +83,10 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
     requiere: ["OPS 2.1"],
     campos: [
       { label: "Tarifa", tipo: "numero" },
-      { label: "PP / CC", tipo: "seleccion", requerido: true },
+      { label: "PP / CC", tipo: "seleccion", requerido: true, opciones: ["PP", "CC"] },
       { label: "EORI" },
       { label: "Partida arancelaria" },
-      { label: "Descripción de la mercancía" },
+      { label: "Descripción", tipo: "area" },
     ],
   },
   "OPS 3.1": {
@@ -93,7 +95,7 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
     compara: "Solicitud de reserva",
     requiere: ["OPS 2.2"],
     campos: [
-      { label: "Vuelo", requerido: true },
+      { label: "Nro. Vuelo", requerido: true },
       { label: "Fecha de vuelo", tipo: "fecha", requerido: true },
       { label: "No. de booking" },
       { label: "Condiciones", tipo: "area" },
@@ -106,11 +108,11 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
     interaccion: "documento",
     accion: "Generar draft",
     campos: [
-      { label: "Remitente" },
-      { label: "Consignatario" },
-      { label: "Piezas", tipo: "numero" },
-      { label: "Peso (kg)", tipo: "numero" },
-      { label: "Destino" },
+      { label: "Shipper", tipo: "catalogo" },
+      { label: "Consignatario", tipo: "catalogo" },
+      { label: "Cantidad (bultos)", tipo: "numero" },
+      { label: "Peso total (kg)", tipo: "numero" },
+      { label: "Aeropuerto Destino", tipo: "catalogo" },
     ],
     pendiente: "Vista previa del draft.",
   },
@@ -118,7 +120,7 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
     interaccion: "notificacion",
     accion: "Enviar preaviso",
     requiere: ["OPS 4.1"],
-    campos: [{ label: "Agente en destino", tipo: "seleccion", requerido: true }],
+    campos: [{ label: "Agente en destino", tipo: "catalogo", requerido: true }],
   },
   "OPS 4.3": {
     interaccion: "orden-compra",
@@ -129,12 +131,12 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
   "OPS 4.4": {
     interaccion: "incidencia",
     accion: "Solicitar anulación",
-    campos: [{ label: "Qué se anula (OC / reserva)", tipo: "seleccion", requerido: true }],
+    campos: [{ label: "Qué se anula", tipo: "seleccion", requerido: true, opciones: ["OC", "Reserva", "OC y reserva"] }],
   },
   "OPS 5.1": {
     interaccion: "notificacion",
     accion: "Solicitar servicio de aduana",
-    campos: [{ label: "Agente aduanal", tipo: "seleccion", requerido: true }],
+    campos: [{ label: "Agente aduanal", tipo: "catalogo", requerido: true }],
   },
   "OPS 5.2": { interaccion: "orden-compra", accion: "Generar OC de aduana", requiere: ["OPS 5.1"] },
   "OPS 5.3": {
@@ -142,7 +144,7 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
     accion: "Solicitar depósito",
     campos: [
       { label: "Monto", tipo: "numero", requerido: true },
-      { label: "Moneda", tipo: "seleccion" },
+      { label: "Moneda", tipo: "catalogo" },
       { label: "Saldo disponible", tipo: "numero" },
       { label: "Comprobante", tipo: "archivo" },
     ],
@@ -170,7 +172,7 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
     campos: [
       { label: "Peso oficial (kg)", tipo: "numero", requerido: true },
       { label: "Peso cobrable (kg)", tipo: "numero" },
-      { label: "Piezas", tipo: "numero" },
+      { label: "Cantidad (bultos)", tipo: "numero" },
     ],
   },
   "OPS 9.2": {
@@ -195,7 +197,7 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
     interaccion: "formulario",
     accion: "Gestionar seguro",
     campos: [
-      { label: "Aseguradora", tipo: "seleccion" },
+      { label: "Aseguradora", tipo: "catalogo" },
       { label: "Valor asegurable", tipo: "numero", requerido: true },
       { label: "Prima", tipo: "numero" },
       { label: "No. de póliza" },
@@ -221,7 +223,7 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
   "OPS 15": {
     interaccion: "confirmacion",
     accion: "Enviar a facturación",
-    campos: [{ label: "¿Cargos pendientes?", tipo: "seleccion", requerido: true }],
+    campos: [{ label: "¿Cargos pendientes?", tipo: "seleccion", requerido: true, opciones: ["Sí", "No"] }],
   },
   "OPS 16": {
     interaccion: "seguimiento",

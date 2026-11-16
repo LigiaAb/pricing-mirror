@@ -101,7 +101,7 @@ export const GESTION_COMBEX: DefinicionesGestion = {
   "CBX E3": {
     interaccion: "incidencia",
     accion: "Informar incidencia",
-    campos: [{ label: "Tipo (cambio / cancelación / descarga)", tipo: "seleccion", requerido: true }],
+    campos: [{ label: "Tipo", tipo: "seleccion", requerido: true, opciones: ["Cambio", "Cancelación", "Descarga"] }],
   },
   "CBX E4": {
     interaccion: "seguimiento",

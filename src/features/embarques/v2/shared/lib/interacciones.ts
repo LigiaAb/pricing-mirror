@@ -23,12 +23,31 @@ export type TipoInteraccion =
   | "seguimiento"
   | "incidencia";
 
-export type TipoCampo = "texto" | "numero" | "fecha" | "fecha-hora" | "seleccion" | "area" | "archivo";
+/**
+ * Tipo de dato del campo; define el componente (`shared/components/campos.tsx`):
+ * `seleccion` = lista corta y fija (`opciones`) → Select;
+ * `catalogo` = catálogo del sistema con búsqueda → Combobox;
+ * `casillas` = varias opciones marcables (`opciones`) → Checkbox.
+ */
+export type TipoCampo =
+  | "texto"
+  | "numero"
+  | "fecha"
+  | "fecha-hora"
+  | "seleccion"
+  | "catalogo"
+  | "casillas"
+  | "area"
+  | "archivo";
 
 export type CampoGestion = {
   label: string;
   tipo?: TipoCampo;
   requerido?: boolean;
+  /** `seleccion` y `casillas`: opciones fijas. */
+  opciones?: readonly string[];
+  /** `archivo`: tipos aceptados (`accept`), ej. `"image/*"`. */
+  acepta?: string;
 };
 
 export type DefinicionInteraccion = {
@@ -70,10 +89,10 @@ export const INTERACCIONES: Record<TipoInteraccion, DefinicionInteraccion> = {
   "orden-compra": {
     accion: "Generar OC",
     base: [
-      { label: "Proveedor", tipo: "seleccion", requerido: true },
+      { label: "Proveedor", tipo: "catalogo", requerido: true },
       { label: "No. OC" },
       { label: "Monto", tipo: "numero", requerido: true },
-      { label: "Moneda", tipo: "seleccion" },
+      { label: "Moneda", tipo: "catalogo" },
     ],
   },
   /** Generar, emitir o imprimir un documento. */
@@ -84,13 +103,13 @@ export const INTERACCIONES: Record<TipoInteraccion, DefinicionInteraccion> = {
   /** Fotografías de la carga. */
   evidencia: {
     accion: "Subir fotografías",
-    base: [{ label: "Fotografías", tipo: "archivo", requerido: true }],
+    base: [{ label: "Fotografías", tipo: "archivo", requerido: true, acepta: "image/*" }],
   },
   /** Estado de un trámite hasta que concluye. */
   seguimiento: {
     accion: "Actualizar seguimiento",
     base: [
-      { label: "Estado", tipo: "seleccion", requerido: true },
+      { label: "Estado", tipo: "seleccion", requerido: true, opciones: ["En trámite", "Detenido", "Concluido"] },
       { label: "Fecha", tipo: "fecha" },
       { label: "Observaciones", tipo: "area" },
     ],

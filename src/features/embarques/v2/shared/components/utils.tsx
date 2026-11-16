@@ -2,8 +2,6 @@
 
 import { Construction, Eye } from "lucide-react";
 import type * as React from "react";
-import { Field, FieldLabel } from "@/shared/components/ui/field";
-import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
 import { cn } from "@/shared/lib/utils";
 
 /* ==========================================================================
@@ -42,35 +40,6 @@ export function Dato({ label, valor }: { label: string; valor: React.ReactNode }
       </span>
       <span className="truncate text-sm font-semibold">{valor}</span>
     </div>
-  );
-}
-
-/** Campo de solo lectura para maquetar formularios (sin lógica). */
-export function CampoMaqueta({
-  id,
-  label,
-  valor = "",
-  tipo = "text",
-  requerido = false,
-  className,
-}: {
-  id: string;
-  label: string;
-  valor?: string;
-  tipo?: "text" | "date" | "number" | "datetime-local";
-  requerido?: boolean;
-  className?: string | undefined;
-}) {
-  return (
-    <Field className={cn(className)}>
-      <FieldLabel htmlFor={id}>
-        {label}
-        {requerido && " *"}
-      </FieldLabel>
-      <InputGroup>
-        <InputGroupInput id={id} type={tipo} defaultValue={valor} placeholder={label} readOnly />
-      </InputGroup>
-    </Field>
   );
 }
 
