@@ -297,7 +297,6 @@ src/features/pricing/cotizacion/calculo/components/carrier-selector.tsx: error T
 src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS2709: Cannot use namespace 'ComboboxOption' as a type.
 src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS7006: Parameter 'next' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS7006: Parameter 'nextValue' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/criterios-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/datos-complementarios-cotizacion.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
@@ -316,7 +315,6 @@ src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx: error
 src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/scalling.tsx: error TS7006: Parameter 'next' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/scalling.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/scalling.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/scalling.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
@@ -333,7 +331,6 @@ src/features/pricing/plantillas-clientes/components/rubros-plantilla.tsx: error 
 src/features/pricing/reportes/components/lista-reportes.tsx: error TS2709: Cannot use namespace 'ComboboxOption' as a type.
 src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'date' implicitly has an 'any' type.
 src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'nextValue' implicitly has an 'any' type.
-src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'open' implicitly has an 'any' type.
 src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
@@ -388,7 +385,6 @@ src/features/pricing/tarifas/components/formulario-tarifa.tsx: error TS7006: Par
 src/features/pricing/tarifas/components/formulario-tarifa.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/formulario-tarifa.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/formulario-tarifa.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/formulario-tarifa.tsx: error TS7006: Parameter 'nextOpen' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/formulario-tarifa.tsx: error TS7006: Parameter 'nextValue' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.

@@ -1,7 +1,3 @@
-/*
- * COPIA del código real del proyecto (espejo). NO copiar al proyecto real: allá ya existe.
- * Sirve para revisar los usos en pricing con el comportamiento real del componente.
- */
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
@@ -181,7 +177,7 @@ export function AsyncComboboxInput<T>({
     <div className={cn("w-full", className)}>
       <Popover
         open={open}
-        onOpenChange={(nextOpen: boolean) => {
+        onOpenChange={(nextOpen) => {
           if (!isBlocked) setOpen(nextOpen);
           if (!nextOpen) onBlur?.();
         }}
