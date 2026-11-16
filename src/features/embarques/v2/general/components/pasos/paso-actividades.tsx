@@ -2,18 +2,15 @@
 
 import { AlertTriangle, ChevronDown } from "lucide-react";
 import { type ActividadTracking, actividadesPorId } from "../../lib/actividades-tracking";
-import { gestionDe } from "../../lib/gestion-actividades";
-import { INTERACCIONES, type TipoInteraccion } from "../../lib/interacciones";
 import { type PasoEmbarque, pasoDeTab, TRACKING_PASOS } from "../../lib/pasos";
-import { ICONO_INTERACCION, TarjetaActividad } from "../tarjeta-actividad";
+import { TarjetaActividad } from "../tarjeta-actividad";
 import { EncabezadoPaso } from "../utils";
 
 /* ==========================================================================
  * TAB GENÉRICA DE ACTIVIDADES (SOLO MAQUETA)
  *
  * Todas las tabs con actividades del Excel se ven igual:
- *   1. Encabezado (título, descripción, paso del tracking y tipos de
- *      interacción que usa).
+ *   1. Encabezado (título, descripción y paso del tracking).
  *   2. Aviso (si la tab lo define).
  *   3. Actividades del flujo agrupadas por proceso, en el orden de la tab.
  *   4. Excepciones aparte, plegadas (solo se usan si ocurren).
@@ -30,29 +27,6 @@ function porProceso(actividades: readonly ActividadTracking[]) {
   return grupos;
 }
 
-/** Chips con los tipos de interacción que usa la tab. */
-function TiposUsados({ actividades }: { actividades: readonly ActividadTracking[] }) {
-  const tipos = [...new Set(actividades.map((actividad) => gestionDe(actividad.id).interaccion))];
-
-  return (
-    <div className="flex flex-wrap gap-1">
-      {tipos.map((tipo: TipoInteraccion) => {
-        const Icono = ICONO_INTERACCION[tipo];
-        return (
-          <span
-            key={tipo}
-            className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground"
-            title={INTERACCIONES[tipo].descripcion}
-          >
-            <Icono className="size-3.5" aria-hidden="true" />
-            {INTERACCIONES[tipo].label}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-
 export function PasoActividades({ paso, pasoActual }: { paso: PasoEmbarque; pasoActual: number }) {
   const actividades = actividadesPorId(paso.actividades);
   const flujo = actividades.filter((actividad) => actividad.tipo !== "Excepción");
@@ -62,11 +36,7 @@ export function PasoActividades({ paso, pasoActual }: { paso: PasoEmbarque; paso
 
   return (
     <div className="space-y-4">
-      <EncabezadoPaso
-        titulo={paso.label}
-        descripcion={paso.descripcion}
-        acciones={<TiposUsados actividades={actividades} />}
-      />
+      <EncabezadoPaso titulo={paso.label} descripcion={paso.descripcion} />
 
       {nombrePaso ? (
         <p className="text-xs text-muted-foreground">
@@ -101,7 +71,7 @@ export function PasoActividades({ paso, pasoActual }: { paso: PasoEmbarque; paso
           <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-amber-800 dark:text-amber-200">
             <AlertTriangle className="size-4" aria-hidden="true" />
             Excepciones ({excepciones.length})
-            <span className="text-xs font-normal text-muted-foreground">Solo si ocurren</span>
+            <span className="text-xs font-normal text-muted-foreground">Solo si aplican</span>
             <ChevronDown
               className="ml-auto size-4 transition-transform group-open:rotate-180"
               aria-hidden="true"

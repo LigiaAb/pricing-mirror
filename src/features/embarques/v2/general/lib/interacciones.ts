@@ -5,6 +5,9 @@
  * tabs se arman con las mismas piezas: así una confirmación, un correo o una
  * OC se ven igual en cualquier paso.
  *
+ * USO INTERNO: el tipo NO se muestra al usuario (solo define icono, campos
+ * base y texto del botón). En pantalla se ve la actividad y su botón.
+ *
  * `base` = campos que lleva siempre ese tipo; la actividad agrega los suyos
  * antes (ver `gestion-actividades.ts`).
  * ========================================================================== */
@@ -29,40 +32,32 @@ export type CampoGestion = {
 };
 
 export type DefinicionInteraccion = {
-  /** Nombre del tipo (chip en la tarjeta y leyenda). */
-  label: string;
-  /** Para qué se usa (leyenda). */
-  descripcion: string;
   /** Texto del botón cuando la actividad no define el suyo. */
   accion: string;
   base: readonly CampoGestion[];
 };
 
 export const INTERACCIONES: Record<TipoInteraccion, DefinicionInteraccion> = {
+  /** Registro de datos de la actividad. */
   formulario: {
-    label: "Formulario",
-    descripcion: "Registro de datos de la actividad.",
     accion: "Guardar",
     base: [{ label: "Observaciones", tipo: "area" }],
   },
+  /** Pesos, medidas o correlativos que se comparan contra una referencia. */
   "dato-especial": {
-    label: "Dato especial",
-    descripcion: "Pesos, medidas o correlativos que se comparan contra una referencia.",
     accion: "Registrar",
     base: [],
   },
+  /** Verificar y dejar constancia de quién confirmó y cuándo. */
   confirmacion: {
-    label: "Confirmación",
-    descripcion: "Verificar y dejar constancia de quién confirmó y cuándo.",
     accion: "Confirmar",
     base: [
       { label: "Fecha y hora", tipo: "fecha-hora", requerido: true },
       { label: "Confirmado por" },
     ],
   },
+  /** Correo al cliente, destino o proveedor; queda como evidencia. */
   notificacion: {
-    label: "Correo",
-    descripcion: "Envío de correo al cliente, destino o proveedor; queda como evidencia.",
     accion: "Enviar correo",
     base: [
       { label: "Destinatarios", requerido: true },
@@ -71,9 +66,8 @@ export const INTERACCIONES: Record<TipoInteraccion, DefinicionInteraccion> = {
       { label: "Adjuntos", tipo: "archivo" },
     ],
   },
+  /** OC relacionada con el embarque. */
   "orden-compra": {
-    label: "Orden de compra",
-    descripcion: "OC relacionada con el embarque.",
     accion: "Generar OC",
     base: [
       { label: "Proveedor", tipo: "seleccion", requerido: true },
@@ -82,21 +76,18 @@ export const INTERACCIONES: Record<TipoInteraccion, DefinicionInteraccion> = {
       { label: "Moneda", tipo: "seleccion" },
     ],
   },
+  /** Generar, emitir o imprimir un documento. */
   documento: {
-    label: "Documento",
-    descripcion: "Generar, emitir o imprimir un documento.",
     accion: "Generar",
     base: [{ label: "Fecha", tipo: "fecha" }],
   },
+  /** Fotografías de la carga. */
   evidencia: {
-    label: "Evidencia",
-    descripcion: "Fotografías de la carga.",
     accion: "Subir fotografías",
     base: [{ label: "Fotografías", tipo: "archivo", requerido: true }],
   },
+  /** Estado de un trámite hasta que concluye. */
   seguimiento: {
-    label: "Seguimiento",
-    descripcion: "Estado de un trámite hasta que concluye.",
     accion: "Actualizar seguimiento",
     base: [
       { label: "Estado", tipo: "seleccion", requerido: true },
@@ -104,9 +95,8 @@ export const INTERACCIONES: Record<TipoInteraccion, DefinicionInteraccion> = {
       { label: "Observaciones", tipo: "area" },
     ],
   },
+  /** Excepción: se registra con motivo y autorización. */
   incidencia: {
-    label: "Incidencia",
-    descripcion: "Excepción: se registra con motivo y autorización.",
     accion: "Registrar incidencia",
     base: [
       { label: "Motivo", requerido: true },

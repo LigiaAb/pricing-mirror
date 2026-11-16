@@ -19,7 +19,7 @@ import { Button } from "@/shared/components/ui/button";
 import { cn } from "@/shared/lib/utils";
 import { type ActividadTracking, actividadesPorId } from "../lib/actividades-tracking";
 import { accionDe, camposDe, gestionDe } from "../lib/gestion-actividades";
-import { type CampoGestion, INTERACCIONES, type TipoInteraccion } from "../lib/interacciones";
+import type { CampoGestion, TipoInteraccion } from "../lib/interacciones";
 import { EtiquetaTipo } from "./actividades-tracking";
 import { CampoMaqueta, Dato, Pendiente } from "./utils";
 
@@ -30,9 +30,11 @@ import { CampoMaqueta, Dato, Pendiente } from "./utils";
  * de interacción (`lib/interacciones.ts`) y los campos de la actividad
  * (`lib/gestion-actividades.ts`):
  *
- *   encabezado: icono del tipo · id · actividad · tipo del Excel · estado
- *   cuerpo:     entrada requerida · referencia a comparar · campos
+ *   encabezado: icono · código · actividad · responsable · tipo del Excel · estado
+ *   cuerpo:     entrada · actividades previas · comparación · campos
  *   pie:        control del Excel · resultado · botón de la acción
+ *
+ * El tipo de interacción es interno: no se muestra su nombre al usuario.
  * ========================================================================== */
 
 export const ICONO_INTERACCION: Record<TipoInteraccion, LucideIcon> = {
@@ -53,7 +55,7 @@ const ESTADO: Record<EstadoActividad, { label: string; clase: string }> = {
   hecha: { label: "Hecha", clase: "bg-primary text-primary-foreground" },
   "en-curso": { label: "En curso", clase: "border border-primary text-primary" },
   pendiente: { label: "Pendiente", clase: "bg-muted text-muted-foreground" },
-  "si-ocurre": { label: "Si ocurre", clase: "border border-amber-500/40 text-amber-800 dark:text-amber-200" },
+  "si-ocurre": { label: "Solo si aplica", clase: "border border-amber-500/40 text-amber-800 dark:text-amber-200" },
 };
 
 /** Estado de maqueta: sale del paso del embarque (sin datos reales todavía). */
@@ -118,7 +120,7 @@ function CampoActividad({ actividad, campo }: { actividad: ActividadTracking; ca
   return (
     <CampoMaqueta
       id={id}
-      label={tipo === "seleccion" ? `${campo.label} ▾` : campo.label}
+      label={campo.label}
       tipo={tipoInput[tipo]}
       requerido={campo.requerido ?? false}
     />
@@ -133,7 +135,6 @@ export function TarjetaActividad({
   pasoActual: number;
 }) {
   const gestion = gestionDe(actividad.id);
-  const interaccion = INTERACCIONES[gestion.interaccion];
   const Icono = ICONO_INTERACCION[gestion.interaccion];
   const estado = ESTADO[estadoActividad(actividad, pasoActual)];
   const requiere = actividadesPorId(gestion.requiere ?? []);
@@ -158,7 +159,6 @@ export function TarjetaActividad({
             "flex size-9 shrink-0 items-center justify-center rounded-lg",
             excepcion ? "bg-amber-500/20 text-amber-800 dark:text-amber-200" : "bg-primary/10 text-primary",
           )}
-          title={interaccion.descripcion}
         >
           <Icono className="size-5" aria-hidden="true" />
         </div>
@@ -171,8 +171,6 @@ export function TarjetaActividad({
             <h5 className="text-sm font-semibold">{actividad.actividad}</h5>
           </div>
           <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-            <span className="font-medium">{interaccion.label}</span>
-            <span aria-hidden="true">·</span>
             <span>Responsable: {actividad.responsable}</span>
             <EtiquetaTipo tipo={actividad.tipo} />
           </div>
@@ -192,10 +190,10 @@ export function TarjetaActividad({
         {requiere.length > 0 ? (
           <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
             <Link2 className="size-3.5" aria-hidden="true" />
-            Requiere:
+            Antes:
             {requiere.map((previa) => (
-              <span key={previa.id} className="rounded border px-1.5" title={previa.actividad}>
-                {previa.id} · {previa.actividad}
+              <span key={previa.id} className="rounded border px-1.5" title={`${previa.responsable} ${previa.codigo}`}>
+                {previa.actividad}
               </span>
             ))}
           </div>
@@ -203,8 +201,8 @@ export function TarjetaActividad({
 
         {gestion.compara ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <Dato label={`Referencia: ${gestion.compara}`} valor="—" />
-            <Dato label="Registrado" valor="—" />
+            <Dato label={gestion.compara} valor="—" />
+            <Dato label="Actual" valor="—" />
             <Dato label="Diferencia" valor="—" />
           </div>
         ) : null}

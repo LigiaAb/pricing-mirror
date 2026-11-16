@@ -87,7 +87,6 @@ function TriggerPaso({ paso, pasoActual }: { paso: PasoEmbarque; pasoActual: num
         <span className="text-left">{paso.label}</span>
         <span className="w-full text-left text-[9px]">
           {paso.detalle}
-          {paso.actividades.length > 0 ? ` · ${paso.actividades.length}` : ""}
         </span>
       </div>
 

@@ -87,7 +87,9 @@ tracking (`1 · Reserva`, `2 · Documentación`…); la tab muestra check si su 
 
 ### Tipos de interacción (`lib/interacciones.ts`)
 
-Cada actividad se trabaja con uno de 9 tipos; todos se ven con la misma tarjeta:
+Cada actividad se trabaja con uno de 9 tipos; todos se ven con la misma tarjeta. **Son de uso interno: el
+nombre del tipo no se muestra al usuario** (solo define icono, campos base y botón). En pantalla no usar
+términos técnicos: el usuario ve la actividad, sus campos y el botón con la acción.
 
 | Tipo            | Para qué                                     | Campos base                                  |
 | --------------- | -------------------------------------------- | -------------------------------------------- |
@@ -104,16 +106,16 @@ Cada actividad se trabaja con uno de 9 tipos; todos se ven con la misma tarjeta:
 ### Gestión de cada actividad (`lib/gestion-actividades.ts`)
 
 `GESTION_ACTIVIDADES["<id>"]`: `interaccion`, `campos` propios (van antes de los base), `accion` (texto del
-botón), `compara` (referencia del control del Excel: muestra Referencia / Registrado / Diferencia), `requiere`
-(actividades previas) y `pendiente` (parte aún sin maquetar, p. ej. la tabla de rubros de OPS 9.2).
+botón), `compara` (referencia del control del Excel: muestra la referencia, "Actual" y "Diferencia"), `requiere`
+(actividades previas, se muestran como "Antes: <actividad>") y `pendiente` (parte aún sin maquetar, p. ej. la tabla de rubros de OPS 9.2).
 
 ### Tarjeta (`components/tarjeta-actividad.tsx`) y tab genérica (`pasos/paso-actividades.tsx`)
 
-Tarjeta: encabezado (icono del tipo, id, actividad, responsable, tipo del Excel, estado), cuerpo (entrada,
-requiere, comparación, campos) y pie (control, resultado y botón). Estado de maqueta según el paso del
-embarque: Hecha / En curso / Pendiente; las excepciones dicen "Si ocurre".
+Tarjeta: encabezado (icono, código, actividad, responsable, tipo del Excel, estado), cuerpo (entrada,
+actividades previas, comparación, campos) y pie (control, resultado y botón). Estado de maqueta según el paso
+del embarque: Hecha / En curso / Pendiente; las excepciones dicen "Solo si aplica".
 
-Tab genérica: encabezado con los tipos que usa, aviso (si la tab lo define), actividades agrupadas por
+Tab genérica: encabezado (título y descripción), aviso (si la tab lo define), actividades agrupadas por
 proceso y **Excepciones** aparte, plegadas.
 
 ### Agregar o mover algo
