@@ -69,7 +69,22 @@ const archivo = join(CARPETA_DIFF, `${fecha}-${slug || "cambio"}.diff`);
 // por byte (hash) y fallaba ante cualquier diferencia de CRLF/LF.
 const diff = execFileSync(
   "git",
-  ["diff", "--no-color", "--no-ext-diff", "--text", `${commit}^`, commit, "--", ...RUTAS_CODIGO],
+  [
+    "diff",
+    "--no-color",
+    "--no-ext-diff",
+    "--text",
+    // Sin renombres: un archivo movido sale como borrado + nuevo. Con renombres,
+    // git empareja archivos vacíos entre sí (p. ej. un .gitkeep con un .tsx
+    // vacío) y el diff exige archivos que el proyecto real no tiene.
+    "--no-renames",
+    `${commit}^`,
+    commit,
+    "--",
+    ...RUTAS_CODIGO,
+    // Los .gitkeep solo existen en el espejo (marcan carpetas vacías).
+    ":(exclude,glob)**/.gitkeep",
+  ],
   { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 },
 ).replace(/\r\n/g, "\n");
 
