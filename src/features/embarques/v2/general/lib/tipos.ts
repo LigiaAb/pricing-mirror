@@ -28,8 +28,21 @@ export type PasoTracking = {
   responsables: readonly ResponsableTracking[];
 };
 
+/**
+ * Datos de la coordinación que usa el tracking interactivo (`TrackingDetalle`).
+ * Mismos nombres y tipos que `Coordinacion` del proyecto: una fila real de la
+ * tabla se puede pasar tal cual.
+ */
+export type CoordinacionTracking = {
+  coordinacion: string | number;
+  cod_file: string;
+  estadoId: string | number;
+  seg_coord_id?: number;
+  estado_id_tracking?: number;
+};
+
 /** Fila de la tabla de embarques. */
-export type EmbarqueMaqueta = {
+export type EmbarqueMaqueta = CoordinacionTracking & {
   codFile: string;
   id: number;
   cliente: string;

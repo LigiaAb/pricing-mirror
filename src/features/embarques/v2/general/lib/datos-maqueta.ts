@@ -10,6 +10,11 @@ import type { EmbarqueMaqueta } from "./tipos";
 export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
   {
     codFile: "000101",
+    coordinacion: 5101,
+    cod_file: "000101",
+    estadoId: 1,
+    seg_coord_id: 9101,
+    estado_id_tracking: 0,
     id: 1001,
     cliente: "CROPA DSV",
     tipoTransporte: "AÉREO",
@@ -23,6 +28,11 @@ export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
   },
   {
     codFile: "000102",
+    coordinacion: 5102,
+    cod_file: "000102",
+    estadoId: 1,
+    seg_coord_id: 9102,
+    estado_id_tracking: 0,
     id: 1002,
     cliente: "DISTRIBUIDORA ABC",
     tipoTransporte: "AÉREO",
@@ -36,6 +46,11 @@ export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
   },
   {
     codFile: "000103",
+    coordinacion: 5103,
+    cod_file: "000103",
+    estadoId: 1,
+    seg_coord_id: 9103,
+    estado_id_tracking: 0,
     id: 1003,
     cliente: "IMPORTADORA XYZ",
     tipoTransporte: "AÉREO",
@@ -49,6 +64,11 @@ export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
   },
   {
     codFile: "000104",
+    coordinacion: 5104,
+    cod_file: "000104",
+    estadoId: 1,
+    seg_coord_id: 9104,
+    estado_id_tracking: 0,
     id: 1004,
     cliente: "COMERCIAL DEL SUR",
     tipoTransporte: "AÉREO",
