@@ -14,6 +14,10 @@ al proyecto completo. Responder siempre en **español**.
 | `tsconfig.json`                              | Copia exacta del proyecto real                        | No (ya existe allá)              |
 
 - `src/features/catalogos/create-catalogo.ts` contiene el **código real** de `createCatalogo` del proyecto.
+- `src/shared/components/form/fields/async-combobox-input.tsx` contiene el **código real** de `AsyncComboboxInput`
+  (solo se anotó `nextOpen: boolean` porque `Popover` es `any` en el espejo). Guarda en caché lo que devuelve
+  `fetchOptions` por `queryKey` + búsqueda (30 s) y **no** vuelve a consultar si `fetchOptions` cambia: con opciones
+  locales que cambian (catálogo que carga después, listas filtradas), pasar un `queryKey` que cambie con la lista.
 - Si un cambio necesita un tipo de `@/shared` que no está en los stubs, se agrega al stub (solo tipos) y se avisa.
 - Nunca cambiar lógica dentro de los stubs para "hacer pasar" algo.
 - **Embarques: se trabaja únicamente en `src/features/embarques/v2/`.** Lo demás de `src/features/embarques/`

@@ -72,35 +72,43 @@ export function CommoditiesTable({ codMetodo }: Props) {
     [estados],
   );
 
+  // Índices por código: el catálogo de commodities es grande y buscar con find por fila es lento.
+  const commodityPorCodigo = React.useMemo(
+    () => new Map(commodities.map((commodity) => [String(commodity.cod_commodity), commodity])),
+    [commodities],
+  );
+
+  const estadoPorCodigo = React.useMemo(
+    () => new Map(estados.map((estado) => [String(estado.cod_estado), estado])),
+    [estados],
+  );
+
   const data = React.useMemo<FilaMetodoCommodity[]>(
     () =>
       (commoditiesMetodo.data ?? []).map((fila) => ({
         ...fila,
-
-        commodity:
-          commodities.find(
-            (commodity) => String(commodity.cod_commodity) === String(fila.cod_commodity),
-          ) ?? null,
-
-        estado:
-          estados.find((estado) => String(estado.cod_estado) === String(fila.cod_estado)) ?? null,
+        commodity: commodityPorCodigo.get(String(fila.cod_commodity)) ?? null,
+        estado: estadoPorCodigo.get(String(fila.cod_estado)) ?? null,
       })),
-    [commoditiesMetodo.data, commodities, estados],
+    [commoditiesMetodo.data, commodityPorCodigo, estadoPorCodigo],
   );
 
   const commoditiesSeleccionables = React.useMemo(() => {
-    return commodities.filter((commodity) => {
-      const asignadoActivo = (commoditiesMetodo.data ?? []).some(
-        (item) =>
-          String(item.cod_commodity) === String(commodity.cod_commodity) &&
-          String(item.cod_estado) === String(COD_ESTADO_ACTIVO) &&
-          // Cuando editamos, dejamos disponible
-          // el commodity de esa misma fila.
-          String(item.cod_metodocommodity) !== String(filaEditando?.cod_metodocommodity ?? ""),
-      );
+    const asignadosActivos = new Set(
+      (commoditiesMetodo.data ?? [])
+        .filter(
+          (item) =>
+            String(item.cod_estado) === String(COD_ESTADO_ACTIVO) &&
+            // Cuando editamos, dejamos disponible
+            // el commodity de esa misma fila.
+            String(item.cod_metodocommodity) !== String(filaEditando?.cod_metodocommodity ?? ""),
+        )
+        .map((item) => String(item.cod_commodity)),
+    );
 
-      return !asignadoActivo;
-    });
+    return commodities.filter(
+      (commodity) => !asignadosActivos.has(String(commodity.cod_commodity)),
+    );
   }, [commodities, commoditiesMetodo.data, filaEditando?.cod_metodocommodity]);
 
   const formatearFilaApi = React.useCallback(

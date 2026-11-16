@@ -1,0 +1,137 @@
+diff --git a/src/features/pricing/tarifas/components/metodo-commodities/commodities-form.tsx b/src/features/pricing/tarifas/components/metodo-commodities/commodities-form.tsx
+index 5ef0303..bbd4125 100644
+--- a/src/features/pricing/tarifas/components/metodo-commodities/commodities-form.tsx
++++ b/src/features/pricing/tarifas/components/metodo-commodities/commodities-form.tsx
+@@ -33,6 +33,34 @@ function filtrarOpciones<T extends { label: string }>(options: T[], search: stri
+   return options.filter((option) => option.label.toLowerCase().includes(busqueda));
+ }
+ 
++/*
++ * El catálogo de commodities es grande: el combobox no virtualiza, así que dibujar
++ * todas las opciones lo vuelve lento. Se muestran las primeras y se busca al escribir.
++ */
++const LIMITE_OPCIONES_COMMODITY = 50;
++
++/*
++ * AsyncComboboxInput guarda en caché (30 s, por queryKey + búsqueda) lo que devuelve
++ * fetchOptions y no vuelve a consultar cuando fetchOptions cambia. Como aquí las
++ * opciones se filtran localmente, la clave debe cambiar cuando llega una lista nueva;
++ * si no, se queda con la lista vacía de antes de que cargara el catálogo, o sigue
++ * ofreciendo commodities que ya se asignaron.
++ */
++const idsListas = new WeakMap<object, number>();
++let siguienteIdLista = 0;
++
++function idDeLista(lista: object): number {
++  let id = idsListas.get(lista);
++
++  if (id === undefined) {
++    siguienteIdLista += 1;
++    id = siguienteIdLista;
++    idsListas.set(lista, id);
++  }
++
++  return id;
++}
++
+ export function CommoditiesForm({
+   value,
+   commodities,
+@@ -59,8 +87,17 @@ export function CommoditiesForm({
+     });
+   }, [value, estadoActivo]);
+ 
++  const idCombobox = React.useId();
++  const queryKeyCommodities = `tarifas-commodities-${idCombobox}-${idDeLista(commodities)}`;
++
+   const fetchCommodities = React.useCallback(
+-    async (search: string) => filtrarOpciones(commodities, search),
++    async (search: string) =>
++      filtrarOpciones(commodities, search).slice(0, LIMITE_OPCIONES_COMMODITY),
++    [commodities],
++  );
++
++  const commoditiesIniciales = React.useMemo(
++    () => commodities.slice(0, LIMITE_OPCIONES_COMMODITY),
+     [commodities],
+   );
+ 
+@@ -101,7 +138,8 @@ export function CommoditiesForm({
+               }))
+             }
+             fetchOptions={fetchCommodities}
+-            initialOptions={commodities}
++            queryKey={queryKeyCommodities}
++            initialOptions={commoditiesIniciales}
+             getOptionValue={(option) => option.value}
+             getOptionLabel={(option) => option.label}
+             placeholder="Seleccione..."
+diff --git a/src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx b/src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx
+index 66758b8..10631b1 100644
+--- a/src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx
++++ b/src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx
+@@ -72,35 +72,43 @@ export function CommoditiesTable({ codMetodo }: Props) {
+     [estados],
+   );
+ 
++  // Índices por código: el catálogo de commodities es grande y buscar con find por fila es lento.
++  const commodityPorCodigo = React.useMemo(
++    () => new Map(commodities.map((commodity) => [String(commodity.cod_commodity), commodity])),
++    [commodities],
++  );
++
++  const estadoPorCodigo = React.useMemo(
++    () => new Map(estados.map((estado) => [String(estado.cod_estado), estado])),
++    [estados],
++  );
++
+   const data = React.useMemo<FilaMetodoCommodity[]>(
+     () =>
+       (commoditiesMetodo.data ?? []).map((fila) => ({
+         ...fila,
+-
+-        commodity:
+-          commodities.find(
+-            (commodity) => String(commodity.cod_commodity) === String(fila.cod_commodity),
+-          ) ?? null,
+-
+-        estado:
+-          estados.find((estado) => String(estado.cod_estado) === String(fila.cod_estado)) ?? null,
++        commodity: commodityPorCodigo.get(String(fila.cod_commodity)) ?? null,
++        estado: estadoPorCodigo.get(String(fila.cod_estado)) ?? null,
+       })),
+-    [commoditiesMetodo.data, commodities, estados],
++    [commoditiesMetodo.data, commodityPorCodigo, estadoPorCodigo],
+   );
+ 
+   const commoditiesSeleccionables = React.useMemo(() => {
+-    return commodities.filter((commodity) => {
+-      const asignadoActivo = (commoditiesMetodo.data ?? []).some(
+-        (item) =>
+-          String(item.cod_commodity) === String(commodity.cod_commodity) &&
+-          String(item.cod_estado) === String(COD_ESTADO_ACTIVO) &&
+-          // Cuando editamos, dejamos disponible
+-          // el commodity de esa misma fila.
+-          String(item.cod_metodocommodity) !== String(filaEditando?.cod_metodocommodity ?? ""),
+-      );
+-
+-      return !asignadoActivo;
+-    });
++    const asignadosActivos = new Set(
++      (commoditiesMetodo.data ?? [])
++        .filter(
++          (item) =>
++            String(item.cod_estado) === String(COD_ESTADO_ACTIVO) &&
++            // Cuando editamos, dejamos disponible
++            // el commodity de esa misma fila.
++            String(item.cod_metodocommodity) !== String(filaEditando?.cod_metodocommodity ?? ""),
++        )
++        .map((item) => String(item.cod_commodity)),
++    );
++
++    return commodities.filter(
++      (commodity) => !asignadosActivos.has(String(commodity.cod_commodity)),
++    );
+   }, [commodities, commoditiesMetodo.data, filaEditando?.cod_metodocommodity]);
+ 
+   const formatearFilaApi = React.useCallback(

@@ -1,29 +1,292 @@
-/* STUB del repo espejo: solo tipos para verificar pricing. NO copiar al proyecto real. */
 /*
- * Props inferidas de los usos en pricing y del error reportado en el proyecto real:
- * `value` es `T | null` (NO acepta `undefined`) → usar `?? null` al pasarle valores opcionales.
+ * COPIA del código real del proyecto (espejo). NO copiar al proyecto real: allá ya existe.
+ * Sirve para revisar los usos en pricing con el comportamiento real del componente.
  */
-import type * as React from "react";
+"use client";
 
-export type AsyncComboboxInputProps<T> = {
-  id?: string;
-  label?: React.ReactNode;
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
+import * as React from "react";
+import { Button } from "@/shared/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/shared/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  popoverListClassName,
+} from "@/shared/components/ui/popover";
+import { normalizarBusqueda } from "@/shared/lib/text";
+import { cn } from "@/shared/lib/utils";
+
+type Key = string | number;
+
+export interface AsyncComboboxInputProps<T> {
+  id?: string | undefined;
+  label?: string | undefined;
   value: T | null;
   onChange: (value: T | null) => void;
-  fetchOptions: (search: string) => Promise<T[]>;
-  initialOptions?: T[];
-  getOptionValue: (option: T) => string | number;
+  fetchOptions: (search: string, signal?: AbortSignal) => Promise<T[]>;
+  /** Clave de caché compartida; sin ella cada instancia cachea por separado. */
+  queryKey?: string;
+  getOptionValue: (option: T) => Key;
   getOptionLabel: (option: T) => string;
+  getOptionDescription?: (option: T) => string | undefined;
+  searchFields?: (keyof T)[];
   placeholder?: string;
   searchPlaceholder?: string;
-  minSearchLength?: number;
-  fetchOnEmpty?: boolean;
-  clearable?: boolean;
+  emptyMessage?: string;
   disabled?: boolean;
   readOnly?: boolean;
-  contentClassName?: string;
-};
+  clearable?: boolean;
+  minSearchLength?: number;
+  debounceMs?: number;
+  fetchOnEmpty?: boolean;
+  initialOptions?: T[];
+  className?: React.ComponentProps<"div">["className"];
+  contentClassName?: React.ComponentProps<"div">["className"];
+  onBlur?: (() => void) | undefined;
+  ref?: React.Ref<HTMLButtonElement> | undefined;
+  "aria-invalid"?: boolean | undefined;
+  "aria-describedby"?: string | undefined;
+}
 
-export declare function AsyncComboboxInput<T>(
-  props: Readonly<AsyncComboboxInputProps<T>>,
-): React.JSX.Element;
+function useDebouncedValue<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = React.useState(value);
+
+  React.useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedValue(value), delay);
+    return () => window.clearTimeout(timeout);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+export function AsyncComboboxInput<T>({
+  id,
+  label,
+  value,
+  onChange,
+  fetchOptions,
+  queryKey,
+  getOptionValue,
+  getOptionLabel,
+  getOptionDescription,
+  searchFields = [],
+  placeholder = "Seleccione...",
+  searchPlaceholder = "Buscar...",
+  emptyMessage = "Sin resultados.",
+  disabled = false,
+  readOnly = false,
+  clearable = true,
+  minSearchLength = 0,
+  debounceMs = 300,
+  fetchOnEmpty = true,
+  initialOptions,
+  className,
+  contentClassName,
+  onBlur,
+  ref,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
+}: Readonly<AsyncComboboxInputProps<T>>) {
+  const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState("");
+
+  const debouncedQuery = useDebouncedValue(query, debounceMs);
+  const isBlocked = disabled || readOnly;
+  const search = debouncedQuery.trim();
+
+  /*
+   * fetchOptions suele declararse inline en los consumidores: guardarlo en un
+   * ref evita que su cambio de referencia invalide la consulta en cada render.
+   * Sin `queryKey` explícito la caché es por instancia; con él se comparte
+   * entre todos los selectores que consulten lo mismo.
+   */
+  const fetchOptionsRef = React.useRef(fetchOptions);
+  fetchOptionsRef.current = fetchOptions;
+  const instanceKey = React.useId();
+
+  const optionsQuery = useQuery({
+    queryKey: ["async-combobox", queryKey ?? instanceKey, search],
+    queryFn: ({ signal }) => fetchOptionsRef.current(search, signal),
+    enabled: !isBlocked && (fetchOnEmpty || search.length >= minSearchLength),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+    retry: false,
+    // El error se muestra dentro del propio listado, no como toast global.
+    meta: { silent: true },
+  });
+
+  const options = React.useMemo(
+    () => (Array.isArray(optionsQuery.data) ? optionsQuery.data : (initialOptions ?? [])),
+    [optionsQuery.data, initialOptions],
+  );
+  const isFetching = optionsQuery.isFetching;
+  const fetchError = optionsQuery.error
+    ? optionsQuery.error instanceof Error
+      ? optionsQuery.error.message
+      : "Error al cargar opciones"
+    : null;
+
+  const filteredOptions = React.useMemo(() => {
+    const normalizedQuery = normalizarBusqueda(query.trim());
+
+    if (!normalizedQuery) return options;
+
+    return options.filter((option) => {
+      const extraValues = searchFields.map((field) => option[field]);
+      const searchableText = normalizarBusqueda(
+        [getOptionLabel(option), getOptionValue(option), ...extraValues].join(" "),
+      );
+
+      return searchableText.includes(normalizedQuery);
+    });
+  }, [getOptionLabel, getOptionValue, options, query, searchFields]);
+
+  const selectedLabel = value ? getOptionLabel(value) : "";
+  const canClear = clearable && value !== null && !isBlocked;
+
+  const selectOption = (option: T) => {
+    const alreadySelected =
+      value !== null && String(getOptionValue(value)) === String(getOptionValue(option));
+
+    onChange(alreadySelected && clearable ? null : option);
+    setQuery("");
+    setOpen(false);
+  };
+
+  const clearValue = (event: React.MouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onChange(null);
+    setQuery("");
+  };
+
+  const message = fetchError
+    ? fetchError
+    : isFetching
+      ? "Cargando..."
+      : !fetchOnEmpty && query.trim().length < minSearchLength
+        ? `Ingrese al menos ${minSearchLength} caracteres.`
+        : emptyMessage;
+
+  return (
+    <div className={cn("w-full", className)}>
+      <Popover
+        open={open}
+        onOpenChange={(nextOpen: boolean) => {
+          if (!isBlocked) setOpen(nextOpen);
+          if (!nextOpen) onBlur?.();
+        }}
+      >
+        <div className="relative w-full">
+          <PopoverTrigger asChild>
+            <Button
+              ref={ref}
+              id={id}
+              aria-invalid={ariaInvalid}
+              aria-describedby={ariaDescribedBy}
+              type="button"
+              variant="outline"
+              role="combobox"
+              aria-label={label}
+              aria-expanded={open}
+              onBlur={() => {
+                if (!open) onBlur?.();
+              }}
+              disabled={isBlocked}
+              className={cn(
+                "h-9 w-full justify-between font-normal",
+                !value && "text-muted-foreground",
+                ariaInvalid && "border-destructive focus-visible:ring-destructive/20",
+                canClear && "pr-16",
+              )}
+            >
+              <span className="min-w-0 flex-1 truncate text-left">
+                {selectedLabel || placeholder}
+              </span>
+
+              <span className="ml-2 flex shrink-0 items-center gap-1">
+                {isFetching && <Loader2 className="size-4 animate-spin opacity-60" />}
+
+                <ChevronsUpDown className="size-4 opacity-50" />
+              </span>
+            </Button>
+          </PopoverTrigger>
+
+          {canClear && (
+            <button
+              type="button"
+              aria-label="Limpiar selección"
+              tabIndex={-1}
+              onClick={clearValue}
+              className="absolute right-8 top-1/2 z-10 -translate-y-1/2 rounded-sm hover:text-destructive"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+        </div>
+
+        <PopoverContent
+          className={cn(popoverListClassName, "p-0", contentClassName)}
+          align="start"
+          sideOffset={4}
+        >
+          <Command shouldFilter={false}>
+            <CommandInput
+              value={query}
+              onValueChange={setQuery}
+              placeholder={searchPlaceholder}
+              className="h-9"
+            />
+
+            <CommandList>
+              <CommandEmpty>{message}</CommandEmpty>
+
+              <CommandGroup>
+                {filteredOptions.map((option) => {
+                  const optionValue = String(getOptionValue(option));
+                  const selected = value !== null && String(getOptionValue(value)) === optionValue;
+                  const description = getOptionDescription?.(option);
+
+                  return (
+                    <CommandItem
+                      key={optionValue}
+                      value={optionValue}
+                      onSelect={() => selectOption(option)}
+                      className="items-start"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="wrap-anywhere">{getOptionLabel(option)}</p>
+
+                        {description && (
+                          <p className="wrap-anywhere text-xs text-muted-foreground">
+                            {description}
+                          </p>
+                        )}
+                      </div>
+
+                      <Check
+                        className={cn(
+                          "ml-auto mt-0.5 size-4 shrink-0 text-primary",
+                          selected ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
