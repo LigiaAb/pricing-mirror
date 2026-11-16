@@ -1,6 +1,6 @@
 "use client";
 
-import { FileUp, ListChecks, Route } from "lucide-react";
+import { FileUp, Route } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import type { EmbarqueMaqueta } from "../lib/tipos";
 import { TrackingGeneral } from "./tracking-general";
@@ -13,12 +13,10 @@ import { Dato, SeccionEmbarque } from "./utils";
 export function ResumenEmbarque({
   embarque,
   onVerTracking,
-  onVerActividades,
   onSubirDocumentos,
 }: {
   embarque: EmbarqueMaqueta;
   onVerTracking: () => void;
-  onVerActividades: () => void;
   onSubirDocumentos: () => void;
 }) {
   return (
@@ -38,10 +36,6 @@ export function ResumenEmbarque({
           <Button type="button" size="sm" variant="outline" onClick={onSubirDocumentos}>
             <FileUp className="size-4" aria-hidden="true" />
             Documentos
-          </Button>
-          <Button type="button" size="sm" variant="outline" onClick={onVerActividades}>
-            <ListChecks className="size-4" aria-hidden="true" />
-            Actividades
           </Button>
           <Button type="button" size="sm" onClick={onVerTracking}>
             <Route className="size-4" aria-hidden="true" />

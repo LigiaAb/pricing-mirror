@@ -5,7 +5,6 @@ import * as React from "react";
 import { EMBARQUES_MAQUETA } from "../lib/datos-maqueta";
 import type { ValorPasoEmbarque } from "../lib/pasos";
 import type { EmbarqueMaqueta, PerfilEmbarque } from "../lib/tipos";
-import { DetalleActividadesSheet } from "./detalle-actividades-sheet";
 import { EmbarquesTable } from "./embarques-table";
 import { ResumenEmbarque } from "./resumen-embarque";
 import { TabsEmbarque } from "./tabs-embarque";
@@ -17,8 +16,7 @@ import { TrackingSheet } from "./tracking-sheet";
  * 1. Tabla de embarques.
  * 2. Resumen del seleccionado + tracking general de 6 pasos (solo visual).
  * 3. Tabs con los pasos de gestión (según el perfil de la pantalla).
- * 4. Sheet lateral con el tracking interactivo (solo para el componente existente).
- * 5. Sheet lateral con el detalle de actividades del Excel (aparte).
+ * 4. Sheet lateral con el tracking interactivo.
  *
  * `perfil` permite reutilizar la vista en Operaciones, Bodegas y Combex.
  * Sin API todavía: usa datos de `lib/datos-maqueta.ts`.
@@ -34,7 +32,6 @@ export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: Vi
   const [seleccionado, setSeleccionado] = React.useState<EmbarqueMaqueta | null>(null);
   const [tab, setTab] = React.useState<ValorPasoEmbarque>("informacion");
   const [trackingOpen, setTrackingOpen] = React.useState(false);
-  const [actividadesOpen, setActividadesOpen] = React.useState(false);
 
   const seccionRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -49,16 +46,12 @@ export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: Vi
   }, [seleccionado]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full">
       {/* ================================================================
           LISTADO
       ================================================================= */}
       <section className="rounded-lg border bg-card p-4 shadow-sm">
-        <EmbarquesTable
-          data={EMBARQUES_MAQUETA}
-          seleccionado={seleccionado}
-          onSeleccionar={seleccionar}
-        />
+        <EmbarquesTable data={EMBARQUES_MAQUETA} seleccionado={seleccionado} onSeleccionar={seleccionar} />
       </section>
 
       {/* ================================================================
@@ -66,20 +59,10 @@ export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: Vi
       ================================================================= */}
       {seleccionado ? (
         <div ref={seccionRef} className="space-y-4">
-          <ResumenEmbarque
-            embarque={seleccionado}
-            onVerTracking={() => setTrackingOpen(true)}
-            onVerActividades={() => setActividadesOpen(true)}
-            onSubirDocumentos={() => setTab("documentos")}
-          />
+          <ResumenEmbarque embarque={seleccionado} onVerTracking={() => setTrackingOpen(true)} onSubirDocumentos={() => setTab("documentos")} />
 
           <section className="rounded-lg border bg-card p-2 shadow-sm">
-            <TabsEmbarque
-              embarque={seleccionado}
-              perfil={perfil}
-              value={tab}
-              onValueChange={setTab}
-            />
+            <TabsEmbarque embarque={seleccionado} perfil={perfil} value={tab} onValueChange={setTab} />
           </section>
         </div>
       ) : (
@@ -92,12 +75,6 @@ export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: Vi
       <TrackingSheet open={trackingOpen} onOpenChange={setTrackingOpen} embarque={seleccionado}>
         {trackingInteractivo}
       </TrackingSheet>
-
-      <DetalleActividadesSheet
-        open={actividadesOpen}
-        onOpenChange={setActividadesOpen}
-        embarque={seleccionado}
-      />
     </div>
   );
 };
