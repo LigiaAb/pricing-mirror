@@ -321,7 +321,10 @@ export function CampoFecha({
   );
 }
 
-/** Archivos: arrastrar o seleccionar (mismo patrón que `public/file-dropzone`). */
+/**
+ * Archivos: arrastrar o seleccionar (mismo patrón que `public/file-dropzone`).
+ * Con archivos y editable: "x" en la esquina para quitarlos todos y una por archivo.
+ */
 export function CampoArchivos({
   id,
   label,
@@ -341,50 +344,69 @@ export function CampoArchivos({
     if (!lista?.length) return;
     setArchivos((previos) => [...previos, ...Array.from(lista, (archivo) => archivo.name)]);
   };
+  const quitar = (indice: number) => setArchivos((previos) => previos.filter((_, i) => i !== indice));
+  const puedeLimpiar = archivos.length > 0 && !soloLectura;
 
   return (
     <Field className={cn(className)}>
       <Etiqueta id={id} label={label} requerido={requerido} />
-      <button
-        id={id}
-        type="button"
-        disabled={soloLectura}
-        className={cn(
-          "flex w-full flex-col items-center gap-1 rounded-lg border-2 border-dashed px-4 py-2 text-center transition-colors",
-          arrastrando ? "border-primary bg-primary/5" : "border-input bg-muted/30",
-          soloLectura ? "cursor-default opacity-60" : "cursor-pointer hover:border-primary",
-        )}
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => {
-          e.preventDefault();
-          if (!soloLectura) setArrastrando(true);
-        }}
-        onDragLeave={() => setArrastrando(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setArrastrando(false);
-          if (!soloLectura) agregar(e.dataTransfer.files);
-        }}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          {...(acepta ? { accept: acepta } : {})}
-          className="hidden"
-          onChange={(e) => {
-            agregar(e.target.files);
-            e.target.value = "";
+      <div className="relative">
+        <button
+          id={id}
+          type="button"
+          disabled={soloLectura}
+          className={cn(
+            "flex w-full flex-col items-center gap-1 rounded-lg border-2 border-dashed px-4 py-2 text-center transition-colors",
+            arrastrando ? "border-primary bg-primary/5" : "border-input bg-muted/30",
+            soloLectura ? "cursor-default opacity-60" : "cursor-pointer hover:border-primary",
+          )}
+          onClick={() => inputRef.current?.click()}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!soloLectura) setArrastrando(true);
           }}
-        />
-        <UploadCloud className="size-5 text-muted-foreground opacity-80" aria-hidden="true" />
-        <span className="text-xs font-medium">
-          {arrastrando ? "Suelta los archivos aquí..." : "Arrastra los archivos aquí o haz clic para seleccionar"}
-        </span>
-        {archivos.length > 0 ? (
-          <span className="text-xs text-muted-foreground">{archivos.join(" · ")}</span>
+          onDragLeave={() => setArrastrando(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setArrastrando(false);
+            if (!soloLectura) agregar(e.dataTransfer.files);
+          }}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            multiple
+            {...(acepta ? { accept: acepta } : {})}
+            className="hidden"
+            onChange={(e) => {
+              agregar(e.target.files);
+              e.target.value = "";
+            }}
+          />
+          <UploadCloud className="size-5 text-muted-foreground opacity-80" aria-hidden="true" />
+          <span className="text-xs font-medium">
+            {arrastrando ? "Suelta los archivos aquí..." : "Arrastra los archivos aquí o haz clic para seleccionar"}
+          </span>
+        </button>
+        {puedeLimpiar ? (
+          <BotonLimpiar onClick={() => setArchivos([])} className="absolute right-2 top-2" />
         ) : null}
-      </button>
+      </div>
+      {archivos.length > 0 ? (
+        <ul className="flex flex-wrap gap-1">
+          {archivos.map((nombre, indice) => (
+            <li
+              key={`${indice}-${nombre}`}
+              className="flex items-center gap-1 rounded-md border bg-muted/30 px-2 py-0.5 text-xs text-muted-foreground"
+            >
+              <span className="max-w-48 truncate" title={nombre}>
+                {nombre}
+              </span>
+              {soloLectura ? null : <BotonLimpiar onClick={() => quitar(indice)} />}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </Field>
   );
 }
