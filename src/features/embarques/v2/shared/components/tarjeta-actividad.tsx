@@ -9,7 +9,6 @@ import {
   Link2,
   type LucideIcon,
   Mail,
-  Paperclip,
   Scale,
   ShieldCheck,
   ShoppingCart,
@@ -21,7 +20,15 @@ import { type ActividadTracking, actividadesPorId } from "../lib/actividades-tra
 import { accionDe, camposDe, type GestionActividad } from "../lib/gestion-actividades";
 import type { CampoGestion, TipoInteraccion } from "../lib/interacciones";
 import { EtiquetaTipo } from "./actividades-tracking";
-import { CampoMaqueta, Dato, Pendiente, SoloConsulta } from "./utils";
+import {
+  CampoArchivos,
+  CampoArea,
+  CampoCatalogo,
+  CampoFecha,
+  CampoSeleccion,
+  CampoTexto,
+} from "./campos";
+import { Dato, Pendiente, SoloConsulta } from "./utils";
 
 /* ==========================================================================
  * TARJETA DE UNA ACTIVIDAD (SOLO MAQUETA)
@@ -82,60 +89,37 @@ function idCampo(actividad: ActividadTracking, campo: CampoGestion): string {
   return `${actividad.id.replace(/\s+/g, "-").toLowerCase()}-${slug}`;
 }
 
-/** Un campo de la actividad según su tipo (solo lectura, sin lógica). */
+/** Un campo de la actividad con el componente de su tipo (`campos.tsx`). */
 function CampoActividad({ actividad, campo }: { actividad: ActividadTracking; campo: CampoGestion }) {
-  const id = idCampo(actividad, campo);
-  const tipo = campo.tipo ?? "texto";
-  const etiqueta = `${campo.label}${campo.requerido ? " *" : ""}`;
+  const base = {
+    id: idCampo(actividad, campo),
+    label: campo.label,
+    requerido: campo.requerido ?? false,
+  };
 
-  if (tipo === "archivo") {
-    return (
-      <div className="flex flex-col gap-1 sm:col-span-2">
-        <span className="text-sm font-medium">{etiqueta}</span>
-        <div className="flex items-center gap-2 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
-          <Paperclip className="size-4 text-primary" aria-hidden="true" />
-          Arrastrar archivos aquí o seleccionar
-        </div>
-      </div>
-    );
+  switch (campo.tipo ?? "texto") {
+    case "archivo":
+      return <CampoArchivos {...base} acepta={campo.acepta} className="sm:col-span-2" />;
+    case "area":
+      return <CampoArea {...base} className="sm:col-span-2" />;
+    case "fecha":
+      return <CampoFecha {...base} />;
+    case "fecha-hora":
+      return <CampoFecha {...base} conHora className="sm:col-span-2" />;
+    case "seleccion":
+      return campo.opciones ? <CampoSeleccion {...base} opciones={campo.opciones} /> : <CampoCatalogo {...base} />;
+    case "catalogo":
+      return <CampoCatalogo {...base} />;
+    case "numero":
+      return <CampoTexto {...base} tipo="number" />;
+    case "texto":
+      return <CampoTexto {...base} />;
   }
-
-  if (tipo === "area") {
-    return (
-      <label htmlFor={id} className="flex flex-col gap-1 sm:col-span-2">
-        <span className="text-sm font-medium">{etiqueta}</span>
-        <textarea
-          id={id}
-          readOnly
-          rows={2}
-          placeholder={campo.label}
-          className="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm"
-        />
-      </label>
-    );
-  }
-
-  const tipoInput = {
-    texto: "text",
-    seleccion: "text",
-    numero: "number",
-    fecha: "date",
-    "fecha-hora": "datetime-local",
-  } as const;
-
-  return (
-    <CampoMaqueta
-      id={id}
-      label={campo.label}
-      tipo={tipoInput[tipo]}
-      requerido={campo.requerido ?? false}
-    />
-  );
 }
 
 /** Valor registrado de un campo, en solo consulta (sin datos todavía). */
 function ValorCampo({ campo }: { campo: CampoGestion }) {
-  const ancho = campo.tipo === "area" || campo.tipo === "archivo";
+  const ancho = campo.tipo === "area" || campo.tipo === "archivo" || campo.tipo === "fecha-hora";
   return (
     <div className={cn(ancho && "sm:col-span-2")}>
       <Dato label={campo.label} valor={campo.tipo === "archivo" ? "Sin archivos" : "—"} />

@@ -44,7 +44,7 @@ export const GESTION_BODEGAS: DefinicionesGestion = {
     interaccion: "confirmacion",
     accion: "Confirmar empaque",
     requiere: ["OPS 0.4"],
-    campos: [{ label: "Resultado de la revisión", tipo: "seleccion", requerido: true }],
+    campos: [{ label: "Resultado de la revisión", tipo: "seleccion", requerido: true, opciones: ["Conforme", "Con observaciones", "No conforme"] }],
   },
   "Bodega 0.5": {
     interaccion: "dato-especial",
@@ -60,7 +60,7 @@ export const GESTION_BODEGAS: DefinicionesGestion = {
     accion: "Validar recepción",
     campos: [
       { label: "Piezas recibidas", tipo: "numero", requerido: true },
-      { label: "Estado físico", tipo: "seleccion", requerido: true },
+      { label: "Estado físico", tipo: "seleccion", requerido: true, opciones: ["Buen estado", "Con daños"] },
     ],
   },
   "Bodega 7.2": {
@@ -80,7 +80,7 @@ export const GESTION_BODEGAS: DefinicionesGestion = {
     interaccion: "formulario",
     accion: "Asignar unidad",
     campos: [
-      { label: "Proveedor", tipo: "seleccion", requerido: true },
+      { label: "Proveedor", tipo: "catalogo", requerido: true },
       { label: "Placa", requerido: true },
       { label: "Piloto", requerido: true },
       { label: "Fecha y hora", tipo: "fecha-hora" },
@@ -111,11 +111,11 @@ export const GESTION_BODEGAS: DefinicionesGestion = {
   "Bodega E1": {
     interaccion: "incidencia",
     accion: "Detener despacho e informar a OPS",
-    campos: [{ label: "Diferencia en (piezas / peso / medidas)", tipo: "seleccion", requerido: true }],
+    campos: [{ label: "Diferencia en", tipo: "seleccion", requerido: true, opciones: ["Piezas", "Peso", "Medidas"] }],
   },
   "Bodega E2": {
     interaccion: "incidencia",
     accion: "Escalar caso",
-    campos: [{ label: "Fotografías del daño", tipo: "archivo", requerido: true }],
+    campos: [{ label: "Fotografías del daño", tipo: "archivo", requerido: true, acepta: "image/*" }],
   },
 };
