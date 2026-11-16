@@ -2,7 +2,7 @@
 
 import { Upload } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import { EncabezadoPaso, Pendiente } from "../utils";
+import { EncabezadoPaso, Pendiente } from "../../shared/components/utils";
 
 /**
  * Subida de documentos. No depende del paso del embarque: se puede usar en

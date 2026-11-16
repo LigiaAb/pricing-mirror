@@ -5,8 +5,8 @@ import * as React from "react";
 import { DataTable, DataTableColumnHeader } from "@/shared/components/data-table/data-table";
 import { Button } from "@/shared/components/ui/button";
 import type { ColumnDef } from "@/shared/lib/tanstack-table";
+import type { EmbarqueMaqueta } from "../../shared/lib/tipos";
 import { TRACKING_PASOS } from "../lib/pasos";
-import type { EmbarqueMaqueta } from "../lib/tipos";
 
 function crearColumnas({
   seleccionado,

@@ -3,7 +3,7 @@
 import { Check } from "lucide-react";
 import * as React from "react";
 import { cn } from "@/shared/lib/utils";
-import { actividadesDelPaso } from "../lib/actividades-tracking";
+import { actividadesDelPaso } from "../../shared/lib/actividades-tracking";
 import { estadoPaso, TRACKING_PASOS } from "../lib/pasos";
 
 /**

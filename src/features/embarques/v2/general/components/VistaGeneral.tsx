@@ -2,9 +2,9 @@
 
 import { MousePointerClick } from "lucide-react";
 import * as React from "react";
+import type { EmbarqueMaqueta, PerfilEmbarque } from "../../shared/lib/tipos";
 import { EMBARQUES_MAQUETA } from "../lib/datos-maqueta";
 import { pasosDelPerfil, type ValorPasoEmbarque } from "../lib/pasos";
-import type { EmbarqueMaqueta, PerfilEmbarque } from "../lib/tipos";
 import { DetalleActividadesSheet } from "./detalle-actividades-sheet";
 import { EmbarquesTable } from "./embarques-table";
 import { ResumenEmbarque } from "./resumen-embarque";

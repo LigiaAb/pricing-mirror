@@ -18,7 +18,7 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { cn } from "@/shared/lib/utils";
 import { type ActividadTracking, actividadesPorId } from "../lib/actividades-tracking";
-import { accionDe, camposDe, gestionDe } from "../lib/gestion-actividades";
+import { accionDe, camposDe, type GestionActividad } from "../lib/gestion-actividades";
 import type { CampoGestion, TipoInteraccion } from "../lib/interacciones";
 import { EtiquetaTipo } from "./actividades-tracking";
 import { CampoMaqueta, Dato, Pendiente, SoloConsulta } from "./utils";
@@ -28,7 +28,7 @@ import { CampoMaqueta, Dato, Pendiente, SoloConsulta } from "./utils";
  *
  * Misma estructura para las 69 actividades del Excel; cambia según el tipo
  * de interacción (`lib/interacciones.ts`) y los campos de la actividad
- * (`lib/gestion-actividades.ts`):
+ * (`<actor>/lib/gestion-actividades.ts`):
  *
  *   encabezado: icono · código · actividad · responsable · tipo del Excel · estado
  *   cuerpo:     entrada · actividades previas · comparación · campos
@@ -38,6 +38,9 @@ import { CampoMaqueta, Dato, Pendiente, SoloConsulta } from "./utils";
  *
  * `editable = false` (actividad de otra área): mismos datos en solo consulta,
  * sin campos de captura ni botón.
+ *
+ * La tarjeta es común; cada actor la usa con sus definiciones desde su carpeta
+ * (`operaciones/`, `bodegas/`, `combex/` → `components/actividad-<actor>.tsx`).
  * ========================================================================== */
 
 export const ICONO_INTERACCION: Record<TipoInteraccion, LucideIcon> = {
@@ -140,16 +143,22 @@ function ValorCampo({ campo }: { campo: CampoGestion }) {
   );
 }
 
+/** Props del formulario de una actividad (lo que cada actor recibe de la tab). */
+export type PropsActividad = {
+  actividad: ActividadTracking;
+  pasoActual: number;
+  editable: boolean;
+};
+
 export function TarjetaActividad({
   actividad,
   pasoActual,
   editable,
-}: {
-  actividad: ActividadTracking;
-  pasoActual: number;
-  editable: boolean;
+  gestion,
+}: PropsActividad & {
+  /** Cómo se trabaja la actividad (definiciones del actor). */
+  gestion: GestionActividad;
 }) {
-  const gestion = gestionDe(actividad.id);
   const Icono = ICONO_INTERACCION[gestion.interaccion];
   const estado = ESTADO[estadoActividad(actividad, pasoActual)];
   const requiere = actividadesPorId(gestion.requiere ?? []);

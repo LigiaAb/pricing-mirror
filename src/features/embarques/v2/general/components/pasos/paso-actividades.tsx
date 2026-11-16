@@ -1,7 +1,14 @@
 "use client";
 
 import { AlertTriangle, ChevronDown } from "lucide-react";
-import type { ActividadTracking } from "../../lib/actividades-tracking";
+import type * as React from "react";
+import { ActividadBodegas } from "../../../bodegas/components/actividad-bodegas";
+import { ActividadCombex } from "../../../combex/components/actividad-combex";
+import { ActividadOperaciones } from "../../../operaciones/components/actividad-operaciones";
+import type { PropsActividad } from "../../../shared/components/tarjeta-actividad";
+import { EncabezadoPaso } from "../../../shared/components/utils";
+import type { ActividadTracking } from "../../../shared/lib/actividades-tracking";
+import type { PerfilEmbarque, ResponsableTracking } from "../../../shared/lib/tipos";
 import {
   actividadesDelPerfil,
   type PasoEmbarque,
@@ -9,9 +16,6 @@ import {
   puedeEditar,
   TRACKING_PASOS,
 } from "../../lib/pasos";
-import type { PerfilEmbarque } from "../../lib/tipos";
-import { TarjetaActividad } from "../tarjeta-actividad";
-import { EncabezadoPaso } from "../utils";
 
 /* ==========================================================================
  * TAB GENÉRICA DE ACTIVIDADES (SOLO MAQUETA)
@@ -24,7 +28,22 @@ import { EncabezadoPaso } from "../utils";
  *
  * Según el perfil: Operaciones ve todas las actividades (edita solo las de
  * OPS); Bodegas y Combex ven solo las de su área.
+ *
+ * Los formularios no viven aquí: cada actividad usa el de su actor
+ * (`operaciones/`, `bodegas/`, `combex/`), según su responsable.
  * ========================================================================== */
+
+/** Formulario de cada actor (carpeta del actor). */
+const FORMULARIO_DE_RESPONSABLE: Record<ResponsableTracking, (props: PropsActividad) => React.ReactNode> = {
+  OPS: ActividadOperaciones,
+  Bodega: ActividadBodegas,
+  CBX: ActividadCombex,
+};
+
+function FormularioActividad(props: PropsActividad) {
+  const Formulario = FORMULARIO_DE_RESPONSABLE[props.actividad.responsable];
+  return <Formulario {...props} />;
+}
 
 /** Agrupa actividades consecutivas con el mismo proceso. */
 function porProceso(actividades: readonly ActividadTracking[]) {
@@ -76,7 +95,7 @@ export function PasoActividades({
             {grupo.proceso}
           </h4>
           {grupo.actividades.map((actividad) => (
-            <TarjetaActividad
+            <FormularioActividad
               key={actividad.id}
               actividad={actividad}
               pasoActual={pasoActual}
@@ -102,12 +121,12 @@ export function PasoActividades({
           </summary>
           <div className="space-y-2 pt-2">
             {excepciones.map((actividad) => (
-              <TarjetaActividad
-              key={actividad.id}
-              actividad={actividad}
-              pasoActual={pasoActual}
-              editable={puedeEditar(actividad, perfil)}
-            />
+              <FormularioActividad
+                key={actividad.id}
+                actividad={actividad}
+                pasoActual={pasoActual}
+                editable={puedeEditar(actividad, perfil)}
+              />
             ))}
           </div>
         </details>

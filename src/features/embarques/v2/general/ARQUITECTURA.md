@@ -3,6 +3,24 @@
 **Estado: solo maquetado.** No hay API ni lógica: datos de `lib/datos-maqueta.ts`, botones deshabilitados y
 campos de solo lectura. La funcionalidad se agrega después sin cambiar la estructura.
 
+## Carpetas de `v2/`
+
+`general/` es **solo la vista general** (tabla, resumen, tracking, tabs y Sheets). Los formularios de las
+actividades van en la carpeta de su actor, y lo que usan todos en `shared/`:
+
+| Carpeta        | Qué tiene                                                                          |
+| -------------- | ---------------------------------------------------------------------------------- |
+| `general/`     | Vista general: `VistaGeneral`, tabla, resumen, tracking general, tabs, Sheets, Información; `lib/pasos.ts` y `lib/datos-maqueta.ts` |
+| `operaciones/` | Formularios de OPS: `lib/gestion-actividades.ts` (`GESTION_OPERACIONES`), `components/actividad-operaciones.tsx`, `components/paso-documentos.tsx` |
+| `bodegas/`     | Formularios de Bodega: `lib/gestion-actividades.ts` (`GESTION_BODEGAS`), `components/actividad-bodegas.tsx` |
+| `combex/`      | Formularios de CBX: `lib/gestion-actividades.ts` (`GESTION_COMBEX`), `components/actividad-combex.tsx` |
+| `shared/`      | Común: tipos, actividades del Excel, tipos de interacción, motor de gestión (`gestionDe`, `camposDe`, `accionDe`), tarjeta genérica y piezas (`utils.tsx`) |
+
+Dependencias: `general` → actores → `shared`. `shared` no importa de `general` ni de los actores, y un actor
+no importa de otro.
+
+Las rutas de abajo sin carpeta son relativas a `general/`.
+
 ## Pantalla (`components/VistaGeneral.tsx`)
 
 1. **Tabla de embarques** — `embarques-table.tsx` (`DataTable`, mismo patrón que Cotizaciones).
@@ -14,7 +32,7 @@ campos de solo lectura. La funcionalidad se agrega después sin cambiar la estru
    componente en `components/pasos/`.
 4. **Sheet de tracking interactivo** — `tracking-sheet.tsx`. Solo el componente existente
    `TrackingDetalle` (`@/features/tracking`), con los datos del embarque seleccionado
-   (`CoordinacionTracking` en `lib/tipos.ts`: mismos nombres que `Coordinacion`). `puedeRetroceder={false}`;
+   (`CoordinacionTracking` en `shared/lib/tipos.ts`: mismos nombres que `Coordinacion`). `puedeRetroceder={false}`;
    `ocupado` mientras se guarda. `VistaGeneral` recibe `codTipoTracking` y `onActualizarEstadoTracking(embarque,
    payload)`: ahí la pantalla actualiza el estado (API) y reconsulta. No agregar otro contenido aquí.
 5. **Sheet de actividades** — `detalle-actividades-sheet.tsx`: detalle del Excel por paso y área,
@@ -25,14 +43,17 @@ campos de solo lectura. La funcionalidad se agrega después sin cambiar la estru
 | Qué                                   | Dónde                                    |
 | ------------------------------------- | ---------------------------------------- |
 | Pasos del tracking (6) y de las tabs  | `lib/pasos.ts` (definición única)        |
-| Tipos (`PerfilEmbarque`, embarque)    | `lib/tipos.ts`                           |
+| Tipos (`PerfilEmbarque`, embarque)    | `shared/lib/tipos.ts`                    |
 | Datos de ejemplo (borrar con la API)  | `lib/datos-maqueta.ts`                   |
-| Piezas reutilizables (sección, dato…) | `components/utils.tsx`                   |
-| Tipos de interacción (9)              | `lib/interacciones.ts`                   |
-| Cómo se trabaja cada actividad        | `lib/gestion-actividades.ts`             |
-| Tarjeta genérica de una actividad     | `components/tarjeta-actividad.tsx`       |
+| Piezas reutilizables (sección, dato…) | `shared/components/utils.tsx`            |
+| Actividades del Excel (69)            | `shared/lib/actividades-tracking.ts`     |
+| Tipos de interacción (9)              | `shared/lib/interacciones.ts`            |
+| Motor de gestión (tipo y helpers)     | `shared/lib/gestion-actividades.ts`      |
+| Cómo se trabaja cada actividad        | `<actor>/lib/gestion-actividades.ts`     |
+| Formulario de una actividad del actor | `<actor>/components/actividad-<actor>.tsx` |
+| Tarjeta genérica de una actividad     | `shared/components/tarjeta-actividad.tsx` |
 | Tab genérica (todas las del flujo)    | `components/pasos/paso-actividades.tsx`  |
-| Tabs con contenido propio             | `pasos/paso-informacion.tsx`, `paso-documentos.tsx` |
+| Tabs con contenido propio             | `pasos/paso-informacion.tsx`, `operaciones/components/paso-documentos.tsx` |
 
 ## Tracking general (Exportación Aérea)
 
@@ -48,7 +69,7 @@ consolidado, alcance (tooltip) y áreas responsables (OPS, Bodega, CBX):
 
 ### Actividades (qué paso original va en cada paso)
 
-`lib/actividades-tracking.ts` (`ACTIVIDADES_TRACKING`) es la hoja *Detalle original*: 69 actividades con
+`shared/lib/actividades-tracking.ts` (`ACTIVIDADES_TRACKING`) es la hoja *Detalle original*: 69 actividades con
 paso nuevo, responsable, código original, proceso, entrada, actividad, resultado, tipo
 (Principal/Opcional/Condicional/Excepción/Transversal) y control. Cuadra con la hoja *Tracking 6 pasos*.
 El `id` es `"<responsable> <código>"` (ej. `"OPS 4.1"`, `"Bodega 0.1"`) porque los códigos se repiten entre
@@ -87,7 +108,7 @@ tracking (`1 · Reserva`, `2 · Documentación`…); la tab muestra check si su 
 | —    | Documentos (extra)     | —                                                   |
 | —    | Cancelación (extra)    | OPS 4.4                                             |
 
-### Tipos de interacción (`lib/interacciones.ts`)
+### Tipos de interacción (`shared/lib/interacciones.ts`)
 
 Cada actividad se trabaja con uno de 9 tipos; todos se ven con la misma tarjeta. **Son de uso interno: el
 nombre del tipo no se muestra al usuario** (solo define icono, campos base y botón). En pantalla no usar
@@ -105,26 +126,33 @@ términos técnicos: el usuario ve la actividad, sus campos y el botón con la a
 | Seguimiento     | Trámite hasta que concluye                   | Estado, Fecha, Observaciones                 |
 | Incidencia      | Excepción con motivo y autorización          | Motivo, Autorizado por, Detalle              |
 
-### Gestión de cada actividad (`lib/gestion-actividades.ts`)
+### Gestión de cada actividad (`<actor>/lib/gestion-actividades.ts`)
 
-`GESTION_ACTIVIDADES["<id>"]`: `interaccion`, `campos` propios (van antes de los base), `accion` (texto del
+Cada actor define las suyas: `GESTION_OPERACIONES` (31, OPS), `GESTION_BODEGAS` (16, Bodega) y
+`GESTION_COMBEX` (22, CBX). Tipo y helpers en `shared/lib/gestion-actividades.ts`.
+
+`GESTION_<ACTOR>["<id>"]`: `interaccion`, `campos` propios (van antes de los base), `accion` (texto del
 botón), `compara` (referencia del control del Excel: muestra la referencia, "Actual" y "Diferencia"), `requiere`
 (actividades previas, se muestran como "Antes: <actividad>") y `pendiente` (parte aún sin maquetar, p. ej. la tabla de rubros de OPS 9.2).
 
-### Tarjeta (`components/tarjeta-actividad.tsx`) y tab genérica (`pasos/paso-actividades.tsx`)
+### Tarjeta (`shared/components/tarjeta-actividad.tsx`) y tab genérica (`pasos/paso-actividades.tsx`)
 
 Tarjeta: encabezado (icono, código, actividad, responsable, tipo del Excel, estado), cuerpo (entrada,
 actividades previas, comparación, campos) y pie (control, resultado y botón). Estado de maqueta según el paso
 del embarque: Hecha / En curso / Pendiente; las excepciones dicen "Solo si aplica".
 
 Tab genérica: encabezado (título y descripción), aviso (si la tab lo define), actividades agrupadas por
-proceso y **Excepciones** aparte, plegadas.
+proceso y **Excepciones** aparte, plegadas. Cada actividad se muestra con el formulario de su actor
+(`FORMULARIO_DE_RESPONSABLE`: OPS → `ActividadOperaciones`, Bodega → `ActividadBodegas`, CBX →
+`ActividadCombex`), que es la tarjeta común con las definiciones de esa carpeta.
 
 ### Agregar o mover algo
 
 - Mover una actividad de tab: cambiar su id de lista en `PASOS_EMBARQUE`.
 - Agregar una tab: 1 entrada en `PASOS_EMBARQUE` + su icono en `ICONOS` de `tabs-embarque.tsx`.
-- Cambiar cómo se captura una actividad: su entrada en `GESTION_ACTIVIDADES`.
+- Cambiar cómo se captura una actividad: su entrada en `<actor>/lib/gestion-actividades.ts`.
+- Un formulario propio de un actor (fuera de la tarjeta común): en `<actor>/components/`, usado desde
+  `actividad-<actor>.tsx`.
 - Un campo nuevo para todo un tipo: `base` del tipo en `INTERACCIONES`.
 
 ## Perfiles: Operaciones, Bodegas, Combex
@@ -146,7 +174,7 @@ Bodega → bodegas, CBX → combex):
   "Solo consulta", los datos registrados y no tiene botón.
 - El botón **Documentos** del resumen y el Sheet de actividades también siguen el perfil.
 
-Las carpetas `v2/bodegas` y `v2/combex` montan `VistaGeneral` con su perfil.
+Las pantallas de cada actor montan `VistaGeneral` con su perfil.
 
 **Facturación** (solo visualización): en pausa. Cuando se retome, sería otra entrada `grupo: "extra"` en
 `PASOS_EMBARQUE`, de solo lectura.

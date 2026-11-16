@@ -23,6 +23,8 @@ import {
 import type * as React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { cn } from "@/shared/lib/utils";
+import { PasoDocumentos } from "../../operaciones/components/paso-documentos";
+import type { EmbarqueMaqueta, PerfilEmbarque } from "../../shared/lib/tipos";
 import {
   type PasoEmbarque,
   pasoDeTab,
@@ -31,9 +33,7 @@ import {
   TRACKING_PASOS,
   type ValorPasoEmbarque,
 } from "../lib/pasos";
-import type { EmbarqueMaqueta, PerfilEmbarque } from "../lib/tipos";
 import { PasoActividades } from "./pasos/paso-actividades";
-import { PasoDocumentos } from "./pasos/paso-documentos";
 import { PasoInformacion } from "./pasos/paso-informacion";
 
 const ICONOS: Record<ValorPasoEmbarque, LucideIcon> = {
@@ -57,8 +57,9 @@ const ICONOS: Record<ValorPasoEmbarque, LucideIcon> = {
 };
 
 /**
- * Contenido de la tab: Información y Documentos tienen su propio componente;
- * las demás usan la tab genérica de actividades.
+ * Contenido de la tab: Información (vista general) y Documentos (Operaciones)
+ * tienen su propio componente; las demás usan la tab genérica de actividades,
+ * que muestra el formulario de cada actor.
  */
 function contenidoPaso(
   paso: PasoEmbarque,

@@ -12,8 +12,8 @@
  * Información y Documentos, que tienen el suyo).
  * ========================================================================== */
 
-import { type ActividadTracking, actividadesPorId } from "./actividades-tracking";
-import type { EstadoPaso, PasoTracking, PerfilEmbarque, ResponsableTracking } from "./tipos";
+import { type ActividadTracking, actividadesPorId } from "../../shared/lib/actividades-tracking";
+import type { EstadoPaso, PasoTracking, PerfilEmbarque, ResponsableTracking } from "../../shared/lib/tipos";
 
 /**
  * Tracking de Exportación Aérea (6 pasos consolidados).

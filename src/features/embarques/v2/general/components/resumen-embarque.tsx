@@ -2,9 +2,9 @@
 
 import { FileUp, ListChecks, Route } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import type { EmbarqueMaqueta } from "../lib/tipos";
+import { Dato, SeccionEmbarque } from "../../shared/components/utils";
+import type { EmbarqueMaqueta } from "../../shared/lib/tipos";
 import { TrackingGeneral } from "./tracking-general";
-import { Dato, SeccionEmbarque } from "./utils";
 
 /**
  * Información breve del embarque seleccionado + tracking general.

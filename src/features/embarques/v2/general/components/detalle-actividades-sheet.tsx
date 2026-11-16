@@ -9,10 +9,10 @@ import {
   SheetTitle,
 } from "@/shared/components/ui/sheet";
 import { cn } from "@/shared/lib/utils";
-import { actividadesDelPaso } from "../lib/actividades-tracking";
+import { ListaActividades } from "../../shared/components/actividades-tracking";
+import { actividadesDelPaso } from "../../shared/lib/actividades-tracking";
+import type { EmbarqueMaqueta, PerfilEmbarque, ResponsableTracking } from "../../shared/lib/tipos";
 import { estadoPaso, PERFIL_DE_RESPONSABLE, TRACKING_PASOS } from "../lib/pasos";
-import type { EmbarqueMaqueta, PerfilEmbarque, ResponsableTracking } from "../lib/tipos";
-import { ListaActividades } from "./actividades-tracking";
 
 /**
  * Sheet lateral con el detalle de actividades del Excel por paso y área.

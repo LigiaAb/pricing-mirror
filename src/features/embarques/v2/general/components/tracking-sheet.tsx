@@ -10,7 +10,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/shared/components/ui/sheet";
-import type { CoordinacionTracking, EmbarqueMaqueta } from "../lib/tipos";
+import type { CoordinacionTracking, EmbarqueMaqueta } from "../../shared/lib/tipos";
 
 /** Lo que la pantalla hace al mover el tracking (actualizar estado y reconsultar). */
 export type ActualizarEstadoTracking = (
