@@ -173,8 +173,9 @@ Tarjeta: encabezado (icono, código, actividad, responsable, tipo del Excel, est
 actividades previas, comparación, campos) y pie (control, resultado y botón). Estado de maqueta según el paso
 del embarque: Hecha / En curso / Pendiente; las excepciones dicen "Solo si aplica".
 
-Tab genérica: encabezado (título y descripción), aviso (si la tab lo define), actividades agrupadas por
-proceso y **Excepciones** aparte, plegadas. Cada actividad se muestra con el formulario de su actor
+Tab genérica: encabezado (título y descripción), aviso (si la tab lo define) y **tabs horizontales por tipo**
+del Excel (`ORDEN_TIPOS`: Principal, Opcional, Condicional, Transversal, Excepción; solo las que tienen
+actividades, con su conteo; abre la primera). Dentro de cada tipo, actividades agrupadas por proceso. Cada actividad se muestra con el formulario de su actor
 (`FORMULARIO_DE_RESPONSABLE`: OPS → `ActividadOperaciones`, Bodega → `ActividadBodegas`, CBX →
 `ActividadCombex`), que es la tarjeta común con las definiciones de esa carpeta.
 
