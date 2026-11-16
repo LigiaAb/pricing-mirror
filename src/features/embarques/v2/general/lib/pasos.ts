@@ -12,14 +12,60 @@
 
 import type { EstadoPaso, PasoTracking, PerfilEmbarque } from "./tipos";
 
-/** Textos provisionales: confirmar con el negocio. */
+/**
+ * Tracking de Exportación Aérea (6 pasos consolidados).
+ * Fuente: "Tracking-Expo-Aereo-6Pasos.xlsx", hoja "Tracking 6 pasos".
+ * Si otras operaciones (marítimo, terrestre, importación) tienen otros pasos,
+ * esta lista pasa a depender del tipo de operación.
+ */
 export const TRACKING_PASOS: readonly PasoTracking[] = [
-  { id: 1, titulo: "Apertura", descripcion: "File creado" },
-  { id: 2, titulo: "Guías", descripcion: "Guías asignadas" },
-  { id: 3, titulo: "Reserva", descripcion: "Reserva confirmada" },
-  { id: 4, titulo: "Draft", descripcion: "Draft enviado" },
-  { id: 5, titulo: "Tarifas", descripcion: "Tarifas confirmadas" },
-  { id: 6, titulo: "Cierre", descripcion: "Embarque cerrado" },
+  {
+    id: 1,
+    corto: "Reserva",
+    titulo: "Coordinación y reserva",
+    alcance:
+      "Recolección y empaque cuando apliquen; asignación de HAWB/MAWB; solicitud y confirmación de reserva.",
+    responsables: ["OPS", "Bodega"],
+  },
+  {
+    id: 2,
+    corto: "Documentación",
+    titulo: "Documentación y gestión aduanera",
+    alcance: "Draft, preaviso, OC para autorizar pago aéreo; gestión aduanera, DEPREX y DUCA.",
+    responsables: ["OPS", "CBX"],
+  },
+  {
+    id: 3,
+    corto: "Bodega",
+    titulo: "Liberación y despacho de bodega",
+    alcance:
+      "Salida en sistema; preparación, pase de salida, despacho e inventario de bodega.",
+    responsables: ["OPS", "Bodega"],
+  },
+  {
+    id: 4,
+    corto: "COMBEX",
+    titulo: "Recepción en COMBEX y documentación final",
+    alcance:
+      "Recepción y repeso oficial; boleta, guía definitiva, cargos y documentación final.",
+    responsables: ["OPS", "CBX"],
+  },
+  {
+    id: 5,
+    corto: "Salida",
+    titulo: "Despacho, salida aérea y complementaria",
+    alcance:
+      "Confirmación de despacho; verificación de salida; avisos y seguimiento de complementaria.",
+    responsables: ["OPS", "CBX"],
+  },
+  {
+    id: 6,
+    corto: "Cierre",
+    titulo: "Arribo y cierre de la operación",
+    alcance:
+      "Confirmación de llegada; facturación, reportes y gestión de órdenes de compra según sus condiciones originales.",
+    responsables: ["OPS", "CBX"],
+  },
 ];
 
 export function estadoPaso(idPaso: number, pasoActual: number): EstadoPaso {
@@ -41,7 +87,11 @@ export type PasoEmbarque = {
   value: ValorPasoEmbarque;
   label: string;
   detalle: string;
-  /** Paso del tracking al que corresponde (null = no es un paso del flujo). */
+  /**
+   * Paso del tracking donde ocurre (null = no depende de un paso).
+   * Según el Excel: guías y reserva → 1 (1.1–3.2), draft → 2 (4.1–4.2),
+   * confirmación de tarifas → 4 (9.2).
+   */
   pasoTracking: number | null;
   /** Tabs que van separadas al final (siempre disponibles u opcionales). */
   grupo: "flujo" | "extra";
@@ -55,15 +105,15 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
     value: "informacion",
     label: "Información",
     detalle: "Datos del embarque",
-    pasoTracking: 1,
+    pasoTracking: null,
     grupo: "flujo",
     perfiles: TODOS,
   },
   {
     value: "guias",
     label: "Asignación de guías",
-    detalle: "BL / AWB / CP",
-    pasoTracking: 2,
+    detalle: "HAWB / MAWB",
+    pasoTracking: 1,
     grupo: "flujo",
     perfiles: ["operaciones"],
   },
@@ -71,15 +121,15 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
     value: "reservas",
     label: "Reservas",
     detalle: "Solicitud y confirmación",
-    pasoTracking: 3,
+    pasoTracking: 1,
     grupo: "flujo",
     perfiles: ["operaciones"],
   },
   {
     value: "draft",
     label: "Draft",
-    detalle: "Elaboración y envío",
-    pasoTracking: 4,
+    detalle: "Elaboración, envío y preaviso",
+    pasoTracking: 2,
     grupo: "flujo",
     perfiles: ["operaciones"],
   },
@@ -87,7 +137,7 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
     value: "tarifas",
     label: "Tarifas",
     detalle: "Confirmación de cotización",
-    pasoTracking: 5,
+    pasoTracking: 4,
     grupo: "flujo",
     perfiles: ["operaciones"],
   },

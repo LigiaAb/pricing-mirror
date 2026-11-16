@@ -24,11 +24,30 @@ campos de solo lectura. La funcionalidad se agrega después sin cambiar la estru
 | Piezas reutilizables (sección, dato…) | `components/utils.tsx`                   |
 | Contenido de cada tab                 | `components/pasos/paso-<nombre>.tsx`     |
 
+## Tracking general (Exportación Aérea)
+
+Fuente: `Tracking-Expo-Aereo-6Pasos.xlsx` (hoja *Tracking 6 pasos*). Cada paso tiene nombre corto, nombre
+consolidado, alcance (tooltip) y áreas responsables (OPS, Bodega, CBX):
+
+1. **Reserva** — Coordinación y reserva (OPS, Bodega)
+2. **Documentación** — Documentación y gestión aduanera (OPS, CBX)
+3. **Bodega** — Liberación y despacho de bodega (OPS, Bodega)
+4. **COMBEX** — Recepción en COMBEX y documentación final (OPS, CBX)
+5. **Salida** — Despacho, salida aérea y complementaria (OPS, CBX)
+6. **Cierre** — Arribo y cierre de la operación (OPS, CBX)
+
+El detalle por actividad (hoja *Detalle original*, 69 actividades con código, responsable y tipo
+Principal/Opcional/Condicional/Excepción/Transversal) corresponde al tracking interactivo del Sheet.
+Si otras operaciones tienen otros pasos, `TRACKING_PASOS` pasa a depender del tipo de operación.
+
 ## Tabs actuales
 
 Flujo: Información · Asignación de guías · Reservas (solicitud y confirmación) · Draft (elaboración y envío) ·
 Tarifas (confirmación de cotización). Separadas al final: **Documentos** (disponible en cualquier paso) y
 **Cancelación / anulación** (opcional).
+
+Cada tab indica en `pasoTracking` en qué paso ocurre (guías y reservas → 1, draft → 2, tarifas → 4);
+se marca con check cuando el embarque ya pasó ese paso.
 
 Agregar una tab = 1 entrada en `PASOS_EMBARQUE` + su componente en `pasos/` + su `case` e icono en
 `tabs-embarque.tsx`.

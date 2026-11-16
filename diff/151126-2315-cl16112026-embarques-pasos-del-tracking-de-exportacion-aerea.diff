@@ -1,0 +1,385 @@
+diff --git a/src/features/embarques/v2/general/ARQUITECTURA.md b/src/features/embarques/v2/general/ARQUITECTURA.md
+index 84cb0d1..3343e27 100644
+--- a/src/features/embarques/v2/general/ARQUITECTURA.md
++++ b/src/features/embarques/v2/general/ARQUITECTURA.md
+@@ -24,12 +24,31 @@ campos de solo lectura. La funcionalidad se agrega después sin cambiar la estru
+ | Piezas reutilizables (sección, dato…) | `components/utils.tsx`                   |
+ | Contenido de cada tab                 | `components/pasos/paso-<nombre>.tsx`     |
+ 
++## Tracking general (Exportación Aérea)
++
++Fuente: `Tracking-Expo-Aereo-6Pasos.xlsx` (hoja *Tracking 6 pasos*). Cada paso tiene nombre corto, nombre
++consolidado, alcance (tooltip) y áreas responsables (OPS, Bodega, CBX):
++
++1. **Reserva** — Coordinación y reserva (OPS, Bodega)
++2. **Documentación** — Documentación y gestión aduanera (OPS, CBX)
++3. **Bodega** — Liberación y despacho de bodega (OPS, Bodega)
++4. **COMBEX** — Recepción en COMBEX y documentación final (OPS, CBX)
++5. **Salida** — Despacho, salida aérea y complementaria (OPS, CBX)
++6. **Cierre** — Arribo y cierre de la operación (OPS, CBX)
++
++El detalle por actividad (hoja *Detalle original*, 69 actividades con código, responsable y tipo
++Principal/Opcional/Condicional/Excepción/Transversal) corresponde al tracking interactivo del Sheet.
++Si otras operaciones tienen otros pasos, `TRACKING_PASOS` pasa a depender del tipo de operación.
++
+ ## Tabs actuales
+ 
+ Flujo: Información · Asignación de guías · Reservas (solicitud y confirmación) · Draft (elaboración y envío) ·
+ Tarifas (confirmación de cotización). Separadas al final: **Documentos** (disponible en cualquier paso) y
+ **Cancelación / anulación** (opcional).
+ 
++Cada tab indica en `pasoTracking` en qué paso ocurre (guías y reservas → 1, draft → 2, tarifas → 4);
++se marca con check cuando el embarque ya pasó ese paso.
++
+ Agregar una tab = 1 entrada en `PASOS_EMBARQUE` + su componente en `pasos/` + su `case` e icono en
+ `tabs-embarque.tsx`.
+ 
+diff --git a/src/features/embarques/v2/general/components/embarques-table.tsx b/src/features/embarques/v2/general/components/embarques-table.tsx
+index 1d27b3f..75c8a77 100644
+--- a/src/features/embarques/v2/general/components/embarques-table.tsx
++++ b/src/features/embarques/v2/general/components/embarques-table.tsx
+@@ -59,7 +59,7 @@ function crearColumnas({
+       cell: ({ row }) => (
+         <span className="text-nowrap">
+           {row.original.pasoActual}/{TRACKING_PASOS.length} ·{" "}
+-          {TRACKING_PASOS.find((paso) => paso.id === row.original.pasoActual)?.titulo ?? ""}
++          {TRACKING_PASOS.find((paso) => paso.id === row.original.pasoActual)?.corto ?? ""}
+         </span>
+       ),
+     },
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-draft.tsx b/src/features/embarques/v2/general/components/pasos/paso-draft.tsx
+index 9c81ec7..0265320 100644
+--- a/src/features/embarques/v2/general/components/pasos/paso-draft.tsx
++++ b/src/features/embarques/v2/general/components/pasos/paso-draft.tsx
+@@ -9,7 +9,7 @@ export function PasoDraft() {
+     <div className="space-y-4">
+       <EncabezadoPaso
+         titulo="Draft"
+-        descripcion="Elaboración del draft y envío para revisión."
++        descripcion="Borrador de la guía y preaviso de carga al destino."
+         acciones={
+           <>
+             <Button type="button" size="sm" variant="outline" disabled>
+@@ -18,7 +18,7 @@ export function PasoDraft() {
+             </Button>
+             <Button type="button" size="sm" disabled>
+               <Send className="size-4" aria-hidden="true" />
+-              Enviar draft
++              Enviar preaviso
+             </Button>
+           </>
+         }
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-guias.tsx b/src/features/embarques/v2/general/components/pasos/paso-guias.tsx
+index 6ac0874..4ea00d8 100644
+--- a/src/features/embarques/v2/general/components/pasos/paso-guias.tsx
++++ b/src/features/embarques/v2/general/components/pasos/paso-guias.tsx
+@@ -9,7 +9,7 @@ export function PasoGuias() {
+     <div className="space-y-4">
+       <EncabezadoPaso
+         titulo="Asignación de guías"
+-        descripcion="Guía master y guías house del embarque."
++        descripcion="Asignación de HAWB y registro de MAWB (sin duplicados ni saltos de correlativo)."
+         acciones={
+           <Button type="button" size="sm" disabled>
+             <Plus className="size-4" aria-hidden="true" />
+@@ -19,14 +19,14 @@ export function PasoGuias() {
+       />
+ 
+       <fieldset className="grid grid-cols-1 gap-4 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-4">
+-        <legend className="px-1 text-sm font-semibold">Guía master</legend>
++        <legend className="px-1 text-sm font-semibold">MAWB</legend>
+         <CampoMaqueta id="guia-tipo" label="Tipo de guía" requerido />
+         <CampoMaqueta id="guia-numero" label="Número" requerido />
+         <CampoMaqueta id="guia-fecha" label="Fecha de emisión" tipo="date" />
+         <CampoMaqueta id="guia-carrier" label="Carrier" />
+       </fieldset>
+ 
+-      <Pendiente texto="Tabla de guías house asignadas." />
++      <Pendiente texto="Tabla de HAWB asignadas." />
+     </div>
+   );
+ }
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-tarifas.tsx b/src/features/embarques/v2/general/components/pasos/paso-tarifas.tsx
+index 4ec9cba..31e7cd1 100644
+--- a/src/features/embarques/v2/general/components/pasos/paso-tarifas.tsx
++++ b/src/features/embarques/v2/general/components/pasos/paso-tarifas.tsx
+@@ -9,7 +9,7 @@ export function PasoTarifas() {
+     <div className="space-y-4">
+       <EncabezadoPaso
+         titulo="Confirmación de tarifas"
+-        descripcion="Rubros de la cotización vinculada contra lo real del embarque."
++        descripcion="Tarifas y gastos reales contra la cotización (con el peso oficial de COMBEX)."
+         acciones={
+           <Button type="button" size="sm" disabled>
+             <CheckCircle2 className="size-4" aria-hidden="true" />
+diff --git a/src/features/embarques/v2/general/components/tracking-general.tsx b/src/features/embarques/v2/general/components/tracking-general.tsx
+index 58b72a9..8672d0a 100644
+--- a/src/features/embarques/v2/general/components/tracking-general.tsx
++++ b/src/features/embarques/v2/general/components/tracking-general.tsx
+@@ -19,8 +19,9 @@ export function TrackingGeneral({ pasoActual }: { pasoActual: number }) {
+         return (
+           <React.Fragment key={paso.id}>
+             <li
+-              className="flex min-w-24 flex-col items-center gap-1 text-center"
++              className="flex w-28 shrink-0 flex-col items-center gap-1 text-center"
+               aria-current={estado === "actual" ? "step" : undefined}
++              title={`${paso.titulo}: ${paso.alcance}`}
+             >
+               <span
+                 className={cn(
+@@ -38,9 +39,19 @@ export function TrackingGeneral({ pasoActual }: { pasoActual: number }) {
+                   estado === "pendiente" && "text-muted-foreground",
+                 )}
+               >
+-                {paso.titulo}
++                {paso.corto}
++              </span>
++              <span className="text-[11px] leading-tight text-muted-foreground">{paso.titulo}</span>
++              <span className="flex flex-wrap justify-center gap-1">
++                {paso.responsables.map((responsable) => (
++                  <span
++                    key={responsable}
++                    className="rounded border px-1 text-[9px] font-medium text-muted-foreground"
++                  >
++                    {responsable}
++                  </span>
++                ))}
+               </span>
+-              <span className="text-[11px] text-muted-foreground">{paso.descripcion}</span>
+             </li>
+ 
+             {esUltimo ? null : (
+diff --git a/src/features/embarques/v2/general/lib/datos-maqueta.ts b/src/features/embarques/v2/general/lib/datos-maqueta.ts
+index d08e216..b083ae2 100644
+--- a/src/features/embarques/v2/general/lib/datos-maqueta.ts
++++ b/src/features/embarques/v2/general/lib/datos-maqueta.ts
+@@ -1,6 +1,7 @@
+ /* ==========================================================================
+  * DATOS DE EJEMPLO (SOLO MAQUETA)
+  *
++ * Exportación aérea (el tracking actual es el de Expo Aéreo).
+  * Se eliminan cuando exista la API de embarques (`v2/embarques/api`).
+  * ========================================================================== */
+ 
+@@ -11,12 +12,12 @@ export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
+     codFile: "000101",
+     id: 1001,
+     cliente: "CROPA DSV",
+-    tipoTransporte: "MARÍTIMO",
+-    origen: "Shanghái, CN",
+-    destino: "Puerto Quetzal, GT",
+-    carrier: "MAERSK",
++    tipoTransporte: "AÉREO",
++    origen: "Guatemala, GT",
++    destino: "Miami, US",
++    carrier: "AVIANCA CARGO",
+     etd: "02-11-2026",
+-    eta: "28-11-2026",
++    eta: "03-11-2026",
+     estado: "EN PROCESO",
+     pasoActual: 3,
+   },
+@@ -25,9 +26,9 @@ export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
+     id: 1002,
+     cliente: "DISTRIBUIDORA ABC",
+     tipoTransporte: "AÉREO",
+-    origen: "Miami, US",
+-    destino: "Guatemala, GT",
+-    carrier: "AVIANCA CARGO",
++    origen: "Guatemala, GT",
++    destino: "Madrid, ES",
++    carrier: "IBERIA CARGO",
+     etd: "14-11-2026",
+     eta: "15-11-2026",
+     estado: "EN PROCESO",
+@@ -37,10 +38,10 @@ export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
+     codFile: "000103",
+     id: 1003,
+     cliente: "IMPORTADORA XYZ",
+-    tipoTransporte: "TERRESTRE",
+-    origen: "San Salvador, SV",
+-    destino: "Guatemala, GT",
+-    carrier: "TRANSPORTES GT",
++    tipoTransporte: "AÉREO",
++    origen: "Guatemala, GT",
++    destino: "Ciudad de México, MX",
++    carrier: "AEROMÉXICO CARGO",
+     etd: "16-11-2026",
+     eta: "17-11-2026",
+     estado: "NUEVO",
+@@ -50,12 +51,12 @@ export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
+     codFile: "000104",
+     id: 1004,
+     cliente: "COMERCIAL DEL SUR",
+-    tipoTransporte: "MARÍTIMO",
+-    origen: "Manzanillo, MX",
+-    destino: "Santo Tomás, GT",
+-    carrier: "CMA CGM",
++    tipoTransporte: "AÉREO",
++    origen: "Guatemala, GT",
++    destino: "Los Ángeles, US",
++    carrier: "COPA CARGO",
+     etd: "20-10-2026",
+-    eta: "30-10-2026",
++    eta: "21-10-2026",
+     estado: "CERRADO",
+     pasoActual: 6,
+   },
+diff --git a/src/features/embarques/v2/general/lib/pasos.ts b/src/features/embarques/v2/general/lib/pasos.ts
+index f289881..31eb079 100644
+--- a/src/features/embarques/v2/general/lib/pasos.ts
++++ b/src/features/embarques/v2/general/lib/pasos.ts
+@@ -12,14 +12,60 @@
+ 
+ import type { EstadoPaso, PasoTracking, PerfilEmbarque } from "./tipos";
+ 
+-/** Textos provisionales: confirmar con el negocio. */
++/**
++ * Tracking de Exportación Aérea (6 pasos consolidados).
++ * Fuente: "Tracking-Expo-Aereo-6Pasos.xlsx", hoja "Tracking 6 pasos".
++ * Si otras operaciones (marítimo, terrestre, importación) tienen otros pasos,
++ * esta lista pasa a depender del tipo de operación.
++ */
+ export const TRACKING_PASOS: readonly PasoTracking[] = [
+-  { id: 1, titulo: "Apertura", descripcion: "File creado" },
+-  { id: 2, titulo: "Guías", descripcion: "Guías asignadas" },
+-  { id: 3, titulo: "Reserva", descripcion: "Reserva confirmada" },
+-  { id: 4, titulo: "Draft", descripcion: "Draft enviado" },
+-  { id: 5, titulo: "Tarifas", descripcion: "Tarifas confirmadas" },
+-  { id: 6, titulo: "Cierre", descripcion: "Embarque cerrado" },
++  {
++    id: 1,
++    corto: "Reserva",
++    titulo: "Coordinación y reserva",
++    alcance:
++      "Recolección y empaque cuando apliquen; asignación de HAWB/MAWB; solicitud y confirmación de reserva.",
++    responsables: ["OPS", "Bodega"],
++  },
++  {
++    id: 2,
++    corto: "Documentación",
++    titulo: "Documentación y gestión aduanera",
++    alcance: "Draft, preaviso, OC para autorizar pago aéreo; gestión aduanera, DEPREX y DUCA.",
++    responsables: ["OPS", "CBX"],
++  },
++  {
++    id: 3,
++    corto: "Bodega",
++    titulo: "Liberación y despacho de bodega",
++    alcance:
++      "Salida en sistema; preparación, pase de salida, despacho e inventario de bodega.",
++    responsables: ["OPS", "Bodega"],
++  },
++  {
++    id: 4,
++    corto: "COMBEX",
++    titulo: "Recepción en COMBEX y documentación final",
++    alcance:
++      "Recepción y repeso oficial; boleta, guía definitiva, cargos y documentación final.",
++    responsables: ["OPS", "CBX"],
++  },
++  {
++    id: 5,
++    corto: "Salida",
++    titulo: "Despacho, salida aérea y complementaria",
++    alcance:
++      "Confirmación de despacho; verificación de salida; avisos y seguimiento de complementaria.",
++    responsables: ["OPS", "CBX"],
++  },
++  {
++    id: 6,
++    corto: "Cierre",
++    titulo: "Arribo y cierre de la operación",
++    alcance:
++      "Confirmación de llegada; facturación, reportes y gestión de órdenes de compra según sus condiciones originales.",
++    responsables: ["OPS", "CBX"],
++  },
+ ];
+ 
+ export function estadoPaso(idPaso: number, pasoActual: number): EstadoPaso {
+@@ -41,7 +87,11 @@ export type PasoEmbarque = {
+   value: ValorPasoEmbarque;
+   label: string;
+   detalle: string;
+-  /** Paso del tracking al que corresponde (null = no es un paso del flujo). */
++  /**
++   * Paso del tracking donde ocurre (null = no depende de un paso).
++   * Según el Excel: guías y reserva → 1 (1.1–3.2), draft → 2 (4.1–4.2),
++   * confirmación de tarifas → 4 (9.2).
++   */
+   pasoTracking: number | null;
+   /** Tabs que van separadas al final (siempre disponibles u opcionales). */
+   grupo: "flujo" | "extra";
+@@ -55,15 +105,15 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
+     value: "informacion",
+     label: "Información",
+     detalle: "Datos del embarque",
+-    pasoTracking: 1,
++    pasoTracking: null,
+     grupo: "flujo",
+     perfiles: TODOS,
+   },
+   {
+     value: "guias",
+     label: "Asignación de guías",
+-    detalle: "BL / AWB / CP",
+-    pasoTracking: 2,
++    detalle: "HAWB / MAWB",
++    pasoTracking: 1,
+     grupo: "flujo",
+     perfiles: ["operaciones"],
+   },
+@@ -71,15 +121,15 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
+     value: "reservas",
+     label: "Reservas",
+     detalle: "Solicitud y confirmación",
+-    pasoTracking: 3,
++    pasoTracking: 1,
+     grupo: "flujo",
+     perfiles: ["operaciones"],
+   },
+   {
+     value: "draft",
+     label: "Draft",
+-    detalle: "Elaboración y envío",
+-    pasoTracking: 4,
++    detalle: "Elaboración, envío y preaviso",
++    pasoTracking: 2,
+     grupo: "flujo",
+     perfiles: ["operaciones"],
+   },
+@@ -87,7 +137,7 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
+     value: "tarifas",
+     label: "Tarifas",
+     detalle: "Confirmación de cotización",
+-    pasoTracking: 5,
++    pasoTracking: 4,
+     grupo: "flujo",
+     perfiles: ["operaciones"],
+   },
+diff --git a/src/features/embarques/v2/general/lib/tipos.ts b/src/features/embarques/v2/general/lib/tipos.ts
+index 377413d..ba0061d 100644
+--- a/src/features/embarques/v2/general/lib/tipos.ts
++++ b/src/features/embarques/v2/general/lib/tipos.ts
+@@ -12,11 +12,20 @@ export type PerfilEmbarque = "operaciones" | "bodegas" | "combex";
+ /** Estado visual de un paso del tracking. */
+ export type EstadoPaso = "completado" | "actual" | "pendiente";
+ 
++/** Áreas que ejecutan actividades del tracking (columna "Responsable" del Excel). */
++export type ResponsableTracking = "OPS" | "Bodega" | "CBX";
++
+ /** Paso del tracking general (solo visual). */
+ export type PasoTracking = {
+   id: number;
++  /** Nombre corto para el círculo del tracking y la tabla. */
++  corto: string;
++  /** Estado consolidado (nombre completo del paso). */
+   titulo: string;
+-  descripcion: string;
++  /** Alcance del paso. */
++  alcance: string;
++  /** Áreas con actividades en el paso. */
++  responsables: readonly ResponsableTracking[];
+ };
+ 
+ /** Fila de la tabla de embarques. */
