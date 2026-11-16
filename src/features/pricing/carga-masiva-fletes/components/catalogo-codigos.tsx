@@ -3,26 +3,20 @@
 /* ==========================================================================
  * CATÁLOGO DE CÓDIGOS (sheet lateral de Carga masiva de fletes)
  *
- * Los códigos del sistema no son los oficiales (ISO / IATA). Aquí el usuario
- * consulta y copia el código que debe escribir en la plantilla de Excel.
- *
- * - "Países y ciudades": al elegir un país se listan sus ciudades.
- * - "Puntos de enlace": aeropuertos y puertos (tipo de punto = catálogo
- *   `tipos` con tipo_tabla PUNTO_ENLACE).
+ * Solo para la plantilla TERRESTRE: los códigos de país y ciudad del sistema
+ * no son los oficiales. Aquí el usuario los consulta y copia para escribirlos
+ * en CODIGO PAIS / CODIGO CIUDAD. Al elegir un país se listan sus ciudades.
  *
  * Qué campo se copia como "código" está definido en un solo lugar
- * (`aFilaPais`, `aFilaCiudad`, `aFilaPuntoEnlace`).
+ * (`aFilaPais`, `aFilaCiudad`).
  * ========================================================================== */
 
 import { Check, Copy, SearchIcon } from "lucide-react";
 import * as React from "react";
 
-import { ciudades, paises, puntosEnlace, tipos } from "@/features/catalogos";
+import { ciudades, paises } from "@/features/catalogos";
 import { Input } from "@/shared/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
-
-import type { MetodoCargaFlete } from "../api/carga-masiva-fletes";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -40,19 +34,6 @@ type FilaCiudad = FilaCatalogo & { codPais: string };
 
 /** Máximo de filas visibles por tabla; con búsqueda se llega al resto. */
 const MAX_FILAS = 200;
-
-type GrupoPuntoEnlace = {
-  /** nom_tipo del tipo de punto de enlace (tipo_tabla PUNTO_ENLACE). */
-  tipoPunto: string;
-  titulo: string;
-  /** Columnas de la plantilla que usan este catálogo (vacío = aún sin plantilla). */
-  columnas: Partial<Record<MetodoCargaFlete, string>>;
-};
-
-const GRUPOS_PUNTO_ENLACE: readonly GrupoPuntoEnlace[] = [
-  { tipoPunto: "AEROPUERTO", titulo: "Aeropuertos", columnas: { AIRFREIGTH: "ORIGEN CODIGO IATA / DESTINO CODIGO IATA" } },
-  { tipoPunto: "PUERTO", titulo: "Puertos", columnas: {} },
-];
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null;
@@ -87,18 +68,6 @@ function aFilaCiudad(item: UnknownRecord): FilaCiudad | null {
     codPais: texto(item.cod_pais ?? item.codPais),
     referencia: texto(item.siglas_ciudad ?? item.siglasCiudad),
     nombre: texto(item.nombre_ciudad ?? item.nombreCiudad),
-  };
-}
-
-function aFilaPuntoEnlace(item: UnknownRecord): (FilaCatalogo & { codTipo: string }) | null {
-  const codigo = texto(item.cod_puntoenlace ?? item.codPuntoenlace ?? item.value);
-  if (!codigo) return null;
-
-  return {
-    codigo,
-    codTipo: texto(item.cod_tipo ?? item.codTipo ?? item.cod_tipo_puntoenlace),
-    referencia: "",
-    nombre: texto(item.nombre ?? item.label),
   };
 }
 
@@ -295,7 +264,7 @@ function PaisesYCiudades({ copiado, onCopiar }: { copiado: string | null; onCopi
       <section className="space-y-3">
         <div>
           <h3 className="text-base font-semibold">Países</h3>
-          <p className="text-xs text-muted-foreground">Seleccione un país para ver sus ciudades. Columna de la plantilla: CODIGO PAIS.</p>
+          <p className="text-xs text-muted-foreground">Códigos del sistema (no son los oficiales). Seleccione un país para ver sus ciudades. Columna de la plantilla: CODIGO PAIS.</p>
         </div>
         <Buscador value={busquedaPais} onChange={setBusquedaPais} placeholder="Buscar por código o nombre..." />
         <TablaCodigos
@@ -354,113 +323,14 @@ function PaisesYCiudades({ copiado, onCopiar }: { copiado: string | null; onCopi
   );
 }
 
-function SeccionPuntoEnlace({
-  grupo,
-  metodo,
-  filas,
-  isLoading,
-  copiado,
-  onCopiar,
-}: {
-  grupo: GrupoPuntoEnlace;
-  metodo: MetodoCargaFlete;
-  filas: readonly FilaCatalogo[];
-  isLoading: boolean;
-  copiado: string | null;
-  onCopiar: (clave: string, codigo: string) => void;
-}) {
-  const [busqueda, setBusqueda] = React.useState("");
-  const filtradas = React.useMemo(() => filtrar(filas, busqueda), [filas, busqueda]);
-  const columna = grupo.columnas[metodo];
-
-  return (
-    <section className="space-y-3">
-      <div>
-        <h3 className="text-base font-semibold">{grupo.titulo}</h3>
-        {columna ? <p className="text-xs text-muted-foreground">Columna de la plantilla: {columna}.</p> : null}
-      </div>
-      <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar por código o nombre..." />
-      <TablaCodigos
-        filas={filtradas}
-        total={filas.length}
-        prefijoClave={grupo.tipoPunto}
-        columnaNombre="Nombre"
-        isLoading={isLoading}
-        vacio={`No se encontraron ${grupo.titulo.toLowerCase()}.`}
-        copiado={copiado}
-        onCopiar={onCopiar}
-      />
-    </section>
-  );
-}
-
-function PuntosEnlace({
-  metodo,
-  copiado,
-  onCopiar,
-}: {
-  metodo: MetodoCargaFlete;
-  copiado: string | null;
-  onCopiar: (clave: string, codigo: string) => void;
-}) {
-  const puntosQuery = puntosEnlace.useLista();
-  // Misma consulta que useCatalogosPricing: React Query comparte la caché.
-  const tiposQuery = tipos.useLista();
-
-  /** nom_tipo (AEROPUERTO / PUERTO) -> cod_tipo */
-  const codTipoPorNombre = React.useMemo(() => {
-    const mapa = new Map<string, string>();
-
-    for (const item of registros(tiposQuery.data)) {
-      if (texto(item.tipo_tabla ?? item.tipoTabla) !== "PUNTO_ENLACE") continue;
-      mapa.set(texto(item.nom_tipo ?? item.nomTipo).toUpperCase(), texto(item.cod_tipo ?? item.codTipo));
-    }
-
-    return mapa;
-  }, [tiposQuery.data]);
-
-  const listaPuntos = React.useMemo(
-    () => ordenarPorNombre(registros(puntosQuery.data).flatMap((item) => aFilaPuntoEnlace(item) ?? [])),
-    [puntosQuery.data],
-  );
-
-  // En aéreo los aeropuertos van primero; en los demás, los puertos.
-  const grupos = metodo === "AIRFREIGTH" ? GRUPOS_PUNTO_ENLACE : [...GRUPOS_PUNTO_ENLACE].reverse();
-  const isLoading = puntosQuery.isLoading || tiposQuery.isLoading;
-
-  return (
-    <div className="space-y-6">
-      {grupos.map((grupo, index) => {
-        const codTipo = codTipoPorNombre.get(grupo.tipoPunto);
-        const filas = codTipo == null ? [] : listaPuntos.filter((punto) => punto.codTipo === codTipo);
-
-        return (
-          <div key={grupo.tipoPunto} className={index > 0 ? "border-t pt-5" : undefined}>
-            <SeccionPuntoEnlace grupo={grupo} metodo={metodo} filas={filas} isLoading={isLoading} copiado={copiado} onCopiar={onCopiar} />
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 /** Contenido del sheet "Catálogo de códigos". Montarlo solo con el sheet abierto: así no consulta de más. */
-export function CatalogoCodigos({ metodo }: { metodo: MetodoCargaFlete }) {
+export function CatalogoCodigos() {
   const { copiado, copiar } = useCopiar();
   const onCopiar = React.useCallback((clave: string, codigo: string) => void copiar(clave, codigo), [copiar]);
 
   return (
-    <Tabs defaultValue="paises" className="space-y-5 p-4 sm:p-6">
-      <TabsList>
-        <TabsTrigger value="paises">Países y ciudades</TabsTrigger>
-        <TabsTrigger value="puntos">Aeropuertos y puertos</TabsTrigger>
-      </TabsList>
-      <TabsContent value="paises">
-        <PaisesYCiudades copiado={copiado} onCopiar={onCopiar} />
-      </TabsContent>
-      <TabsContent value="puntos">
-        <PuntosEnlace metodo={metodo} copiado={copiado} onCopiar={onCopiar} />
-      </TabsContent>
-    </Tabs>
+    <div className="p-4 sm:p-6">
+      <PaisesYCiudades copiado={copiado} onCopiar={onCopiar} />
+    </div>
   );
 }

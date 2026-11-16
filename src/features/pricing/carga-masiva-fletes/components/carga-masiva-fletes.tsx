@@ -303,6 +303,7 @@ export function CargaMasivaFletes() {
         value={metodo}
         onValueChange={(value) => {
           setMetodo(value as MetodoCargaFlete);
+          setMostrarCatalogos(false);
           limpiarResultados();
         }}
         className="space-y-4"
@@ -324,10 +325,13 @@ export function CargaMasivaFletes() {
               </TabsTrigger>
             </Tooltip>
           </TabsList>
-          <Button onClick={() => setMostrarCatalogos(true)} variant="outline" size="sm">
-            <Book className="size-5" aria-hidden="true" />
-            <span>Catálogo de códigos</span>
-          </Button>
+          {/* Solo terrestre: CODIGO PAIS / CODIGO CIUDAD usan códigos del sistema. */}
+          {metodo === "LANDFREIGTH" ? (
+            <Button onClick={() => setMostrarCatalogos(true)} variant="outline" size="sm">
+              <Book className="size-5" aria-hidden="true" />
+              <span>Catálogo de códigos</span>
+            </Button>
+          ) : null}
         </div>
 
         {(["AIRFREIGTH", "LANDFREIGTH"] as const).map((tabMetodo) => (
@@ -444,11 +448,11 @@ export function CargaMasivaFletes() {
               </div>
               <div className="space-y-1">
                 <SheetTitle>Catálogo de códigos</SheetTitle>
-                <SheetDescription>Consulte y copie los códigos del sistema para completar la plantilla.</SheetDescription>
+                <SheetDescription>Consulte y copie los códigos de país y ciudad para completar la plantilla terrestre.</SheetDescription>
               </div>
             </div>
           </SheetHeader>
-          {mostrarCatalogos ? <CatalogoCodigos metodo={metodo} /> : null}
+          {mostrarCatalogos ? <CatalogoCodigos /> : null}
         </SheetContent>
       </Sheet>
 
