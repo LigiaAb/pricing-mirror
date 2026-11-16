@@ -1,0 +1,65 @@
+diff --git a/src/features/pricing/carga-masiva-fletes/components/carga-masiva-fletes.tsx b/src/features/pricing/carga-masiva-fletes/components/carga-masiva-fletes.tsx
+index f0831ec5a862be11790b34f18de0c7eac8399f95..d1df1006b2551d54b49544497397e1411c726b5b 100644
+GIT binary patch
+delta 248
+zcmbO;oAL1+#tl>SWQ$WveDjM-iV};Q6H5|v^3(H+HPRAuic>YMdATO{I%`axVac<3
+zpWarc`f7bGh2Z?0e1($KqM}rwo>VIZXMYz@cYlQdN6%mdeHhQ#Gt|Y=MWM7fF;5}+
+z@aB|EprHyWsW}S8nZ+fkxrurTTKcuTTncbdots*cpOUX&Yip~Z<m2e);uhrU=^o;t
+zq+qY00aG|R*Dz@^lc(ck9wXh!HnQTA-JOIdb2tcXjx(Am&aY6AczA8GLZw1-W@$=d
+V$|NrtE`&QL%XoEe-s<(72>=byPzeA4
+
+delta 85
+zcmaDnhjGqq#tl>SHt*KE&oo)yC}wi4k<H}YMtYN98wpSDG!xpaYCKb%Ge@B~v$!NR
+nH*xY=FPX`oy*h<*Q%mww@@=ajbghEE-DE~%k<F95FERlD;aefX
+
+diff --git a/src/features/pricing/carga-masiva-fletes/components/catalogo-codigos.tsx b/src/features/pricing/carga-masiva-fletes/components/catalogo-codigos.tsx
+index bc3361964c9c7fc0adc5876f212ed4c37ca9be9a..8ad56f75b0850d675a57534a959aa1bc16fa8e42 100644
+GIT binary patch
+delta 337
+zcmccJ%D6RY!m|3{{G5D+g2bXkg`7l%f}F&>lFS?+E5tP@$Tc`5$kj?AC%;%B`S9kH
+z%yb|lB^9Xn@Y-U9N`>Ui(v-v$ph%8Fab|HzYHlKzf|f#FzCv++9#~U;T4r))VoqwY
+zo`Pdx>EX2sK$WG%rHMtE`4B_%^NO8Hb4n6HhUFJz0__L6BegiWC^IRu2xu?Jz|=ei
+zXMYz@cYlQdN6%mdeHhQ#Gt|Y=1!(l-SVo=6{}@wQH1)U?CJOjWKF(A=Ihgs#<}EB5
+zOq)M)n6qqN&bLWM*BRjlxQi7uu(?-LPhoSU_EC<>h4zysYdfr;9A(STTcB&AP@HR3
+dplhaN$2IwlqYIyneoAJU9hZWFrZrbB7XZk8bX@=d
+
+delta 3889
+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
+
