@@ -1,6 +1,6 @@
 "use client";
 
-import { Construction } from "lucide-react";
+import { Construction, Eye } from "lucide-react";
 import type * as React from "react";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
@@ -92,6 +92,21 @@ export function EncabezadoPaso({
       </div>
       {acciones ? <div className="flex flex-wrap items-center gap-2">{acciones}</div> : null}
     </div>
+  );
+}
+
+/** Indicador de que el usuario solo puede ver (no editar). */
+export function SoloConsulta({ className }: { className?: string | undefined }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium text-muted-foreground",
+        className,
+      )}
+    >
+      <Eye className="size-3" aria-hidden="true" />
+      Solo consulta
+    </span>
   );
 }
 

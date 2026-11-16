@@ -1,8 +1,15 @@
 "use client";
 
 import { AlertTriangle, ChevronDown } from "lucide-react";
-import { type ActividadTracking, actividadesPorId } from "../../lib/actividades-tracking";
-import { type PasoEmbarque, pasoDeTab, TRACKING_PASOS } from "../../lib/pasos";
+import type { ActividadTracking } from "../../lib/actividades-tracking";
+import {
+  actividadesDelPerfil,
+  type PasoEmbarque,
+  pasoDeTab,
+  puedeEditar,
+  TRACKING_PASOS,
+} from "../../lib/pasos";
+import type { PerfilEmbarque } from "../../lib/tipos";
 import { TarjetaActividad } from "../tarjeta-actividad";
 import { EncabezadoPaso } from "../utils";
 
@@ -14,6 +21,9 @@ import { EncabezadoPaso } from "../utils";
  *   2. Aviso (si la tab lo define).
  *   3. Actividades del flujo agrupadas por proceso, en el orden de la tab.
  *   4. Excepciones aparte, plegadas (solo se usan si ocurren).
+ *
+ * Según el perfil: Operaciones ve todas las actividades (edita solo las de
+ * OPS); Bodegas y Combex ven solo las de su área.
  * ========================================================================== */
 
 /** Agrupa actividades consecutivas con el mismo proceso. */
@@ -27,8 +37,16 @@ function porProceso(actividades: readonly ActividadTracking[]) {
   return grupos;
 }
 
-export function PasoActividades({ paso, pasoActual }: { paso: PasoEmbarque; pasoActual: number }) {
-  const actividades = actividadesPorId(paso.actividades);
+export function PasoActividades({
+  paso,
+  pasoActual,
+  perfil,
+}: {
+  paso: PasoEmbarque;
+  pasoActual: number;
+  perfil: PerfilEmbarque;
+}) {
+  const actividades = actividadesDelPerfil(paso, perfil);
   const flujo = actividades.filter((actividad) => actividad.tipo !== "Excepción");
   const excepciones = actividades.filter((actividad) => actividad.tipo === "Excepción");
   const pasoTracking = pasoDeTab(paso) ?? actividades[0]?.paso;
@@ -58,7 +76,12 @@ export function PasoActividades({ paso, pasoActual }: { paso: PasoEmbarque; paso
             {grupo.proceso}
           </h4>
           {grupo.actividades.map((actividad) => (
-            <TarjetaActividad key={actividad.id} actividad={actividad} pasoActual={pasoActual} />
+            <TarjetaActividad
+              key={actividad.id}
+              actividad={actividad}
+              pasoActual={pasoActual}
+              editable={puedeEditar(actividad, perfil)}
+            />
           ))}
         </section>
       ))}
@@ -79,7 +102,12 @@ export function PasoActividades({ paso, pasoActual }: { paso: PasoEmbarque; paso
           </summary>
           <div className="space-y-2 pt-2">
             {excepciones.map((actividad) => (
-              <TarjetaActividad key={actividad.id} actividad={actividad} pasoActual={pasoActual} />
+              <TarjetaActividad
+              key={actividad.id}
+              actividad={actividad}
+              pasoActual={pasoActual}
+              editable={puedeEditar(actividad, perfil)}
+            />
             ))}
           </div>
         </details>

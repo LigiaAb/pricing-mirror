@@ -19,7 +19,8 @@ export function ResumenEmbarque({
   embarque: EmbarqueMaqueta;
   onVerTracking: () => void;
   onVerActividades: () => void;
-  onSubirDocumentos: () => void;
+  /** Sin él no se muestra el botón (perfiles que no ven Documentos). */
+  onSubirDocumentos?: (() => void) | undefined;
 }) {
   return (
     <section className="space-y-4">
@@ -35,10 +36,12 @@ export function ResumenEmbarque({
           <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
             {embarque.estado}
           </span>
-          <Button type="button" size="sm" variant="outline" onClick={onSubirDocumentos}>
-            <FileUp className="size-4" aria-hidden="true" />
-            Documentos
-          </Button>
+          {onSubirDocumentos ? (
+            <Button type="button" size="sm" variant="outline" onClick={onSubirDocumentos}>
+              <FileUp className="size-4" aria-hidden="true" />
+              Documentos
+            </Button>
+          ) : null}
           <Button type="button" size="sm" variant="outline" onClick={onVerActividades}>
             <ListChecks className="size-4" aria-hidden="true" />
             Actividades

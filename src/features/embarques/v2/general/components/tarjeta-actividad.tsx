@@ -21,7 +21,7 @@ import { type ActividadTracking, actividadesPorId } from "../lib/actividades-tra
 import { accionDe, camposDe, gestionDe } from "../lib/gestion-actividades";
 import type { CampoGestion, TipoInteraccion } from "../lib/interacciones";
 import { EtiquetaTipo } from "./actividades-tracking";
-import { CampoMaqueta, Dato, Pendiente } from "./utils";
+import { CampoMaqueta, Dato, Pendiente, SoloConsulta } from "./utils";
 
 /* ==========================================================================
  * TARJETA DE UNA ACTIVIDAD (SOLO MAQUETA)
@@ -35,6 +35,9 @@ import { CampoMaqueta, Dato, Pendiente } from "./utils";
  *   pie:        control del Excel · resultado · botón de la acción
  *
  * El tipo de interacción es interno: no se muestra su nombre al usuario.
+ *
+ * `editable = false` (actividad de otra área): mismos datos en solo consulta,
+ * sin campos de captura ni botón.
  * ========================================================================== */
 
 export const ICONO_INTERACCION: Record<TipoInteraccion, LucideIcon> = {
@@ -127,12 +130,24 @@ function CampoActividad({ actividad, campo }: { actividad: ActividadTracking; ca
   );
 }
 
+/** Valor registrado de un campo, en solo consulta (sin datos todavía). */
+function ValorCampo({ campo }: { campo: CampoGestion }) {
+  const ancho = campo.tipo === "area" || campo.tipo === "archivo";
+  return (
+    <div className={cn(ancho && "sm:col-span-2")}>
+      <Dato label={campo.label} valor={campo.tipo === "archivo" ? "Sin archivos" : "—"} />
+    </div>
+  );
+}
+
 export function TarjetaActividad({
   actividad,
   pasoActual,
+  editable,
 }: {
   actividad: ActividadTracking;
   pasoActual: number;
+  editable: boolean;
 }) {
   const gestion = gestionDe(actividad.id);
   const Icono = ICONO_INTERACCION[gestion.interaccion];
@@ -176,9 +191,12 @@ export function TarjetaActividad({
           </div>
         </div>
 
-        <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", estado.clase)}>
-          {estado.label}
-        </span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {editable ? null : <SoloConsulta />}
+          <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", estado.clase)}>
+            {estado.label}
+          </span>
+        </div>
       </header>
 
       {/* Cuerpo */}
@@ -208,9 +226,13 @@ export function TarjetaActividad({
         ) : null}
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {camposDe(gestion).map((campo) => (
-            <CampoActividad key={campo.label} actividad={actividad} campo={campo} />
-          ))}
+          {camposDe(gestion).map((campo) =>
+            editable ? (
+              <CampoActividad key={campo.label} actividad={actividad} campo={campo} />
+            ) : (
+              <ValorCampo key={campo.label} campo={campo} />
+            ),
+          )}
         </div>
 
         {gestion.pendiente ? <Pendiente texto={gestion.pendiente} /> : null}
@@ -225,10 +247,12 @@ export function TarjetaActividad({
           </p>
           <p>Resultado: {actividad.resultado}</p>
         </div>
-        <Button type="button" size="sm" variant={excepcion ? "outline" : "default"} disabled>
-          <Icono className="size-4" aria-hidden="true" />
-          {accionDe(gestion)}
-        </Button>
+        {editable ? (
+          <Button type="button" size="sm" variant={excepcion ? "outline" : "default"} disabled>
+            <Icono className="size-4" aria-hidden="true" />
+            {accionDe(gestion)}
+          </Button>
+        ) : null}
       </footer>
     </article>
   );

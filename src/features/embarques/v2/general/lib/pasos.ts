@@ -12,7 +12,7 @@
  * Información y Documentos, que tienen el suyo).
  * ========================================================================== */
 
-import { actividadesPorId } from "./actividades-tracking";
+import { type ActividadTracking, actividadesPorId } from "./actividades-tracking";
 import type { EstadoPaso, PasoTracking, PerfilEmbarque, ResponsableTracking } from "./tipos";
 
 /**
@@ -112,6 +112,8 @@ export type PasoEmbarque = {
   grupo: "flujo" | "extra";
   /** Aviso destacado arriba del contenido. */
   aviso?: string;
+  /** Tab sin actividades que ven todos los perfiles (Información). */
+  paraTodos?: boolean;
 };
 
 export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
@@ -122,6 +124,7 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
     descripcion: "Datos generales, partes y carga.",
     actividades: [],
     grupo: "flujo",
+    paraTodos: true,
   },
   /* ---------- Paso 1 · Coordinación y reserva ---------- */
   {
@@ -296,14 +299,24 @@ export const PERFIL_DE_RESPONSABLE: Record<ResponsableTracking, PerfilEmbarque> 
   CBX: "combex",
 };
 
-/**
- * Perfiles que ven la tab. Sin actividades (Información, Documentos): todos.
- * Con actividades: Operaciones (coordina el file) + las áreas responsables.
- * Es una propuesta: se ajusta cuando se definan Bodegas y Combex.
- */
+/* --------------------------------------------------------------------------
+ * PERMISOS POR PERFIL
+ *
+ * - Operaciones orquesta el embarque: ve todas las tabs y todas las
+ *   actividades, pero solo edita las de OPS; las de Bodega y Combex las ve
+ *   en solo consulta.
+ * - Bodegas y Combex ven solo su parte: las tabs con actividades de su área
+ *   y, dentro de ellas, solo sus actividades.
+ * - Información la ven todos; solo Operaciones la edita.
+ * - Documentos y Cancelación: solo Operaciones.
+ * ------------------------------------------------------------------------ */
+
+/** Perfiles que ven la tab. */
 export function perfilesDeTab(paso: PasoEmbarque): PerfilEmbarque[] {
   const actividades = actividadesPorId(paso.actividades);
-  if (actividades.length === 0) return ["operaciones", "bodegas", "combex"];
+  if (actividades.length === 0) {
+    return paso.paraTodos ? ["operaciones", "bodegas", "combex"] : ["operaciones"];
+  }
   const perfiles = new Set<PerfilEmbarque>(["operaciones"]);
   for (const actividad of actividades) perfiles.add(PERFIL_DE_RESPONSABLE[actividad.responsable]);
   return [...perfiles];
@@ -311,6 +324,23 @@ export function perfilesDeTab(paso: PasoEmbarque): PerfilEmbarque[] {
 
 export function pasosDelPerfil(perfil: PerfilEmbarque): PasoEmbarque[] {
   return PASOS_EMBARQUE.filter((paso) => perfilesDeTab(paso).includes(perfil));
+}
+
+/** Actividades de la tab que ve el perfil (Operaciones: todas; los demás: las de su área). */
+export function actividadesDelPerfil(paso: PasoEmbarque, perfil: PerfilEmbarque): ActividadTracking[] {
+  const actividades = actividadesPorId(paso.actividades);
+  if (perfil === "operaciones") return actividades;
+  return actividades.filter((actividad) => PERFIL_DE_RESPONSABLE[actividad.responsable] === perfil);
+}
+
+/** El perfil edita solo las actividades de su área. */
+export function puedeEditar(actividad: ActividadTracking, perfil: PerfilEmbarque): boolean {
+  return PERFIL_DE_RESPONSABLE[actividad.responsable] === perfil;
+}
+
+/** Información: la edita solo Operaciones. */
+export function puedeEditarInformacion(perfil: PerfilEmbarque): boolean {
+  return perfil === "operaciones";
 }
 
 /**

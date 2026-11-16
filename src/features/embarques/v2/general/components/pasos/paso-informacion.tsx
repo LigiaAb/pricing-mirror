@@ -3,20 +3,27 @@
 import { Pencil } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import type { EmbarqueMaqueta } from "../../lib/tipos";
-import { CampoMaqueta, EncabezadoPaso } from "../utils";
+import { CampoMaqueta, EncabezadoPaso, SoloConsulta } from "../utils";
 
-/** Detalle completo del embarque (el resumen breve está siempre visible arriba). */
-export function PasoInformacion({ embarque }: { embarque: EmbarqueMaqueta }) {
+/**
+ * Detalle completo del embarque (el resumen breve está siempre visible arriba).
+ * La ven todos los perfiles; solo Operaciones la edita (`editable`).
+ */
+export function PasoInformacion({ embarque, editable }: { embarque: EmbarqueMaqueta; editable: boolean }) {
   return (
     <div className="space-y-4">
       <EncabezadoPaso
         titulo="Información del embarque"
         descripcion="Datos generales, partes y carga."
         acciones={
-          <Button type="button" size="sm" variant="outline" disabled>
-            <Pencil className="size-4" aria-hidden="true" />
-            Editar
-          </Button>
+          editable ? (
+            <Button type="button" size="sm" variant="outline" disabled>
+              <Pencil className="size-4" aria-hidden="true" />
+              Editar
+            </Button>
+          ) : (
+            <SoloConsulta />
+          )
         }
       />
 

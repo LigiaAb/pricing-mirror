@@ -10,23 +10,26 @@ import {
 } from "@/shared/components/ui/sheet";
 import { cn } from "@/shared/lib/utils";
 import { actividadesDelPaso } from "../lib/actividades-tracking";
-import { estadoPaso, TRACKING_PASOS } from "../lib/pasos";
-import type { EmbarqueMaqueta, ResponsableTracking } from "../lib/tipos";
+import { estadoPaso, PERFIL_DE_RESPONSABLE, TRACKING_PASOS } from "../lib/pasos";
+import type { EmbarqueMaqueta, PerfilEmbarque, ResponsableTracking } from "../lib/tipos";
 import { ListaActividades } from "./actividades-tracking";
 
 /**
  * Sheet lateral con el detalle de actividades del Excel por paso y área.
  * Es independiente del Sheet de tracking interactivo (`tracking-sheet.tsx`),
  * que queda reservado para el componente existente.
+ * Operaciones ve todas las áreas; Bodegas y Combex solo la suya.
  */
 export function DetalleActividadesSheet({
   open,
   onOpenChange,
   embarque,
+  perfil,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   embarque: EmbarqueMaqueta | null;
+  perfil: PerfilEmbarque;
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -49,7 +52,7 @@ export function DetalleActividadesSheet({
         </SheetHeader>
 
         <div className="space-y-5 p-4 sm:space-y-6 sm:p-6">
-          {embarque ? <ActividadesPorPaso pasoActual={embarque.pasoActual} /> : null}
+          {embarque ? <ActividadesPorPaso pasoActual={embarque.pasoActual} perfil={perfil} /> : null}
         </div>
       </SheetContent>
     </Sheet>
@@ -59,12 +62,18 @@ export function DetalleActividadesSheet({
 const AREAS: readonly ResponsableTracking[] = ["OPS", "Bodega", "CBX"];
 
 /** Maqueta del detalle: actividades del Excel por paso y por área. */
-function ActividadesPorPaso({ pasoActual }: { pasoActual: number }) {
+function ActividadesPorPaso({ pasoActual, perfil }: { pasoActual: number; perfil: PerfilEmbarque }) {
+  const areas =
+    perfil === "operaciones" ? AREAS : AREAS.filter((area) => PERFIL_DE_RESPONSABLE[area] === perfil);
+
   return (
     <div className="space-y-3">
       {TRACKING_PASOS.map((paso) => {
         const estado = estadoPaso(paso.id, pasoActual);
-        const actividades = actividadesDelPaso(paso.id);
+        const actividades = actividadesDelPaso(paso.id).filter((actividad) =>
+          areas.includes(actividad.responsable),
+        );
+        if (actividades.length === 0) return null;
 
         return (
           <details
@@ -98,7 +107,7 @@ function ActividadesPorPaso({ pasoActual }: { pasoActual: number }) {
 
             <div className="space-y-3 border-t p-3">
               <p className="text-xs text-muted-foreground">{paso.alcance}</p>
-              {AREAS.map((area) => {
+              {areas.map((area) => {
                 const delArea = actividades.filter((actividad) => actividad.responsable === area);
                 if (delArea.length === 0) return null;
 

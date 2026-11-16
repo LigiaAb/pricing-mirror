@@ -3,7 +3,7 @@
 import { MousePointerClick } from "lucide-react";
 import * as React from "react";
 import { EMBARQUES_MAQUETA } from "../lib/datos-maqueta";
-import type { ValorPasoEmbarque } from "../lib/pasos";
+import { pasosDelPerfil, type ValorPasoEmbarque } from "../lib/pasos";
 import type { EmbarqueMaqueta, PerfilEmbarque } from "../lib/tipos";
 import { DetalleActividadesSheet } from "./detalle-actividades-sheet";
 import { EmbarquesTable } from "./embarques-table";
@@ -37,6 +37,7 @@ export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: Vi
   const [actividadesOpen, setActividadesOpen] = React.useState(false);
 
   const seccionRef = React.useRef<HTMLDivElement | null>(null);
+  const veDocumentos = pasosDelPerfil(perfil).some((paso) => paso.value === "documentos");
 
   const seleccionar = React.useCallback((embarque: EmbarqueMaqueta) => {
     setSeleccionado(embarque);
@@ -66,7 +67,7 @@ export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: Vi
             embarque={seleccionado}
             onVerTracking={() => setTrackingOpen(true)}
             onVerActividades={() => setActividadesOpen(true)}
-            onSubirDocumentos={() => setTab("documentos")}
+            onSubirDocumentos={veDocumentos ? () => setTab("documentos") : undefined}
           />
 
           <section className="rounded-lg border bg-card p-2 shadow-sm">
@@ -84,7 +85,7 @@ export const VistaGeneral = ({ perfil = "operaciones", trackingInteractivo }: Vi
         {trackingInteractivo}
       </TrackingSheet>
 
-      <DetalleActividadesSheet open={actividadesOpen} onOpenChange={setActividadesOpen} embarque={seleccionado} />
+      <DetalleActividadesSheet open={actividadesOpen} onOpenChange={setActividadesOpen} embarque={seleccionado} perfil={perfil} />
     </div>
   );
 };
