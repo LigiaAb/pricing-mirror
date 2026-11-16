@@ -2,14 +2,14 @@
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarIcon, UploadCloud } from "lucide-react";
-import { useRef, useState } from "react";
+import { CalendarIcon, UploadCloud, X } from "lucide-react";
+import { type ChangeEvent, useRef, useState } from "react";
 import { Button } from "@/shared/components/ui/button";
 import { Calendar } from "@/shared/components/ui/calendar";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Combobox } from "@/shared/components/ui/combobox";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
-import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/components/ui/input-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/popover";
 import {
   Select,
@@ -38,6 +38,8 @@ import type { CampoGestion } from "../lib/interacciones";
  *
  * Sin lógica de guardado: cada campo guarda su valor solo en estado local.
  * `soloLectura` deshabilita el control (ej. Información fuera de edición).
+ * Con valor y editable, cada campo muestra una "x" al final para limpiarlo
+ * (`BotonLimpiar`, mismo estilo que `AsyncComboboxInput`; el `Combobox` usa `clearable`).
  * ========================================================================== */
 
 type BaseCampo = {
@@ -60,6 +62,25 @@ function Etiqueta({ id, label, requerido }: Pick<BaseCampo, "id" | "label" | "re
   );
 }
 
+/**
+ * "x" para limpiar el valor del campo. Mismo estilo que la de `AsyncComboboxInput`.
+ * Fuera del tab (`tabIndex={-1}`): el teclado sigue de un campo al siguiente.
+ */
+function BotonLimpiar({ onClick, className }: { onClick: () => void; className?: string | undefined }) {
+  return (
+    <button
+      type="button"
+      aria-label="Limpiar selección"
+      title="Limpiar"
+      tabIndex={-1}
+      onClick={onClick}
+      className={cn("rounded-sm text-muted-foreground hover:text-destructive", className)}
+    >
+      <X className="size-4" aria-hidden="true" />
+    </button>
+  );
+}
+
 /** Texto corto o número. */
 export function CampoTexto({
   id,
@@ -70,6 +91,7 @@ export function CampoTexto({
   valor = "",
   tipo = "text",
 }: BaseCampo & { valor?: string | undefined; tipo?: "text" | "number" | undefined }) {
+  const [texto, setTexto] = useState(valor);
   return (
     <Field className={cn(className)}>
       <Etiqueta id={id} label={label} requerido={requerido} />
@@ -77,10 +99,16 @@ export function CampoTexto({
         <InputGroupInput
           id={id}
           type={tipo}
-          defaultValue={valor}
+          value={texto}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setTexto(e.target.value)}
           placeholder={label}
           readOnly={soloLectura}
         />
+        {texto && !soloLectura ? (
+          <InputGroupAddon align="inline-end">
+            <BotonLimpiar onClick={() => setTexto("")} />
+          </InputGroupAddon>
+        ) : null}
       </InputGroup>
     </Field>
   );
@@ -88,10 +116,25 @@ export function CampoTexto({
 
 /** Texto largo (observaciones, detalle). */
 export function CampoArea({ id, label, requerido, soloLectura, className }: BaseCampo) {
+  const [texto, setTexto] = useState("");
+  const puedeLimpiar = texto !== "" && !soloLectura;
   return (
     <Field className={cn(className)}>
       <Etiqueta id={id} label={label} requerido={requerido} />
-      <Textarea id={id} rows={2} placeholder={label} readOnly={soloLectura} className="resize-none" />
+      <div className="relative">
+        <Textarea
+          id={id}
+          rows={2}
+          value={texto}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setTexto(e.target.value)}
+          placeholder={label}
+          readOnly={soloLectura}
+          className={cn("resize-none", puedeLimpiar && "pr-8")}
+        />
+        {puedeLimpiar ? (
+          <BotonLimpiar onClick={() => setTexto("")} className="absolute right-2 top-2" />
+        ) : null}
+      </div>
     </Field>
   );
 }
@@ -106,21 +149,30 @@ export function CampoSeleccion({
   opciones,
 }: BaseCampo & { opciones: readonly string[] }) {
   const [valor, setValor] = useState("");
+  const puedeLimpiar = valor !== "" && !soloLectura;
   return (
     <Field className={cn(className)}>
       <Etiqueta id={id} label={label} requerido={requerido} />
-      <Select value={valor} onValueChange={setValor} disabled={soloLectura}>
-        <SelectTrigger id={id}>
-          <SelectValue placeholder="Seleccionar..." />
-        </SelectTrigger>
-        <SelectContent>
-          {opciones.map((opcion) => (
-            <SelectItem key={opcion} value={opcion}>
-              {opcion}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="relative">
+        <Select value={valor} onValueChange={setValor} disabled={soloLectura}>
+          <SelectTrigger id={id} className={cn("w-full", puedeLimpiar && "pr-14")}>
+            <SelectValue placeholder="Seleccionar..." />
+          </SelectTrigger>
+          <SelectContent>
+            {opciones.map((opcion) => (
+              <SelectItem key={opcion} value={opcion}>
+                {opcion}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {puedeLimpiar ? (
+          <BotonLimpiar
+            onClick={() => setValor("")}
+            className="absolute right-8 top-1/2 z-10 -translate-y-1/2"
+          />
+        ) : null}
+      </div>
     </Field>
   );
 }
@@ -203,47 +255,65 @@ export function CampoFecha({
   conHora = false,
 }: BaseCampo & { valor?: Date | undefined; conHora?: boolean | undefined }) {
   const [fecha, setFecha] = useState<Date | undefined>(valor);
+  const [hora, setHora] = useState("");
   const [abierto, setAbierto] = useState(false);
+  const puedeLimpiar = fecha !== undefined && !soloLectura;
   return (
     <Field className={cn(className)}>
       <Etiqueta id={id} label={label} requerido={requerido} />
       <div className="flex gap-2">
-        <Popover open={abierto} onOpenChange={setAbierto}>
-          <PopoverTrigger asChild>
-            <Button
-              id={id}
-              type="button"
-              variant="outline"
-              disabled={soloLectura}
-              className={cn(
-                "min-w-0 flex-1 justify-start text-left font-normal",
-                !fecha && "text-muted-foreground",
-              )}
-            >
-              <CalendarIcon className="mr-2 size-4" aria-hidden="true" />
-              <span className="truncate">
-                {fecha ? format(fecha, "PPP", { locale: es }) : "Seleccionar fecha"}
-              </span>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={fecha}
-              onSelect={(nueva: Date | undefined) => {
-                setFecha(nueva);
-                setAbierto(false);
-              }}
+        <div className="relative min-w-0 flex-1">
+          <Popover open={abierto} onOpenChange={setAbierto}>
+            <PopoverTrigger asChild>
+              <Button
+                id={id}
+                type="button"
+                variant="outline"
+                disabled={soloLectura}
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !fecha && "text-muted-foreground",
+                  puedeLimpiar && "pr-8",
+                )}
+              >
+                <CalendarIcon className="mr-2 size-4" aria-hidden="true" />
+                <span className="truncate">
+                  {fecha ? format(fecha, "PPP", { locale: es }) : "Seleccionar fecha"}
+                </span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={fecha}
+                onSelect={(nueva: Date | undefined) => {
+                  setFecha(nueva);
+                  setAbierto(false);
+                }}
+              />
+            </PopoverContent>
+          </Popover>
+          {puedeLimpiar ? (
+            <BotonLimpiar
+              onClick={() => setFecha(undefined)}
+              className="absolute right-2 top-1/2 z-10 -translate-y-1/2"
             />
-          </PopoverContent>
-        </Popover>
+          ) : null}
+        </div>
         {conHora ? (
-          <InputGroup className="w-28 shrink-0">
+          <InputGroup className="w-32 shrink-0">
             <InputGroupInput
               type="time"
               aria-label={`${label} (hora)`}
+              value={hora}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setHora(e.target.value)}
               readOnly={soloLectura}
             />
+            {hora && !soloLectura ? (
+              <InputGroupAddon align="inline-end">
+                <BotonLimpiar onClick={() => setHora("")} />
+              </InputGroupAddon>
+            ) : null}
           </InputGroup>
         ) : null}
       </div>
