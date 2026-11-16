@@ -174,8 +174,8 @@ actividades previas, comparación, campos) y pie (control, resultado y botón). 
 del embarque: Hecha / En curso / Pendiente; las excepciones dicen "Solo si aplica".
 
 Tab genérica: encabezado (título y descripción), aviso (si la tab lo define) y **tabs horizontales por tipo**
-del Excel (`ORDEN_TIPOS`: Principal, Opcional, Condicional, Transversal, Excepción; solo las que tienen
-actividades, con su conteo; abre la primera). Dentro de cada tipo, actividades agrupadas por proceso. Cada actividad se muestra con el formulario de su actor
+del Excel (`ORDEN_TIPOS`: Principal, Opcional, Condicional, Transversal, Excepción; siempre las 5, con su
+conteo; las que no tienen actividades quedan bloqueadas; abre la primera con actividades). Dentro de cada tipo, actividades agrupadas por proceso. Cada actividad se muestra con el formulario de su actor
 (`FORMULARIO_DE_RESPONSABLE`: OPS → `ActividadOperaciones`, Bodega → `ActividadBodegas`, CBX →
 `ActividadCombex`), que es la tarjeta común con las definiciones de esa carpeta.
 

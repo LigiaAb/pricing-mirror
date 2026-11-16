@@ -1,0 +1,68 @@
+diff --git a/src/features/embarques/v2/general/ARQUITECTURA.md b/src/features/embarques/v2/general/ARQUITECTURA.md
+index db5ea03..a225b1c 100644
+--- a/src/features/embarques/v2/general/ARQUITECTURA.md
++++ b/src/features/embarques/v2/general/ARQUITECTURA.md
+@@ -174,8 +174,8 @@ actividades previas, comparación, campos) y pie (control, resultado y botón).
+ del embarque: Hecha / En curso / Pendiente; las excepciones dicen "Solo si aplica".
+ 
+ Tab genérica: encabezado (título y descripción), aviso (si la tab lo define) y **tabs horizontales por tipo**
+-del Excel (`ORDEN_TIPOS`: Principal, Opcional, Condicional, Transversal, Excepción; solo las que tienen
+-actividades, con su conteo; abre la primera). Dentro de cada tipo, actividades agrupadas por proceso. Cada actividad se muestra con el formulario de su actor
++del Excel (`ORDEN_TIPOS`: Principal, Opcional, Condicional, Transversal, Excepción; siempre las 5, con su
++conteo; las que no tienen actividades quedan bloqueadas; abre la primera con actividades). Dentro de cada tipo, actividades agrupadas por proceso. Cada actividad se muestra con el formulario de su actor
+ (`FORMULARIO_DE_RESPONSABLE`: OPS → `ActividadOperaciones`, Bodega → `ActividadBodegas`, CBX →
+ `ActividadCombex`), que es la tarjeta común con las definiciones de esa carpeta.
+ 
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx b/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx
+index c51ab69..6d00dca 100644
+--- a/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx
++++ b/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx
+@@ -25,7 +25,8 @@ import {
+  *   1. Encabezado (título, descripción y paso del tracking).
+  *   2. Aviso (si la tab lo define).
+  *   3. Tabs horizontales por tipo de actividad del Excel (Principal, Opcional,
+- *      Condicional, Transversal, Excepción); solo las que tienen actividades.
++ *      Condicional, Transversal, Excepción); siempre las 5, bloqueadas las que
++ *      no tienen actividades.
+  *      Dentro, agrupadas por proceso, en el orden de la tab.
+  *
+  * Según el perfil: Operaciones ve todas las actividades (edita solo las de
+@@ -47,7 +48,7 @@ function FormularioActividad(props: PropsActividad) {
+   return <Formulario {...props} />;
+ }
+ 
+-/** Orden de las tabs por tipo (la primera con actividades abre por defecto). */
++/** Orden de las tabs por tipo (siempre todas; abre la primera con actividades). */
+ const ORDEN_TIPOS: readonly TipoActividad[] = ["Principal", "Opcional", "Condicional", "Transversal", "Excepción"];
+ 
+ /** Agrupa actividades consecutivas con el mismo proceso. */
+@@ -74,7 +75,8 @@ export function PasoActividades({
+   const porTipo = ORDEN_TIPOS.map((tipo) => ({
+     tipo,
+     actividades: actividades.filter((actividad) => actividad.tipo === tipo),
+-  })).filter((grupo) => grupo.actividades.length > 0);
++  }));
++  const tipoInicial = porTipo.find((grupo) => grupo.actividades.length > 0)?.tipo;
+   const pasoTracking = pasoDeTab(paso) ?? actividades[0]?.paso;
+   const nombrePaso = TRACKING_PASOS.find((item) => item.id === pasoTracking)?.titulo;
+ 
+@@ -96,11 +98,16 @@ export function PasoActividades({
+         </div>
+       ) : null}
+ 
+-      {porTipo.length > 0 ? (
+-        <Tabs key={perfil} defaultValue={porTipo[0]?.tipo ?? ""} className="space-y-3">
++      {tipoInicial ? (
++        <Tabs key={perfil} defaultValue={tipoInicial} className="space-y-3">
+           <TabsList className="h-auto flex-wrap justify-start">
+             {porTipo.map((grupo) => (
+-              <TabsTrigger key={grupo.tipo} value={grupo.tipo} className="gap-1.5">
++              <TabsTrigger
++                key={grupo.tipo}
++                value={grupo.tipo}
++                disabled={grupo.actividades.length === 0}
++                className="gap-1.5"
++              >
+                 {grupo.tipo === "Excepción" ? (
+                   <AlertTriangle className="size-3.5 text-amber-600" aria-hidden="true" />
+                 ) : null}
