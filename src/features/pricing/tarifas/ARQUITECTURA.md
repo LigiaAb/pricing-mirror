@@ -98,15 +98,15 @@ export const METODO_COSTO_VENTA = definirMetodo({
 
 De `METODO_<X>` sale todo lo demás:
 
-| Qué | Dónde se usa |
-| --- | --- |
-| `esquema` (Zod de la lista) y `tipos.registro` | `api/tarifa-<metodo>.ts` |
-| `tipos.payload` y `aPayload(fila, { codMetodo, codServicio })` | componente padre / tabla (insertar, actualizar) |
-| `tipos.fila` y `aFila(registro, { monedas, rubros, ... })` (busca las opciones de los selects) | componente padre / tabla |
-| `filaNueva()` (campos con `inicial`) | formulario, al crear |
-| `validar(fila)` → `{ valido, faltantes, errores }` (requeridos + reglas) | formulario (botón y mensajes) |
-| `<CampoMetodo {...campo} campo="costo" />` (etiqueta, input y errores del campo) | formulario |
-| `columnasMetodo(METODO_X, ["costo", "cod_moneda_costo"])` | `-columns.tsx` (rango, scalling) |
+| Qué                                                                                            | Dónde se usa                                    |
+| ---------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `esquema` (Zod de la lista) y `tipos.registro`                                                 | `api/tarifa-<metodo>.ts`                        |
+| `tipos.payload` y `aPayload(fila, { codMetodo, codServicio })`                                 | componente padre / tabla (insertar, actualizar) |
+| `tipos.fila` y `aFila(registro, { monedas, rubros, ... })` (busca las opciones de los selects) | componente padre / tabla                        |
+| `filaNueva()` (campos con `inicial`)                                                           | formulario, al crear                            |
+| `validar(fila)` → `{ valido, faltantes, errores }` (requeridos + reglas)                       | formulario (botón y mensajes)                   |
+| `<CampoMetodo {...campo} campo="costo" />` (etiqueta, input y errores del campo)               | formulario                                      |
+| `columnasMetodo(METODO_X, ["costo", "cod_moneda_costo"])`                                      | `-columns.tsx` (rango, scalling)                |
 
 Tipos de campo: `monto`, `moneda`, `rubro`, `opcion` (cualquier catálogo `{ value, label }`), `booleano`,
 `fijo`, `delContexto` y `propio` (salida a mano). Si un campo no se comporta como su tipo, se sobrescribe solo

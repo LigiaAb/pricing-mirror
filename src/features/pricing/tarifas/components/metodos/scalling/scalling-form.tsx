@@ -222,11 +222,7 @@ export function ScallingForm({
       </Field>
 
       <div className="flex gap-2">
-        <Button
-          type="button"
-          onClick={guardar}
-          disabled={!puedeGuardar || isPending}
-        >
+        <Button type="button" onClick={guardar} disabled={!puedeGuardar || isPending}>
           {esEdicion ? <Save className="size-4" /> : <Plus className="size-4" />}
 
           {esEdicion ? "Guardar" : "Agregar"}

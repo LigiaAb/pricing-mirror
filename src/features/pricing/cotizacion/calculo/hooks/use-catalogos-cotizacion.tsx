@@ -44,7 +44,6 @@ import type {
 } from "../lib/tipos";
 import type { CatalogosFormularioCotizacion } from "./use-formulario-cotizacion";
 
-
 /* ==========================================================================
  * CATÁLOGOS DEL CÁLCULO (versiones, carrier, due agent/carrier, scalling...)
  * ========================================================================== */

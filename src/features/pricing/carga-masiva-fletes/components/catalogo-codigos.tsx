@@ -16,7 +16,14 @@ import * as React from "react";
 
 import { ciudades, paises } from "@/features/catalogos";
 import { Input } from "@/shared/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/shared/components/ui/table";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -74,18 +81,16 @@ function aFilaCiudad(item: UnknownRecord): FilaCiudad | null {
 }
 
 function normalizarBusqueda(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .trim();
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 }
 
 function filtrar<T extends FilaCatalogo>(filas: readonly T[], busqueda: string): T[] {
   const termino = normalizarBusqueda(busqueda);
   if (!termino) return [...filas];
 
-  return filas.filter((fila) => normalizarBusqueda(`${fila.codigo} ${fila.referencia} ${fila.nombre}`).includes(termino));
+  return filas.filter((fila) =>
+    normalizarBusqueda(`${fila.codigo} ${fila.referencia} ${fila.nombre}`).includes(termino),
+  );
 }
 
 function ordenarPorNombre<T extends FilaCatalogo>(filas: T[]): T[] {
@@ -118,7 +123,15 @@ function useCopiar() {
   return { copiado, copiar };
 }
 
-function BotonCopiar({ copiado, onCopiar, codigo }: { copiado: boolean; onCopiar: () => void; codigo: string }) {
+function BotonCopiar({
+  copiado,
+  onCopiar,
+  codigo,
+}: {
+  copiado: boolean;
+  onCopiar: () => void;
+  codigo: string;
+}) {
   return (
     <button
       type="button"
@@ -130,16 +143,37 @@ function BotonCopiar({ copiado, onCopiar, codigo }: { copiado: boolean; onCopiar
         onCopiar();
       }}
     >
-      {copiado ? <Check className="size-4 text-emerald-600" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
+      {copiado ? (
+        <Check className="size-4 text-emerald-600" aria-hidden="true" />
+      ) : (
+        <Copy className="size-4" aria-hidden="true" />
+      )}
     </button>
   );
 }
 
-function Buscador({ value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder: string }) {
+function Buscador({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
   return (
     <div className="relative">
-      <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-      <Input type="search" value={value} placeholder={placeholder} className="pl-9" onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange(event.target.value)} />
+      <SearchIcon
+        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+        aria-hidden="true"
+      />
+      <Input
+        type="search"
+        value={value}
+        placeholder={placeholder}
+        className="pl-9"
+        onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
+      />
     </div>
   );
 }
@@ -180,20 +214,28 @@ function TablaCodigos<T extends FilaCatalogo>({
             <TableRow>
               <TableHead className="w-12" />
               <TableHead className="w-28">Código</TableHead>
-              {columnaReferencia ? <TableHead className="w-28">{columnaReferencia}</TableHead> : null}
+              {columnaReferencia ? (
+                <TableHead className="w-28">{columnaReferencia}</TableHead>
+              ) : null}
               <TableHead>{columnaNombre}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={columnas} className="py-6 text-center text-sm text-muted-foreground">
+                <TableCell
+                  colSpan={columnas}
+                  className="py-6 text-center text-sm text-muted-foreground"
+                >
                   Cargando...
                 </TableCell>
               </TableRow>
             ) : visibles.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columnas} className="py-6 text-center text-sm text-muted-foreground">
+                <TableCell
+                  colSpan={columnas}
+                  className="py-6 text-center text-sm text-muted-foreground"
+                >
                   {vacio}
                 </TableCell>
               </TableRow>
@@ -206,14 +248,26 @@ function TablaCodigos<T extends FilaCatalogo>({
                   <TableRow
                     key={clave}
                     data-state={activa ? "selected" : undefined}
-                    className={onSeleccionar ? `cursor-pointer ${activa ? "bg-primary/10 hover:bg-primary/15" : ""}` : undefined}
+                    className={
+                      onSeleccionar
+                        ? `cursor-pointer ${activa ? "bg-primary/10 hover:bg-primary/15" : ""}`
+                        : undefined
+                    }
                     onClick={onSeleccionar ? () => onSeleccionar(fila) : undefined}
                   >
                     <TableCell className="py-1.5">
-                      <BotonCopiar codigo={fila.codigo} copiado={copiado === clave} onCopiar={() => onCopiar(clave, fila.codigo)} />
+                      <BotonCopiar
+                        codigo={fila.codigo}
+                        copiado={copiado === clave}
+                        onCopiar={() => onCopiar(clave, fila.codigo)}
+                      />
                     </TableCell>
                     <TableCell className="font-mono font-semibold">{fila.codigo}</TableCell>
-                    {columnaReferencia ? <TableCell className="text-muted-foreground">{fila.referencia || "—"}</TableCell> : null}
+                    {columnaReferencia ? (
+                      <TableCell className="text-muted-foreground">
+                        {fila.referencia || "—"}
+                      </TableCell>
+                    ) : null}
                     <TableCell>{fila.nombre || "—"}</TableCell>
                   </TableRow>
                 );
@@ -235,7 +289,13 @@ function TablaCodigos<T extends FilaCatalogo>({
   );
 }
 
-function PaisesYCiudades({ copiado, onCopiar }: { copiado: string | null; onCopiar: (clave: string, codigo: string) => void }) {
+function PaisesYCiudades({
+  copiado,
+  onCopiar,
+}: {
+  copiado: string | null;
+  onCopiar: (clave: string, codigo: string) => void;
+}) {
   const paisesQuery = paises.useLista({ cod_estado: 1 });
   const ciudadesQuery = ciudades.useLista({ cod_estado: 1 });
 
@@ -248,27 +308,44 @@ function PaisesYCiudades({ copiado, onCopiar }: { copiado: string | null; onCopi
     [paisesQuery.data],
   );
   const listaCiudades = React.useMemo(
-    () => ordenarPorNombre(registros(ciudadesQuery.data).flatMap((item) => aFilaCiudad(item) ?? [])),
+    () =>
+      ordenarPorNombre(registros(ciudadesQuery.data).flatMap((item) => aFilaCiudad(item) ?? [])),
     [ciudadesQuery.data],
   );
 
-  const paisSeleccionado = React.useMemo(() => listaPaises.find((pais) => pais.codPais === codPais) ?? null, [listaPaises, codPais]);
+  const paisSeleccionado = React.useMemo(
+    () => listaPaises.find((pais) => pais.codPais === codPais) ?? null,
+    [listaPaises, codPais],
+  );
   const ciudadesPais = React.useMemo(
     () => (codPais == null ? [] : listaCiudades.filter((ciudad) => ciudad.codPais === codPais)),
     [listaCiudades, codPais],
   );
 
-  const paisesFiltrados = React.useMemo(() => filtrar(listaPaises, busquedaPais), [listaPaises, busquedaPais]);
-  const ciudadesFiltradas = React.useMemo(() => filtrar(ciudadesPais, busquedaCiudad), [ciudadesPais, busquedaCiudad]);
+  const paisesFiltrados = React.useMemo(
+    () => filtrar(listaPaises, busquedaPais),
+    [listaPaises, busquedaPais],
+  );
+  const ciudadesFiltradas = React.useMemo(
+    () => filtrar(ciudadesPais, busquedaCiudad),
+    [ciudadesPais, busquedaCiudad],
+  );
 
   return (
     <div className="space-y-6">
       <section className="space-y-3">
         <div>
           <h3 className="text-base font-semibold">Países</h3>
-          <p className="text-xs text-muted-foreground">Códigos del sistema (no son los oficiales). Seleccione un país para ver sus ciudades. Columna de la plantilla: CODIGO PAIS.</p>
+          <p className="text-xs text-muted-foreground">
+            Códigos del sistema (no son los oficiales). Seleccione un país para ver sus ciudades.
+            Columna de la plantilla: CODIGO PAIS.
+          </p>
         </div>
-        <Buscador value={busquedaPais} onChange={setBusquedaPais} placeholder="Buscar por código o nombre..." />
+        <Buscador
+          value={busquedaPais}
+          onChange={setBusquedaPais}
+          placeholder="Buscar por código o nombre..."
+        />
         <TablaCodigos
           filas={paisesFiltrados}
           total={listaPaises.length}
@@ -290,7 +367,9 @@ function PaisesYCiudades({ copiado, onCopiar }: { copiado: string | null; onCopi
       <section className="space-y-3 border-t pt-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h3 className="text-base font-semibold">{paisSeleccionado ? `Ciudades de ${paisSeleccionado.nombre}` : "Ciudades"}</h3>
+            <h3 className="text-base font-semibold">
+              {paisSeleccionado ? `Ciudades de ${paisSeleccionado.nombre}` : "Ciudades"}
+            </h3>
             <p className="text-xs text-muted-foreground">Columna de la plantilla: CODIGO CIUDAD.</p>
           </div>
           {paisSeleccionado ? (
@@ -302,7 +381,11 @@ function PaisesYCiudades({ copiado, onCopiar }: { copiado: string | null; onCopi
 
         {paisSeleccionado ? (
           <>
-            <Buscador value={busquedaCiudad} onChange={setBusquedaCiudad} placeholder="Buscar ciudad..." />
+            <Buscador
+              value={busquedaCiudad}
+              onChange={setBusquedaCiudad}
+              placeholder="Buscar ciudad..."
+            />
             <TablaCodigos
               filas={ciudadesFiltradas}
               total={ciudadesPais.length}
@@ -328,7 +411,10 @@ function PaisesYCiudades({ copiado, onCopiar }: { copiado: string | null; onCopi
 /** Contenido del sheet "Catálogo de códigos". Montarlo solo con el sheet abierto: así no consulta de más. */
 export function CatalogoCodigos() {
   const { copiado, copiar } = useCopiar();
-  const onCopiar = React.useCallback((clave: string, codigo: string) => void copiar(clave, codigo), [copiar]);
+  const onCopiar = React.useCallback(
+    (clave: string, codigo: string) => void copiar(clave, codigo),
+    [copiar],
+  );
 
   return (
     <div className="p-4 sm:p-6">

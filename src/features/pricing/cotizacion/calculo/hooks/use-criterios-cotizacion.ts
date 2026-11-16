@@ -8,7 +8,6 @@ import {
   type TotalesMedidas,
 } from "@/features/pricing/shared";
 
-
 import {
   normalizarBooleanCriterio,
   prepararCriteriosCalculo,

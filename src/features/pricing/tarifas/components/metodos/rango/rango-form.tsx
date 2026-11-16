@@ -2,12 +2,12 @@
 
 import { Plus, Save, X } from "lucide-react";
 import React from "react";
+import { METODO_RANGO } from "@/features/pricing/shared";
 import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
 import { Button } from "@/shared/components/ui/button";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
 import { crearIdLocal } from "@/shared/lib/id";
-import { METODO_RANGO } from "@/features/pricing/shared";
 import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
 import type { FilaMetodoRango, MonedaRangoOption } from "./rango-columns";
 

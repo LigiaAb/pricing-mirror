@@ -56,7 +56,14 @@ export function CoberturaForm({
 
   const puedeGuardar = !readonly && valido;
 
-  const campo = { metodo: METODO_COBERTURA, fila: row, onChange: cambiar, monedas, readonly, errores };
+  const campo = {
+    metodo: METODO_COBERTURA,
+    fila: row,
+    onChange: cambiar,
+    monedas,
+    readonly,
+    errores,
+  };
 
   return (
     <div className="space-y-4">

@@ -44,7 +44,14 @@ export function CostoVentaForm({
 
   const puedeGuardar = !readonly && valido;
 
-  const campo = { metodo: METODO_COSTO_VENTA, fila: row, onChange: cambiar, monedas, readonly, errores };
+  const campo = {
+    metodo: METODO_COSTO_VENTA,
+    fila: row,
+    onChange: cambiar,
+    monedas,
+    readonly,
+    errores,
+  };
 
   return (
     <div className="space-y-4">

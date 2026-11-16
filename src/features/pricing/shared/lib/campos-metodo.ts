@@ -396,7 +396,9 @@ export type PayloadMetodo<IdCod extends string, C extends CamposMetodo> = Simpli
 >;
 
 type OpcionesFila<C extends CamposMetodo> = {
-  -readonly [K in keyof C as C[K] extends { en: infer E extends string } ? E : never]?: C[K] extends {
+  -readonly [K in keyof C as C[K] extends { en: infer E extends string }
+    ? E
+    : never]?: C[K] extends {
     deApi: (...args: never[]) => infer O;
   }
     ? O
@@ -449,7 +451,8 @@ export function definirMetodo<const IdCod extends string, const C extends Campos
     const fila: Valores = { ...registro };
 
     for (const [cod, campo] of entradas) {
-      if (campo.en && campo.deApi) fila[campo.en] = campo.deApi(registro as Valores, cod, catalogos);
+      if (campo.en && campo.deApi)
+        fila[campo.en] = campo.deApi(registro as Valores, cod, catalogos);
     }
 
     return fila as Fila;

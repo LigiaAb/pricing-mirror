@@ -81,9 +81,7 @@ export const METODO_EQUIPO = definirMetodo({
     cod_estado: fijo(1, { esquema: zId.nullable(), inicial: 1 }),
   },
 
-  reglas: [
-    ventaNoMenorQueCosto("costo", "venta", "El valor de venta debe ser mayor al de costo"),
-  ],
+  reglas: [ventaNoMenorQueCosto("costo", "venta", "El valor de venta debe ser mayor al de costo")],
 });
 
 type Tipos = typeof METODO_EQUIPO.tipos;

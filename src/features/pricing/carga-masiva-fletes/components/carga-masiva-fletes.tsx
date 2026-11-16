@@ -1,6 +1,17 @@
 "use client";
 
-import { Book, CheckCircle2, Download, FileSpreadsheet, Loader2, Plane, Send, Ship, Truck, XCircle } from "lucide-react";
+import {
+  Book,
+  CheckCircle2,
+  Download,
+  FileSpreadsheet,
+  Loader2,
+  Plane,
+  Send,
+  Ship,
+  Truck,
+  XCircle,
+} from "lucide-react";
 import * as React from "react";
 
 import { centrosCosto, empresas } from "@/features/catalogos";
@@ -8,15 +19,30 @@ import { useContextoOperativoStore } from "@/features/shell";
 import { Alert } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
-
-import { type CargaMasivaFleteExitosa, type MetodoCargaFlete, useCargarFletesMasivos } from "../api/carga-masiva-fletes";
-import { descargarPlantillaFletes, descargarReporteFletes } from "../lib/plantillas-fletes";
-import { Tooltip } from "@/shared/components/ui/tooltip";
 import { Separator } from "@/shared/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/shared/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/shared/components/ui/sheet";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/shared/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Tooltip } from "@/shared/components/ui/tooltip";
+import {
+  type CargaMasivaFleteExitosa,
+  type MetodoCargaFlete,
+  useCargarFletesMasivos,
+} from "../api/carga-masiva-fletes";
+import { descargarPlantillaFletes, descargarReporteFletes } from "../lib/plantillas-fletes";
 import { CatalogoCodigos } from "./catalogo-codigos";
 
 type Id = string | number;
@@ -74,7 +100,8 @@ function opcionesCentroCosto(value: unknown): Opcion[] {
       {
         value: id,
         label: String(item.nombreCc ?? item.nombre_cc ?? item.label ?? id),
-        codEmpresa: typeof codEmpresa === "string" || typeof codEmpresa === "number" ? codEmpresa : null,
+        codEmpresa:
+          typeof codEmpresa === "string" || typeof codEmpresa === "number" ? codEmpresa : null,
       },
     ];
   });
@@ -106,15 +133,32 @@ function ArchivoExcel({
         <FileSpreadsheet className="size-4 text-emerald-600" aria-hidden="true" />
         {label} <span className="text-destructive">*</span>
       </span>
-      <Input id={id} type="file" accept={`${EXCEL_MIME},.xlsx`} disabled={disabled} onChange={(event) => onChange(event.target.files?.[0] ?? null)} />
-      <span className="block truncate text-xs text-muted-foreground">{value?.name ?? "Seleccione un archivo .xlsx"}</span>
+      <Input
+        id={id}
+        type="file"
+        accept={`${EXCEL_MIME},.xlsx`}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.files?.[0] ?? null)}
+      />
+      <span className="block truncate text-xs text-muted-foreground">
+        {value?.name ?? "Seleccione un archivo .xlsx"}
+      </span>
     </label>
   );
 }
 
-function ResultadosCarga({ completados, errores }: { completados: CargaMasivaFleteExitosa[]; errores: string[] }) {
+function ResultadosCarga({
+  completados,
+  errores,
+}: {
+  completados: CargaMasivaFleteExitosa[];
+  errores: string[];
+}) {
   const fechaReporte = React.useMemo(() => Math.floor(Date.now() / 1000), []);
-  const mensajesCompletados = React.useMemo(() => completados.map(mensajeCompletado), [completados]);
+  const mensajesCompletados = React.useMemo(
+    () => completados.map(mensajeCompletado),
+    [completados],
+  );
 
   return (
     <section className="space-y-4">
@@ -246,9 +290,16 @@ export function CargaMasivaFletes() {
   } | null>(null);
   const [errorGeneral, setErrorGeneral] = React.useState<string | null>(null);
 
-  const opcionesEmpresas = React.useMemo(() => opcionesEmpresa(empresasQuery.data), [empresasQuery.data]);
+  const opcionesEmpresas = React.useMemo(
+    () => opcionesEmpresa(empresasQuery.data),
+    [empresasQuery.data],
+  );
   const opcionesCentrosCosto = React.useMemo(
-    () => opcionesCentroCosto(centrosCostoQuery.data).filter((item) => item.codEmpresa == null || codEmpresa == null || mismoId(item.codEmpresa, codEmpresa)),
+    () =>
+      opcionesCentroCosto(centrosCostoQuery.data).filter(
+        (item) =>
+          item.codEmpresa == null || codEmpresa == null || mismoId(item.codEmpresa, codEmpresa),
+      ),
     [centrosCostoQuery.data, codEmpresa],
   );
   React.useEffect(() => {
@@ -261,7 +312,11 @@ export function CargaMasivaFletes() {
     setErrorGeneral(null);
   }, []);
 
-  const puedeEnviar = codEmpresa != null && codCentroCosto != null && archivoVenta != null && (metodo === "LANDFREIGTH" || archivoCosto != null);
+  const puedeEnviar =
+    codEmpresa != null &&
+    codCentroCosto != null &&
+    archivoVenta != null &&
+    (metodo === "LANDFREIGTH" || archivoCosto != null);
 
   const handleSubmit = React.useCallback(async () => {
     if (!puedeEnviar || codEmpresa == null || codCentroCosto == null || !archivoVenta) return;
@@ -277,8 +332,6 @@ export function CargaMasivaFletes() {
         venta: archivoVenta,
       });
 
-      console.log("handleSubmit response", { response });
-
       const errores = response.errores ?? ["La carga masiva no pudo completarse."];
 
       setResultado({
@@ -286,9 +339,20 @@ export function CargaMasivaFletes() {
         errores,
       });
     } catch (error) {
-      setErrorGeneral(error instanceof Error ? error.message : "No fue posible realizar la carga masiva.");
+      setErrorGeneral(
+        error instanceof Error ? error.message : "No fue posible realizar la carga masiva.",
+      );
     }
-  }, [puedeEnviar, codEmpresa, codCentroCosto, archivoVenta, cargarMutation, metodo, archivoCosto, limpiarResultados]);
+  }, [
+    puedeEnviar,
+    codEmpresa,
+    codCentroCosto,
+    archivoVenta,
+    cargarMutation,
+    metodo,
+    archivoCosto,
+    limpiarResultados,
+  ]);
 
   const isLoadingCatalogos = empresasQuery.isLoading || centrosCostoQuery.isLoading;
 
@@ -296,7 +360,9 @@ export function CargaMasivaFletes() {
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Carga masiva de fletes</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Descargue la plantilla correspondiente, complétela y cargue los archivos de tarifas.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Descargue la plantilla correspondiente, complétela y cargue los archivos de tarifas.
+        </p>
       </div>
 
       <Tabs
@@ -339,10 +405,18 @@ export function CargaMasivaFletes() {
             <section className="space-y-5 rounded-lg border bg-card p-5 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="font-semibold">Fletes {tabMetodo === "AIRFREIGTH" ? "aéreos" : "terrestres"}</h2>
-                  <p className="text-sm text-muted-foreground">Los archivos admitidos deben tener formato Excel `.xlsx`.</p>
+                  <h2 className="font-semibold">
+                    Fletes {tabMetodo === "AIRFREIGTH" ? "aéreos" : "terrestres"}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Los archivos admitidos deben tener formato Excel `.xlsx`.
+                  </p>
                 </div>
-                <Button type="button" variant="outline" onClick={() => void descargarPlantillaFletes(tabMetodo)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void descargarPlantillaFletes(tabMetodo)}
+                >
                   <Download className="size-4" aria-hidden="true" />
                   Descargar plantilla
                 </Button>
@@ -427,8 +501,16 @@ export function CargaMasivaFletes() {
                     Limpiar resultado
                   </Button>
                 ) : null}
-                <Button type="button" disabled={!puedeEnviar || cargarMutation.isPending} onClick={() => void handleSubmit()}>
-                  {cargarMutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Send className="size-4" aria-hidden="true" />}
+                <Button
+                  type="button"
+                  disabled={!puedeEnviar || cargarMutation.isPending}
+                  onClick={() => void handleSubmit()}
+                >
+                  {cargarMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Send className="size-4" aria-hidden="true" />
+                  )}
                   Enviar
                 </Button>
               </div>
@@ -440,7 +522,10 @@ export function CargaMasivaFletes() {
       <Separator />
 
       <Sheet open={mostrarCatalogos} onOpenChange={setMostrarCatalogos}>
-        <SheetContent side="right" className="modal-solicitud-hero w-full overflow-y-auto border-l bg-card p-0 sm:max-w-2xl rounded-l-3xl">
+        <SheetContent
+          side="right"
+          className="modal-solicitud-hero w-full overflow-y-auto border-l bg-card p-0 sm:max-w-2xl rounded-l-3xl"
+        >
           <SheetHeader className="border-b bg-muted px-4 py-5 pr-12 sm:px-6 sm:py-6 sm:pr-14 sticky top-0 z-10">
             <div className="flex items-start gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
@@ -448,7 +533,10 @@ export function CargaMasivaFletes() {
               </div>
               <div className="space-y-1">
                 <SheetTitle>Catálogo de códigos</SheetTitle>
-                <SheetDescription>Consulte y copie los códigos de país y ciudad para completar la plantilla terrestre.</SheetDescription>
+                <SheetDescription>
+                  Consulte y copie los códigos de país y ciudad para completar la plantilla
+                  terrestre.
+                </SheetDescription>
               </div>
             </div>
           </SheetHeader>
@@ -461,14 +549,18 @@ export function CargaMasivaFletes() {
           <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin" aria-hidden="true" />
           <div>
             <p className="font-medium">Cargando</p>
-            <p className="text-sm text-muted-foreground">Esto puede demorar unos minutos. Por favor, no cierre la pestaña.</p>
+            <p className="text-sm text-muted-foreground">
+              Esto puede demorar unos minutos. Por favor, no cierre la pestaña.
+            </p>
           </div>
         </Alert>
       ) : null}
 
       {errorGeneral ? <Alert variant="destructive">{errorGeneral}</Alert> : null}
 
-      {resultado ? <ResultadosCarga completados={resultado.completados} errores={resultado.errores} /> : null}
+      {resultado ? (
+        <ResultadosCarga completados={resultado.completados} errores={resultado.errores} />
+      ) : null}
     </div>
   );
 }

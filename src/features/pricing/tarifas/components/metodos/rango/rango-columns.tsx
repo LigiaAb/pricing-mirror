@@ -1,7 +1,7 @@
 import { Pencil, Trash2 } from "lucide-react";
+import { type FilaRango, METODO_RANGO } from "@/features/pricing/shared";
 import { DataTableColumnHeader } from "@/shared/components/data-table/data-table";
 import { Button } from "@/shared/components/ui/button";
-import { type FilaRango, METODO_RANGO } from "@/features/pricing/shared";
 import type { ColumnDef } from "@/shared/lib/tanstack-table";
 import type { MonedaOpcion } from "../../../hooks/use-opciones-tarifa";
 import { columnasMetodo } from "../columnas-metodo";
