@@ -1,18 +1,7 @@
-src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
 src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/carga-masiva-fletes/components/carga-masiva-fletes.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
 src/features/pricing/carga-masiva-fletes/components/carga-masiva-fletes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/carga-masiva-fletes/components/carga-masiva-fletes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
@@ -24,25 +13,6 @@ src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS
 src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS7006: Parameter 'next' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx: error TS7006: Parameter 'nextValue' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'getValue' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'getValue' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/criterios-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/datos-complementarios-cotizacion.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/datos-complementarios-cotizacion.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
@@ -69,18 +39,10 @@ src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts: erro
 src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS2322: Type 'RubroCatalog[]' is not assignable to type 'Rubro[]'.
-src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
 src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/plantillas-clientes/components/rubros-plantilla.tsx: error TS7006: Parameter 'value' implicitly has an 'any' type.
 src/features/pricing/reportes/components/lista-reportes.tsx: error TS2709: Cannot use namespace 'ComboboxOption' as a type.
 src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'date' implicitly has an 'any' type.
@@ -142,45 +104,21 @@ src/features/pricing/tarifas/components/formulario-tarifa.tsx: error TS7006: Par
 src/features/pricing/tarifas/components/formulario-tarifa.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/formulario-tarifa.tsx: error TS7006: Parameter 'nextOpen' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/formulario-tarifa.tsx: error TS7006: Parameter 'nextValue' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-commodities/commodities-columns.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
-src/features/pricing/tarifas/components/metodo-commodities/commodities-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-commodities/commodities-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-commodities/commodities-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-detalle/detalle-columns.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
-src/features/pricing/tarifas/components/metodo-detalle/detalle-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-detalle/detalle-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-detalle/detalle-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-detalle/detalle-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-detalle/detalle-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-detalle/detalle-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-detalle/detalle-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-detalle/detalle-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-entidad/entidad-columns.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
-src/features/pricing/tarifas/components/metodo-entidad/entidad-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-entidad/entidad-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-columns.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
-src/features/pricing/tarifas/components/metodo-pais/pais-columns.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
-src/features/pricing/tarifas/components/metodo-pais/pais-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-pais/pais-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
-src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
-src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/rango/rango-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'e' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'e' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'e' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'e' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx: error TS7006: Parameter 'e' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx: error TS7006: Parameter 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
@@ -188,20 +126,6 @@ src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx: err
 src/features/pricing/tarifas/components/tab-tarifas.tsx: error TS7006: Parameter 'event' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/tab-tarifas.tsx: error TS7006: Parameter 'i' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/tab-tarifas.tsx: error TS7006: Parameter 'o' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/tarifas-columns.tsx: error TS2709: Cannot use namespace 'ColumnDef' as a type.
-src/features/pricing/tarifas/components/tarifas-columns.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/tarifas-columns.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/tarifas-columns.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/tarifas-columns.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/tarifas-columns.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/tarifas-columns.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/tarifas-columns.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/tarifas-columns.tsx: error TS7031: Binding element 'column' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/tarifas-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/tarifas-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/tarifas-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/tarifas-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/tarifas-columns.tsx: error TS7031: Binding element 'row' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/tarifas-table.tsx: error TS7006: Parameter 'ev' implicitly has an 'any' type.
 src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2375: Type '{ cod_metodo?: string | number; cod_tipo?: string | number | null | undefined; cod_tipo_tarifa?: string | number | undefined; todos_los_paises?: boolean | null | undefined; todos_los_clientes?: boolean | ... 1 more ... | undefined; ... 75 more ...; ultimoUsuario: any; }' is not assignable to type 'FilaServicioMetodo' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
 src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts: error TS7006: Parameter 'state' implicitly has an 'any' type.

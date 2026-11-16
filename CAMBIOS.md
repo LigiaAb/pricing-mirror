@@ -3,6 +3,10 @@
 Registro para dar seguimiento a lo hecho en el módulo **pricing**. Entradas nuevas **arriba**, agrupadas por fecha.
 Cada entrada: rama · módulo/submódulo · qué y por qué · diff generado (si aplica).
 
+## 16/11/2026
+
+- **Embarques v2 / General** (`claude/16112026-work-embarques-general`): maqueta (sin funcionalidad) de la vista general a partir del inicio de `main` (`VistaGeneral.tsx`, que no compilaba: usaba `React.Fragment` sin importar `React`). Tabla de embarques, resumen siempre visible del seleccionado con tracking general de 6 pasos (solo visual), tabs verticales estilo Tarifas (Información, Asignación de guías, Reservas, Draft, Tarifas; aparte Documentos —siempre disponible— y Cancelación —opcional—) y botón **Tracking** que abre un `Sheet` lateral para el tracking interactivo existente (prop `trackingInteractivo`, pendiente conectar). Pasos en `lib/pasos.ts` con `perfiles` (Operaciones/Bodegas/Combex) para las pantallas futuras. Guía: `embarques/v2/general/ARQUITECTURA.md`. Stub tipado `src/shared/lib/tanstack-table.ts` (solo espejo: `ColumnDef<TData>` sobre react-table 9) — resuelve 76 errores previos; línea base: 133. `diff:guardar` ahora incluye `src/features/embarques`. Diff: `151126-2305-cl16112026-embarques-maqueta-de-vista-general-con-tabs-y-tra.diff`.
+
 ## 13/11/2026
 
 - **Cotizaciones / Cálculo** (`claude/13112026-work-pricing-cotizacion`): `criterios-form.tsx` quita el fragmento `<>…</>` innecesario del `return` (aviso `lint/complexity/noUselessFragments` de biome en el pre-commit); solo eso, sin otros cambios. Diff: `131126-1245-cl13112026-cotizaciones-quitar-fragmento-innecesario-en-crit.diff`.
