@@ -64,6 +64,10 @@ const isRecord = (value: unknown): value is UnknownRecord =>
 
 // const isPrimitiveComparable = (value: unknown): value is string | number | boolean => ["string", "number", "boolean"].includes(typeof value);
 
+// Método "COSTO POR PORCENTAJE" siempre se calcula sobre el tipo de cálculo "COSTO".
+const COD_METODO_COSTO_POR_PORCENTAJE = 504;
+const COD_TIPO_CALCULO_COSTO = 584;
+
 const CAMPOS_SIEMPRE_LECTURA = [
   "usuario",
   "empresa",
@@ -509,6 +513,20 @@ export function useFormulario({
           }
         }
 
+        if (id === "metodoCalculo") {
+          const metodoSeleccionado = val as TipoOption | null;
+
+          if (metodoSeleccionado?.value === COD_METODO_COSTO_POR_PORCENTAJE) {
+            const tipoCalculoCosto =
+              ((catalogosProcesados?.tiposCalculo || []) as readonly TipoOption[]).find(
+                (tc) => tc.value === COD_TIPO_CALCULO_COSTO,
+              ) ?? null;
+
+            next.tipoCalculo = tipoCalculoCosto;
+            next.cod_tipo_calculo = getPlainValue(tipoCalculoCosto);
+          }
+        }
+
         if (!regla) {
           next[id] = val;
           return next;
@@ -583,6 +601,9 @@ export function useFormulario({
         } else if (inputsReadOnly.includes(id)) {
           resultadoFinal = true;
         } else if (fieldRules[id]?.readonly) {
+          resultadoFinal = true;
+        } else if (id === "tipoCalculo" && values?.cod_tipo === COD_METODO_COSTO_POR_PORCENTAJE) {
+          // Con "COSTO POR PORCENTAJE" el tipo de cálculo queda fijo en "COSTO".
           resultadoFinal = true;
         } else {
           const require = fieldRules[id]?.require;
