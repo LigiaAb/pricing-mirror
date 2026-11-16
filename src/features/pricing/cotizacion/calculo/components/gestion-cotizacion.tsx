@@ -437,6 +437,34 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
     [isNewCotizacion, insertarCotizacion, actualizarCotizacion],
   );
 
+  /*
+   * Al guardar una versión nueva el cálculo pide reactivar la cabecera (p. ej. una
+   * cotización vencida pasa a activa). El endpoint actualiza la cabecera completa,
+   * así que se envía la cotización abierta con el estado nuevo.
+   */
+  const handleActualizarEstadoCabecera = React.useCallback(
+    async ({
+      cod_cotizacion_cabecera,
+      cod_estado,
+    }: {
+      cod_cotizacion_cabecera: Id;
+      cod_estado: Id;
+    }) => {
+      if (
+        cotizacionPersistida == null ||
+        !mismoId(cotizacionPersistida.cod_cotizacion_cabecera, cod_cotizacion_cabecera)
+      ) {
+        throw new Error("La cotización abierta no coincide con la versión guardada.");
+      }
+
+      await actualizarCotizacion({
+        ...(cotizacionPersistida as CotizacionCabeceraPayload),
+        cod_estado,
+      });
+    },
+    [cotizacionPersistida, actualizarCotizacion],
+  );
+
   /* ==========================================================================
    * CÁLCULO
    * ========================================================================== */
@@ -641,6 +669,7 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
                 }
                 codUsuario={codUsuario}
                 plantillaSeleccionada={plantillaSeleccionada}
+                onActualizarEstadoCabecera={handleActualizarEstadoCabecera}
                 serviciosAutoSeleccion={(rubrosPlantillaQuery.data ?? []).flatMap((rubro) =>
                   rubro.cod_servicio == null ? [] : [rubro.cod_servicio],
                 )}
