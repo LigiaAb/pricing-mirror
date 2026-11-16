@@ -21,9 +21,14 @@ import { useCatalogosCotizacion } from "../hooks/use-catalogos-cotizacion";
 import type { useRubrosDueAgent } from "../hooks/use-rubros-due-agent";
 import type { MonedaFlete } from "../lib/carrier-flete";
 import { TIPO_CALCULO } from "../lib/constantes";
-import { esCoberturaMercaderia, esTipoCalculoManual, type RubroDueAgent } from "../lib/due-agent";
+import type { RubroDueAgent } from "../lib/due-agent";
 import { getCodServicioDueCarrier } from "../lib/due-carrier";
-import { esMetodoCostoPorcentaje } from "../lib/rubros-manuales";
+import {
+  claveValorFactura,
+  esCoberturaMercaderia,
+  esMetodoCostoPorcentaje,
+  esRubroManual,
+} from "../lib/rubros-manuales";
 import { buscarMoneda, formatNumero, getSimboloMoneda } from "../lib/utils";
 import { Detalles } from "./utils";
 
@@ -370,7 +375,7 @@ export function DueAgent({ controller, lectura = false, entidadNombre }: Props) 
 
                     const metodo = item.servicio?.metodo;
 
-                    const manual = esTipoCalculoManual(item);
+                    const manual = esRubroManual(item);
 
                     const cobertura = esCoberturaMercaderia(item);
 
@@ -491,7 +496,7 @@ export function DueAgent({ controller, lectura = false, entidadNombre }: Props) 
                                 </span>
 
                                 <Input
-                                  value={valoresManual[`${item.value}_a_calcular`] ?? ""}
+                                  value={valoresManual[claveValorFactura(item.value)] ?? ""}
                                   inputMode="decimal"
                                   className="text-right"
                                   onChange={(event) =>

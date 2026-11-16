@@ -1,14 +1,16 @@
 import type { MonedaFlete } from "./carrier-flete";
-import { TIPO_CALCULO } from "./constantes";
 import {
   aplicarCostoPorcentaje,
+  claveValorFactura,
+  detalleCoberturaFactura,
+  esCoberturaMercaderia,
   esMetodoCostoPorcentaje,
+  esRubroManual,
   getCodMonedaVenta,
-  getCodTipoCalculo,
   primeraMonedaDefinida,
 } from "./rubros-manuales";
 import type { Id } from "./tipos";
-import { buscarMoneda, numero } from "./utils";
+import { buscarMoneda, numero, simboloDeMoneda } from "./utils";
 
 export type RubroDueCarrier = {
   value?: string | null;
@@ -95,8 +97,9 @@ export function getMetodoDueCarrier(item: RubroDueCarrier) {
   return item.servicio?.metodo ?? item.metodo ?? null;
 }
 
+/** ABIERTO, COBERTURA o COSTO_PORCENTAJE (definición única en lib/rubros-manuales.ts). */
 export function esDueCarrierManual(item: RubroDueCarrier) {
-  return esMetodoCostoPorcentaje(item) || Number(getCodTipoCalculo(item)) === TIPO_CALCULO.ABIERTO;
+  return esRubroManual(item);
 }
 export function crearKeyRubroDueCarrier(item: RubroDueCarrier) {
   const codRubro = item.cod_rubro ?? "";
@@ -170,17 +173,20 @@ export function aplicarValoresManualDueCarrier({
   rubros,
   valores,
   lectura,
+  monedas,
 }: {
   rubros: RubroDueCarrier[];
 
   valores: ValoresManualDueCarrier;
 
   lectura: boolean;
+
+  monedas: MonedaFlete[];
 }) {
   const codMonedaDefault = obtenerCodMonedaDefaultDueCarrier(rubros);
 
-  return rubros.map((item) => {
-    if (!esDueCarrierManual(item)) {
+  return rubros.map((item): RubroDueCarrier => {
+    if (!esRubroManual(item)) {
       return item;
     }
 
@@ -203,7 +209,7 @@ export function aplicarValoresManualDueCarrier({
       codMonedaDefault,
     });
 
-    return {
+    const resultado = {
       ...item,
 
       venta: valor,
@@ -239,6 +245,23 @@ export function aplicarValoresManualDueCarrier({
         },
       },
     };
+
+    /*
+     * Cobertura: `valor` ya es la cobertura calculada; además se agrega
+     * el detalle sobre el valor de factura (igual que en Due Agent).
+     */
+    if (esCoberturaMercaderia(item)) {
+      const detalle = detalleCoberturaFactura(
+        simboloDeMoneda(buscarMoneda(monedas, codMoneda)),
+        valores[claveValorFactura(item.value)] ?? 0,
+      );
+
+      resultado.metodo.detalles = [...(item.metodo?.detalles ?? []), detalle];
+
+      resultado.servicio.metodo.detalles = [...(item.servicio?.metodo?.detalles ?? []), detalle];
+    }
+
+    return resultado;
   });
 }
 export type TotalDueCarrierMoneda = {
@@ -284,12 +307,15 @@ export function procesarRubrosDueCarrier({
   rubros,
   valores,
   lectura,
+  monedas,
 }: {
   rubros: RubroDueCarrier[];
 
   valores: ValoresManualDueCarrier;
 
   lectura: boolean;
+
+  monedas: MonedaFlete[];
 }) {
   /*
    * 1. eliminar duplicados
@@ -302,7 +328,7 @@ export function procesarRubrosDueCarrier({
   const conFleteActivo = filtrarFleteActivoDueCarrier(sinDuplicados);
 
   /*
-   * 3. aplicar abiertos
+   * 3. aplicar manuales (abiertos, cobertura, costo por porcentaje)
    */
   return aplicarValoresManualDueCarrier({
     rubros: conFleteActivo,
@@ -310,5 +336,7 @@ export function procesarRubrosDueCarrier({
     valores,
 
     lectura,
+
+    monedas,
   });
 }
