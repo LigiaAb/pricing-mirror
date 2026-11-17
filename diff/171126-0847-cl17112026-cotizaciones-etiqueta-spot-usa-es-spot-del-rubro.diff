@@ -1,0 +1,42 @@
+diff --git a/src/features/pricing/cotizacion/calculo/lib/rubros-guardados.ts b/src/features/pricing/cotizacion/calculo/lib/rubros-guardados.ts
+index 0aab21e..9ec8a70 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/rubros-guardados.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/rubros-guardados.ts
+@@ -47,11 +47,11 @@ export type RubroGuardado = {
+   metodo_detalles?: unknown;
+ 
+   /*
+-   * Marca SPOT del rubro guardado (true o 1). Según el endpoint
++   * Marca SPOT del rubro guardado (true/false). Según el endpoint
+    * llega en mayúsculas o minúsculas.
+    */
+-  COTIZACIONDETALLE_ES_SPOT?: unknown;
+-  cotizaciondetalle_es_spot?: unknown;
++  ES_SPOT?: boolean | null;
++  es_spot?: boolean | null;
+ 
+   [key: string]: unknown;
+ };
+@@ -70,7 +70,7 @@ export type RubroGuardadoProcesado = {
+   gruporubro_nombre: string;
+ 
+   /*
+-   * Sale de COTIZACIONDETALLE_ES_SPOT: Due Carrier / Due Agent
++   * Sale de ES_SPOT: Due Carrier / Due Agent
+    * muestran la etiqueta SPOT con este campo, igual que en el cálculo.
+    */
+   es_tarifa_spot: boolean;
+@@ -240,11 +240,9 @@ export function unirDetallesGuardados(...fuentes: unknown[]) {
+  * NORMALIZACIÓN
+  * ============================================================ */
+ 
+-/** `COTIZACIONDETALLE_ES_SPOT` del rubro guardado: SPOT si es true o 1. */
++/** `ES_SPOT` del rubro guardado: SPOT si es true. */
+ export function esRubroGuardadoSpot(item: RubroGuardado) {
+-  const valor = item.COTIZACIONDETALLE_ES_SPOT ?? item.cotizaciondetalle_es_spot;
+-
+-  return valor === true || valor === 1 || valor === "1" || valor === "true";
++  return (item.ES_SPOT ?? item.es_spot) === true;
+ }
+ 
+ export function normalizarRubrosGuardados({
