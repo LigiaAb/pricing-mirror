@@ -1,8 +1,8 @@
 export {
   AUTORIZACION_SPOT_KEY,
+  type OriginalSpot,
   obtenerCwSpot,
   obtenerOriginalSpot,
-  type OriginalSpot,
   recuperarArchivoPdf,
   type TarifaSpotAutorizacion,
   type TarifaSpotFila,
