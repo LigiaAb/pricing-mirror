@@ -351,6 +351,8 @@ function DetalleCalculoCotizacion({
       Parameters<typeof useRubrosCotizacion>[0]["rubrosGuardados"]
     >,
 
+    versionSpot: versionActual?.es_spot === true,
+
     entidadSeleccionadaId: entidadEfectivaId,
 
     categoriaSeleccionada: carrier.categoriaSeleccionada,

@@ -46,12 +46,7 @@ export type RubroGuardado = {
   metodo_detalle?: unknown;
   metodo_detalles?: unknown;
 
-  /*
-   * Marca SPOT del rubro guardado (true/false). Según el endpoint
-   * llega en mayúsculas o minúsculas.
-   */
-  ES_SPOT?: boolean | null;
-  es_spot?: boolean | null;
+  es_flete?: boolean | null;
 
   [key: string]: unknown;
 };
@@ -70,7 +65,7 @@ export type RubroGuardadoProcesado = {
   gruporubro_nombre: string;
 
   /*
-   * Sale de ES_SPOT: Due Carrier / Due Agent
+   * Flete de una versión con ES_SPOT: Due Carrier / Due Agent
    * muestran la etiqueta SPOT con este campo, igual que en el cálculo.
    */
   es_tarifa_spot: boolean;
@@ -240,9 +235,19 @@ export function unirDetallesGuardados(...fuentes: unknown[]) {
  * NORMALIZACIÓN
  * ============================================================ */
 
-/** `ES_SPOT` del rubro guardado: SPOT si es true. */
-export function esRubroGuardadoSpot(item: RubroGuardado) {
-  return (item.ES_SPOT ?? item.es_spot) === true;
+/**
+ * Rubro de flete guardado: `es_flete` o su `cod_rubro` está entre los fletes
+ * del catálogo (misma regla que `extraerEntidadVersion`). En una versión SPOT
+ * solo se guarda el flete SPOT, así que ese es el que lleva la etiqueta.
+ */
+export function esRubroGuardadoFlete(
+  item: RubroGuardado,
+  codigosFletes: ReadonlyArray<{ cod_rubro?: Id | null }>,
+) {
+  return (
+    item.es_flete === true ||
+    codigosFletes.some((flete) => String(flete.cod_rubro) === String(item.cod_rubro))
+  );
 }
 
 export function normalizarRubrosGuardados({
@@ -251,8 +256,16 @@ export function normalizarRubrosGuardados({
   serviciosCatalogo,
   monedas,
   entidades,
+  versionSpot = false,
+  codigosFletes = [],
 }: {
   rubros: RubroGuardado[];
+
+  /** `es_spot` (ES_SPOT) de la versión abierta. */
+  versionSpot?: boolean;
+
+  /** Rubros de flete del catálogo (`useCatalogosCotizacion().codigosFletes`). */
+  codigosFletes?: ReadonlyArray<{ cod_rubro?: Id | null }>;
 
   rubrosCatalogo: RubroCatalogo[];
 
@@ -388,7 +401,7 @@ export function normalizarRubrosGuardados({
 
       gruporubro_nombre: item.gruporubro_nombre ?? "",
 
-      es_tarifa_spot: esRubroGuardadoSpot(item),
+      es_tarifa_spot: versionSpot && esRubroGuardadoFlete(item, codigosFletes),
 
       /*
        * El legado conserva dos formas simultáneas:
