@@ -43,7 +43,9 @@ TypeScript 7 · React 19 · zod 4 · @tanstack/react-query 5.105 · react-table 
 
 ```bash
 npm install
-npm run check:nuevos            # tsc y SOLO errores nuevos vs .tsc-baseline.txt + check:finales (usar este)
+npm run check:nuevos            # tsc (SOLO errores nuevos vs .tsc-baseline.txt) + check:biome + check:finales (usar este)
+npm run check:biome             # Biome (biome.json = copia del proyecto real) sobre pricing, embarques/v2 y async-combobox-input
+npm run biome:arreglar          # aplica formato, orden de imports y arreglos seguros de Biome
 npm run check:finales           # falla si un archivo cambió CRLF<->LF o si uno nuevo no está en LF
 npm run check                   # tsc completo (incluye ~326 errores previos: stubs any + código existente)
 npm run check:actualizar-base   # tras resolver errores previos, guardar nueva línea base
@@ -51,6 +53,15 @@ npm run diff:guardar            # tras cada commit: diff/[DDMMYY-HHmm]-[commit].
 ```
 
 Regla: **ningún cambio debe dejar errores nuevos** en `check:nuevos`. Si se resuelven errores previos, actualizar la base.
+
+## Biome
+
+`biome.json` es **copia exacta del proyecto real** (no editarlo aquí). En el proyecto Biome **bloquea el commit**, así que
+en el espejo `check:biome` no acepta **ningún error** (no hay línea base): formato (2 espacios, ancho 100, comillas dobles,
+`;`, trailing commas), imports ordenados y con `import type`, nombres de archivo en **kebab-case**, sin `any`, sin `!`,
+sin `console`, sin `key` por índice, dependencias de hooks exhaustivas, `type` en `<button>`, etc.
+Única excepción del espejo: se ignora `noUndeclaredDependencies` de `next` (aquí no está instalado).
+El resto de `src/features/embarques/` (referencia) no se revisa.
 
 ## Finales de línea
 
