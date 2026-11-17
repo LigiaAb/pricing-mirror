@@ -1,0 +1,148 @@
+diff --git a/src/features/pricing/autorizacion-spot/api/autorizacion-spot.ts b/src/features/pricing/autorizacion-spot/api/autorizacion-spot.ts
+index 5a1eca2..31af7af 100644
+--- a/src/features/pricing/autorizacion-spot/api/autorizacion-spot.ts
++++ b/src/features/pricing/autorizacion-spot/api/autorizacion-spot.ts
+@@ -2,20 +2,18 @@
+ 
+ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+ import { z } from "zod";
+-import { CACHE_DYNAMIC } from "@/shared/api/cache";
+-import { http } from "@/shared/api/client";
+-import { parseEnvelope } from "@/shared/api/envelope";
+-import { zId } from "@/shared/lib/zod-scalars";
+-import { cotizacionCabeceraSchema } from "../../cotizacion/calculo/api/cotizacion-cabecera";
+ import {
+   activarCotizacionDetalle,
+-  recuperarArchivoPdf,
+-} from "../../cotizacion/calculo/api/cotizacion-detalle";
+-import {
++  cotizacionCabeceraSchema,
+   criterioGuardadoSchema,
+   listarRubrosVersion,
++  recuperarArchivoPdf,
+   versionCotizacionSchema,
+-} from "../../cotizacion/calculo/api/versiones";
++} from "@/features/pricing/cotizacion/calculo";
++import { CACHE_DYNAMIC } from "@/shared/api/cache";
++import { http } from "@/shared/api/client";
++import { parseEnvelope } from "@/shared/api/envelope";
++import { zId } from "@/shared/lib/zod-scalars";
+ 
+ type Id = string | number;
+ 
+diff --git a/src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx b/src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx
+index 0c1e873..1a80a71 100644
+--- a/src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx
++++ b/src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx
+@@ -11,20 +11,20 @@ import {
+ } from "lucide-react";
+ import Link from "next/link";
+ import * as React from "react";
++import {
++  type CatalogosFormularioCotizacion,
++  type CotizacionCabeceraPayload,
++  CotizacionForm,
++  filtrarPorTipoTabla,
++  formatNumero,
++  normalizarOpciones,
++  type OpcionFormularioCotizacion,
++} from "@/features/pricing/cotizacion/calculo";
++import { useCatalogosTarifas, useReferenciaEstable } from "@/features/pricing/tarifas";
+ import { useContextoOperativoStore } from "@/features/shell";
+ import { Button } from "@/shared/components/ui/button";
+ import { encodeId } from "@/shared/lib/sqids";
+ import { useAuthStore } from "@/shared/stores/auth-store";
+-import type { CotizacionCabeceraPayload } from "../../cotizacion/calculo/api/cotizacion-cabecera";
+-import { CotizacionForm } from "../../cotizacion/calculo/components/cotizacion-form";
+-import type {
+-  CatalogosFormularioCotizacion,
+-  OpcionFormularioCotizacion,
+-} from "../../cotizacion/calculo/hooks/use-formulario-cotizacion";
+-import { filtrarPorTipoTabla, normalizarOpciones } from "../../cotizacion/calculo/lib/catalogos";
+-import { formatNumero } from "../../cotizacion/calculo/lib/utils";
+-import { useCatalogosTarifas } from "../../tarifas/hooks/use-catalogos-tarifas";
+-import { useReferenciaEstable } from "../../tarifas/hooks/use-referencia-estable";
+ import {
+   obtenerCwSpot,
+   obtenerOriginalSpot,
+diff --git a/src/features/pricing/cotizacion/calculo/index.ts b/src/features/pricing/cotizacion/calculo/index.ts
+index ffb9387..97d7e66 100644
+--- a/src/features/pricing/cotizacion/calculo/index.ts
++++ b/src/features/pricing/cotizacion/calculo/index.ts
+@@ -3,11 +3,17 @@ export {
+   cotizacionCabeceraSchema,
+ } from "./api/cotizacion-cabecera";
+ export { activarCotizacionDetalle, recuperarArchivoPdf } from "./api/cotizacion-detalle";
+-export { criterioGuardadoSchema, versionCotizacionSchema } from "./api/versiones";
++export {
++  criterioGuardadoSchema,
++  listarRubrosVersion,
++  versionCotizacionSchema,
++} from "./api/versiones";
+ export { CotizacionForm } from "./components/cotizacion-form";
+ export { GestionCotizacion } from "./components/gestion-cotizacion";
+ export type {
+   CatalogosFormularioCotizacion,
+   OpcionFormularioCotizacion,
+ } from "./hooks/use-formulario-cotizacion";
++export { filtrarPorTipoTabla, normalizarOpciones } from "./lib/catalogos";
+ export { esRubroDueAgent } from "./lib/clasificacion-rubros";
++export { formatNumero } from "./lib/utils";
+diff --git a/src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx b/src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx
+index a6012e2..45f6140 100644
+--- a/src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx
++++ b/src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx
+@@ -2,19 +2,19 @@
+ 
+ import { Eye, ListRestart, Plus, Trash2 } from "lucide-react";
+ import * as React from "react";
++import {
++  type CatalogosFormularioCotizacion,
++  type CotizacionCabeceraPayload,
++  CotizacionForm,
++  type OpcionFormularioCotizacion,
++} from "@/features/pricing/cotizacion/calculo";
++import { useCatalogosTarifas } from "@/features/pricing/tarifas";
+ import { useContextoOperativoStore } from "@/features/shell";
+ import { DataTable, DataTableColumnHeader } from "@/shared/components/data-table/data-table";
+ import { Button } from "@/shared/components/ui/button";
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+ import type { ColumnDef } from "@/shared/lib/tanstack-table";
+ import { useAuthStore } from "@/shared/stores/auth-store";
+-import type { CotizacionCabeceraPayload } from "../../cotizacion/calculo/api/cotizacion-cabecera";
+-import { CotizacionForm } from "../../cotizacion/calculo/components/cotizacion-form";
+-import type {
+-  CatalogosFormularioCotizacion,
+-  OpcionFormularioCotizacion,
+-} from "../../cotizacion/calculo/hooks/use-formulario-cotizacion";
+-import { useCatalogosTarifas } from "../../tarifas/hooks/use-catalogos-tarifas";
+ import {
+   type PlantillaCliente,
+   useActualizarPlantillaCliente,
+diff --git a/src/features/pricing/plantillas-clientes/components/rubros-plantilla.tsx b/src/features/pricing/plantillas-clientes/components/rubros-plantilla.tsx
+index 57b8a86..7585dde 100644
+--- a/src/features/pricing/plantillas-clientes/components/rubros-plantilla.tsx
++++ b/src/features/pricing/plantillas-clientes/components/rubros-plantilla.tsx
+@@ -2,9 +2,9 @@
+ 
+ import { Save } from "lucide-react";
+ import * as React from "react";
++import { esRubroDueAgent } from "@/features/pricing/cotizacion/calculo";
+ import { Button } from "@/shared/components/ui/button";
+ import { Checkbox } from "@/shared/components/ui/checkbox";
+-import { esRubroDueAgent } from "../../cotizacion/calculo/lib/clasificacion-rubros";
+ import {
+   type PlantillaRubro,
+   useGuardarPlantillaRubros,
+diff --git a/src/features/pricing/tarifas/index.ts b/src/features/pricing/tarifas/index.ts
+index ceeb03c..e73a37a 100644
+--- a/src/features/pricing/tarifas/index.ts
++++ b/src/features/pricing/tarifas/index.ts
+@@ -277,6 +277,7 @@ export {
+   useOpcionesMonedas,
+   useOpcionesRubros,
+ } from "./hooks/use-opciones-tarifa";
++export { useReferenciaEstable } from "./hooks/use-referencia-estable";
+ export {
+   booleano,
+   type CampoBooleano,

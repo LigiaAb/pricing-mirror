@@ -2,9 +2,9 @@
 
 import { Save } from "lucide-react";
 import * as React from "react";
+import { esRubroDueAgent } from "@/features/pricing/cotizacion/calculo";
 import { Button } from "@/shared/components/ui/button";
 import { Checkbox } from "@/shared/components/ui/checkbox";
-import { esRubroDueAgent } from "../../cotizacion/calculo/lib/clasificacion-rubros";
 import {
   type PlantillaRubro,
   useGuardarPlantillaRubros,
