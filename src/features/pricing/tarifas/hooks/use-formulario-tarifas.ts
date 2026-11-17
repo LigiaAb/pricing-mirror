@@ -84,6 +84,12 @@ const METODO_POR_TIPO_CALCULO: Readonly<Record<string, string>> = {
   ABIERTO: "COSTO/VENTA",
 };
 
+// Tipos de cálculo que solo se ofrecen con un método: nombre del tipo → nombre del método.
+// Con otro método (o sin método) el tipo no aparece en el select.
+const METODO_REQUERIDO_POR_TIPO_CALCULO: Readonly<Record<string, string>> = {
+  COSTO: "COSTO POR PORCENTAJE",
+};
+
 const normalizarNombreCatalogo = (texto: unknown): string =>
   String(texto ?? "")
     .normalize("NFD")
@@ -108,6 +114,13 @@ const obtenerMetodoFijo = (tipoCalculo: unknown): string | undefined =>
 
 const tieneNombre = (opcion: unknown, nombre: string): boolean =>
   nombreOpcionTipo(opcion) === nombre;
+
+// El tipo de cálculo se puede usar con el método (METODO_REQUERIDO_POR_TIPO_CALCULO).
+const tipoCalculoPermitido = (tipoCalculo: unknown, metodoCalculo: unknown): boolean => {
+  const metodoRequerido = METODO_REQUERIDO_POR_TIPO_CALCULO[nombreOpcionTipo(tipoCalculo)];
+
+  return metodoRequerido === undefined || tieneNombre(metodoCalculo, metodoRequerido);
+};
 
 const CAMPOS_SIEMPRE_LECTURA = [
   "usuario",
@@ -379,6 +392,12 @@ export function useFormulario({
         return catalogoFiltrado;
       }
 
+      if (id === "tipoCalculo") {
+        const tiposCalculo = (catalogosProcesados?.[catalogoId] ?? []) as readonly TipoOption[];
+
+        return tiposCalculo.filter((tc) => tipoCalculoPermitido(tc, values_inter.metodoCalculo));
+      }
+
       if (id === "metodoCalculo") {
         const metodos = (catalogosProcesados?.metodosCalculo || []) as readonly TipoOption[];
 
@@ -589,6 +608,10 @@ export function useFormulario({
 
             next.tipoCalculo = tipoCalculoFijo;
             next.cod_tipo_calculo = getPlainValue(tipoCalculoFijo);
+          } else if (!tipoCalculoPermitido(prev.tipoCalculo, metodoSeleccionado)) {
+            // El tipo elegido no se ofrece con el nuevo método (ej. COSTO sin COSTO POR PORCENTAJE).
+            next.tipoCalculo = null;
+            next.cod_tipo_calculo = null;
           }
         }
 
