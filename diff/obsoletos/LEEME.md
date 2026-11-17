@@ -14,3 +14,8 @@ proyecto real están en LF).
 También es obsoleto 171126-0958-cl17112026-autorizacion-spot-tabla-separada-para-que-no-se-r.diff:
 se generó sobre una versión vieja de autorizar-tarifa-spot.tsx (el espejo estaba desincronizado) y
 no aplica en el proyecto. Usar en su lugar 171126-1015-…-tabla-separada-sobre-la-version.diff.
+
+También es obsoleto 171126-1032-cl17112026-sync-restaurar-el-espejo-al-contenido-de-los-diff.diff
+(se marcó "NO APLICAR"): en el proyecto no aplica completo porque incluye borrar
+`cotizacion/calculo/lib/costo-porcentaje.ts`, que el proyecto ya no tiene. Usar en su lugar
+171126-1036-cl17112026-sync-poner-al-dia-el-proyecto.diff (mismo contenido sin ese archivo).
