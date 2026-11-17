@@ -159,8 +159,9 @@ Gastos y Documentos de la CTS no van aquí (los archivos están en la tab Archiv
 Cada card junta varios datos en pocas líneas (p. ej. nombre + NIT · industria · país; dirección + municipio ·
 departamento · país; contacto con email y teléfono; cada carga con bultos · peso · medidas · CW · embalaje, valor,
 país, partida y régimen, y en el encabezado productos, bultos, peso y "CW total" como la tabla de la CTS).
-Producto y Rutas son listas (cada carga y tramo). Fechas muestra **todas las fechas** del embarque
-(`CAMPOS_FECHAS`, en el orden del proceso), siempre, con "—" si aún no hay fecha: las del módulo actual (Fecha
+Producto y Rutas son listas (cada carga y tramo). Fechas lista las fechas del embarque
+(`CAMPOS_FECHAS`, en el orden del proceso); muestra las que tienen valor y, aunque no tengan, las marcadas
+`mostrarSiempre` (Recolección, ETD, ATD, ETA y ATA, con "—"). Son las del módulo actual (Fecha
 Inicio, Fecha de Recolección, ETD, ETA y Fecha de entrega COMBEX) y las que registra el Excel de procesos
 (envío de solicitud de reserva, recepción en bodega, salida real, aviso de salida, nueva fecha de salida y llegada
 real). Cada fecha anota su origen y, en `actividad`, la actividad del Excel que la registra. Los documentos CROPA la CTS los pide solo con el gasto 127, por

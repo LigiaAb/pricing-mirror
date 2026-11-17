@@ -30,7 +30,7 @@ export type CampoEmbarque = CampoGestion & {
   soloLectura?: boolean;
   /** Actividad del Excel de procesos que registra el dato (`ACTIVIDADES_TRACKING`). */
   actividad?: string;
-
+  /** Fechas: se muestra aunque no tenga valor ("—"); las demás solo si tienen valor. */
   mostrarSiempre?: boolean;
 };
 
@@ -149,9 +149,10 @@ export const CAMPOS_RUTA: readonly CampoEmbarque[] = [
 ];
 
 /**
- * Fechas: todas las del embarque, en el orden del proceso; la card las muestra
- * siempre ("—" si aún no hay fecha). `actividad` = actividad del Excel de
- * procesos ("Tracking-Expo-Aereo-6Pasos.xlsx") que la registra.
+ * Fechas: todas las del embarque, en el orden del proceso. La card muestra las
+ * que tienen valor y, aunque no tengan, las `mostrarSiempre` (Recolección, ETD,
+ * ATD, ETA y ATA, con "—"). `actividad` = actividad del Excel de procesos
+ * ("Tracking-Expo-Aereo-6Pasos.xlsx") que la registra.
  *
  * Con dato en el módulo actual (`key` = nombre del dato):
  *   fechaInicio          → columna "Fecha Inicio" (pages/coordinaciones-columns-base.tsx)
@@ -176,7 +177,7 @@ export const CAMPOS_FECHAS: readonly CampoEmbarque[] = [
     tipo: "fecha",
     requerido: true,
     actividad: "OPS 0.1",
-    mostrarSiempre: true
+    mostrarSiempre: true,
   },
   {
     key: "fecha_envio_reserva",
@@ -196,19 +197,19 @@ export const CAMPOS_FECHAS: readonly CampoEmbarque[] = [
     tipo: "fecha",
     actividad: "CBX 8.1",
   },
-  { 
-    key: "fecha_salida", 
-    label: "Estimated time of departure (ETD)", 
-    tipo: "fecha", 
+  {
+    key: "fecha_salida",
+    label: "Estimated time of departure (ETD)",
+    tipo: "fecha",
     actividad: "OPS 3.1",
-    mostrarSiempre: true
+    mostrarSiempre: true,
   },
   {
     key: "fecha_salida_real",
     label: "Actual time of departure (ATD)",
     tipo: "fecha-hora",
     actividad: "CBX 12.1",
-    mostrarSiempre: true
+    mostrarSiempre: true,
   },
   {
     key: "fecha_aviso_salida",
@@ -217,17 +218,17 @@ export const CAMPOS_FECHAS: readonly CampoEmbarque[] = [
     actividad: "CBX 12.3",
   },
   { key: "fecha_nueva_salida", label: "Nueva fecha de salida", tipo: "fecha", actividad: "CBX E2" },
-  { 
-    key: "fecha_llegada", 
-    label: "Estimated time of arrival (ETA)", 
+  {
+    key: "fecha_llegada",
+    label: "Estimated time of arrival (ETA)",
     tipo: "fecha",
-    mostrarSiempre: true
+    mostrarSiempre: true,
   },
   {
     key: "fecha_llegada_real",
     label: "Actual time of arrival (ATA)",
     tipo: "fecha-hora",
     actividad: "CBX 14.1",
-    mostrarSiempre: true
+    mostrarSiempre: true,
   },
 ];

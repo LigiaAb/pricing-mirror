@@ -1,5 +1,3 @@
-src/features/embarques/api/asignaciones-cts.ts: error TS2305: Module '"@/shared/lib/zod-scalars"' has no exported member 'zBool'.
-src/features/embarques/api/asignaciones-cts.ts: error TS7006: Parameter 'valor' implicitly has an 'any' type.
 src/features/embarques/api/use-carga-asignaciones-cts.ts: error TS2724: '"@/shared/api/envelope"' has no exported member named 'parseEnvelopeObjeto'. Did you mean 'parseEnvelope'?
 src/features/embarques/components/asignacion-cts/asignacion-cts-form.tsx: error TS2709: Cannot use namespace 'FormFieldConfig' as a type.
 src/features/embarques/components/asignacion-cts/asignacion-cts-form.tsx: error TS7006: Parameter 'cliente' implicitly has an 'any' type.
