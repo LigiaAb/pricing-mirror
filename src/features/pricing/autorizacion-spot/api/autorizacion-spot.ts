@@ -13,6 +13,7 @@ import {
 } from "../../cotizacion/calculo/api/cotizacion-detalle";
 import {
   criterioGuardadoSchema,
+  listarRubrosVersion,
   versionCotizacionSchema,
 } from "../../cotizacion/calculo/api/versiones";
 
@@ -77,6 +78,32 @@ export async function obtenerCwSpot(codCotizacionCabecera: Id, codCotizacionDeta
     "lista-cotizacion-detalle-criterio",
   );
   return criterios.find((item) => String(item.cod_criterio) === "15")?.valor ?? null;
+}
+
+/** Valores originales del flete que reemplazó el Spot, leídos del rubro guardado en la versión. */
+export type OriginalSpot = {
+  /** El flete original era un mínimo (monto fijo, `original_rate_venta` = 0). */
+  esMinimo: boolean;
+  /** Mínimo original (`original_venta` del rubro SPOT). */
+  minimo: number | null;
+};
+
+const numeroONull = (value: unknown) =>
+  value == null || String(value).trim() === "" || !Number.isFinite(Number(value))
+    ? null
+    : Number(value);
+
+/**
+ * El rubro SPOT de la versión guarda más campos que la tarifa Spot: si el flete usaba
+ * mínimo, el monto original va en `original_venta` (la tarifa Spot solo guarda la
+ * tarifa por unidad original, que en ese caso es 0). `null` si no se encuentra.
+ */
+export async function obtenerOriginalSpot(codCotizacionDetalle: Id): Promise<OriginalSpot | null> {
+  const rubros = await listarRubrosVersion(codCotizacionDetalle);
+  const spot = rubros.find((rubro) => rubro.es_tarifa_spot === true);
+  if (!spot) return null;
+  const rateOriginal = numeroONull(spot.original_rate_venta);
+  return { esMinimo: rateOriginal === 0, minimo: numeroONull(spot.original_venta) };
 }
 
 export { recuperarArchivoPdf };

@@ -1,0 +1,234 @@
+diff --git a/src/features/pricing/autorizacion-spot/api/autorizacion-spot.ts b/src/features/pricing/autorizacion-spot/api/autorizacion-spot.ts
+index b98a667..5a1eca2 100644
+--- a/src/features/pricing/autorizacion-spot/api/autorizacion-spot.ts
++++ b/src/features/pricing/autorizacion-spot/api/autorizacion-spot.ts
+@@ -13,6 +13,7 @@ import {
+ } from "../../cotizacion/calculo/api/cotizacion-detalle";
+ import {
+   criterioGuardadoSchema,
++  listarRubrosVersion,
+   versionCotizacionSchema,
+ } from "../../cotizacion/calculo/api/versiones";
+ 
+@@ -79,6 +80,32 @@ export async function obtenerCwSpot(codCotizacionCabecera: Id, codCotizacionDeta
+   return criterios.find((item) => String(item.cod_criterio) === "15")?.valor ?? null;
+ }
+ 
++/** Valores originales del flete que reemplazó el Spot, leídos del rubro guardado en la versión. */
++export type OriginalSpot = {
++  /** El flete original era un mínimo (monto fijo, `original_rate_venta` = 0). */
++  esMinimo: boolean;
++  /** Mínimo original (`original_venta` del rubro SPOT). */
++  minimo: number | null;
++};
++
++const numeroONull = (value: unknown) =>
++  value == null || String(value).trim() === "" || !Number.isFinite(Number(value))
++    ? null
++    : Number(value);
++
++/**
++ * El rubro SPOT de la versión guarda más campos que la tarifa Spot: si el flete usaba
++ * mínimo, el monto original va en `original_venta` (la tarifa Spot solo guarda la
++ * tarifa por unidad original, que en ese caso es 0). `null` si no se encuentra.
++ */
++export async function obtenerOriginalSpot(codCotizacionDetalle: Id): Promise<OriginalSpot | null> {
++  const rubros = await listarRubrosVersion(codCotizacionDetalle);
++  const spot = rubros.find((rubro) => rubro.es_tarifa_spot === true);
++  if (!spot) return null;
++  const rateOriginal = numeroONull(spot.original_rate_venta);
++  return { esMinimo: rateOriginal === 0, minimo: numeroONull(spot.original_venta) };
++}
++
+ export { recuperarArchivoPdf };
+ 
+ export function useActualizarTarifaSpot() {
+diff --git a/src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx b/src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx
+index 663ea1e..01aeb38 100644
+--- a/src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx
++++ b/src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx
+@@ -29,6 +29,8 @@ import type {
+ import { useCatalogosTarifas } from "../../tarifas/hooks/use-catalogos-tarifas";
+ import {
+   obtenerCwSpot,
++  obtenerOriginalSpot,
++  type OriginalSpot,
+   recuperarArchivoPdf,
+   type TarifaSpotFila,
+   useActualizarTarifaSpot,
+@@ -99,6 +101,8 @@ type Fila = TarifaSpotFila & {
+   solicitante: string;
+   autorizador: string;
+   reason_code_nombre: string;
++  /** Se completa al abrir el detalle (rubro SPOT guardado en la versión). */
++  original?: OriginalSpot | null;
+ };
+ 
+ type EstadoSpot = "pendiente" | "sin-documento" | "autorizada" | "rechazada";
+@@ -307,15 +311,23 @@ export function AutorizarTarifaSpot() {
+       setPdfUrl(null);
+       setEstadoPdf(row.url_documento ? "cargando" : null);
+ 
+-      const [cw, documento] = await Promise.allSettled([
++      const [cw, original, documento] = await Promise.allSettled([
+         obtenerCwSpot(row.cod_cotizacion_cabecera as Id, row.cod_cotizaciondetalle),
++        obtenerOriginalSpot(row.cod_cotizaciondetalle),
+         row.url_documento ? recuperarArchivoPdf(row.url_documento) : Promise.resolve(null),
+       ]);
+ 
+       // Si mientras tanto se eligió otra fila, se descarta esta respuesta.
+       if (seleccionRef.current !== row.cod_tarifa_spot) return;
+-      if (cw.status === "fulfilled")
+-        setSeleccionada((actual) => (actual ? { ...actual, cw: cw.value } : actual));
++      setSeleccionada((actual) =>
++        actual
++          ? {
++              ...actual,
++              ...(cw.status === "fulfilled" ? { cw: cw.value } : {}),
++              original: original.status === "fulfilled" ? original.value : null,
++            }
++          : actual,
++      );
+       if (documento.status === "fulfilled" && documento.value) {
+         const url = URL.createObjectURL(documento.value);
+         setPdfUrl(url);
+@@ -402,6 +414,11 @@ export function AutorizarTarifaSpot() {
+     seleccionada != null &&
+     Boolean(seleccionada.url_documento) &&
+     mismoId(seleccionada.cod_estado, estados.activo);
++  // Mínimo: el original es el monto del rubro (original_venta), no tarifa × CW.
++  const minimoOriginal =
++    seleccionada?.original?.esMinimo && seleccionada.original.minimo != null
++      ? seleccionada.original.minimo
++      : null;
+   const tieneOriginal = Number(seleccionada?.venta_original ?? 0) !== 0;
+   const cerrar = () => {
+     seleccionRef.current = null;
+@@ -477,19 +494,28 @@ export function AutorizarTarifaSpot() {
+                 <div className="rounded-lg border p-4">
+                   <p className="mb-3 text-sm font-semibold">Valores originales</p>
+                   <div className="grid gap-2 sm:grid-cols-2">
+-                    {/* Igual que el legado: sin tarifa original (0 o vacía) no hay valores que comparar. */}
+-                    <Resumen
+-                      label="Tarifa original"
+-                      value={tieneOriginal ? monto(seleccionada.venta_original) : "—"}
+-                    />
+-                    <Resumen
+-                      label="Valor original"
+-                      value={
+-                        tieneOriginal && seleccionada.cw != null
+-                          ? monto(Number(seleccionada.venta_original) * Number(seleccionada.cw))
+-                          : "—"
+-                      }
+-                    />
++                    {minimoOriginal != null ? (
++                      <>
++                        <Resumen label="Mínimo original" value={monto(minimoOriginal)} />
++                        <Resumen label="Valor original" value={monto(minimoOriginal)} />
++                      </>
++                    ) : (
++                      <>
++                        {/* Igual que el legado: sin tarifa original (0 o vacía) no hay valores que comparar. */}
++                        <Resumen
++                          label="Tarifa original"
++                          value={tieneOriginal ? monto(seleccionada.venta_original) : "—"}
++                        />
++                        <Resumen
++                          label="Valor original"
++                          value={
++                            tieneOriginal && seleccionada.cw != null
++                              ? monto(Number(seleccionada.venta_original) * Number(seleccionada.cw))
++                              : "—"
++                          }
++                        />
++                      </>
++                    )}
+                   </div>
+                 </div>
+               </div>
+diff --git a/src/features/pricing/autorizacion-spot/index.ts b/src/features/pricing/autorizacion-spot/index.ts
+index 064f400..11813dc 100644
+--- a/src/features/pricing/autorizacion-spot/index.ts
++++ b/src/features/pricing/autorizacion-spot/index.ts
+@@ -1,6 +1,8 @@
+ export {
+   AUTORIZACION_SPOT_KEY,
+   obtenerCwSpot,
++  obtenerOriginalSpot,
++  type OriginalSpot,
+   recuperarArchivoPdf,
+   type TarifaSpotAutorizacion,
+   type TarifaSpotFila,
+diff --git a/src/features/pricing/cotizacion/calculo/api/versiones.ts b/src/features/pricing/cotizacion/calculo/api/versiones.ts
+index 8c0e6db..cfad7df 100644
+--- a/src/features/pricing/cotizacion/calculo/api/versiones.ts
++++ b/src/features/pricing/cotizacion/calculo/api/versiones.ts
+@@ -194,7 +194,7 @@ export async function listarVersionesConSpot(codCotizacionCabecera: Id) {
+     }),
+   );
+ }
+-async function listarRubrosVersion(codCotizacionDetalle: Id) {
++export async function listarRubrosVersion(codCotizacionDetalle: Id) {
+   return parseEnvelope(
+     await http.get<unknown>("/api/appweb/lista-cotizacion-detalle-rubro", {
+       params: {
+diff --git a/src/features/pricing/cotizacion/calculo/components/dialogo-spot.tsx b/src/features/pricing/cotizacion/calculo/components/dialogo-spot.tsx
+index 3e9308f..034e6f9 100644
+--- a/src/features/pricing/cotizacion/calculo/components/dialogo-spot.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/dialogo-spot.tsx
+@@ -95,10 +95,11 @@ export function DialogoSpot({
+             {esMinimo && (
+               <p className="text-sm text-muted-foreground">
+                 La modificación se aplica al mínimo; se conserva la tarifa actual.
++                {/* Igual que el legado: sin rango se aplica con tarifa 0. */}
+                 {rangos.isError
+-                  ? " No se pudieron cargar los rangos."
++                  ? " No se pudieron cargar los rangos: se aplicará con tarifa 0."
+                   : !rangos.isFetching && !primerRango
+-                    ? " No hay rangos disponibles."
++                    ? " No hay rangos disponibles: se aplicará con tarifa 0."
+                     : ""}
+               </p>
+             )}
+@@ -181,11 +182,7 @@ export function DialogoSpot({
+               disabled={
+                 !Number.isFinite(fleteSpot) ||
+                 fleteSpot <= 0 ||
+-                (esMinimo &&
+-                  (rangos.isFetching ||
+-                    rangos.isError ||
+-                    !primerRango ||
+-                    !Number.isFinite(rateActual)))
++                (esMinimo && (rangos.isFetching || !Number.isFinite(rateActual)))
+               }
+               onClick={() => {
+                 onConfirm(rubroBase, fleteSpot, rateSpot);
+diff --git a/src/features/pricing/cotizacion/calculo/lib/carrier-flete.ts b/src/features/pricing/cotizacion/calculo/lib/carrier-flete.ts
+index af880af..1f4e70f 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/carrier-flete.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/carrier-flete.ts
+@@ -435,11 +435,19 @@ export function crearTarifaSpotDueCarrier({
+    */
+   const esRubroFlete = servicioBase.es_flete === true;
+ 
+-  // Si la tarifa original era un monto fijo (rate = 0), el Spot se muestra como monto fijo.
+-  const minimo =
+-    esRubroFlete && Number(rubroBase.metodo?.rate_venta ?? metodoBase.rate_venta) === 0
+-      ? valor
+-      : undefined;
++  /*
++   * Regla aprobada del legado (agregarTarifaSpotDueCarrier): el detalle muestra
++   * "Tarifa <moneda> <mínimo original>" cuando el flete usa mínimo (rate_costo = 0)
++   * o el Spot se aplicó sin rango (rate = 0); si no, la tarifa por unidad.
++   * El legado tomaba el mínimo solo con rate = 0 y dejaba "undefined" en el otro
++   * caso; aquí ambos usan la misma fuente (venta del método base).
++   */
++  const rateCostoBase = rubroBase.metodo?.rate_costo;
++  const usaMinimo =
++    esRubroFlete &&
++    ((rateCostoBase != null && String(rateCostoBase).trim() !== "" && Number(rateCostoBase) === 0) ||
++      (rate != null && rate === 0));
++  const minimo = usaMinimo ? (metodoBase.venta ?? undefined) : undefined;
+ 
+   const detalleFlete = construirDetalleFlete(codTipoTransporte, {
+     tipo: "spot",

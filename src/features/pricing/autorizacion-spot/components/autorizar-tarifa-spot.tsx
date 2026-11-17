@@ -29,6 +29,8 @@ import type {
 import { useCatalogosTarifas } from "../../tarifas/hooks/use-catalogos-tarifas";
 import {
   obtenerCwSpot,
+  obtenerOriginalSpot,
+  type OriginalSpot,
   recuperarArchivoPdf,
   type TarifaSpotFila,
   useActualizarTarifaSpot,
@@ -99,6 +101,8 @@ type Fila = TarifaSpotFila & {
   solicitante: string;
   autorizador: string;
   reason_code_nombre: string;
+  /** Se completa al abrir el detalle (rubro SPOT guardado en la versión). */
+  original?: OriginalSpot | null;
 };
 
 type EstadoSpot = "pendiente" | "sin-documento" | "autorizada" | "rechazada";
@@ -307,15 +311,23 @@ export function AutorizarTarifaSpot() {
       setPdfUrl(null);
       setEstadoPdf(row.url_documento ? "cargando" : null);
 
-      const [cw, documento] = await Promise.allSettled([
+      const [cw, original, documento] = await Promise.allSettled([
         obtenerCwSpot(row.cod_cotizacion_cabecera as Id, row.cod_cotizaciondetalle),
+        obtenerOriginalSpot(row.cod_cotizaciondetalle),
         row.url_documento ? recuperarArchivoPdf(row.url_documento) : Promise.resolve(null),
       ]);
 
       // Si mientras tanto se eligió otra fila, se descarta esta respuesta.
       if (seleccionRef.current !== row.cod_tarifa_spot) return;
-      if (cw.status === "fulfilled")
-        setSeleccionada((actual) => (actual ? { ...actual, cw: cw.value } : actual));
+      setSeleccionada((actual) =>
+        actual
+          ? {
+              ...actual,
+              ...(cw.status === "fulfilled" ? { cw: cw.value } : {}),
+              original: original.status === "fulfilled" ? original.value : null,
+            }
+          : actual,
+      );
       if (documento.status === "fulfilled" && documento.value) {
         const url = URL.createObjectURL(documento.value);
         setPdfUrl(url);
@@ -402,6 +414,11 @@ export function AutorizarTarifaSpot() {
     seleccionada != null &&
     Boolean(seleccionada.url_documento) &&
     mismoId(seleccionada.cod_estado, estados.activo);
+  // Mínimo: el original es el monto del rubro (original_venta), no tarifa × CW.
+  const minimoOriginal =
+    seleccionada?.original?.esMinimo && seleccionada.original.minimo != null
+      ? seleccionada.original.minimo
+      : null;
   const tieneOriginal = Number(seleccionada?.venta_original ?? 0) !== 0;
   const cerrar = () => {
     seleccionRef.current = null;
@@ -477,19 +494,28 @@ export function AutorizarTarifaSpot() {
                 <div className="rounded-lg border p-4">
                   <p className="mb-3 text-sm font-semibold">Valores originales</p>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    {/* Igual que el legado: sin tarifa original (0 o vacía) no hay valores que comparar. */}
-                    <Resumen
-                      label="Tarifa original"
-                      value={tieneOriginal ? monto(seleccionada.venta_original) : "—"}
-                    />
-                    <Resumen
-                      label="Valor original"
-                      value={
-                        tieneOriginal && seleccionada.cw != null
-                          ? monto(Number(seleccionada.venta_original) * Number(seleccionada.cw))
-                          : "—"
-                      }
-                    />
+                    {minimoOriginal != null ? (
+                      <>
+                        <Resumen label="Mínimo original" value={monto(minimoOriginal)} />
+                        <Resumen label="Valor original" value={monto(minimoOriginal)} />
+                      </>
+                    ) : (
+                      <>
+                        {/* Igual que el legado: sin tarifa original (0 o vacía) no hay valores que comparar. */}
+                        <Resumen
+                          label="Tarifa original"
+                          value={tieneOriginal ? monto(seleccionada.venta_original) : "—"}
+                        />
+                        <Resumen
+                          label="Valor original"
+                          value={
+                            tieneOriginal && seleccionada.cw != null
+                              ? monto(Number(seleccionada.venta_original) * Number(seleccionada.cw))
+                              : "—"
+                          }
+                        />
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

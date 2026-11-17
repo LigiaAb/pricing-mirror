@@ -95,10 +95,11 @@ export function DialogoSpot({
             {esMinimo && (
               <p className="text-sm text-muted-foreground">
                 La modificación se aplica al mínimo; se conserva la tarifa actual.
+                {/* Igual que el legado: sin rango se aplica con tarifa 0. */}
                 {rangos.isError
-                  ? " No se pudieron cargar los rangos."
+                  ? " No se pudieron cargar los rangos: se aplicará con tarifa 0."
                   : !rangos.isFetching && !primerRango
-                    ? " No hay rangos disponibles."
+                    ? " No hay rangos disponibles: se aplicará con tarifa 0."
                     : ""}
               </p>
             )}
@@ -181,11 +182,7 @@ export function DialogoSpot({
               disabled={
                 !Number.isFinite(fleteSpot) ||
                 fleteSpot <= 0 ||
-                (esMinimo &&
-                  (rangos.isFetching ||
-                    rangos.isError ||
-                    !primerRango ||
-                    !Number.isFinite(rateActual)))
+                (esMinimo && (rangos.isFetching || !Number.isFinite(rateActual)))
               }
               onClick={() => {
                 onConfirm(rubroBase, fleteSpot, rateSpot);
