@@ -237,7 +237,7 @@ function CardFechas({ valores }: { valores: ValoresEmbarque }) {
   return (
     <CardInfo titulo="Fechas" icono={CalendarDays}>
       <Datos>
-        {CAMPOS_FECHAS.map((campo) => (
+        {CAMPOS_FECHAS.filter(campo => texto(valores, campo.key) || campo.mostrarSiempre).map((campo) => (
           <Fila key={campo.key} label={campo.label}>
             {texto(valores, campo.key) ?? VACIO}
           </Fila>

@@ -30,6 +30,8 @@ export type CampoEmbarque = CampoGestion & {
   soloLectura?: boolean;
   /** Actividad del Excel de procesos que registra el dato (`ACTIVIDADES_TRACKING`). */
   actividad?: string;
+
+  mostrarSiempre?: boolean;
 };
 
 export const CAMPO_COD_FILE: CampoEmbarque = {
@@ -174,6 +176,7 @@ export const CAMPOS_FECHAS: readonly CampoEmbarque[] = [
     tipo: "fecha",
     requerido: true,
     actividad: "OPS 0.1",
+    mostrarSiempre: true
   },
   {
     key: "fecha_envio_reserva",
@@ -193,12 +196,19 @@ export const CAMPOS_FECHAS: readonly CampoEmbarque[] = [
     tipo: "fecha",
     actividad: "CBX 8.1",
   },
-  { key: "fecha_salida", label: "ETD", tipo: "fecha", actividad: "OPS 3.1" },
+  { 
+    key: "fecha_salida", 
+    label: "Estimated time of departure (ETD)", 
+    tipo: "fecha", 
+    actividad: "OPS 3.1",
+    mostrarSiempre: true
+  },
   {
     key: "fecha_salida_real",
-    label: "Salida real (ATD)",
+    label: "Actual time of departure (ATD)",
     tipo: "fecha-hora",
     actividad: "CBX 12.1",
+    mostrarSiempre: true
   },
   {
     key: "fecha_aviso_salida",
@@ -207,11 +217,17 @@ export const CAMPOS_FECHAS: readonly CampoEmbarque[] = [
     actividad: "CBX 12.3",
   },
   { key: "fecha_nueva_salida", label: "Nueva fecha de salida", tipo: "fecha", actividad: "CBX E2" },
-  { key: "fecha_llegada", label: "ETA", tipo: "fecha" },
+  { 
+    key: "fecha_llegada", 
+    label: "Estimated time of arrival (ETA)", 
+    tipo: "fecha",
+    mostrarSiempre: true
+  },
   {
     key: "fecha_llegada_real",
-    label: "Llegada real (ATA)",
+    label: "Actual time of arrival (ATA)",
     tipo: "fecha-hora",
     actividad: "CBX 14.1",
+    mostrarSiempre: true
   },
 ];
