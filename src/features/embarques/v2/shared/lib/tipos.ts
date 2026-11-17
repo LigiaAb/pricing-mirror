@@ -58,6 +58,28 @@ export type EmbarqueMaqueta = CoordinacionTracking & {
 };
 
 /**
+ * Valores de la tab Información por `key` de `shared/lib/campos-embarque.ts`
+ * (mismo nombre del dato que en el módulo actual). Casillas = lista.
+ */
+export type ValoresEmbarque = Readonly<Record<string, string | readonly string[] | undefined>>;
+
+/**
+ * Información del embarque (tab Información), por sección del módulo actual.
+ * Producto, Rutas y Fechas de movimiento son listas (cada carga, tramo y fecha).
+ */
+export type InformacionEmbarque = {
+  shipper: ValoresEmbarque;
+  consignatario: ValoresEmbarque;
+  facturacion: ValoresEmbarque;
+  detalles: ValoresEmbarque;
+  cargas: readonly ValoresEmbarque[];
+  rutas: readonly ValoresEmbarque[];
+  /** `fecha_recoleccion` y demás fechas que no son lista. */
+  fechaRecoleccion: ValoresEmbarque;
+  fechas: readonly ValoresEmbarque[];
+};
+
+/**
  * Archivo del embarque (tab Archivos, solo consulta y descarga).
  * Se sube en la actividad que lo pide (`origen: "actividad"`) o en el
  * tracking interactivo (`origen: "tracking"`); no hay subida general.
