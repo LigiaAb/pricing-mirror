@@ -1,0 +1,18 @@
+diff --git a/src/features/pricing/tarifas/components/tab-tarifas.tsx b/src/features/pricing/tarifas/components/tab-tarifas.tsx
+index f4fa706..7a1639d 100644
+--- a/src/features/pricing/tarifas/components/tab-tarifas.tsx
++++ b/src/features/pricing/tarifas/components/tab-tarifas.tsx
+@@ -218,7 +218,12 @@ export function TarifasTabs({
+         break;
+     }
+ 
+-    const detalleCliente = aplicaATodosLosClientes(values) ? "No Aplicados" : "Aplicados";
++    const detalleCliente = aplicaATodosLosClientes({
++      todos_los_clientes: values.todos_los_clientes,
++      cod_tipo_tarifa: values.cod_tipo_tarifa,
++    })
++      ? "No Aplicados"
++      : "Aplicados";
+ 
+     const detalleContinente = values.todos_los_paises ? "No Aplicados" : "Aplicados";
+ 
