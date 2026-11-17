@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { generarPdfReporte, type ReportePdf } from "../lib/pdf-reporte";
+import type { ReportePdf } from "../lib/pdf-reporte";
 
 export function usePdfReporte(
   opciones: {
@@ -36,8 +36,20 @@ export function usePdfReporte(
     setError(null);
     opciones.onError?.(null);
     opciones.onGenerando?.(true);
+    // La ventana se abre antes del import dinámico: después de un await el navegador
+    // ya no lo considera parte del clic y bloquea la vista previa.
     const ventana =
       reporte.salida === "visualizar" ? window.open("", "vista-previa-reporte") : null;
+    cargarYGenerar(reporte, ventana).catch((causa: unknown) => {
+      // Error al cargar el módulo del PDF: se reporta igual que un error al generar.
+      ventana?.close();
+      terminar(causa instanceof Error ? causa.message : "No se pudo cargar el generador de PDF.");
+    });
+  }
+
+  /** Carga jspdf / jspdf-autotable solo al generar (librerías de cliente >50KB). */
+  async function cargarYGenerar(reporte: ReportePdf, ventana: Window | null): Promise<void> {
+    const { generarPdfReporte } = await import("../lib/pdf-reporte");
     generarPdfReporte(
       reporte,
       (doc) => {
