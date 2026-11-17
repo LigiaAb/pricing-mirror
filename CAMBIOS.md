@@ -5,6 +5,7 @@ Cada entrada: rama · módulo/submódulo · qué y por qué · diff generado (si
 
 ## 17/11/2026
 
+- **Embarques v2 / General** (`claude/17112026-work-embarques-general`): **sincronización, NO APLICAR en el proyecto.** Biome (`lint/style/useFilenamingConvention`) bloqueaba el commit del proyecto real porque el archivo de la vista general no estaba en kebab-case. Se renombra `components/VistaGeneral.tsx` → `components/vista-general.tsx` (contenido igual; ningún archivo de `v2/` lo importa, solo la página de `src/app`). En el proyecto real el renombre se hace a mano (`git mv`) y se ajusta el import de la página. Diff: `171126-0835-cl17112026-embarques-renombrar-vistageneral-tsx-a-vista-gene.diff` (solo registro).
 - **Cotizaciones / Cálculo** (`claude/17112026-work-pricing-cotizacion`): error de consola *In HTML, <pre> cannot be a descendant of <p>* (hidratación) al abrir el **diálogo SPOT** en Due Carrier. `dialogo-spot.tsx` tenía los montos (tarifa actual, CW, flete/mínimo actual, flete SPOT) en `<pre>` dentro de `<p>`. Se quitan los `<pre>` y el `<p>` lleva `font-mono` para que se vean igual (monoespaciado, como el `<pre>`). Sin cambios de lógica. Los `<pre>` de Reportes están dentro de celdas de tabla (válido) y no se tocan. Diff: `171126-0818-cl17112026-cotizaciones-quitar-pre-dentro-de-p-en-dialogo-sp.diff`.
 
 ## 16/11/2026

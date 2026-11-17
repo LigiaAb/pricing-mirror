@@ -21,7 +21,7 @@ no importa de otro.
 
 Las rutas de abajo sin carpeta son relativas a `general/`.
 
-## Pantalla (`components/VistaGeneral.tsx`)
+## Pantalla (`components/vista-general.tsx`)
 
 1. **Tabla de embarques** — `embarques-table.tsx` (`DataTable`, mismo patrón que Cotizaciones).
 2. **Resumen del seleccionado** (siempre visible) — `resumen-embarque.tsx`: franja con file/estado,
