@@ -56,3 +56,22 @@ export type EmbarqueMaqueta = CoordinacionTracking & {
   /** Paso del tracking en el que va (1..6). */
   pasoActual: number;
 };
+
+/**
+ * Archivo del embarque (tab Archivos, solo consulta y descarga).
+ * Se sube en la actividad que lo pide (`origen: "actividad"`) o en el
+ * tracking interactivo (`origen: "tracking"`); no hay subida general.
+ */
+export type ArchivoEmbarque = {
+  id: number;
+  nombre: string;
+  /** Tipo de documento (ej. "Guía aérea", "Fotografía"). */
+  tipo: string;
+  origen: "actividad" | "tracking";
+  /** Id de la actividad (`ACTIVIDADES_TRACKING`) si `origen` es `"actividad"`. */
+  actividad?: string | undefined;
+  /** Paso del tracking (1..6) en que se subió. */
+  paso: number;
+  usuario: string;
+  fecha: string;
+};
