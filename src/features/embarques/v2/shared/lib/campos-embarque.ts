@@ -28,6 +28,8 @@ export type CampoEmbarque = CampoGestion & {
   key: string;
   /** Solo consulta también al editar (en el módulo actual viene del maestro). */
   soloLectura?: boolean;
+  /** Actividad del Excel de procesos que registra el dato (`ACTIVIDADES_TRACKING`). */
+  actividad?: string;
 };
 
 export const CAMPO_COD_FILE: CampoEmbarque = {
@@ -145,18 +147,71 @@ export const CAMPOS_RUTA: readonly CampoEmbarque[] = [
 ];
 
 /**
- * Fechas: todas las del embarque, en orden; la card las muestra siempre ("—"
- * si aún no hay fecha). Origen en el módulo actual:
+ * Fechas: todas las del embarque, en el orden del proceso; la card las muestra
+ * siempre ("—" si aún no hay fecha). `actividad` = actividad del Excel de
+ * procesos ("Tracking-Expo-Aereo-6Pasos.xlsx") que la registra.
+ *
+ * Con dato en el módulo actual (`key` = nombre del dato):
  *   fechaInicio          → columna "Fecha Inicio" (pages/coordinaciones-columns-base.tsx)
  *   fecha_recoleccion    → `fechas-publicas` (CTS, gasto cod_rubro 12); fecha-mov tipo 266
  *   fecha_salida         → ETD: salida del primer tramo (secciones/rutas.tsx)
  *   fecha_llegada        → ETA: llegada del último tramo (secciones/rutas.tsx)
  *   fecha_entrega_combex → fecha-mov tipo 324 (`TIPO_FECHA_ENTREGA_COMBEX`, seleccionar-destino)
+ *
+ * Solo del Excel (sin dato en el módulo actual; `key` propuesta):
+ *   fecha_envio_reserva     → OPS 2.2  "Registrar fecha y hora de envío"
+ *   fecha_recepcion_bodega  → Bodega 0.1 "Registrar fecha, hora y responsable"
+ *   fecha_salida_real       → CBX 12.1 "Registrar vuelo y fecha reales"
+ *   fecha_aviso_salida      → CBX 12.3 "Registrar fecha del correo"
+ *   fecha_nueva_salida      → CBX E2 "Indicar motivo y nueva fecha" (excepción; OPS E1 la reserva)
+ *   fecha_llegada_real      → CBX 14.1 "Registrar fecha y hora"
  */
 export const CAMPOS_FECHAS: readonly CampoEmbarque[] = [
   { key: "fechaInicio", label: "Fecha Inicio", tipo: "fecha-hora", soloLectura: true },
-  { key: "fecha_recoleccion", label: "Fecha de Recolección", tipo: "fecha", requerido: true },
-  { key: "fecha_salida", label: "ETD", tipo: "fecha" },
+  {
+    key: "fecha_recoleccion",
+    label: "Fecha de Recolección",
+    tipo: "fecha",
+    requerido: true,
+    actividad: "OPS 0.1",
+  },
+  {
+    key: "fecha_envio_reserva",
+    label: "Envío de solicitud de reserva",
+    tipo: "fecha-hora",
+    actividad: "OPS 2.2",
+  },
+  {
+    key: "fecha_recepcion_bodega",
+    label: "Recepción en bodega",
+    tipo: "fecha-hora",
+    actividad: "Bodega 0.1",
+  },
+  {
+    key: "fecha_entrega_combex",
+    label: "Fecha de entrega COMBEX",
+    tipo: "fecha",
+    actividad: "CBX 8.1",
+  },
+  { key: "fecha_salida", label: "ETD", tipo: "fecha", actividad: "OPS 3.1" },
+  {
+    key: "fecha_salida_real",
+    label: "Salida real (ATD)",
+    tipo: "fecha-hora",
+    actividad: "CBX 12.1",
+  },
+  {
+    key: "fecha_aviso_salida",
+    label: "Aviso de salida al cliente",
+    tipo: "fecha-hora",
+    actividad: "CBX 12.3",
+  },
+  { key: "fecha_nueva_salida", label: "Nueva fecha de salida", tipo: "fecha", actividad: "CBX E2" },
   { key: "fecha_llegada", label: "ETA", tipo: "fecha" },
-  { key: "fecha_entrega_combex", label: "Fecha de entrega COMBEX", tipo: "fecha" },
+  {
+    key: "fecha_llegada_real",
+    label: "Llegada real (ATA)",
+    tipo: "fecha-hora",
+    actividad: "CBX 14.1",
+  },
 ];

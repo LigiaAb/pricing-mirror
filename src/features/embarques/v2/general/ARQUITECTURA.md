@@ -160,8 +160,10 @@ Cada card junta varios datos en pocas líneas (p. ej. nombre + NIT · industria 
 departamento · país; contacto con email y teléfono; cada carga con bultos · peso · medidas · CW · embalaje, valor,
 país, partida y régimen, y en el encabezado productos, bultos, peso y "CW total" como la tabla de la CTS).
 Producto y Rutas son listas (cada carga y tramo). Fechas muestra **todas las fechas** del embarque
-(`CAMPOS_FECHAS`: Fecha Inicio, Fecha de Recolección, ETD, ETA y Fecha de entrega COMBEX, con su origen
-anotado), siempre, con "—" si aún no hay fecha. Los documentos CROPA la CTS los pide solo con el gasto 127, por
+(`CAMPOS_FECHAS`, en el orden del proceso), siempre, con "—" si aún no hay fecha: las del módulo actual (Fecha
+Inicio, Fecha de Recolección, ETD, ETA y Fecha de entrega COMBEX) y las que registra el Excel de procesos
+(envío de solicitud de reserva, recepción en bodega, salida real, aviso de salida, nueva fecha de salida y llegada
+real). Cada fecha anota su origen y, en `actividad`, la actividad del Excel que la registra. Los documentos CROPA la CTS los pide solo con el gasto 127, por
 eso sin valor no se dibujan. Cod File no se repite (está en el
 resumen). Botón Editar solo para Operaciones (deshabilitado en la maqueta). De la CTS se toman los **pasos** y los
 **campos**: misma clave, nombre, obligatorio y opciones (`CAMPOS_SHIPPER`, `CAMPOS_CONSIGNATARIO`,
