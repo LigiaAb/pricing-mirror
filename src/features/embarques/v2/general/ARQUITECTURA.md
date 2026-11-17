@@ -152,15 +152,20 @@ Con valor y editable, cada campo muestra una **x** al final para limpiarlo (`Bot
 ### Campos de Información (`shared/lib/campos-embarque.ts`)
 
 v2 es un **rediseño**: la tab Información (`pasos/paso-informacion.tsx`) se lee en **cards**, no en formulario
-de solo lectura. Hay **una card por sección del módulo actual**: Shipper, Consignatario, Facturación, Detalles,
-Rutas, Fechas y Producto (esta última a todo el ancho). Cada card junta varios datos en pocas líneas (p. ej.
-nombre + NIT · industria · país; dirección + municipio · departamento · país; contacto con email y teléfono;
-cada carga con bultos · peso · medidas, valor y partida, y totales en el encabezado). Producto, Rutas y Fechas
-de movimiento son listas (cada carga, tramo y fecha). Cod File no se repite (está en el resumen). Botón Editar
-solo para Operaciones (deshabilitado en la maqueta). De ese módulo se toman las **secciones** y los
+de solo lectura. Muestra **solo lo que muestra la CTS del módulo actual** (`STEPS_CTS` en
+`components/cts-detalle/secciones-wizard-privado.tsx`), sin datos extra: **una card por paso**: Shipper,
+Consignatario, Notificación, Facturación, Detalles, Rutas, Fechas y Producto (esta última a todo el ancho).
+Gastos y Documentos de la CTS no van aquí (los archivos están en la tab Archivos) y Seguimiento es el tracking.
+Cada card junta varios datos en pocas líneas (p. ej. nombre + NIT · industria · país; dirección + municipio ·
+departamento · país; contacto con email y teléfono; cada carga con bultos · peso · medidas · CW · embalaje, valor,
+país, partida y régimen, y en el encabezado productos, bultos, peso y "CW total" como la tabla de la CTS).
+Producto y Rutas son listas (cada carga y tramo). Fechas es solo la **fecha de recolección** (las fechas de
+movimiento con tipo de fecha no están en la CTS); la CTS la pide solo con el gasto `cod_rubro` 12, y los
+documentos CROPA solo con el gasto 127, por eso sin valor no se dibujan. Cod File no se repite (está en el
+resumen). Botón Editar solo para Operaciones (deshabilitado en la maqueta). De la CTS se toman los **pasos** y los
 **campos**: misma clave, nombre, obligatorio y opciones (`CAMPOS_SHIPPER`, `CAMPOS_CONSIGNATARIO`,
-`CAMPOS_FACTURACION`, `CAMPOS_DETALLES`, `CAMPOS_PRODUCTO`, `CAMPOS_RUTA`, `CAMPOS_FECHAS`, `CAMPO_COD_FILE`);
-no sus pestañas ni formularios. Los valores llegan como `InformacionEmbarque` (`shared/lib/tipos.ts`, valores
+`CAMPOS_NOTIFICACION`, `CAMPOS_FACTURACION`, `CAMPOS_DETALLES`, `CAMPOS_PRODUCTO`, `CAMPOS_RUTA`,
+`CAMPOS_FECHAS`, `CAMPO_COD_FILE`); no sus pestañas ni formularios. Los valores llegan como `InformacionEmbarque` (`shared/lib/tipos.ts`, valores
 por `key`); en la maqueta, `informacionMaqueta(embarque)` de `lib/datos-maqueta.ts`.
 `key` es el nombre del dato en el módulo actual, para conectar la API sin traducir; el origen de cada lista
 está anotado en el archivo. Cómo se combina cada campo en su card lo decide `pasos/paso-informacion.tsx`. Las actividades que

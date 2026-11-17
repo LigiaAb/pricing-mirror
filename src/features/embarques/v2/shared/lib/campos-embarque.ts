@@ -1,18 +1,21 @@
 /* ==========================================================================
  * CAMPOS DE LA INFORMACIÓN DEL EMBARQUE
  *
- * Los mismos campos que ya tiene el módulo actual de embarques (clave, nombre,
- * obligatorio, tipo de dato y opciones fijas), agrupados por sus secciones.
- * El diseño es de v2: una card por sección que combina varios datos
- * (`general/components/pasos/paso-informacion.tsx`).
+ * Los mismos campos que muestra la CTS del módulo actual (clave, nombre,
+ * obligatorio, tipo de dato y opciones fijas), agrupados por sus pasos
+ * (`STEPS_CTS` en components/cts-detalle/secciones-wizard-privado.tsx). Gastos y
+ * Documentos no van aquí (los archivos están en la tab Archivos) y Seguimiento
+ * es el tracking. El diseño es de v2: una card por paso que combina varios
+ * datos (`general/components/pasos/paso-informacion.tsx`).
  *
  * Origen (módulo actual, solo referencia):
  *   Shipper / Consignatario → public/secciones/entidad-public-form/fields.ts y model.ts
+ *   Notificación            → public/secciones/notificaciones-publicas.tsx
+ *   Producto                → public/secciones/cargas-publicas* y secciones/carga-form-dialog.tsx
  *   Facturación             → public/secciones/facturacion-publica.tsx
- *   Producto                → secciones/carga-form-dialog.tsx
  *   Detalles                → public/secciones/detalles-publica-model.ts
- *   Rutas                   → secciones/ruta-dialog.tsx
- *   Fechas                  → public/secciones/fechas-publicas.tsx y secciones/fechas.tsx
+ *   Fechas                  → public/secciones/fechas-publicas.tsx
+ *   Rutas                   → secciones/rutas.tsx y secciones/ruta-dialog.tsx
  *   Cod File                → info-coordinacion/info-coordinacion.tsx
  *
  * `key` = nombre del dato en el módulo actual: al conectar la API se usa tal cual.
@@ -68,6 +71,14 @@ function camposEntidad(titulo: string): readonly CampoEmbarque[] {
 export const CAMPOS_SHIPPER = camposEntidad("Shipper");
 export const CAMPOS_CONSIGNATARIO = camposEntidad("Consignatario");
 
+/** Notificación: `NOTIFICACIONES_FIELDS` (en la CTS privada es de consulta). */
+export const CAMPOS_NOTIFICACION: readonly CampoEmbarque[] = [
+  { key: "nombre", label: "Nombre", requerido: true },
+  { key: "email", label: "Email", requerido: true },
+  { key: "telefono", label: "Teléfono", requerido: true },
+  { key: "telefonoEmergencia", label: "Teléfono de emergencia" },
+];
+
 /** Facturación: en el módulo actual es siempre de consulta (refleja el maestro del cliente). */
 export const CAMPOS_FACTURACION: readonly CampoEmbarque[] = [
   { key: "cliente", label: "Nombre", requerido: true, soloLectura: true },
@@ -92,7 +103,7 @@ export const CAMPOS_DETALLES: readonly CampoEmbarque[] = [
     tipo: "casillas",
     opciones: ["Carga Valiosa", "Cobertura de Seguro"],
   },
-  // CROPA_DOCS (lib/constantes.ts)
+  // CROPA_DOCS (lib/constantes.ts); solo si algún gasto tiene cod_rubro 127 (`showCropaDocs`).
   {
     key: "documentosCropa",
     label: "Documentos CROPA",
@@ -103,7 +114,10 @@ export const CAMPOS_DETALLES: readonly CampoEmbarque[] = [
   { key: "instruccionesManejo", label: "Instrucciones de manejo", tipo: "area" },
 ];
 
-/** Producto (cada carga): `carga-form-dialog`. */
+/**
+ * Producto (cada carga): `carga-form-dialog`. El CW lo calcula la CTS
+ * (`normalizeCargaRows`) y lo muestra en la tabla con el "CW total".
+ */
 export const CAMPOS_PRODUCTO: readonly CampoEmbarque[] = [
   { key: "cantidad", label: "Cantidad (bultos)", tipo: "numero", requerido: true },
   { key: "pesoTotal", label: "Peso total (kg)", tipo: "numero", requerido: true },
@@ -114,7 +128,10 @@ export const CAMPOS_PRODUCTO: readonly CampoEmbarque[] = [
   { key: "descripcion", label: "Descripción", tipo: "area", requerido: true },
   { key: "valor", label: "Valor declarado", tipo: "numero", requerido: true },
   { key: "paisOrigenId", label: "País Origen", tipo: "catalogo", requerido: true },
+  { key: "tipoEmbalaje", label: "Tipo embalaje", tipo: "catalogo", requerido: true },
   { key: "partidaArancelaria", label: "Partida arancelaria", requerido: true },
+  { key: "regimenAduanal", label: "Régimen aduanal", tipo: "catalogo", requerido: true },
+  { key: "cw", label: "CW (kg)", tipo: "numero", soloLectura: true },
 ];
 
 /** Rutas (cada tramo): `ruta-dialog`. */
@@ -127,10 +144,10 @@ export const CAMPOS_RUTA: readonly CampoEmbarque[] = [
   { key: "flightNumber", label: "Nro. Vuelo" },
 ];
 
-/** Fechas: recolección (`fechas-publicas`) y fechas de movimiento (`fechas`). */
+/**
+ * Fechas: `fechas-publicas`, solo la fecha de recolección. La CTS muestra el
+ * paso solo si algún gasto tiene cod_rubro 12 (`showFechas`).
+ */
 export const CAMPOS_FECHAS: readonly CampoEmbarque[] = [
   { key: "fecha_recoleccion", label: "Fecha de Recolección", tipo: "fecha", requerido: true },
-  { key: "id_tipo_fecha", label: "Tipo de Fecha", tipo: "catalogo", requerido: true },
-  { key: "fecha", label: "Fecha", tipo: "fecha", requerido: true },
-  { key: "observacion", label: "Observación", tipo: "area" },
 ];

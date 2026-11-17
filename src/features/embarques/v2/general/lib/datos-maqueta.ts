@@ -152,39 +152,115 @@ export const ARCHIVOS_MAQUETA: Record<number, ArchivoEmbarque[]> = {
 };
 
 /**
- * Información de un embarque (tab Información). Toma lo que ya tiene la fila
- * (cliente, carrier, origen, destino, ETD/ETA) y completa el resto con ejemplos.
+ * Ciudad y país de cada destino de la maqueta (Rutas y Consignatario se
+ * escriben con nombres, como los muestra la CTS al resolver los catálogos).
+ */
+const DESTINOS_MAQUETA: Record<string, { ciudad: string; pais: string }> = {
+  "Miami, US": {
+    ciudad: "Miami",
+    pais: "Estados Unidos",
+  },
+  "Madrid, ES": {
+    ciudad: "Madrid",
+    pais: "España",
+  },
+  "Ciudad de México, MX": {
+    ciudad: "Ciudad de México",
+    pais: "México",
+  },
+  "Los Ángeles, US": {
+    ciudad: "Los Ángeles",
+    pais: "Estados Unidos",
+  },
+};
+
+/** Código de vuelo de ejemplo por aerolínea (para que coincida con el carrier). */
+const VUELOS_MAQUETA: Record<string, string> = {
+  "AVIANCA CARGO": "AV 571",
+  "IBERIA CARGO": "IB 6342",
+  "AEROMÉXICO CARGO": "AM 663",
+  "COPA CARGO": "CM 418",
+};
+
+/** Un día antes de una fecha `DD-MM-AAAA` (recolección de ejemplo antes del ETD). */
+function diaAnterior(fecha: string): string | undefined {
+  const [dia, mes, anio] = fecha.split("-").map(Number);
+  if (!dia || !mes || !anio) return undefined;
+  const anterior = new Date(anio, mes - 1, dia - 1);
+  const dos = (valor: number) => String(valor).padStart(2, "0");
+  return `${dos(anterior.getDate())}-${dos(anterior.getMonth() + 1)}-${anterior.getFullYear()}`;
+}
+
+/**
+ * Información de un embarque (tab Información): solo los datos que muestra la
+ * CTS del módulo actual (`shared/lib/campos-embarque.ts`). Toma lo que ya tiene
+ * la fila (cliente, carrier, destino) y completa con ejemplos solo los datos que
+ * se escriben a mano (nombres, NIT, direcciones, contactos, cargas) o que son
+ * opciones fijas del módulo actual (peligrosidad, documentos CROPA). Los que
+ * salen de catálogos que aún no se consultan (industria, tipos de contacto,
+ * pago, carga, incoterm, servicio, clasificación, unidad de medida, embalaje,
+ * régimen y aeropuertos) quedan vacíos ("—") hasta conectar la API.
  */
 export function informacionMaqueta(embarque: EmbarqueMaqueta): InformacionEmbarque {
-  const [ciudadDestino = embarque.destino, paisDestino = ""] = embarque.destino.split(", ");
+  const destino = DESTINOS_MAQUETA[embarque.destino];
   return {
     shipper: {
       entidad_nombre: "AGROEXPORTADORA LOS ALTOS, S.A.",
       entidad_nit: "1234567-8",
-      entidad_industria: "Agrícola",
       entidad_pais: "Guatemala",
       direccion_recoleccion: "Km 17.5 Carretera a El Salvador, Bodega 4",
       direccion_recoleccion_muni: "Santa Catarina Pinula",
       direccion_recoleccion_depto: "Guatemala",
       direccion_recoleccion_pais: "Guatemala",
       entidad_contacto_nombre: "Ana Morales",
-      _contacto_tipo_list: ["Operativo", "Facturación"],
       entidad_contacto_email: "amorales@losaltos.com.gt",
       entidad_contacto_telefono: "+502 2233-4455",
     },
     consignatario: {
       entidad_nombre: "GLOBAL FRESH IMPORTS LLC",
       entidad_nit: "98-7654321",
-      entidad_industria: "Comercio",
-      entidad_pais: paisDestino,
-      direccion_recoleccion: "1200 NW 78th Ave, Suite 210",
-      direccion_recoleccion_ciudad: ciudadDestino,
-      direccion_recoleccion_pais: paisDestino,
+      entidad_pais: destino?.pais,
+      direccion_recoleccion: "1200 Commerce Ave, Suite 210",
+      direccion_recoleccion_ciudad: destino?.ciudad,
+      direccion_recoleccion_pais: destino?.pais,
       entidad_contacto_nombre: "Carlos Rivera",
-      _contacto_tipo_list: ["Operativo"],
       entidad_contacto_email: "crivera@importer.com",
       entidad_contacto_telefono: "+1 305 555 0142",
     },
+    notificacion: {
+      nombre: "Carlos Rivera",
+      email: "crivera@importer.com",
+      telefono: "+1 305 555 0142",
+      telefonoEmergencia: "+1 305 555 0199",
+    },
+    cargas: [
+      {
+        descripcion: "Arveja china fresca",
+        cantidad: "120",
+        pesoTotal: "1,450.00",
+        largo: "60",
+        alto: "30",
+        ancho: "40",
+        valor: "8,700.00",
+        paisOrigenId: "Guatemala",
+        partidaArancelaria: "0708.10.00",
+        // max(peso 1,450, volumétrico 120 × 60 × 30 × 40 / 6000 = 1,440)
+        cw: "1,450.00",
+      },
+      {
+        descripcion: "Ejote francés",
+        cantidad: "40",
+        pesoTotal: "380.50",
+        largo: "50",
+        alto: "25",
+        ancho: "35",
+        valor: "2,100.00",
+        paisOrigenId: "Guatemala",
+        partidaArancelaria: "0708.20.00",
+        // max(peso 380.50, volumétrico 40 × 50 × 25 × 35 / 6000 = 292)
+        cw: "380.50",
+      },
+    ],
     facturacion: {
       cliente: embarque.cliente,
       numero: "7654321-0",
@@ -194,55 +270,18 @@ export function informacionMaqueta(embarque: EmbarqueMaqueta): InformacionEmbarq
       clienteContactoTelefono: "+502 2211-0099",
     },
     detalles: {
-      tipoPago: "PREPAID",
-      tipoCarga: "General",
-      incoterm: "FCA",
-      servicio: "Puerta a aeropuerto",
-      clasificacionCarga: "Perecedero",
       peligrosidad: ["Cobertura de Seguro"],
       documentosCropa: ["DUA Definitiva"],
       instruccionesManejo: "Mantener refrigerado entre 2 °C y 8 °C. No apilar.",
     },
-    cargas: [
-      {
-        descripcion: "Arveja china fresca",
-        cantidad: "120",
-        pesoTotal: "1,450.00",
-        unidadMedida: "cm",
-        largo: "60",
-        alto: "30",
-        ancho: "40",
-        valor: "USD 8,700.00",
-        paisOrigenId: "Guatemala",
-        partidaArancelaria: "0708.10.00",
-      },
-      {
-        descripcion: "Ejote francés",
-        cantidad: "40",
-        pesoTotal: "380.50",
-        unidadMedida: "cm",
-        largo: "50",
-        alto: "25",
-        ancho: "35",
-        valor: "USD 2,100.00",
-        paisOrigenId: "Guatemala",
-        partidaArancelaria: "0708.20.00",
-      },
-    ],
+    fechas: { fecha_recoleccion: diaAnterior(embarque.etd) },
     rutas: [
       {
         codEntidadProv: embarque.carrier,
         codPaisOrigen: "Guatemala",
-        puertoIdOrigen: "La Aurora (GUA)",
-        codPaisDestino: paisDestino,
-        puertoIdDestino: ciudadDestino,
-        flightNumber: "AV 571",
+        codPaisDestino: destino?.pais,
+        flightNumber: VUELOS_MAQUETA[embarque.carrier],
       },
-    ],
-    fechaRecoleccion: { fecha_recoleccion: embarque.etd },
-    fechas: [
-      { id_tipo_fecha: "ETD", fecha: embarque.etd },
-      { id_tipo_fecha: "ETA", fecha: embarque.eta, observacion: "Sujeto a confirmación." },
     ],
   };
 }

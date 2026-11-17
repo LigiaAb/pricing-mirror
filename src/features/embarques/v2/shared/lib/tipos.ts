@@ -64,19 +64,19 @@ export type EmbarqueMaqueta = CoordinacionTracking & {
 export type ValoresEmbarque = Readonly<Record<string, string | readonly string[] | undefined>>;
 
 /**
- * Información del embarque (tab Información), por sección del módulo actual.
- * Producto, Rutas y Fechas de movimiento son listas (cada carga, tramo y fecha).
+ * Información del embarque (tab Información), por paso de la CTS del módulo
+ * actual. Producto y Rutas son listas (cada carga y cada tramo).
  */
 export type InformacionEmbarque = {
   shipper: ValoresEmbarque;
   consignatario: ValoresEmbarque;
+  notificacion: ValoresEmbarque;
+  cargas: readonly ValoresEmbarque[];
   facturacion: ValoresEmbarque;
   detalles: ValoresEmbarque;
-  cargas: readonly ValoresEmbarque[];
+  /** `fecha_recoleccion` (vacía si el embarque no tiene el gasto de fechas). */
+  fechas: ValoresEmbarque;
   rutas: readonly ValoresEmbarque[];
-  /** `fecha_recoleccion` y demás fechas que no son lista. */
-  fechaRecoleccion: ValoresEmbarque;
-  fechas: readonly ValoresEmbarque[];
 };
 
 /**
