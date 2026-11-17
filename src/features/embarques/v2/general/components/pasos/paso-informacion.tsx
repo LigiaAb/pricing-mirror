@@ -232,16 +232,18 @@ function CardRutas({ rutas }: { rutas: readonly ValoresEmbarque[] }) {
   );
 }
 
-/** Todas las fechas del embarque (`CAMPOS_FECHAS`); sin fecha aún → "—". */
+/** Fechas del embarque (`CAMPOS_FECHAS`) con valor, más las `mostrarSiempre` ("—" si no hay). */
 function CardFechas({ valores }: { valores: ValoresEmbarque }) {
   return (
     <CardInfo titulo="Fechas" icono={CalendarDays}>
       <Datos>
-        {CAMPOS_FECHAS.filter(campo => texto(valores, campo.key) || campo.mostrarSiempre).map((campo) => (
-          <Fila key={campo.key} label={campo.label}>
-            {texto(valores, campo.key) ?? VACIO}
-          </Fila>
-        ))}
+        {CAMPOS_FECHAS.filter((campo) => texto(valores, campo.key) || campo.mostrarSiempre).map(
+          (campo) => (
+            <Fila key={campo.key} label={campo.label}>
+              {texto(valores, campo.key) ?? VACIO}
+            </Fila>
+          ),
+        )}
       </Datos>
     </CardInfo>
   );

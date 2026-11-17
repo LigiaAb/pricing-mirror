@@ -6,3 +6,4 @@ export declare const http: {
   put<T = unknown>(url: string, body?: unknown, config?: Config): Promise<T>;
   delete<T = unknown>(url: string, config?: Config): Promise<T>;
 };
+export declare const httpPublic: typeof http;
