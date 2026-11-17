@@ -21,6 +21,21 @@ export const CATALOGOS_AGREGAR_TODOS = {
   incoterms: true,
 };
 
+// Tipos de tarifa: PUBLICA = aplica a todos los clientes; ESPECIAL = solo a clientes asignados.
+export const COD_TIPO_TARIFA_PUBLICA = 97;
+export const COD_TIPO_TARIFA_ESPECIAL = 98;
+
+/**
+ * ¿El método aplica a todos los clientes?
+ * Usa `todos_los_clientes`; en registros anteriores (sin ese dato) se deduce de
+ * `cod_tipo_tarifa` (PUBLICA = todos los clientes).
+ */
+export const aplicaATodosLosClientes = (metodo: {
+  todos_los_clientes?: boolean | null | undefined;
+  cod_tipo_tarifa?: unknown;
+}): boolean =>
+  metodo.todos_los_clientes ?? Number(metodo.cod_tipo_tarifa) === COD_TIPO_TARIFA_PUBLICA;
+
 export const eliminarDuplicadosById = <T>(arr: T[], id: keyof T) => {
   return arr.filter((item, index) => arr.findIndex((i) => i[id] === item[id]) === index);
 };

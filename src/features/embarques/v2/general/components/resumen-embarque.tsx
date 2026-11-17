@@ -14,10 +14,13 @@ export function ResumenEmbarque({
   embarque,
   onVerTracking,
   onVerActividades,
+  // onSubirDocumentos,
 }: {
   embarque: EmbarqueMaqueta;
   onVerTracking: () => void;
   onVerActividades: () => void;
+  /** Sin él no se muestra el botón (perfiles que no ven Documentos). */
+  // onSubirDocumentos?: (() => void) | undefined;
 }) {
   return (
     <section className="space-y-4">

@@ -6,7 +6,7 @@ import {
   ClipboardList,
   FileStack,
   FileText,
-  FolderOpen,
+  FolderUp,
   Landmark,
   type LucideIcon,
   PackageCheck,
@@ -23,6 +23,7 @@ import {
 import type * as React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { cn } from "@/shared/lib/utils";
+import { PasoDocumentos } from "../../operaciones/components/paso-documentos";
 import type { EmbarqueMaqueta, PerfilEmbarque } from "../../shared/lib/tipos";
 import {
   type PasoEmbarque,
@@ -33,7 +34,6 @@ import {
   type ValorPasoEmbarque,
 } from "../lib/pasos";
 import { PasoActividades } from "./pasos/paso-actividades";
-import { PasoArchivos } from "./pasos/paso-archivos";
 import { PasoInformacion } from "./pasos/paso-informacion";
 
 const ICONOS: Record<ValorPasoEmbarque, LucideIcon> = {
@@ -52,13 +52,13 @@ const ICONOS: Record<ValorPasoEmbarque, LucideIcon> = {
   salida: PlaneTakeoff,
   complementaria: FileText,
   cierre: PlaneLanding,
-  archivos: FolderOpen,
+  documentos: FolderUp,
   cancelacion: Ban,
 };
 
 /**
- * Contenido de la tab: Información y Archivos (lista del embarque, solo
- * consulta y descarga) tienen su propio componente; las demás usan la tab genérica de actividades,
+ * Contenido de la tab: Información (vista general) y Documentos (Operaciones)
+ * tienen su propio componente; las demás usan la tab genérica de actividades,
  * que muestra el formulario de cada actor.
  */
 function contenidoPaso(
@@ -69,8 +69,8 @@ function contenidoPaso(
   switch (paso.value) {
     case "informacion":
       return <PasoInformacion embarque={embarque} editable={puedeEditarInformacion(perfil)} />;
-    case "archivos":
-      return <PasoArchivos paso={paso} embarque={embarque} />;
+    case "documentos":
+      return <PasoDocumentos />;
     default:
       return <PasoActividades paso={paso} pasoActual={embarque.pasoActual} perfil={perfil} />;
   }

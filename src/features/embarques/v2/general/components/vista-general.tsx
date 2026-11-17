@@ -46,6 +46,7 @@ export const VistaGeneral = ({
   const [actividadesOpen, setActividadesOpen] = React.useState(false);
 
   const seccionRef = React.useRef<HTMLDivElement | null>(null);
+  // const veDocumentos = pasosDelPerfil(perfil).some((paso) => paso.value === "documentos");
 
   const seleccionar = React.useCallback((embarque: EmbarqueMaqueta) => {
     setSeleccionado(embarque);
@@ -79,6 +80,7 @@ export const VistaGeneral = ({
             embarque={seleccionado}
             onVerTracking={() => setTrackingOpen(true)}
             onVerActividades={() => setActividadesOpen(true)}
+            // onSubirDocumentos={veDocumentos ? () => setTab("documentos") : undefined}
           />
 
           <section className="rounded-lg border bg-card p-2 shadow-sm">

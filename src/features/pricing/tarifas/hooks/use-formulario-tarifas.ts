@@ -6,7 +6,10 @@ import { useContextoOperativoStore } from "@/features/shell";
 import { useAuthStore } from "@/shared/stores/auth-store";
 import { fieldRules } from "../lib//tarifa-field-rules";
 import {
+  aplicaATodosLosClientes,
   CATALOGOS_AGREGAR_TODOS,
+  COD_TIPO_TARIFA_ESPECIAL,
+  COD_TIPO_TARIFA_PUBLICA,
   convertClasificacionServicio,
   DEFAULT_TODOS_VALUE,
 } from "../lib/tarifa-helpers";
@@ -63,6 +66,16 @@ const isRecord = (value: unknown): value is UnknownRecord =>
   typeof value === "object" && value !== null;
 
 // const isPrimitiveComparable = (value: unknown): value is string | number | boolean => ["string", "number", "boolean"].includes(typeof value);
+
+// Métodos de cálculo que fijan el tipo de cálculo: cod_tipo (método) → cod_tipo_calculo.
+// Al elegir el método se asigna el tipo y el select queda de solo lectura.
+const TIPO_CALCULO_POR_METODO: Readonly<Record<number, number>> = {
+  504: 584, // COSTO POR PORCENTAJE → COSTO
+  363: 356,
+};
+
+const obtenerTipoCalculoFijo = (codMetodo: unknown): number | undefined =>
+  typeof codMetodo === "number" ? TIPO_CALCULO_POR_METODO[codMetodo] : undefined;
 
 const CAMPOS_SIEMPRE_LECTURA = [
   "usuario",
@@ -177,6 +190,11 @@ export function useFormulario({
         resultado[campo] = catalogo.find((item) => isRecord(item) && item.value === null) ?? null;
       }
     });
+
+    // Registros anteriores sin todos_los_clientes: se deduce de cod_tipo_tarifa.
+    if (defaultValues?.todos_los_clientes == null && defaultValues?.cod_tipo_tarifa != null) {
+      resultado.aplicaTodosClientes = aplicaATodosLosClientes(defaultValues);
+    }
 
     // ── Defaults desde ctx para empresa y centroCosto ─────────────────────────
     const empresas = Array.isArray(catalogosProcesados?.empresas)
@@ -435,6 +453,21 @@ export function useFormulario({
     obtenerCatalogoByIdRef.current = obtenerCatalogoById;
   }, [obtenerCatalogoById]);
 
+  // El tipo de tarifa ya no se elige: se correlaciona con "aplica a todos los clientes"
+  // (todos los clientes → PUBLICA 97; si no → ESPECIAL 98).
+  const obtenerTipoTarifaSegunClientes = React.useCallback(
+    (todosLosClientes: boolean): TipoOption => {
+      const codTipoTarifa = todosLosClientes ? COD_TIPO_TARIFA_PUBLICA : COD_TIPO_TARIFA_ESPECIAL;
+
+      return (
+        ((catalogosProcesados?.tiposTarifa || []) as readonly TipoOption[]).find(
+          (tt) => tt.value === codTipoTarifa,
+        ) ?? { value: codTipoTarifa }
+      );
+    },
+    [catalogosProcesados],
+  );
+
   const onInput = React.useCallback(
     ({ id, val }: { id: string; val: unknown }) => {
       setValues((prev) => {
@@ -509,6 +542,29 @@ export function useFormulario({
           }
         }
 
+        if (id === "metodoCalculo") {
+          const metodoSeleccionado = val as TipoOption | null;
+
+          const codTipoCalculoFijo = obtenerTipoCalculoFijo(metodoSeleccionado?.value);
+
+          if (codTipoCalculoFijo !== undefined) {
+            const tipoCalculoFijo =
+              ((catalogosProcesados?.tiposCalculo || []) as readonly TipoOption[]).find(
+                (tc) => tc.value === codTipoCalculoFijo,
+              ) ?? null;
+
+            next.tipoCalculo = tipoCalculoFijo;
+            next.cod_tipo_calculo = getPlainValue(tipoCalculoFijo);
+          }
+        }
+
+        if (id === "aplicaTodosClientes") {
+          const tipoTarifa = obtenerTipoTarifaSegunClientes(val === true);
+
+          next.tipoTarifa = tipoTarifa;
+          next.cod_tipo_tarifa = getPlainValue(tipoTarifa);
+        }
+
         if (!regla) {
           next[id] = val;
           return next;
@@ -536,7 +592,7 @@ export function useFormulario({
         return next;
       });
     },
-    [catalogosProcesados],
+    [catalogosProcesados, obtenerTipoTarifaSegunClientes],
   );
 
   // ── Helpers de visibilidad / readonly / require ───────────────────────────
@@ -583,6 +639,9 @@ export function useFormulario({
         } else if (inputsReadOnly.includes(id)) {
           resultadoFinal = true;
         } else if (fieldRules[id]?.readonly) {
+          resultadoFinal = true;
+        } else if (id === "tipoCalculo" && obtenerTipoCalculoFijo(values?.cod_tipo) !== undefined) {
+          // El método seleccionado fija el tipo de cálculo (TIPO_CALCULO_POR_METODO).
           resultadoFinal = true;
         } else {
           const require = fieldRules[id]?.require;
@@ -665,9 +724,22 @@ export function useFormulario({
 
   const valoresSoloCodigos = React.useCallback(
     (payload?: string) => {
-      return { ...buildValoresSoloCodigos(values, fieldRules, payload), cod_usuario };
+      const resultado: Record<string, unknown> = {
+        ...buildValoresSoloCodigos(values, fieldRules, payload),
+        cod_usuario,
+      };
+
+      // Al guardar el método, cod_tipo_tarifa siempre corresponde a todos_los_clientes,
+      // aunque el checkbox no se haya tocado (p. ej. registros anteriores inconsistentes).
+      if (resultado.todos_los_clientes != null) {
+        const tipoTarifa = obtenerTipoTarifaSegunClientes(resultado.todos_los_clientes === true);
+
+        resultado.cod_tipo_tarifa = getPlainValue(tipoTarifa);
+      }
+
+      return resultado;
     },
-    [values, cod_usuario],
+    [values, cod_usuario, obtenerTipoTarifaSegunClientes],
   );
 
   return {

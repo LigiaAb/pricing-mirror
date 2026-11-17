@@ -284,9 +284,9 @@ export function TotalesRubros({ controller, lectura = false }: Props) {
               <tr>
                 <th className="w-[70px] px-3 py-2 text-left">Grupo</th>
 
-                <th className="w-[130px] px-3 py-2 text-center">P / C</th>
+                <th className="w-[130px] px-3 py-2 text-center text-nowrap">P / C</th>
 
-                <th className="px-3 py-2 text-left">Nombre</th>
+                <th className="w-1/2 max-w-md px-3 py-2 text-left">Nombre</th>
 
                 <th className="w-[150px] px-3 py-2 text-right">Venta</th>
 
@@ -325,7 +325,7 @@ export function TotalesRubros({ controller, lectura = false }: Props) {
                             value={nombre}
                             placeholder="Nombre grupo"
                             onChange={(event) => cambiarNombreGrupo(idGrupo, event.target.value)}
-                            className="h-8 w-full max-w-xs rounded-md border bg-transparent px-2 outline-none focus:border-primary"
+                            className="h-8 w-full max-w-md rounded-md border bg-transparent px-2 outline-none focus:border-primary"
                           />
                         )}
                       </td>

@@ -95,10 +95,11 @@ export function DialogoSpot({
             {esMinimo && (
               <p className="text-sm text-muted-foreground">
                 La modificación se aplica al mínimo; se conserva la tarifa actual.
+                {/* Igual que el legado: sin rango se aplica con tarifa 0. */}
                 {rangos.isError
-                  ? " No se pudieron cargar los rangos."
+                  ? " No se pudieron cargar los rangos: se aplicará con tarifa 0."
                   : !rangos.isFetching && !primerRango
-                    ? " No hay rangos disponibles."
+                    ? " No hay rangos disponibles: se aplicará con tarifa 0."
                     : ""}
               </p>
             )}
@@ -110,19 +111,15 @@ export function DialogoSpot({
             <div>
               <p className="text-xs text-muted-foreground">Tarifa actual</p>
 
-              <p className="font-medium tabular-nums">
-                <pre>
-                  {simbolo} {formatNumero(rateActual)}
-                </pre>
+              <p className="font-mono font-medium tabular-nums">
+                {simbolo} {formatNumero(rateActual)}
               </p>
             </div>
             {!esMinimo && (
               <div>
                 <p className="text-xs text-muted-foreground">CW</p>
 
-                <p className="font-medium tabular-nums">
-                  <pre>{formatNumero(cw)}</pre>
-                </p>
+                <p className="font-mono font-medium tabular-nums">{formatNumero(cw)}</p>
               </div>
             )}
             <div>
@@ -130,10 +127,8 @@ export function DialogoSpot({
                 {esMinimo ? "Mínimo actual" : "Flete actual"}
               </p>
 
-              <p className="font-medium tabular-nums">
-                <pre>
-                  {simbolo} {formatNumero(fleteActual)}
-                </pre>
+              <p className="font-mono font-medium tabular-nums">
+                {simbolo} {formatNumero(fleteActual)}
               </p>
             </div>
           </div>
@@ -162,10 +157,8 @@ export function DialogoSpot({
               <div className="rounded-md border p-3">
                 <p className="text-xs text-muted-foreground">Flete SPOT</p>
 
-                <p className="text-lg tabular-nums">
-                  <pre>
-                    {simbolo} {formatNumero(fleteSpot)}
-                  </pre>
+                <p className="font-mono text-lg tabular-nums">
+                  {simbolo} {formatNumero(fleteSpot)}
                 </p>
               </div>
             )}
@@ -181,11 +174,7 @@ export function DialogoSpot({
               disabled={
                 !Number.isFinite(fleteSpot) ||
                 fleteSpot <= 0 ||
-                (esMinimo &&
-                  (rangos.isFetching ||
-                    rangos.isError ||
-                    !primerRango ||
-                    !Number.isFinite(rateActual)))
+                (esMinimo && (rangos.isFetching || !Number.isFinite(rateActual)))
               }
               onClick={() => {
                 onConfirm(rubroBase, fleteSpot, rateSpot);

@@ -2,9 +2,9 @@
  * CAMPOS DE LA INFORMACIÓN DEL EMBARQUE
  *
  * Los mismos campos que ya tiene el módulo actual de embarques (clave, nombre,
- * obligatorio, tipo de dato y opciones fijas), agrupados por sus secciones.
- * El diseño es de v2: una card por sección que combina varios datos
- * (`general/components/pasos/paso-informacion.tsx`).
+ * obligatorio, tipo de dato y opciones fijas). Solo se toman los CAMPOS: ni la
+ * agrupación ni el diseño del módulo actual. Dónde y cómo se muestran lo decide
+ * v2 (`general/components/pasos/paso-informacion.tsx`).
  *
  * Origen (módulo actual, solo referencia):
  *   Shipper / Consignatario → public/secciones/entidad-public-form/fields.ts y model.ts

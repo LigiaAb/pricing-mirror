@@ -66,7 +66,7 @@ function Etiqueta({ id, label, requerido }: Pick<BaseCampo, "id" | "label" | "re
  * "x" para limpiar el valor del campo. Mismo estilo que la de `AsyncComboboxInput`.
  * Fuera del tab (`tabIndex={-1}`): el teclado sigue de un campo al siguiente.
  */
-export function BotonLimpiar({
+function BotonLimpiar({
   onClick,
   className,
 }: {

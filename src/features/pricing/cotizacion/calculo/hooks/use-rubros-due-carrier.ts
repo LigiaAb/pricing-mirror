@@ -6,6 +6,11 @@ import {
   type RubroDueCarrier,
   type ValoresManualDueCarrier,
 } from "../lib/due-carrier";
+import {
+  calcularCoberturaMercaderia,
+  claveValorFactura,
+  esCoberturaMercaderia,
+} from "../lib/rubros-manuales";
 import { limpiarNumero } from "../lib/utils";
 import { useCatalogosCotizacion } from "./use-catalogos-cotizacion";
 
@@ -17,6 +22,15 @@ type Props = {
   onRubrosProcesados?: (rubros: RubroDueCarrier[]) => void;
 
   onValoresManualChange?: (valores: ValoresManualDueCarrier) => void;
+
+  /**
+   * `valor_flete` de los criterios (flete del carrier seleccionado).
+   * Lo usa la cobertura de mercadería.
+   */
+  valorFlete?: string | number | null;
+
+  /** Valor de factura escrito en una cobertura (se guarda en criterioCobertura). */
+  onValorFacturaChange?: (value: number) => void;
 };
 
 export function useRubrosDueCarrier({
@@ -24,6 +38,8 @@ export function useRubrosDueCarrier({
   lectura = false,
   onRubrosProcesados,
   onValoresManualChange,
+  valorFlete = 0,
+  onValorFacturaChange,
 }: Props) {
   const { monedas } = useCatalogosCotizacion().calculo;
 
@@ -61,6 +77,9 @@ export function useRubrosDueCarrier({
     setValoresManual((prev) => {
       const valuesActuales = new Set(firmaRubros ? firmaRubros.split("|") : []);
 
+      // El valor de factura de una cobertura vive en su propia llave.
+      for (const value of [...valuesActuales]) valuesActuales.add(claveValorFactura(value));
+
       const keysActuales = Object.keys(prev);
       const hayObsoletos = keysActuales.some((key) => !valuesActuales.has(key));
 
@@ -87,8 +106,10 @@ export function useRubrosDueCarrier({
         valores: valoresManual,
 
         lectura,
+
+        monedas,
       }),
-    [rubros, valoresManual, lectura],
+    [rubros, valoresManual, lectura, monedas],
   );
 
   /* ===========================================
@@ -138,6 +159,41 @@ export function useRubrosDueCarrier({
     [],
   );
 
+  /*
+   * Cobertura: el usuario escribe el valor de factura y la venta
+   * se calcula con el flete del carrier seleccionado (igual que Due Agent).
+   */
+  const cambiarValorFactura = React.useCallback(
+    (item: RubroDueCarrier, raw: string) => {
+      if (!esCoberturaMercaderia(item)) {
+        return;
+      }
+
+      const value = limpiarNumero(raw);
+
+      const factura = Number(value);
+
+      const calculado = calcularCoberturaMercaderia({
+        item,
+
+        valorFactura: factura,
+
+        valorFlete,
+      });
+
+      setValoresManual((prev) => ({
+        ...prev,
+
+        [String(item.value)]: calculado,
+
+        [claveValorFactura(item.value)]: value,
+      }));
+
+      onValorFacturaChange?.(factura);
+    },
+    [valorFlete, onValorFacturaChange],
+  );
+
   /* ===========================================
    * NOTIFICACIONES
    * =========================================== */
@@ -160,5 +216,7 @@ export function useRubrosDueCarrier({
     total,
 
     cambiarValorManual,
+
+    cambiarValorFactura,
   };
 }
