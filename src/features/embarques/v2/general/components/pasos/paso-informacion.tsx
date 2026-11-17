@@ -232,18 +232,17 @@ function CardRutas({ rutas }: { rutas: readonly ValoresEmbarque[] }) {
   );
 }
 
-/** Fecha de recolección (la CTS solo la pide con el gasto cod_rubro 12). */
+/** Todas las fechas del embarque (`CAMPOS_FECHAS`); sin fecha aún → "—". */
 function CardFechas({ valores }: { valores: ValoresEmbarque }) {
-  const recoleccion = texto(valores, "fecha_recoleccion");
   return (
     <CardInfo titulo="Fechas" icono={CalendarDays}>
-      {recoleccion ? (
-        <Datos>
-          <Fila label={etiqueta(CAMPOS_FECHAS, "fecha_recoleccion")}>{recoleccion}</Fila>
-        </Datos>
-      ) : (
-        <SinDatos texto="Sin fecha de recolección." />
-      )}
+      <Datos>
+        {CAMPOS_FECHAS.map((campo) => (
+          <Fila key={campo.key} label={campo.label}>
+            {texto(valores, campo.key) ?? VACIO}
+          </Fila>
+        ))}
+      </Datos>
     </CardInfo>
   );
 }
