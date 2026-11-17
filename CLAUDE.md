@@ -30,7 +30,8 @@ al proyecto completo. Responder siempre en **español**.
 
 ## Versiones (iguales al proyecto real)
 
-TypeScript 7 · React 19 · zod 4 · @tanstack/react-query 5.105 · react-table 9 · date-fns 4 · Next 16 (no instalado: `next/link` es stub).
+TypeScript 7 · React 19.3 · zod 4.6 · @tanstack/react-query 5.107 · react-table 9 · date-fns 4 · lucide-react 1.70 · Biome 2.6 ·
+Next 16 (no instalado: `next/link` es stub). Referencia: `package.json` de producción de `erp-web` 2.1.0.
 
 `tsconfig` estricto — lo que más impacta al escribir código:
 
