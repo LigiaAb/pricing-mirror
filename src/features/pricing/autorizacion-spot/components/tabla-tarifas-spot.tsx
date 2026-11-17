@@ -5,7 +5,7 @@ import * as React from "react";
 import { DataTable, DataTableColumnHeader } from "@/shared/components/data-table/data-table";
 import { Button } from "@/shared/components/ui/button";
 import type { ColumnDef } from "@/shared/lib/tanstack-table";
-import type { TarifaSpotFila } from "../api/autorizacion-spot";
+import type { OriginalSpot, TarifaSpotFila } from "../api/autorizacion-spot";
 
 type Id = string | number;
 
@@ -18,6 +18,11 @@ export type FilaTarifaSpot = TarifaSpotFila & {
   tipo_carga: string;
   tipo_pago: string;
   clasificacion_carga: string;
+  solicitante: string;
+  autorizador: string;
+  reason_code_nombre: string;
+  /** Se completa al abrir el detalle (rubro SPOT guardado en la versión). */
+  original?: OriginalSpot | null;
 };
 
 type TablaTarifasSpotProps = {
@@ -30,12 +35,14 @@ type TablaTarifasSpotProps = {
   onSeleccionar: (fila: FilaTarifaSpot) => void;
 };
 
-const SEARCH_KEYS = ["cod_cotizacion_cabecera", "entidad_nombre"];
+const SEARCH_KEYS = ["cod_cotizacion_cabecera", "entidad_nombre", "solicitante"];
 
 /*
- * Tabla separada y memoizada: seleccionar una fila solo cambia el detalle de la
- * pantalla padre. Mientras `data` y los callbacks conserven su referencia, la
- * tabla no se vuelve a dibujar ni pierde su página, orden o búsqueda.
+ * Tabla separada y memoizada: seleccionar una fila (y lo que llega después: CW,
+ * original, documento) solo cambia el detalle de la pantalla padre. Mientras
+ * `data` y los callbacks conserven su referencia, la tabla no se vuelve a dibujar
+ * ni pierde su página, orden o búsqueda (antes recibía en cada render un
+ * `searchKeys`, `onRefresh` y `extraActions` nuevos).
  */
 export const TablaTarifasSpot = React.memo(function TablaTarifasSpot({
   data,
@@ -67,6 +74,10 @@ export const TablaTarifasSpot = React.memo(function TablaTarifasSpot({
       {
         accessorKey: "entidad_nombre",
         header: ({ column }) => <DataTableColumnHeader column={column} title="Cliente" />,
+      },
+      {
+        accessorKey: "solicitante",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Solicitante" />,
       },
       {
         accessorKey: "tipo_transporte",

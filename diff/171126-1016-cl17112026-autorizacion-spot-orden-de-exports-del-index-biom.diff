@@ -1,0 +1,14 @@
+diff --git a/src/features/pricing/autorizacion-spot/index.ts b/src/features/pricing/autorizacion-spot/index.ts
+index 11813dc..5ebd2c3 100644
+--- a/src/features/pricing/autorizacion-spot/index.ts
++++ b/src/features/pricing/autorizacion-spot/index.ts
+@@ -1,8 +1,8 @@
+ export {
+   AUTORIZACION_SPOT_KEY,
++  type OriginalSpot,
+   obtenerCwSpot,
+   obtenerOriginalSpot,
+-  type OriginalSpot,
+   recuperarArchivoPdf,
+   type TarifaSpotAutorizacion,
+   type TarifaSpotFila,
