@@ -274,7 +274,12 @@ export function informacionMaqueta(embarque: EmbarqueMaqueta): InformacionEmbarq
       documentosCropa: ["DUA Definitiva"],
       instruccionesManejo: "Mantener refrigerado entre 2 °C y 8 °C. No apilar.",
     },
-    fechas: { fecha_recoleccion: diaAnterior(embarque.etd) },
+    // Fecha inicio y entrega COMBEX sin valor: la card muestra "—".
+    fechas: {
+      fecha_recoleccion: diaAnterior(embarque.etd),
+      fecha_salida: embarque.etd,
+      fecha_llegada: embarque.eta,
+    },
     rutas: [
       {
         codEntidadProv: embarque.carrier,

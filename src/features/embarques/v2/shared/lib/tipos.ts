@@ -74,7 +74,7 @@ export type InformacionEmbarque = {
   cargas: readonly ValoresEmbarque[];
   facturacion: ValoresEmbarque;
   detalles: ValoresEmbarque;
-  /** `fecha_recoleccion` (vacía si el embarque no tiene el gasto de fechas). */
+  /** Por `key` de `CAMPOS_FECHAS` (las que aún no hay quedan vacías). */
   fechas: ValoresEmbarque;
   rutas: readonly ValoresEmbarque[];
 };

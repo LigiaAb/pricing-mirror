@@ -14,7 +14,7 @@
  *   Producto                → public/secciones/cargas-publicas* y secciones/carga-form-dialog.tsx
  *   Facturación             → public/secciones/facturacion-publica.tsx
  *   Detalles                → public/secciones/detalles-publica-model.ts
- *   Fechas                  → public/secciones/fechas-publicas.tsx
+ *   Fechas                  → fechas-publicas, rutas y fechas de movimiento (ver CAMPOS_FECHAS)
  *   Rutas                   → secciones/rutas.tsx y secciones/ruta-dialog.tsx
  *   Cod File                → info-coordinacion/info-coordinacion.tsx
  *
@@ -145,9 +145,18 @@ export const CAMPOS_RUTA: readonly CampoEmbarque[] = [
 ];
 
 /**
- * Fechas: `fechas-publicas`, solo la fecha de recolección. La CTS muestra el
- * paso solo si algún gasto tiene cod_rubro 12 (`showFechas`).
+ * Fechas: todas las del embarque, en orden; la card las muestra siempre ("—"
+ * si aún no hay fecha). Origen en el módulo actual:
+ *   fechaInicio          → columna "Fecha Inicio" (pages/coordinaciones-columns-base.tsx)
+ *   fecha_recoleccion    → `fechas-publicas` (CTS, gasto cod_rubro 12); fecha-mov tipo 266
+ *   fecha_salida         → ETD: salida del primer tramo (secciones/rutas.tsx)
+ *   fecha_llegada        → ETA: llegada del último tramo (secciones/rutas.tsx)
+ *   fecha_entrega_combex → fecha-mov tipo 324 (`TIPO_FECHA_ENTREGA_COMBEX`, seleccionar-destino)
  */
 export const CAMPOS_FECHAS: readonly CampoEmbarque[] = [
+  { key: "fechaInicio", label: "Fecha Inicio", tipo: "fecha-hora", soloLectura: true },
   { key: "fecha_recoleccion", label: "Fecha de Recolección", tipo: "fecha", requerido: true },
+  { key: "fecha_salida", label: "ETD", tipo: "fecha" },
+  { key: "fecha_llegada", label: "ETA", tipo: "fecha" },
+  { key: "fecha_entrega_combex", label: "Fecha de entrega COMBEX", tipo: "fecha" },
 ];

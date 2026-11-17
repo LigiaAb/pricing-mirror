@@ -1,0 +1,114 @@
+diff --git a/src/features/embarques/v2/general/ARQUITECTURA.md b/src/features/embarques/v2/general/ARQUITECTURA.md
+index 3abf4b4e..1f85390a 100644
+--- a/src/features/embarques/v2/general/ARQUITECTURA.md
++++ b/src/features/embarques/v2/general/ARQUITECTURA.md
+@@ -159,9 +159,10 @@ Gastos y Documentos de la CTS no van aquí (los archivos están en la tab Archiv
+ Cada card junta varios datos en pocas líneas (p. ej. nombre + NIT · industria · país; dirección + municipio ·
+ departamento · país; contacto con email y teléfono; cada carga con bultos · peso · medidas · CW · embalaje, valor,
+ país, partida y régimen, y en el encabezado productos, bultos, peso y "CW total" como la tabla de la CTS).
+-Producto y Rutas son listas (cada carga y tramo). Fechas es solo la **fecha de recolección** (las fechas de
+-movimiento con tipo de fecha no están en la CTS); la CTS la pide solo con el gasto `cod_rubro` 12, y los
+-documentos CROPA solo con el gasto 127, por eso sin valor no se dibujan. Cod File no se repite (está en el
++Producto y Rutas son listas (cada carga y tramo). Fechas muestra **todas las fechas** del embarque
++(`CAMPOS_FECHAS`: Fecha Inicio, Fecha de Recolección, ETD, ETA y Fecha de entrega COMBEX, con su origen
++anotado), siempre, con "—" si aún no hay fecha. Los documentos CROPA la CTS los pide solo con el gasto 127, por
++eso sin valor no se dibujan. Cod File no se repite (está en el
+ resumen). Botón Editar solo para Operaciones (deshabilitado en la maqueta). De la CTS se toman los **pasos** y los
+ **campos**: misma clave, nombre, obligatorio y opciones (`CAMPOS_SHIPPER`, `CAMPOS_CONSIGNATARIO`,
+ `CAMPOS_NOTIFICACION`, `CAMPOS_FACTURACION`, `CAMPOS_DETALLES`, `CAMPOS_PRODUCTO`, `CAMPOS_RUTA`,
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx b/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx
+index 74c23017..b2ed8861 100644
+--- a/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx
++++ b/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx
+@@ -232,18 +232,17 @@ function CardRutas({ rutas }: { rutas: readonly ValoresEmbarque[] }) {
+   );
+ }
+ 
+-/** Fecha de recolección (la CTS solo la pide con el gasto cod_rubro 12). */
++/** Todas las fechas del embarque (`CAMPOS_FECHAS`); sin fecha aún → "—". */
+ function CardFechas({ valores }: { valores: ValoresEmbarque }) {
+-  const recoleccion = texto(valores, "fecha_recoleccion");
+   return (
+     <CardInfo titulo="Fechas" icono={CalendarDays}>
+-      {recoleccion ? (
+-        <Datos>
+-          <Fila label={etiqueta(CAMPOS_FECHAS, "fecha_recoleccion")}>{recoleccion}</Fila>
+-        </Datos>
+-      ) : (
+-        <SinDatos texto="Sin fecha de recolección." />
+-      )}
++      <Datos>
++        {CAMPOS_FECHAS.map((campo) => (
++          <Fila key={campo.key} label={campo.label}>
++            {texto(valores, campo.key) ?? VACIO}
++          </Fila>
++        ))}
++      </Datos>
+     </CardInfo>
+   );
+ }
+diff --git a/src/features/embarques/v2/general/lib/datos-maqueta.ts b/src/features/embarques/v2/general/lib/datos-maqueta.ts
+index 0cb66c70..ecd7c342 100644
+--- a/src/features/embarques/v2/general/lib/datos-maqueta.ts
++++ b/src/features/embarques/v2/general/lib/datos-maqueta.ts
+@@ -274,7 +274,12 @@ export function informacionMaqueta(embarque: EmbarqueMaqueta): InformacionEmbarq
+       documentosCropa: ["DUA Definitiva"],
+       instruccionesManejo: "Mantener refrigerado entre 2 °C y 8 °C. No apilar.",
+     },
+-    fechas: { fecha_recoleccion: diaAnterior(embarque.etd) },
++    // Fecha inicio y entrega COMBEX sin valor: la card muestra "—".
++    fechas: {
++      fecha_recoleccion: diaAnterior(embarque.etd),
++      fecha_salida: embarque.etd,
++      fecha_llegada: embarque.eta,
++    },
+     rutas: [
+       {
+         codEntidadProv: embarque.carrier,
+diff --git a/src/features/embarques/v2/shared/lib/campos-embarque.ts b/src/features/embarques/v2/shared/lib/campos-embarque.ts
+index f202c4e5..7c8a844c 100644
+--- a/src/features/embarques/v2/shared/lib/campos-embarque.ts
++++ b/src/features/embarques/v2/shared/lib/campos-embarque.ts
+@@ -14,7 +14,7 @@
+  *   Producto                → public/secciones/cargas-publicas* y secciones/carga-form-dialog.tsx
+  *   Facturación             → public/secciones/facturacion-publica.tsx
+  *   Detalles                → public/secciones/detalles-publica-model.ts
+- *   Fechas                  → public/secciones/fechas-publicas.tsx
++ *   Fechas                  → fechas-publicas, rutas y fechas de movimiento (ver CAMPOS_FECHAS)
+  *   Rutas                   → secciones/rutas.tsx y secciones/ruta-dialog.tsx
+  *   Cod File                → info-coordinacion/info-coordinacion.tsx
+  *
+@@ -145,9 +145,18 @@ export const CAMPOS_RUTA: readonly CampoEmbarque[] = [
+ ];
+ 
+ /**
+- * Fechas: `fechas-publicas`, solo la fecha de recolección. La CTS muestra el
+- * paso solo si algún gasto tiene cod_rubro 12 (`showFechas`).
++ * Fechas: todas las del embarque, en orden; la card las muestra siempre ("—"
++ * si aún no hay fecha). Origen en el módulo actual:
++ *   fechaInicio          → columna "Fecha Inicio" (pages/coordinaciones-columns-base.tsx)
++ *   fecha_recoleccion    → `fechas-publicas` (CTS, gasto cod_rubro 12); fecha-mov tipo 266
++ *   fecha_salida         → ETD: salida del primer tramo (secciones/rutas.tsx)
++ *   fecha_llegada        → ETA: llegada del último tramo (secciones/rutas.tsx)
++ *   fecha_entrega_combex → fecha-mov tipo 324 (`TIPO_FECHA_ENTREGA_COMBEX`, seleccionar-destino)
+  */
+ export const CAMPOS_FECHAS: readonly CampoEmbarque[] = [
++  { key: "fechaInicio", label: "Fecha Inicio", tipo: "fecha-hora", soloLectura: true },
+   { key: "fecha_recoleccion", label: "Fecha de Recolección", tipo: "fecha", requerido: true },
++  { key: "fecha_salida", label: "ETD", tipo: "fecha" },
++  { key: "fecha_llegada", label: "ETA", tipo: "fecha" },
++  { key: "fecha_entrega_combex", label: "Fecha de entrega COMBEX", tipo: "fecha" },
+ ];
+diff --git a/src/features/embarques/v2/shared/lib/tipos.ts b/src/features/embarques/v2/shared/lib/tipos.ts
+index 68cc056e..7f07ffb5 100644
+--- a/src/features/embarques/v2/shared/lib/tipos.ts
++++ b/src/features/embarques/v2/shared/lib/tipos.ts
+@@ -74,7 +74,7 @@ export type InformacionEmbarque = {
+   cargas: readonly ValoresEmbarque[];
+   facturacion: ValoresEmbarque;
+   detalles: ValoresEmbarque;
+-  /** `fecha_recoleccion` (vacía si el embarque no tiene el gasto de fechas). */
++  /** Por `key` de `CAMPOS_FECHAS` (las que aún no hay quedan vacías). */
+   fechas: ValoresEmbarque;
+   rutas: readonly ValoresEmbarque[];
+ };
