@@ -5,7 +5,7 @@
  * Se eliminan cuando exista la API de embarques (`v2/embarques/api`).
  * ========================================================================== */
 
-import type { EmbarqueMaqueta } from "../../shared/lib/tipos";
+import type { ArchivoEmbarque, EmbarqueMaqueta } from "../../shared/lib/tipos";
 
 export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
   {
@@ -81,3 +81,72 @@ export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
     pasoActual: 6,
   },
 ];
+
+/**
+ * Archivos de cada embarque (por `id`), para la tab Archivos.
+ * Subidos en la actividad que los pide o en el tracking interactivo.
+ */
+export const ARCHIVOS_MAQUETA: Record<number, ArchivoEmbarque[]> = {
+  1001: [
+    {
+      id: 1,
+      nombre: "reserva-avianca-000101.pdf",
+      tipo: "Confirmación de reserva",
+      origen: "tracking",
+      paso: 1,
+      usuario: "jlopez",
+      fecha: "28-10-2026 10:15",
+    },
+    {
+      id: 2,
+      nombre: "comprobante-aduana-000101.pdf",
+      tipo: "Comprobante",
+      origen: "actividad",
+      actividad: "OPS 5.3",
+      paso: 2,
+      usuario: "jlopez",
+      fecha: "30-10-2026 16:40",
+    },
+    {
+      id: 3,
+      nombre: "carga-recibida-01.jpg",
+      tipo: "Fotografía",
+      origen: "actividad",
+      actividad: "Bodega 7.5",
+      paso: 3,
+      usuario: "mperez",
+      fecha: "01-11-2026 09:05",
+    },
+  ],
+  1002: [
+    {
+      id: 4,
+      nombre: "pesaje-terminal-000102.pdf",
+      tipo: "Comprobante",
+      origen: "actividad",
+      actividad: "CBX 8.3",
+      paso: 4,
+      usuario: "rgarcia",
+      fecha: "12-11-2026 11:20",
+    },
+    {
+      id: 5,
+      nombre: "hojas-seguridad-000102.pdf",
+      tipo: "Hojas de seguridad",
+      origen: "actividad",
+      actividad: "CBX 10.1",
+      paso: 4,
+      usuario: "rgarcia",
+      fecha: "12-11-2026 15:02",
+    },
+    {
+      id: 6,
+      nombre: "guia-master-000102.pdf",
+      tipo: "Guía aérea",
+      origen: "tracking",
+      paso: 5,
+      usuario: "jlopez",
+      fecha: "14-11-2026 08:30",
+    },
+  ],
+};

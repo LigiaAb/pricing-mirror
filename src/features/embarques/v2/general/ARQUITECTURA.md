@@ -11,7 +11,7 @@ actividades van en la carpeta de su actor, y lo que usan todos en `shared/`:
 | Carpeta        | Qué tiene                                                                                                                                                  |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `general/`     | Vista general: `VistaGeneral`, tabla, resumen, tracking general, tabs, Sheets, Información; `lib/pasos.ts` y `lib/datos-maqueta.ts`                        |
-| `operaciones/` | Formularios de OPS: `lib/gestion-actividades.ts` (`GESTION_OPERACIONES`), `components/actividad-operaciones.tsx`, `components/paso-documentos.tsx`         |
+| `operaciones/` | Formularios de OPS: `lib/gestion-actividades.ts` (`GESTION_OPERACIONES`), `components/actividad-operaciones.tsx`                                           |
 | `bodegas/`     | Formularios de Bodega: `lib/gestion-actividades.ts` (`GESTION_BODEGAS`), `components/actividad-bodegas.tsx`                                                |
 | `combex/`      | Formularios de CBX: `lib/gestion-actividades.ts` (`GESTION_COMBEX`), `components/actividad-combex.tsx`                                                     |
 | `shared/`      | Común: tipos, actividades del Excel, tipos de interacción, motor de gestión (`gestionDe`, `camposDe`, `accionDe`), tarjeta genérica y piezas (`utils.tsx`) |
@@ -25,8 +25,7 @@ Las rutas de abajo sin carpeta son relativas a `general/`.
 
 1. **Tabla de embarques** — `embarques-table.tsx` (`DataTable`, mismo patrón que Cotizaciones).
 2. **Resumen del seleccionado** (siempre visible) — `resumen-embarque.tsx`: franja con file/estado,
-   botones **Documentos** (va a la tab Documentos), **Actividades** (Sheet de detalle) y **Tracking**
-   (Sheet del tracking interactivo), datos breves y el
+   botones **Actividades** (Sheet de detalle) y **Tracking** (Sheet del tracking interactivo), datos breves y el
    **tracking general** de 6 pasos (`tracking-general.tsx`, solo visual).
 3. **Tabs de gestión** — `tabs-embarque.tsx` (tabs verticales como `TarifasTabs`). Cada tab es un
    componente en `components/pasos/`.
@@ -40,22 +39,23 @@ Las rutas de abajo sin carpeta son relativas a `general/`.
 
 ## Dónde vive cada cosa
 
-| Qué                                   | Dónde                                                                      |
-| ------------------------------------- | -------------------------------------------------------------------------- |
-| Pasos del tracking (6) y de las tabs  | `lib/pasos.ts` (definición única)                                          |
-| Tipos (`PerfilEmbarque`, embarque)    | `shared/lib/tipos.ts`                                                      |
-| Datos de ejemplo (borrar con la API)  | `lib/datos-maqueta.ts`                                                     |
-| Piezas reutilizables (sección, dato…) | `shared/components/utils.tsx`                                              |
-| Campos de captura (input por tipo)    | `shared/components/campos.tsx`                                             |
-| Campos de Información (corporativos)  | `shared/lib/campos-embarque.ts`                                            |
-| Actividades del Excel (69)            | `shared/lib/actividades-tracking.ts`                                       |
-| Tipos de interacción (9)              | `shared/lib/interacciones.ts`                                              |
-| Motor de gestión (tipo y helpers)     | `shared/lib/gestion-actividades.ts`                                        |
-| Cómo se trabaja cada actividad        | `<actor>/lib/gestion-actividades.ts`                                       |
-| Formulario de una actividad del actor | `<actor>/components/actividad-<actor>.tsx`                                 |
-| Tarjeta genérica de una actividad     | `shared/components/tarjeta-actividad.tsx`                                  |
-| Tab genérica (todas las del flujo)    | `components/pasos/paso-actividades.tsx`                                    |
-| Tabs con contenido propio             | `pasos/paso-informacion.tsx`, `operaciones/components/paso-documentos.tsx` |
+| Qué                                   | Dónde                                                          |
+| ------------------------------------- | -------------------------------------------------------------- |
+| Pasos del tracking (6) y de las tabs  | `lib/pasos.ts` (definición única)                              |
+| Tipos (`PerfilEmbarque`, embarque)    | `shared/lib/tipos.ts`                                          |
+| Datos de ejemplo (borrar con la API)  | `lib/datos-maqueta.ts`                                         |
+| Piezas reutilizables (sección, dato…) | `shared/components/utils.tsx`                                  |
+| Campos de captura (input por tipo)    | `shared/components/campos.tsx`                                 |
+| Campos de Información (corporativos)  | `shared/lib/campos-embarque.ts`                                |
+| Actividades del Excel (69)            | `shared/lib/actividades-tracking.ts`                           |
+| Tipos de interacción (9)              | `shared/lib/interacciones.ts`                                  |
+| Motor de gestión (tipo y helpers)     | `shared/lib/gestion-actividades.ts`                            |
+| Cómo se trabaja cada actividad        | `<actor>/lib/gestion-actividades.ts`                           |
+| Formulario de una actividad del actor | `<actor>/components/actividad-<actor>.tsx`                     |
+| Tarjeta genérica de una actividad     | `shared/components/tarjeta-actividad.tsx`                      |
+| Tab genérica (todas las del flujo)    | `components/pasos/paso-actividades.tsx`                        |
+| Tabs con contenido propio             | `pasos/paso-informacion.tsx`, `pasos/paso-archivos.tsx`        |
+| Archivos del embarque (maqueta)       | `ArchivoEmbarque` en `shared/lib/tipos.ts`; `ARCHIVOS_MAQUETA` |
 
 ## Tracking general (Exportación Aérea)
 
@@ -107,7 +107,7 @@ tracking (`1 · Reserva`, `2 · Documentación`…); la tab muestra check si su 
 | 5    | Despacho y salida     | CBX 11.1, 12.1, 12.3, 12.4, E2, E3, E4; OPS E1 |
 | 5    | Complementaria        | CBX 12.2, 13.1, 13.2                           |
 | 6    | Arribo y cierre       | CBX 14.1; OPS 15, 16, 17                       |
-| —    | Documentos (extra)    | —                                              |
+| —    | Archivos (extra)      | —                                              |
 | —    | Cancelación (extra)   | OPS 4.4                                        |
 
 ### Tipos de interacción (`shared/lib/interacciones.ts`)
@@ -194,20 +194,34 @@ conteo; las que no tienen actividades quedan bloqueadas; abre la primera con act
 perfil_), según el responsable de cada actividad del Excel (`PERFIL_DE_RESPONSABLE`: OPS → operaciones,
 Bodega → bodegas, CBX → combex):
 
-| Perfil      | Tabs                                             | Actividades                                                                 | Información   |
-| ----------- | ------------------------------------------------ | --------------------------------------------------------------------------- | ------------- |
-| Operaciones | Todas (incluye Documentos y Cancelación)         | Ve las 69; edita las 31 de OPS; las de Bodega y Combex en **solo consulta** | Edita         |
-| Bodegas     | Información + tabs con actividades de Bodega (3) | Solo las 16 de Bodega                                                       | Solo consulta |
-| Combex      | Información + tabs con actividades de CBX (6)    | Solo las 22 de CBX                                                          | Solo consulta |
+| Perfil      | Tabs                                       | Actividades                                                                 | Información   |
+| ----------- | ------------------------------------------ | --------------------------------------------------------------------------- | ------------- |
+| Operaciones | Todas (incluye Archivos y Cancelación)     | Ve las 69; edita las 31 de OPS; las de Bodega y Combex en **solo consulta** | Edita         |
+| Bodegas     | Información, Archivos + tabs de Bodega (3) | Solo las 16 de Bodega                                                       | Solo consulta |
+| Combex      | Información, Archivos + tabs de CBX (6)    | Solo las 22 de CBX                                                          | Solo consulta |
 
-- `perfilesDeTab`: qué perfiles ven la tab (`paraTodos` = Información; sin actividades y sin `paraTodos` =
+- `perfilesDeTab`: qué perfiles ven la tab (`paraTodos` = Información y Archivos; sin actividades y sin `paraTodos` =
   solo Operaciones).
 - `actividadesDelPerfil`: actividades de la tab que ve el perfil.
 - `puedeEditar` / `puedeEditarInformacion`: si edita la actividad / Información. Sin edición la tarjeta muestra
   "Solo consulta", los datos registrados y no tiene botón.
-- El botón **Documentos** del resumen y el Sheet de actividades también siguen el perfil.
+- El Sheet de actividades también sigue el perfil.
 
 Las pantallas de cada actor montan `VistaGeneral` con su perfil.
+
+## Archivos del embarque
+
+**No hay subida general de archivos.** Cada archivo se sube en un solo lugar:
+
+1. **La actividad que lo pide**: campos `tipo: "archivo"` de la gestión del actor (`CampoArchivos`; p. ej.
+   comprobantes, fotografías, hojas de seguridad, documento final).
+2. **El tracking interactivo** (`TrackingDetalle`, Sheet de tracking): tiene su propia subida. **En pausa**: no se
+   modifica desde v2 hasta que se retome.
+
+La tab **Archivos** (`pasos/paso-archivos.tsx`, grupo `extra`, `paraTodos`) es solo la **lista** de los archivos
+del embarque para consulta y descarga: archivo, tipo, dónde se subió (actividad o Tracking), paso, usuario y
+fecha; botones Ver y Descargar (deshabilitados en la maqueta). No tiene botón ni zona de subida. Datos de
+`ARCHIVOS_MAQUETA` (por `id` del embarque) hasta que exista la API.
 
 **Facturación** (solo visualización): en pausa. Cuando se retome, sería otra entrada `grupo: "extra"` en
 `PASOS_EMBARQUE`, de solo lectura.

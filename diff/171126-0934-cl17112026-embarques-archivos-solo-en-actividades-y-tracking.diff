@@ -1,0 +1,555 @@
+diff --git a/src/features/embarques/v2/general/ARQUITECTURA.md b/src/features/embarques/v2/general/ARQUITECTURA.md
+index 2fdfd5c..2c4f815 100644
+--- a/src/features/embarques/v2/general/ARQUITECTURA.md
++++ b/src/features/embarques/v2/general/ARQUITECTURA.md
+@@ -11,7 +11,7 @@ actividades van en la carpeta de su actor, y lo que usan todos en `shared/`:
+ | Carpeta        | Qué tiene                                                                                                                                                  |
+ | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+ | `general/`     | Vista general: `VistaGeneral`, tabla, resumen, tracking general, tabs, Sheets, Información; `lib/pasos.ts` y `lib/datos-maqueta.ts`                        |
+-| `operaciones/` | Formularios de OPS: `lib/gestion-actividades.ts` (`GESTION_OPERACIONES`), `components/actividad-operaciones.tsx`, `components/paso-documentos.tsx`         |
++| `operaciones/` | Formularios de OPS: `lib/gestion-actividades.ts` (`GESTION_OPERACIONES`), `components/actividad-operaciones.tsx`                                              |
+ | `bodegas/`     | Formularios de Bodega: `lib/gestion-actividades.ts` (`GESTION_BODEGAS`), `components/actividad-bodegas.tsx`                                                |
+ | `combex/`      | Formularios de CBX: `lib/gestion-actividades.ts` (`GESTION_COMBEX`), `components/actividad-combex.tsx`                                                     |
+ | `shared/`      | Común: tipos, actividades del Excel, tipos de interacción, motor de gestión (`gestionDe`, `camposDe`, `accionDe`), tarjeta genérica y piezas (`utils.tsx`) |
+@@ -25,8 +25,7 @@ Las rutas de abajo sin carpeta son relativas a `general/`.
+ 
+ 1. **Tabla de embarques** — `embarques-table.tsx` (`DataTable`, mismo patrón que Cotizaciones).
+ 2. **Resumen del seleccionado** (siempre visible) — `resumen-embarque.tsx`: franja con file/estado,
+-   botones **Documentos** (va a la tab Documentos), **Actividades** (Sheet de detalle) y **Tracking**
+-   (Sheet del tracking interactivo), datos breves y el
++   botones **Actividades** (Sheet de detalle) y **Tracking** (Sheet del tracking interactivo), datos breves y el
+    **tracking general** de 6 pasos (`tracking-general.tsx`, solo visual).
+ 3. **Tabs de gestión** — `tabs-embarque.tsx` (tabs verticales como `TarifasTabs`). Cada tab es un
+    componente en `components/pasos/`.
+@@ -55,7 +54,8 @@ Las rutas de abajo sin carpeta son relativas a `general/`.
+ | Formulario de una actividad del actor | `<actor>/components/actividad-<actor>.tsx`                                 |
+ | Tarjeta genérica de una actividad     | `shared/components/tarjeta-actividad.tsx`                                  |
+ | Tab genérica (todas las del flujo)    | `components/pasos/paso-actividades.tsx`                                    |
+-| Tabs con contenido propio             | `pasos/paso-informacion.tsx`, `operaciones/components/paso-documentos.tsx` |
++| Tabs con contenido propio             | `pasos/paso-informacion.tsx`, `pasos/paso-archivos.tsx`                    |
++| Archivos del embarque (maqueta)       | `ArchivoEmbarque` en `shared/lib/tipos.ts`; `ARCHIVOS_MAQUETA`             |
+ 
+ ## Tracking general (Exportación Aérea)
+ 
+@@ -107,7 +107,7 @@ tracking (`1 · Reserva`, `2 · Documentación`…); la tab muestra check si su
+ | 5    | Despacho y salida     | CBX 11.1, 12.1, 12.3, 12.4, E2, E3, E4; OPS E1 |
+ | 5    | Complementaria        | CBX 12.2, 13.1, 13.2                           |
+ | 6    | Arribo y cierre       | CBX 14.1; OPS 15, 16, 17                       |
+-| —    | Documentos (extra)    | —                                              |
++| —    | Archivos (extra)      | —                                              |
+ | —    | Cancelación (extra)   | OPS 4.4                                        |
+ 
+ ### Tipos de interacción (`shared/lib/interacciones.ts`)
+@@ -196,18 +196,32 @@ Bodega → bodegas, CBX → combex):
+ 
+ | Perfil      | Tabs                                             | Actividades                                                                 | Información   |
+ | ----------- | ------------------------------------------------ | --------------------------------------------------------------------------- | ------------- |
+-| Operaciones | Todas (incluye Documentos y Cancelación)         | Ve las 69; edita las 31 de OPS; las de Bodega y Combex en **solo consulta** | Edita         |
+-| Bodegas     | Información + tabs con actividades de Bodega (3) | Solo las 16 de Bodega                                                       | Solo consulta |
+-| Combex      | Información + tabs con actividades de CBX (6)    | Solo las 22 de CBX                                                          | Solo consulta |
++| Operaciones | Todas (incluye Archivos y Cancelación)           | Ve las 69; edita las 31 de OPS; las de Bodega y Combex en **solo consulta** | Edita         |
++| Bodegas     | Información, Archivos + tabs de Bodega (3)       | Solo las 16 de Bodega                                                       | Solo consulta |
++| Combex      | Información, Archivos + tabs de CBX (6)          | Solo las 22 de CBX                                                          | Solo consulta |
+ 
+-- `perfilesDeTab`: qué perfiles ven la tab (`paraTodos` = Información; sin actividades y sin `paraTodos` =
++- `perfilesDeTab`: qué perfiles ven la tab (`paraTodos` = Información y Archivos; sin actividades y sin `paraTodos` =
+   solo Operaciones).
+ - `actividadesDelPerfil`: actividades de la tab que ve el perfil.
+ - `puedeEditar` / `puedeEditarInformacion`: si edita la actividad / Información. Sin edición la tarjeta muestra
+   "Solo consulta", los datos registrados y no tiene botón.
+-- El botón **Documentos** del resumen y el Sheet de actividades también siguen el perfil.
++- El Sheet de actividades también sigue el perfil.
+ 
+ Las pantallas de cada actor montan `VistaGeneral` con su perfil.
+ 
++## Archivos del embarque
++
++**No hay subida general de archivos.** Cada archivo se sube en un solo lugar:
++
++1. **La actividad que lo pide**: campos `tipo: "archivo"` de la gestión del actor (`CampoArchivos`; p. ej.
++   comprobantes, fotografías, hojas de seguridad, documento final).
++2. **El tracking interactivo** (`TrackingDetalle`, Sheet de tracking): tiene su propia subida. **En pausa**: no se
++   modifica desde v2 hasta que se retome.
++
++La tab **Archivos** (`pasos/paso-archivos.tsx`, grupo `extra`, `paraTodos`) es solo la **lista** de los archivos
++del embarque para consulta y descarga: archivo, tipo, dónde se subió (actividad o Tracking), paso, usuario y
++fecha; botones Ver y Descargar (deshabilitados en la maqueta). No tiene botón ni zona de subida. Datos de
++`ARCHIVOS_MAQUETA` (por `id` del embarque) hasta que exista la API.
++
+ **Facturación** (solo visualización): en pausa. Cuando se retome, sería otra entrada `grupo: "extra"` en
+ `PASOS_EMBARQUE`, de solo lectura.
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-archivos.tsx b/src/features/embarques/v2/general/components/pasos/paso-archivos.tsx
+new file mode 100644
+index 0000000..363ceb9
+--- /dev/null
++++ b/src/features/embarques/v2/general/components/pasos/paso-archivos.tsx
+@@ -0,0 +1,152 @@
++"use client";
++
++import { Download, Eye, FileText, Route } from "lucide-react";
++import * as React from "react";
++import { DataTable, DataTableColumnHeader } from "@/shared/components/data-table/data-table";
++import { Button } from "@/shared/components/ui/button";
++import type { ColumnDef } from "@/shared/lib/tanstack-table";
++import { EncabezadoPaso } from "../../../shared/components/utils";
++import { ACTIVIDADES_TRACKING } from "../../../shared/lib/actividades-tracking";
++import type { ArchivoEmbarque, EmbarqueMaqueta } from "../../../shared/lib/tipos";
++import { ARCHIVOS_MAQUETA } from "../../lib/datos-maqueta";
++import { type PasoEmbarque, TRACKING_PASOS } from "../../lib/pasos";
++
++/** Fila de la tabla: el archivo + textos para mostrar y buscar. */
++type FilaArchivo = ArchivoEmbarque & {
++  /** "OPS 5.3 · <actividad>" o "Tracking". */
++  origenTexto: string;
++  /** "3 · Bodega". */
++  pasoTexto: string;
++};
++
++function aFila(archivo: ArchivoEmbarque): FilaArchivo {
++  const actividad =
++    archivo.origen === "actividad"
++      ? ACTIVIDADES_TRACKING.find((item) => item.id === archivo.actividad)
++      : undefined;
++  const corto = TRACKING_PASOS.find((paso) => paso.id === archivo.paso)?.corto ?? "";
++  return {
++    ...archivo,
++    origenTexto:
++      archivo.origen === "tracking"
++        ? "Tracking"
++        : actividad
++          ? `${actividad.id} · ${actividad.actividad}`
++          : (archivo.actividad ?? "Actividad"),
++    pasoTexto: `${archivo.paso} · ${corto}`,
++  };
++}
++
++const COLUMNAS: ColumnDef<FilaArchivo>[] = [
++  {
++    accessorKey: "nombre",
++    header: ({ column }) => <DataTableColumnHeader column={column} title="Archivo" />,
++    enableSorting: true,
++    enableHiding: false,
++    cell: ({ row }) => (
++      <span className="flex items-center gap-2">
++        <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
++        <span className="break-all">{row.original.nombre}</span>
++      </span>
++    ),
++  },
++  {
++    accessorKey: "tipo",
++    header: ({ column }) => <DataTableColumnHeader column={column} title="Tipo" />,
++    enableSorting: true,
++  },
++  {
++    accessorKey: "origenTexto",
++    header: ({ column }) => <DataTableColumnHeader column={column} title="Subido en" />,
++    enableSorting: true,
++    cell: ({ row }) =>
++      row.original.origen === "tracking" ? (
++        <span className="flex items-center gap-1">
++          <Route className="size-4 shrink-0 text-primary" aria-hidden="true" />
++          Tracking
++        </span>
++      ) : (
++        row.original.origenTexto
++      ),
++  },
++  {
++    accessorKey: "pasoTexto",
++    header: ({ column }) => <DataTableColumnHeader column={column} title="Paso" />,
++    enableSorting: true,
++    cell: ({ row }) => <span className="text-nowrap">{row.original.pasoTexto}</span>,
++  },
++  {
++    accessorKey: "usuario",
++    header: ({ column }) => <DataTableColumnHeader column={column} title="Usuario" />,
++    enableSorting: true,
++  },
++  {
++    accessorKey: "fecha",
++    header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha" />,
++    enableSorting: true,
++    cell: ({ row }) => <span className="text-nowrap">{row.original.fecha}</span>,
++  },
++  {
++    id: "acciones",
++    header: "Acciones",
++    enableSorting: false,
++    enableHiding: false,
++    cell: ({ row }) => (
++      <div className="flex items-center justify-end gap-1">
++        {/* Maqueta: se habilitan con la API de archivos. */}
++        <Button
++          type="button"
++          size="icon"
++          variant="ghost"
++          aria-label={`Ver ${row.original.nombre}`}
++          disabled
++        >
++          <Eye className="size-4" aria-hidden="true" />
++        </Button>
++        <Button
++          type="button"
++          size="icon"
++          variant="ghost"
++          aria-label={`Descargar ${row.original.nombre}`}
++          disabled
++        >
++          <Download className="size-4" aria-hidden="true" />
++        </Button>
++      </div>
++    ),
++  },
++];
++
++/**
++ * Archivos del embarque: solo lista para consulta y descarga.
++ * No hay subida general: cada archivo se sube en la actividad que lo pide
++ * (campos `archivo`) o en el tracking interactivo.
++ */
++export function PasoArchivos({
++  paso,
++  embarque,
++}: {
++  paso: PasoEmbarque;
++  embarque: EmbarqueMaqueta;
++}) {
++  const filas = React.useMemo(
++    () => (ARCHIVOS_MAQUETA[embarque.id] ?? []).map(aFila),
++    [embarque.id],
++  );
++
++  return (
++    <div className="space-y-4">
++      <EncabezadoPaso titulo={paso.label} descripcion={paso.descripcion} />
++
++      <DataTable
++        title="Archivos del embarque"
++        columns={COLUMNAS}
++        data={filas}
++        searchKeys={["nombre", "tipo", "origenTexto", "pasoTexto", "usuario", "fecha"]}
++        searchPlaceholder="Buscar archivo…"
++        emptyTitle="Sin archivos"
++        emptyMessage="Este embarque aún no tiene archivos. Se suben en la actividad que los pide o en el tracking."
++      />
++    </div>
++  );
++}
+diff --git a/src/features/embarques/v2/general/components/resumen-embarque.tsx b/src/features/embarques/v2/general/components/resumen-embarque.tsx
+index 41da343..6397c39 100644
+--- a/src/features/embarques/v2/general/components/resumen-embarque.tsx
++++ b/src/features/embarques/v2/general/components/resumen-embarque.tsx
+@@ -14,13 +14,10 @@ export function ResumenEmbarque({
+   embarque,
+   onVerTracking,
+   onVerActividades,
+-  // onSubirDocumentos,
+ }: {
+   embarque: EmbarqueMaqueta;
+   onVerTracking: () => void;
+   onVerActividades: () => void;
+-  /** Sin él no se muestra el botón (perfiles que no ven Documentos). */
+-  // onSubirDocumentos?: (() => void) | undefined;
+ }) {
+   return (
+     <section className="space-y-4">
+diff --git a/src/features/embarques/v2/general/components/tabs-embarque.tsx b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+index dd4f1ee..5290f6d 100644
+--- a/src/features/embarques/v2/general/components/tabs-embarque.tsx
++++ b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+@@ -6,7 +6,7 @@ import {
+   ClipboardList,
+   FileStack,
+   FileText,
+-  FolderUp,
++  FolderOpen,
+   Landmark,
+   type LucideIcon,
+   PackageCheck,
+@@ -23,7 +23,6 @@ import {
+ import type * as React from "react";
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+ import { cn } from "@/shared/lib/utils";
+-import { PasoDocumentos } from "../../operaciones/components/paso-documentos";
+ import type { EmbarqueMaqueta, PerfilEmbarque } from "../../shared/lib/tipos";
+ import {
+   type PasoEmbarque,
+@@ -34,6 +33,7 @@ import {
+   type ValorPasoEmbarque,
+ } from "../lib/pasos";
+ import { PasoActividades } from "./pasos/paso-actividades";
++import { PasoArchivos } from "./pasos/paso-archivos";
+ import { PasoInformacion } from "./pasos/paso-informacion";
+ 
+ const ICONOS: Record<ValorPasoEmbarque, LucideIcon> = {
+@@ -52,13 +52,13 @@ const ICONOS: Record<ValorPasoEmbarque, LucideIcon> = {
+   salida: PlaneTakeoff,
+   complementaria: FileText,
+   cierre: PlaneLanding,
+-  documentos: FolderUp,
++  archivos: FolderOpen,
+   cancelacion: Ban,
+ };
+ 
+ /**
+- * Contenido de la tab: Información (vista general) y Documentos (Operaciones)
+- * tienen su propio componente; las demás usan la tab genérica de actividades,
++ * Contenido de la tab: Información y Archivos (lista del embarque, solo
++ * consulta y descarga) tienen su propio componente; las demás usan la tab genérica de actividades,
+  * que muestra el formulario de cada actor.
+  */
+ function contenidoPaso(
+@@ -69,8 +69,8 @@ function contenidoPaso(
+   switch (paso.value) {
+     case "informacion":
+       return <PasoInformacion embarque={embarque} editable={puedeEditarInformacion(perfil)} />;
+-    case "documentos":
+-      return <PasoDocumentos />;
++    case "archivos":
++      return <PasoArchivos paso={paso} embarque={embarque} />;
+     default:
+       return <PasoActividades paso={paso} pasoActual={embarque.pasoActual} perfil={perfil} />;
+   }
+diff --git a/src/features/embarques/v2/general/components/vista-general.tsx b/src/features/embarques/v2/general/components/vista-general.tsx
+index b5e23c1..bc2ccd3 100644
+--- a/src/features/embarques/v2/general/components/vista-general.tsx
++++ b/src/features/embarques/v2/general/components/vista-general.tsx
+@@ -46,7 +46,6 @@ export const VistaGeneral = ({
+   const [actividadesOpen, setActividadesOpen] = React.useState(false);
+ 
+   const seccionRef = React.useRef<HTMLDivElement | null>(null);
+-  // const veDocumentos = pasosDelPerfil(perfil).some((paso) => paso.value === "documentos");
+ 
+   const seleccionar = React.useCallback((embarque: EmbarqueMaqueta) => {
+     setSeleccionado(embarque);
+@@ -80,7 +79,6 @@ export const VistaGeneral = ({
+             embarque={seleccionado}
+             onVerTracking={() => setTrackingOpen(true)}
+             onVerActividades={() => setActividadesOpen(true)}
+-            // onSubirDocumentos={veDocumentos ? () => setTab("documentos") : undefined}
+           />
+ 
+           <section className="rounded-lg border bg-card p-2 shadow-sm">
+diff --git a/src/features/embarques/v2/general/lib/datos-maqueta.ts b/src/features/embarques/v2/general/lib/datos-maqueta.ts
+index bf161b2..6e91d22 100644
+--- a/src/features/embarques/v2/general/lib/datos-maqueta.ts
++++ b/src/features/embarques/v2/general/lib/datos-maqueta.ts
+@@ -5,7 +5,7 @@
+  * Se eliminan cuando exista la API de embarques (`v2/embarques/api`).
+  * ========================================================================== */
+ 
+-import type { EmbarqueMaqueta } from "../../shared/lib/tipos";
++import type { ArchivoEmbarque, EmbarqueMaqueta } from "../../shared/lib/tipos";
+ 
+ export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
+   {
+@@ -81,3 +81,72 @@ export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
+     pasoActual: 6,
+   },
+ ];
++
++/**
++ * Archivos de cada embarque (por `id`), para la tab Archivos.
++ * Subidos en la actividad que los pide o en el tracking interactivo.
++ */
++export const ARCHIVOS_MAQUETA: Record<number, ArchivoEmbarque[]> = {
++  1001: [
++    {
++      id: 1,
++      nombre: "reserva-avianca-000101.pdf",
++      tipo: "Confirmación de reserva",
++      origen: "tracking",
++      paso: 1,
++      usuario: "jlopez",
++      fecha: "28-10-2026 10:15",
++    },
++    {
++      id: 2,
++      nombre: "comprobante-aduana-000101.pdf",
++      tipo: "Comprobante",
++      origen: "actividad",
++      actividad: "OPS 5.3",
++      paso: 2,
++      usuario: "jlopez",
++      fecha: "30-10-2026 16:40",
++    },
++    {
++      id: 3,
++      nombre: "carga-recibida-01.jpg",
++      tipo: "Fotografía",
++      origen: "actividad",
++      actividad: "Bodega 7.5",
++      paso: 3,
++      usuario: "mperez",
++      fecha: "01-11-2026 09:05",
++    },
++  ],
++  1002: [
++    {
++      id: 4,
++      nombre: "pesaje-terminal-000102.pdf",
++      tipo: "Comprobante",
++      origen: "actividad",
++      actividad: "CBX 8.3",
++      paso: 4,
++      usuario: "rgarcia",
++      fecha: "12-11-2026 11:20",
++    },
++    {
++      id: 5,
++      nombre: "hojas-seguridad-000102.pdf",
++      tipo: "Hojas de seguridad",
++      origen: "actividad",
++      actividad: "CBX 10.1",
++      paso: 4,
++      usuario: "rgarcia",
++      fecha: "12-11-2026 15:02",
++    },
++    {
++      id: 6,
++      nombre: "guia-master-000102.pdf",
++      tipo: "Guía aérea",
++      origen: "tracking",
++      paso: 5,
++      usuario: "jlopez",
++      fecha: "14-11-2026 08:30",
++    },
++  ],
++};
+diff --git a/src/features/embarques/v2/general/lib/pasos.ts b/src/features/embarques/v2/general/lib/pasos.ts
+index 40d3cfc..dc13c81 100644
+--- a/src/features/embarques/v2/general/lib/pasos.ts
++++ b/src/features/embarques/v2/general/lib/pasos.ts
+@@ -9,7 +9,7 @@
+  *
+  * Agregar una tab = 1 entrada aquí + su icono en `tabs-embarque.tsx`. Se
+  * muestra con el componente genérico `pasos/paso-actividades.tsx` (salvo
+- * Información y Documentos, que tienen el suyo).
++ * Información y Archivos, que tienen el suyo).
+  * ========================================================================== */
+ 
+ import { type ActividadTracking, actividadesPorId } from "../../shared/lib/actividades-tracking";
+@@ -96,7 +96,7 @@ export type ValorPasoEmbarque =
+   | "salida"
+   | "complementaria"
+   | "cierre"
+-  | "documentos"
++  | "archivos"
+   | "cancelacion";
+ 
+ export type PasoEmbarque = {
+@@ -115,7 +115,7 @@ export type PasoEmbarque = {
+   grupo: "flujo" | "extra";
+   /** Aviso destacado arriba del contenido. */
+   aviso?: string;
+-  /** Tab sin actividades que ven todos los perfiles (Información). */
++  /** Tab sin actividades que ven todos los perfiles (Información, Archivos). */
+   paraTodos?: boolean;
+ };
+ 
+@@ -280,12 +280,14 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
+   },
+   /* ---------- Separadas ---------- */
+   {
+-    value: "documentos",
+-    label: "Documentos",
+-    detalle: "Disponible siempre",
+-    descripcion: "Disponible en cualquier paso del embarque.",
++    value: "archivos",
++    label: "Archivos",
++    detalle: "Consulta y descarga",
++    descripcion:
++      "Archivos del embarque para consulta y descarga. Se suben en la actividad que los pide o en el tracking.",
+     actividades: [],
+     grupo: "extra",
++    paraTodos: true,
+   },
+   {
+     value: "cancelacion",
+@@ -315,7 +317,8 @@ export const PERFIL_DE_RESPONSABLE: Record<ResponsableTracking, PerfilEmbarque>
+  * - Bodegas y Combex ven solo su parte: las tabs con actividades de su área
+  *   y, dentro de ellas, solo sus actividades.
+  * - Información la ven todos; solo Operaciones la edita.
+- * - Documentos y Cancelación: solo Operaciones.
++ * - Archivos la ven todos (solo consulta y descarga).
++ * - Cancelación: solo Operaciones.
+  * ------------------------------------------------------------------------ */
+ 
+ /** Perfiles que ven la tab. */
+@@ -355,7 +358,7 @@ export function puedeEditarInformacion(perfil: PerfilEmbarque): boolean {
+ 
+ /**
+  * Paso del tracking de una tab: el último paso de sus actividades
+- * (null = la tab no depende de un paso, p. ej. Información o Documentos).
++ * (null = la tab no depende de un paso, p. ej. Información o Archivos).
+  * Cancelación (OPS 4.4) es una excepción y no se marca como completada.
+  */
+ export function pasoDeTab(paso: PasoEmbarque): number | null {
+diff --git a/src/features/embarques/v2/operaciones/components/paso-documentos.tsx b/src/features/embarques/v2/operaciones/components/paso-documentos.tsx
+deleted file mode 100644
+index f976e95..0000000
+--- a/src/features/embarques/v2/operaciones/components/paso-documentos.tsx
++++ /dev/null
+@@ -1,34 +0,0 @@
+-"use client";
+-
+-import { Upload } from "lucide-react";
+-import { Button } from "@/shared/components/ui/button";
+-import { EncabezadoPaso, Pendiente } from "../../shared/components/utils";
+-
+-/**
+- * Subida de documentos. No depende del paso del embarque: se puede usar en
+- * cualquier momento (tab siempre habilitada y botón "Documentos" del resumen).
+- */
+-export function PasoDocumentos() {
+-  return (
+-    <div className="space-y-4">
+-      <EncabezadoPaso
+-        titulo="Documentos"
+-        descripcion="Disponible en cualquier paso del embarque."
+-        acciones={
+-          <Button type="button" size="sm" disabled>
+-            <Upload className="size-4" aria-hidden="true" />
+-            Subir documento
+-          </Button>
+-        }
+-      />
+-
+-      <div className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 p-6 text-center text-sm text-muted-foreground">
+-        <Upload className="size-6 text-primary" aria-hidden="true" />
+-        <span>Arrastrar archivos aquí o seleccionar</span>
+-        <span className="text-xs">Tipo de documento · PDF, imágenes, Excel</span>
+-      </div>
+-
+-      <Pendiente texto="Tabla de documentos subidos (tipo, nombre, usuario, fecha, acciones)." />
+-    </div>
+-  );
+-}
+diff --git a/src/features/embarques/v2/shared/lib/tipos.ts b/src/features/embarques/v2/shared/lib/tipos.ts
+index 3a81af1..7cb7801 100644
+--- a/src/features/embarques/v2/shared/lib/tipos.ts
++++ b/src/features/embarques/v2/shared/lib/tipos.ts
+@@ -56,3 +56,22 @@ export type EmbarqueMaqueta = CoordinacionTracking & {
+   /** Paso del tracking en el que va (1..6). */
+   pasoActual: number;
+ };
++
++/**
++ * Archivo del embarque (tab Archivos, solo consulta y descarga).
++ * Se sube en la actividad que lo pide (`origen: "actividad"`) o en el
++ * tracking interactivo (`origen: "tracking"`); no hay subida general.
++ */
++export type ArchivoEmbarque = {
++  id: number;
++  nombre: string;
++  /** Tipo de documento (ej. "Guía aérea", "Fotografía"). */
++  tipo: string;
++  origen: "actividad" | "tracking";
++  /** Id de la actividad (`ACTIVIDADES_TRACKING`) si `origen` es `"actividad"`. */
++  actividad?: string | undefined;
++  /** Paso del tracking (1..6) en que se subió. */
++  paso: number;
++  usuario: string;
++  fecha: string;
++};
