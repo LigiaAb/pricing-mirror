@@ -1,0 +1,53 @@
+diff --git a/src/features/pricing/cotizacion/calculo/components/dialogo-spot.tsx b/src/features/pricing/cotizacion/calculo/components/dialogo-spot.tsx
+index 034e6f9..4c88811 100644
+--- a/src/features/pricing/cotizacion/calculo/components/dialogo-spot.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/dialogo-spot.tsx
+@@ -111,18 +111,16 @@ export function DialogoSpot({
+             <div>
+               <p className="text-xs text-muted-foreground">Tarifa actual</p>
+ 
+-              <p className="font-medium tabular-nums">
+-                <pre>
+-                  {simbolo} {formatNumero(rateActual)}
+-                </pre>
++              <p className="font-mono font-medium tabular-nums">
++                {simbolo} {formatNumero(rateActual)}
+               </p>
+             </div>
+             {!esMinimo && (
+               <div>
+                 <p className="text-xs text-muted-foreground">CW</p>
+ 
+-                <p className="font-medium tabular-nums">
+-                  <pre>{formatNumero(cw)}</pre>
++                <p className="font-mono font-medium tabular-nums">
++                  {formatNumero(cw)}
+                 </p>
+               </div>
+             )}
+@@ -131,10 +129,8 @@ export function DialogoSpot({
+                 {esMinimo ? "Mínimo actual" : "Flete actual"}
+               </p>
+ 
+-              <p className="font-medium tabular-nums">
+-                <pre>
+-                  {simbolo} {formatNumero(fleteActual)}
+-                </pre>
++              <p className="font-mono font-medium tabular-nums">
++                {simbolo} {formatNumero(fleteActual)}
+               </p>
+             </div>
+           </div>
+@@ -163,10 +159,8 @@ export function DialogoSpot({
+               <div className="rounded-md border p-3">
+                 <p className="text-xs text-muted-foreground">Flete SPOT</p>
+ 
+-                <p className="text-lg tabular-nums">
+-                  <pre>
+-                    {simbolo} {formatNumero(fleteSpot)}
+-                  </pre>
++                <p className="font-mono text-lg tabular-nums">
++                  {simbolo} {formatNumero(fleteSpot)}
+                 </p>
+               </div>
+             )}
