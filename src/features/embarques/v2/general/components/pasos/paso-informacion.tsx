@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Bell,
   Building2,
   CalendarDays,
   ClipboardList,
@@ -20,6 +21,7 @@ import { EncabezadoPaso, SoloConsulta } from "../../../shared/components/utils";
 import {
   CAMPOS_DETALLES,
   CAMPOS_FECHAS,
+  CAMPOS_NOTIFICACION,
   CAMPOS_RUTA,
   type CampoEmbarque,
 } from "../../../shared/lib/campos-embarque";
@@ -28,10 +30,10 @@ import { informacionMaqueta } from "../../lib/datos-maqueta";
 
 /**
  * Detalle completo del embarque (el resumen breve está siempre visible arriba).
- * Una card por sección del módulo actual (Shipper, Consignatario, Facturación,
- * Detalles, Rutas, Fechas y Producto); cada card junta varios datos en pocas
- * líneas para leerlos de un vistazo. Los datos son los campos del módulo actual
- * (`shared/lib/campos-embarque.ts`, por `key`).
+ * Una card por paso de la CTS del módulo actual (Shipper, Consignatario,
+ * Notificación, Facturación, Detalles, Rutas, Fechas y Producto); cada card
+ * junta varios datos en pocas líneas para leerlos de un vistazo. Solo se
+ * muestran los campos de la CTS (`shared/lib/campos-embarque.ts`, por `key`).
  * La ven todos los perfiles; solo Operaciones la edita (`editable`).
  */
 export function PasoInformacion({
@@ -47,7 +49,7 @@ export function PasoInformacion({
     <div className="space-y-4">
       <EncabezadoPaso
         titulo="Información del embarque"
-        descripcion="Partes, detalles, ruta, fechas y carga."
+        descripcion="Datos de la CTS: partes, notificación, detalles, ruta, fechas y carga."
         acciones={
           editable ? (
             <Button type="button" size="sm" variant="outline" disabled>
@@ -63,10 +65,11 @@ export function PasoInformacion({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <CardEntidad titulo="Shipper" icono={Building2} valores={info.shipper} />
         <CardEntidad titulo="Consignatario" icono={UserRound} valores={info.consignatario} />
+        <CardNotificacion valores={info.notificacion} />
         <CardFacturacion valores={info.facturacion} />
         <CardDetalles valores={info.detalles} />
         <CardRutas rutas={info.rutas} />
-        <CardFechas recoleccion={info.fechaRecoleccion} fechas={info.fechas} />
+        <CardFechas valores={info.fechas} />
         <CardProducto cargas={info.cargas} className="md:col-span-full" />
       </div>
     </div>
@@ -122,6 +125,25 @@ function CardEntidad({
   );
 }
 
+/** Contacto a notificar (en la CTS privada es de consulta). */
+function CardNotificacion({ valores }: { valores: ValoresEmbarque }) {
+  const emergencia = texto(valores, "telefonoEmergencia");
+  return (
+    <CardInfo titulo="Notificación" icono={Bell}>
+      <Contacto
+        nombre={texto(valores, "nombre")}
+        email={texto(valores, "email")}
+        telefono={texto(valores, "telefono")}
+      />
+      {emergencia ? (
+        <Datos>
+          <Fila label={etiqueta(CAMPOS_NOTIFICACION, "telefonoEmergencia")}>{emergencia}</Fila>
+        </Datos>
+      ) : null}
+    </CardInfo>
+  );
+}
+
 /** Cliente que factura (siempre de consulta: refleja el maestro del cliente). */
 function CardFacturacion({ valores }: { valores: ValoresEmbarque }) {
   return (
@@ -159,9 +181,12 @@ function CardDetalles({ valores }: { valores: ValoresEmbarque }) {
         <Fila label="Carga">
           {unir([texto(valores, "tipoCarga"), texto(valores, "clasificacionCarga")]) ?? VACIO}
         </Fila>
-        <Fila label={etiqueta(CAMPOS_DETALLES, "documentosCropa")}>
-          <Etiquetas valores={documentos} />
-        </Fila>
+        {/* La CTS pide documentos CROPA solo con el gasto cod_rubro 127. */}
+        {documentos.length > 0 ? (
+          <Fila label={etiqueta(CAMPOS_DETALLES, "documentosCropa")}>
+            <Etiquetas valores={documentos} />
+          </Fila>
+        ) : null}
         {peligrosidad.length > 0 ? (
           <Fila label={etiqueta(CAMPOS_DETALLES, "peligrosidad")}>
             <Etiquetas valores={peligrosidad} aviso />
@@ -206,33 +231,26 @@ function CardRutas({ rutas }: { rutas: readonly ValoresEmbarque[] }) {
   );
 }
 
-/** Recolección y fechas de movimiento (tipo de fecha, fecha y observación). */
-function CardFechas({
-  recoleccion,
-  fechas,
-}: {
-  recoleccion: ValoresEmbarque;
-  fechas: readonly ValoresEmbarque[];
-}) {
+/** Fecha de recolección (la CTS solo la pide con el gasto cod_rubro 12). */
+function CardFechas({ valores }: { valores: ValoresEmbarque }) {
+  const recoleccion = texto(valores, "fecha_recoleccion");
   return (
     <CardInfo titulo="Fechas" icono={CalendarDays}>
-      <Datos>
-        <Fila label="Recolección">{texto(recoleccion, "fecha_recoleccion") ?? VACIO}</Fila>
-        {fechas.map((fecha) => (
-          <Fila
-            key={claveFila(fecha, ["id_tipo_fecha", "fecha"])}
-            label={texto(fecha, "id_tipo_fecha") ?? etiqueta(CAMPOS_FECHAS, "fecha")}
-          >
-            {texto(fecha, "fecha") ?? VACIO}
-            <Secundario texto={texto(fecha, "observacion")} />
-          </Fila>
-        ))}
-      </Datos>
+      {recoleccion ? (
+        <Datos>
+          <Fila label={etiqueta(CAMPOS_FECHAS, "fecha_recoleccion")}>{recoleccion}</Fila>
+        </Datos>
+      ) : (
+        <SinDatos texto="Sin fecha de recolección." />
+      )}
     </CardInfo>
   );
 }
 
-/** Cada carga en una fila (descripción, bultos, peso, medidas, valor y partida) y totales. */
+/**
+ * Cada carga en una fila (descripción, bultos, peso, medidas, CW, embalaje,
+ * valor, país, partida y régimen) y totales; "CW total" como en la CTS.
+ */
 function CardProducto({
   cargas,
   className,
@@ -242,15 +260,17 @@ function CardProducto({
 }) {
   const bultos = sumar(cargas, "cantidad");
   const peso = sumar(cargas, "pesoTotal");
+  const cw = sumar(cargas, "cw");
   return (
     <CardInfo
       titulo="Producto"
       icono={Package}
       className={className}
       meta={unir([
-        cantidad(cargas.length, "carga", "cargas"),
+        cantidad(cargas.length, "producto", "productos"),
         cantidad(bultos, "bulto", "bultos"),
-        `${peso.toLocaleString("es-GT", { minimumFractionDigits: 2 })} kg`,
+        `${kg(peso)} kg`,
+        `CW total ${kg(cw)} kg`,
       ])}
     >
       {cargas.length === 0 ? (
@@ -272,6 +292,8 @@ function CardProducto({
                     cantidad(Number(texto(carga, "cantidad") ?? 0), "bulto", "bultos"),
                     sufijo(texto(carga, "pesoTotal"), "kg"),
                     medidas(carga),
+                    prefijo("CW", sufijo(texto(carga, "cw"), "kg")),
+                    texto(carga, "tipoEmbalaje"),
                   ])}
                 />
               </div>
@@ -283,6 +305,7 @@ function CardProducto({
                   texto(carga, "paisOrigenId"),
                   prefijo("Partida", texto(carga, "partidaArancelaria")),
                 ])}
+                <Secundario texto={texto(carga, "regimenAduanal")} />
               </div>
             </li>
           ))}
@@ -471,6 +494,10 @@ function sufijo(valor: string | undefined, unidad: string): string | undefined {
 
 function cantidad(valor: number, singular: string, plural: string): string {
   return `${valor.toLocaleString("es-GT")} ${valor === 1 ? singular : plural}`;
+}
+
+function kg(valor: number): string {
+  return valor.toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 /** Suma un dato numérico de una lista (acepta separador de miles). */

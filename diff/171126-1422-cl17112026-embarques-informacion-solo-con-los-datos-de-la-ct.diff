@@ -1,0 +1,527 @@
+diff --git a/src/features/embarques/v2/general/ARQUITECTURA.md b/src/features/embarques/v2/general/ARQUITECTURA.md
+index 5ca8c166..3abf4b4e 100644
+--- a/src/features/embarques/v2/general/ARQUITECTURA.md
++++ b/src/features/embarques/v2/general/ARQUITECTURA.md
+@@ -152,15 +152,20 @@ Con valor y editable, cada campo muestra una **x** al final para limpiarlo (`Bot
+ ### Campos de Información (`shared/lib/campos-embarque.ts`)
+ 
+ v2 es un **rediseño**: la tab Información (`pasos/paso-informacion.tsx`) se lee en **cards**, no en formulario
+-de solo lectura. Hay **una card por sección del módulo actual**: Shipper, Consignatario, Facturación, Detalles,
+-Rutas, Fechas y Producto (esta última a todo el ancho). Cada card junta varios datos en pocas líneas (p. ej.
+-nombre + NIT · industria · país; dirección + municipio · departamento · país; contacto con email y teléfono;
+-cada carga con bultos · peso · medidas, valor y partida, y totales en el encabezado). Producto, Rutas y Fechas
+-de movimiento son listas (cada carga, tramo y fecha). Cod File no se repite (está en el resumen). Botón Editar
+-solo para Operaciones (deshabilitado en la maqueta). De ese módulo se toman las **secciones** y los
++de solo lectura. Muestra **solo lo que muestra la CTS del módulo actual** (`STEPS_CTS` en
++`components/cts-detalle/secciones-wizard-privado.tsx`), sin datos extra: **una card por paso**: Shipper,
++Consignatario, Notificación, Facturación, Detalles, Rutas, Fechas y Producto (esta última a todo el ancho).
++Gastos y Documentos de la CTS no van aquí (los archivos están en la tab Archivos) y Seguimiento es el tracking.
++Cada card junta varios datos en pocas líneas (p. ej. nombre + NIT · industria · país; dirección + municipio ·
++departamento · país; contacto con email y teléfono; cada carga con bultos · peso · medidas · CW · embalaje, valor,
++país, partida y régimen, y en el encabezado productos, bultos, peso y "CW total" como la tabla de la CTS).
++Producto y Rutas son listas (cada carga y tramo). Fechas es solo la **fecha de recolección** (las fechas de
++movimiento con tipo de fecha no están en la CTS); la CTS la pide solo con el gasto `cod_rubro` 12, y los
++documentos CROPA solo con el gasto 127, por eso sin valor no se dibujan. Cod File no se repite (está en el
++resumen). Botón Editar solo para Operaciones (deshabilitado en la maqueta). De la CTS se toman los **pasos** y los
+ **campos**: misma clave, nombre, obligatorio y opciones (`CAMPOS_SHIPPER`, `CAMPOS_CONSIGNATARIO`,
+-`CAMPOS_FACTURACION`, `CAMPOS_DETALLES`, `CAMPOS_PRODUCTO`, `CAMPOS_RUTA`, `CAMPOS_FECHAS`, `CAMPO_COD_FILE`);
+-no sus pestañas ni formularios. Los valores llegan como `InformacionEmbarque` (`shared/lib/tipos.ts`, valores
++`CAMPOS_NOTIFICACION`, `CAMPOS_FACTURACION`, `CAMPOS_DETALLES`, `CAMPOS_PRODUCTO`, `CAMPOS_RUTA`,
++`CAMPOS_FECHAS`, `CAMPO_COD_FILE`); no sus pestañas ni formularios. Los valores llegan como `InformacionEmbarque` (`shared/lib/tipos.ts`, valores
+ por `key`); en la maqueta, `informacionMaqueta(embarque)` de `lib/datos-maqueta.ts`.
+ `key` es el nombre del dato en el módulo actual, para conectar la API sin traducir; el origen de cada lista
+ está anotado en el archivo. Cómo se combina cada campo en su card lo decide `pasos/paso-informacion.tsx`. Las actividades que
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx b/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx
+index 731d5f6e..9b8741e5 100644
+--- a/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx
++++ b/src/features/embarques/v2/general/components/pasos/paso-informacion.tsx
+@@ -1,6 +1,7 @@
+ "use client";
+ 
+ import {
++  Bell,
+   Building2,
+   CalendarDays,
+   ClipboardList,
+@@ -20,6 +21,7 @@ import { EncabezadoPaso, SoloConsulta } from "../../../shared/components/utils";
+ import {
+   CAMPOS_DETALLES,
+   CAMPOS_FECHAS,
++  CAMPOS_NOTIFICACION,
+   CAMPOS_RUTA,
+   type CampoEmbarque,
+ } from "../../../shared/lib/campos-embarque";
+@@ -28,10 +30,10 @@ import { informacionMaqueta } from "../../lib/datos-maqueta";
+ 
+ /**
+  * Detalle completo del embarque (el resumen breve está siempre visible arriba).
+- * Una card por sección del módulo actual (Shipper, Consignatario, Facturación,
+- * Detalles, Rutas, Fechas y Producto); cada card junta varios datos en pocas
+- * líneas para leerlos de un vistazo. Los datos son los campos del módulo actual
+- * (`shared/lib/campos-embarque.ts`, por `key`).
++ * Una card por paso de la CTS del módulo actual (Shipper, Consignatario,
++ * Notificación, Facturación, Detalles, Rutas, Fechas y Producto); cada card
++ * junta varios datos en pocas líneas para leerlos de un vistazo. Solo se
++ * muestran los campos de la CTS (`shared/lib/campos-embarque.ts`, por `key`).
+  * La ven todos los perfiles; solo Operaciones la edita (`editable`).
+  */
+ export function PasoInformacion({
+@@ -47,7 +49,7 @@ export function PasoInformacion({
+     <div className="space-y-4">
+       <EncabezadoPaso
+         titulo="Información del embarque"
+-        descripcion="Partes, detalles, ruta, fechas y carga."
++        descripcion="Datos de la CTS: partes, notificación, detalles, ruta, fechas y carga."
+         acciones={
+           editable ? (
+             <Button type="button" size="sm" variant="outline" disabled>
+@@ -63,10 +65,11 @@ export function PasoInformacion({
+       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+         <CardEntidad titulo="Shipper" icono={Building2} valores={info.shipper} />
+         <CardEntidad titulo="Consignatario" icono={UserRound} valores={info.consignatario} />
++        <CardNotificacion valores={info.notificacion} />
+         <CardFacturacion valores={info.facturacion} />
+         <CardDetalles valores={info.detalles} />
+         <CardRutas rutas={info.rutas} />
+-        <CardFechas recoleccion={info.fechaRecoleccion} fechas={info.fechas} />
++        <CardFechas valores={info.fechas} />
+         <CardProducto cargas={info.cargas} className="md:col-span-full" />
+       </div>
+     </div>
+@@ -122,6 +125,25 @@ function CardEntidad({
+   );
+ }
+ 
++/** Contacto a notificar (en la CTS privada es de consulta). */
++function CardNotificacion({ valores }: { valores: ValoresEmbarque }) {
++  const emergencia = texto(valores, "telefonoEmergencia");
++  return (
++    <CardInfo titulo="Notificación" icono={Bell}>
++      <Contacto
++        nombre={texto(valores, "nombre")}
++        email={texto(valores, "email")}
++        telefono={texto(valores, "telefono")}
++      />
++      {emergencia ? (
++        <Datos>
++          <Fila label={etiqueta(CAMPOS_NOTIFICACION, "telefonoEmergencia")}>{emergencia}</Fila>
++        </Datos>
++      ) : null}
++    </CardInfo>
++  );
++}
++
+ /** Cliente que factura (siempre de consulta: refleja el maestro del cliente). */
+ function CardFacturacion({ valores }: { valores: ValoresEmbarque }) {
+   return (
+@@ -159,9 +181,12 @@ function CardDetalles({ valores }: { valores: ValoresEmbarque }) {
+         <Fila label="Carga">
+           {unir([texto(valores, "tipoCarga"), texto(valores, "clasificacionCarga")]) ?? VACIO}
+         </Fila>
+-        <Fila label={etiqueta(CAMPOS_DETALLES, "documentosCropa")}>
+-          <Etiquetas valores={documentos} />
+-        </Fila>
++        {/* La CTS pide documentos CROPA solo con el gasto cod_rubro 127. */}
++        {documentos.length > 0 ? (
++          <Fila label={etiqueta(CAMPOS_DETALLES, "documentosCropa")}>
++            <Etiquetas valores={documentos} />
++          </Fila>
++        ) : null}
+         {peligrosidad.length > 0 ? (
+           <Fila label={etiqueta(CAMPOS_DETALLES, "peligrosidad")}>
+             <Etiquetas valores={peligrosidad} aviso />
+@@ -206,33 +231,26 @@ function CardRutas({ rutas }: { rutas: readonly ValoresEmbarque[] }) {
+   );
+ }
+ 
+-/** Recolección y fechas de movimiento (tipo de fecha, fecha y observación). */
+-function CardFechas({
+-  recoleccion,
+-  fechas,
+-}: {
+-  recoleccion: ValoresEmbarque;
+-  fechas: readonly ValoresEmbarque[];
+-}) {
++/** Fecha de recolección (la CTS solo la pide con el gasto cod_rubro 12). */
++function CardFechas({ valores }: { valores: ValoresEmbarque }) {
++  const recoleccion = texto(valores, "fecha_recoleccion");
+   return (
+     <CardInfo titulo="Fechas" icono={CalendarDays}>
+-      <Datos>
+-        <Fila label="Recolección">{texto(recoleccion, "fecha_recoleccion") ?? VACIO}</Fila>
+-        {fechas.map((fecha) => (
+-          <Fila
+-            key={claveFila(fecha, ["id_tipo_fecha", "fecha"])}
+-            label={texto(fecha, "id_tipo_fecha") ?? etiqueta(CAMPOS_FECHAS, "fecha")}
+-          >
+-            {texto(fecha, "fecha") ?? VACIO}
+-            <Secundario texto={texto(fecha, "observacion")} />
+-          </Fila>
+-        ))}
+-      </Datos>
++      {recoleccion ? (
++        <Datos>
++          <Fila label={etiqueta(CAMPOS_FECHAS, "fecha_recoleccion")}>{recoleccion}</Fila>
++        </Datos>
++      ) : (
++        <SinDatos texto="Sin fecha de recolección." />
++      )}
+     </CardInfo>
+   );
+ }
+ 
+-/** Cada carga en una fila (descripción, bultos, peso, medidas, valor y partida) y totales. */
++/**
++ * Cada carga en una fila (descripción, bultos, peso, medidas, CW, embalaje,
++ * valor, país, partida y régimen) y totales; "CW total" como en la CTS.
++ */
+ function CardProducto({
+   cargas,
+   className,
+@@ -242,15 +260,17 @@ function CardProducto({
+ }) {
+   const bultos = sumar(cargas, "cantidad");
+   const peso = sumar(cargas, "pesoTotal");
++  const cw = sumar(cargas, "cw");
+   return (
+     <CardInfo
+       titulo="Producto"
+       icono={Package}
+       className={className}
+       meta={unir([
+-        cantidad(cargas.length, "carga", "cargas"),
++        cantidad(cargas.length, "producto", "productos"),
+         cantidad(bultos, "bulto", "bultos"),
+-        `${peso.toLocaleString("es-GT", { minimumFractionDigits: 2 })} kg`,
++        `${kg(peso)} kg`,
++        `CW total ${kg(cw)} kg`,
+       ])}
+     >
+       {cargas.length === 0 ? (
+@@ -272,6 +292,8 @@ function CardProducto({
+                     cantidad(Number(texto(carga, "cantidad") ?? 0), "bulto", "bultos"),
+                     sufijo(texto(carga, "pesoTotal"), "kg"),
+                     medidas(carga),
++                    prefijo("CW", sufijo(texto(carga, "cw"), "kg")),
++                    texto(carga, "tipoEmbalaje"),
+                   ])}
+                 />
+               </div>
+@@ -283,6 +305,7 @@ function CardProducto({
+                   texto(carga, "paisOrigenId"),
+                   prefijo("Partida", texto(carga, "partidaArancelaria")),
+                 ])}
++                <Secundario texto={texto(carga, "regimenAduanal")} />
+               </div>
+             </li>
+           ))}
+@@ -473,6 +496,10 @@ function cantidad(valor: number, singular: string, plural: string): string {
+   return `${valor.toLocaleString("es-GT")} ${valor === 1 ? singular : plural}`;
+ }
+ 
++function kg(valor: number): string {
++  return valor.toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
++}
++
+ /** Suma un dato numérico de una lista (acepta separador de miles). */
+ function sumar(filas: readonly ValoresEmbarque[], key: string): number {
+   return filas.reduce((total, fila) => {
+diff --git a/src/features/embarques/v2/general/lib/datos-maqueta.ts b/src/features/embarques/v2/general/lib/datos-maqueta.ts
+index d4520c4b..b60c9910 100644
+--- a/src/features/embarques/v2/general/lib/datos-maqueta.ts
++++ b/src/features/embarques/v2/general/lib/datos-maqueta.ts
+@@ -152,11 +152,56 @@ export const ARCHIVOS_MAQUETA: Record<number, ArchivoEmbarque[]> = {
+ };
+ 
+ /**
+- * Información de un embarque (tab Información). Toma lo que ya tiene la fila
+- * (cliente, carrier, origen, destino, ETD/ETA) y completa el resto con ejemplos.
++ * Destino de cada fila de la maqueta: país y aeropuerto (Rutas y Consignatario
++ * se escriben con nombres, como los muestra la CTS al resolver los catálogos).
++ */
++const DESTINOS_MAQUETA: Record<string, { ciudad: string; pais: string; aeropuerto: string }> = {
++  "Miami, US": {
++    ciudad: "Miami",
++    pais: "Estados Unidos",
++    aeropuerto: "Miami International (MIA)",
++  },
++  "Madrid, ES": {
++    ciudad: "Madrid",
++    pais: "España",
++    aeropuerto: "Adolfo Suárez Madrid-Barajas (MAD)",
++  },
++  "Ciudad de México, MX": {
++    ciudad: "Ciudad de México",
++    pais: "México",
++    aeropuerto: "Benito Juárez (MEX)",
++  },
++  "Los Ángeles, US": {
++    ciudad: "Los Ángeles",
++    pais: "Estados Unidos",
++    aeropuerto: "Los Angeles International (LAX)",
++  },
++};
++
++/** Código de vuelo de ejemplo por aerolínea (para que coincida con el carrier). */
++const VUELOS_MAQUETA: Record<string, string> = {
++  "AVIANCA CARGO": "AV 571",
++  "IBERIA CARGO": "IB 6342",
++  "AEROMÉXICO CARGO": "AM 663",
++  "COPA CARGO": "CM 418",
++};
++
++/** Un día antes de una fecha `DD-MM-AAAA` (recolección de ejemplo antes del ETD). */
++function diaAnterior(fecha: string): string | undefined {
++  const [dia, mes, anio] = fecha.split("-").map(Number);
++  if (!dia || !mes || !anio) return undefined;
++  const anterior = new Date(anio, mes - 1, dia - 1);
++  const dos = (valor: number) => String(valor).padStart(2, "0");
++  return `${dos(anterior.getDate())}-${dos(anterior.getMonth() + 1)}-${anterior.getFullYear()}`;
++}
++
++/**
++ * Información de un embarque (tab Información): solo los datos que muestra la
++ * CTS del módulo actual (`shared/lib/campos-embarque.ts`). Toma lo que ya tiene
++ * la fila (cliente, carrier, destino) y completa el resto con ejemplos.
+  */
+ export function informacionMaqueta(embarque: EmbarqueMaqueta): InformacionEmbarque {
+-  const [ciudadDestino = embarque.destino, paisDestino = ""] = embarque.destino.split(", ");
++  const destino = DESTINOS_MAQUETA[embarque.destino];
+   return {
+     shipper: {
+       entidad_nombre: "AGROEXPORTADORA LOS ALTOS, S.A.",
+@@ -176,32 +221,20 @@ export function informacionMaqueta(embarque: EmbarqueMaqueta): InformacionEmbarq
+       entidad_nombre: "GLOBAL FRESH IMPORTS LLC",
+       entidad_nit: "98-7654321",
+       entidad_industria: "Comercio",
+-      entidad_pais: paisDestino,
+-      direccion_recoleccion: "1200 NW 78th Ave, Suite 210",
+-      direccion_recoleccion_ciudad: ciudadDestino,
+-      direccion_recoleccion_pais: paisDestino,
++      entidad_pais: destino?.pais,
++      direccion_recoleccion: "1200 Commerce Ave, Suite 210",
++      direccion_recoleccion_ciudad: destino?.ciudad,
++      direccion_recoleccion_pais: destino?.pais,
+       entidad_contacto_nombre: "Carlos Rivera",
+       _contacto_tipo_list: ["Operativo"],
+       entidad_contacto_email: "crivera@importer.com",
+       entidad_contacto_telefono: "+1 305 555 0142",
+     },
+-    facturacion: {
+-      cliente: embarque.cliente,
+-      numero: "7654321-0",
+-      direccionFiscal: "6a. Avenida 12-34 Zona 10, Guatemala",
+-      clienteContacto: "Luis Méndez",
+-      clienteContactoEmail: "lmendez@cliente.com.gt",
+-      clienteContactoTelefono: "+502 2211-0099",
+-    },
+-    detalles: {
+-      tipoPago: "PREPAID",
+-      tipoCarga: "General",
+-      incoterm: "FCA",
+-      servicio: "Puerta a aeropuerto",
+-      clasificacionCarga: "Perecedero",
+-      peligrosidad: ["Cobertura de Seguro"],
+-      documentosCropa: ["DUA Definitiva"],
+-      instruccionesManejo: "Mantener refrigerado entre 2 °C y 8 °C. No apilar.",
++    notificacion: {
++      nombre: "Carlos Rivera",
++      email: "crivera@importer.com",
++      telefono: "+1 305 555 0142",
++      telefonoEmergencia: "+1 305 555 0199",
+     },
+     cargas: [
+       {
+@@ -212,9 +245,13 @@ export function informacionMaqueta(embarque: EmbarqueMaqueta): InformacionEmbarq
+         largo: "60",
+         alto: "30",
+         ancho: "40",
+-        valor: "USD 8,700.00",
++        valor: "8,700.00",
+         paisOrigenId: "Guatemala",
++        tipoEmbalaje: "Caja",
+         partidaArancelaria: "0708.10.00",
++        regimenAduanal: "Exportación definitiva",
++        // max(peso 1,450, volumétrico 120 × 60 × 30 × 40 / 6000 = 1,440)
++        cw: "1,450.00",
+       },
+       {
+         descripcion: "Ejote francés",
+@@ -224,25 +261,43 @@ export function informacionMaqueta(embarque: EmbarqueMaqueta): InformacionEmbarq
+         largo: "50",
+         alto: "25",
+         ancho: "35",
+-        valor: "USD 2,100.00",
++        valor: "2,100.00",
+         paisOrigenId: "Guatemala",
++        tipoEmbalaje: "Caja",
+         partidaArancelaria: "0708.20.00",
++        regimenAduanal: "Exportación definitiva",
++        // max(peso 380.50, volumétrico 40 × 50 × 25 × 35 / 6000 = 292)
++        cw: "380.50",
+       },
+     ],
++    facturacion: {
++      cliente: embarque.cliente,
++      numero: "7654321-0",
++      direccionFiscal: "6a. Avenida 12-34 Zona 10, Guatemala",
++      clienteContacto: "Luis Méndez",
++      clienteContactoEmail: "lmendez@cliente.com.gt",
++      clienteContactoTelefono: "+502 2211-0099",
++    },
++    detalles: {
++      tipoPago: "PREPAID",
++      tipoCarga: "General",
++      incoterm: "FCA",
++      servicio: "Puerta a aeropuerto",
++      clasificacionCarga: "Perecedero",
++      peligrosidad: ["Cobertura de Seguro"],
++      documentosCropa: ["DUA Definitiva"],
++      instruccionesManejo: "Mantener refrigerado entre 2 °C y 8 °C. No apilar.",
++    },
++    fechas: { fecha_recoleccion: diaAnterior(embarque.etd) },
+     rutas: [
+       {
+         codEntidadProv: embarque.carrier,
+         codPaisOrigen: "Guatemala",
+         puertoIdOrigen: "La Aurora (GUA)",
+-        codPaisDestino: paisDestino,
+-        puertoIdDestino: ciudadDestino,
+-        flightNumber: "AV 571",
++        codPaisDestino: destino?.pais,
++        puertoIdDestino: destino?.aeropuerto,
++        flightNumber: VUELOS_MAQUETA[embarque.carrier],
+       },
+     ],
+-    fechaRecoleccion: { fecha_recoleccion: embarque.etd },
+-    fechas: [
+-      { id_tipo_fecha: "ETD", fecha: embarque.etd },
+-      { id_tipo_fecha: "ETA", fecha: embarque.eta, observacion: "Sujeto a confirmación." },
+-    ],
+   };
+ }
+diff --git a/src/features/embarques/v2/shared/lib/campos-embarque.ts b/src/features/embarques/v2/shared/lib/campos-embarque.ts
+index 001da3d7..f202c4e5 100644
+--- a/src/features/embarques/v2/shared/lib/campos-embarque.ts
++++ b/src/features/embarques/v2/shared/lib/campos-embarque.ts
+@@ -1,18 +1,21 @@
+ /* ==========================================================================
+  * CAMPOS DE LA INFORMACIÓN DEL EMBARQUE
+  *
+- * Los mismos campos que ya tiene el módulo actual de embarques (clave, nombre,
+- * obligatorio, tipo de dato y opciones fijas), agrupados por sus secciones.
+- * El diseño es de v2: una card por sección que combina varios datos
+- * (`general/components/pasos/paso-informacion.tsx`).
++ * Los mismos campos que muestra la CTS del módulo actual (clave, nombre,
++ * obligatorio, tipo de dato y opciones fijas), agrupados por sus pasos
++ * (`STEPS_CTS` en components/cts-detalle/secciones-wizard-privado.tsx). Gastos y
++ * Documentos no van aquí (los archivos están en la tab Archivos) y Seguimiento
++ * es el tracking. El diseño es de v2: una card por paso que combina varios
++ * datos (`general/components/pasos/paso-informacion.tsx`).
+  *
+  * Origen (módulo actual, solo referencia):
+  *   Shipper / Consignatario → public/secciones/entidad-public-form/fields.ts y model.ts
++ *   Notificación            → public/secciones/notificaciones-publicas.tsx
++ *   Producto                → public/secciones/cargas-publicas* y secciones/carga-form-dialog.tsx
+  *   Facturación             → public/secciones/facturacion-publica.tsx
+- *   Producto                → secciones/carga-form-dialog.tsx
+  *   Detalles                → public/secciones/detalles-publica-model.ts
+- *   Rutas                   → secciones/ruta-dialog.tsx
+- *   Fechas                  → public/secciones/fechas-publicas.tsx y secciones/fechas.tsx
++ *   Fechas                  → public/secciones/fechas-publicas.tsx
++ *   Rutas                   → secciones/rutas.tsx y secciones/ruta-dialog.tsx
+  *   Cod File                → info-coordinacion/info-coordinacion.tsx
+  *
+  * `key` = nombre del dato en el módulo actual: al conectar la API se usa tal cual.
+@@ -68,6 +71,14 @@ function camposEntidad(titulo: string): readonly CampoEmbarque[] {
+ export const CAMPOS_SHIPPER = camposEntidad("Shipper");
+ export const CAMPOS_CONSIGNATARIO = camposEntidad("Consignatario");
+ 
++/** Notificación: `NOTIFICACIONES_FIELDS` (en la CTS privada es de consulta). */
++export const CAMPOS_NOTIFICACION: readonly CampoEmbarque[] = [
++  { key: "nombre", label: "Nombre", requerido: true },
++  { key: "email", label: "Email", requerido: true },
++  { key: "telefono", label: "Teléfono", requerido: true },
++  { key: "telefonoEmergencia", label: "Teléfono de emergencia" },
++];
++
+ /** Facturación: en el módulo actual es siempre de consulta (refleja el maestro del cliente). */
+ export const CAMPOS_FACTURACION: readonly CampoEmbarque[] = [
+   { key: "cliente", label: "Nombre", requerido: true, soloLectura: true },
+@@ -92,7 +103,7 @@ export const CAMPOS_DETALLES: readonly CampoEmbarque[] = [
+     tipo: "casillas",
+     opciones: ["Carga Valiosa", "Cobertura de Seguro"],
+   },
+-  // CROPA_DOCS (lib/constantes.ts)
++  // CROPA_DOCS (lib/constantes.ts); solo si algún gasto tiene cod_rubro 127 (`showCropaDocs`).
+   {
+     key: "documentosCropa",
+     label: "Documentos CROPA",
+@@ -103,7 +114,10 @@ export const CAMPOS_DETALLES: readonly CampoEmbarque[] = [
+   { key: "instruccionesManejo", label: "Instrucciones de manejo", tipo: "area" },
+ ];
+ 
+-/** Producto (cada carga): `carga-form-dialog`. */
++/**
++ * Producto (cada carga): `carga-form-dialog`. El CW lo calcula la CTS
++ * (`normalizeCargaRows`) y lo muestra en la tabla con el "CW total".
++ */
+ export const CAMPOS_PRODUCTO: readonly CampoEmbarque[] = [
+   { key: "cantidad", label: "Cantidad (bultos)", tipo: "numero", requerido: true },
+   { key: "pesoTotal", label: "Peso total (kg)", tipo: "numero", requerido: true },
+@@ -114,7 +128,10 @@ export const CAMPOS_PRODUCTO: readonly CampoEmbarque[] = [
+   { key: "descripcion", label: "Descripción", tipo: "area", requerido: true },
+   { key: "valor", label: "Valor declarado", tipo: "numero", requerido: true },
+   { key: "paisOrigenId", label: "País Origen", tipo: "catalogo", requerido: true },
++  { key: "tipoEmbalaje", label: "Tipo embalaje", tipo: "catalogo", requerido: true },
+   { key: "partidaArancelaria", label: "Partida arancelaria", requerido: true },
++  { key: "regimenAduanal", label: "Régimen aduanal", tipo: "catalogo", requerido: true },
++  { key: "cw", label: "CW (kg)", tipo: "numero", soloLectura: true },
+ ];
+ 
+ /** Rutas (cada tramo): `ruta-dialog`. */
+@@ -127,10 +144,10 @@ export const CAMPOS_RUTA: readonly CampoEmbarque[] = [
+   { key: "flightNumber", label: "Nro. Vuelo" },
+ ];
+ 
+-/** Fechas: recolección (`fechas-publicas`) y fechas de movimiento (`fechas`). */
++/**
++ * Fechas: `fechas-publicas`, solo la fecha de recolección. La CTS muestra el
++ * paso solo si algún gasto tiene cod_rubro 12 (`showFechas`).
++ */
+ export const CAMPOS_FECHAS: readonly CampoEmbarque[] = [
+   { key: "fecha_recoleccion", label: "Fecha de Recolección", tipo: "fecha", requerido: true },
+-  { key: "id_tipo_fecha", label: "Tipo de Fecha", tipo: "catalogo", requerido: true },
+-  { key: "fecha", label: "Fecha", tipo: "fecha", requerido: true },
+-  { key: "observacion", label: "Observación", tipo: "area" },
+ ];
+diff --git a/src/features/embarques/v2/shared/lib/tipos.ts b/src/features/embarques/v2/shared/lib/tipos.ts
+index 4c2493cf..68cc056e 100644
+--- a/src/features/embarques/v2/shared/lib/tipos.ts
++++ b/src/features/embarques/v2/shared/lib/tipos.ts
+@@ -64,19 +64,19 @@ export type EmbarqueMaqueta = CoordinacionTracking & {
+ export type ValoresEmbarque = Readonly<Record<string, string | readonly string[] | undefined>>;
+ 
+ /**
+- * Información del embarque (tab Información), por sección del módulo actual.
+- * Producto, Rutas y Fechas de movimiento son listas (cada carga, tramo y fecha).
++ * Información del embarque (tab Información), por paso de la CTS del módulo
++ * actual. Producto y Rutas son listas (cada carga y cada tramo).
+  */
+ export type InformacionEmbarque = {
+   shipper: ValoresEmbarque;
+   consignatario: ValoresEmbarque;
++  notificacion: ValoresEmbarque;
++  cargas: readonly ValoresEmbarque[];
+   facturacion: ValoresEmbarque;
+   detalles: ValoresEmbarque;
+-  cargas: readonly ValoresEmbarque[];
++  /** `fecha_recoleccion` (vacía si el embarque no tiene el gasto de fechas). */
++  fechas: ValoresEmbarque;
+   rutas: readonly ValoresEmbarque[];
+-  /** `fecha_recoleccion` y demás fechas que no son lista. */
+-  fechaRecoleccion: ValoresEmbarque;
+-  fechas: readonly ValoresEmbarque[];
+ };
+ 
+ /**
