@@ -40,6 +40,9 @@ type Props = {
 
   rubrosGuardados?: RubroGuardado[];
 
+  /** `es_spot` (ES_SPOT) de la versión abierta: marca el flete guardado como SPOT. */
+  versionSpot?: boolean;
+
   /** Define el texto del detalle de flete (ver lib/detalle-flete.ts). */
   codTipoTransporte?: Id | null;
 };
@@ -61,15 +64,21 @@ export function useRubrosCotizacion({
 
   rubrosGuardados = [],
 
+  versionSpot = false,
+
   codTipoTransporte,
 }: Props) {
+  const catalogos = useCatalogosCotizacion();
+
   const {
     categoriasTransporte: categorias,
     monedas,
     rubros: rubrosCatalogo,
     servicios: serviciosCatalogo,
     proveedores: entidades,
-  } = useCatalogosCotizacion().calculo;
+  } = catalogos.calculo;
+
+  const { codigosFletes } = catalogos;
 
   const rubrosLectura = React.useMemo(() => {
     if (!lectura) {
@@ -86,10 +95,23 @@ export function useRubrosCotizacion({
       monedas,
 
       entidades,
+
+      versionSpot,
+
+      codigosFletes,
     });
 
     return separarRubrosGuardados(normalizados);
-  }, [lectura, rubrosGuardados, rubrosCatalogo, serviciosCatalogo, monedas, entidades]);
+  }, [
+    lectura,
+    rubrosGuardados,
+    rubrosCatalogo,
+    serviciosCatalogo,
+    monedas,
+    entidades,
+    versionSpot,
+    codigosFletes,
+  ]);
 
   const rubrosCalculo = React.useMemo(() => {
     if (lectura) {
