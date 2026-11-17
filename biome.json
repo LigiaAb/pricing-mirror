@@ -1,0 +1,149 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": {
+          "level": "on",
+          "options": {}
+        }
+      }
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "correctness": {
+        "noUnusedVariables": "error",
+        "noUnusedImports": "error",
+        "useExhaustiveDependencies": "error",
+        "noNestedComponentDefinitions": "error",
+        "noComponentHookFactories": "off",
+        "noUnusedFunctionParameters": "error",
+        "noUndeclaredDependencies": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "error",
+        "useIterableCallbackReturn": "error",
+        "noArrayIndexKey": "error",
+        "noImplicitAnyLet": "error",
+        "noConsole": "error",
+        "noImportCycles": "error",
+        "noEvolvingTypes": "error"
+      },
+      "style": {
+        "useImportType": "error",
+        "useNodejsImportProtocol": "error",
+        "noProcessEnv": "error",
+        "useFilenamingConvention": {
+          "level": "error",
+          "options": {
+            "filenameCases": ["kebab-case"],
+            "requireAscii": true
+          }
+        },
+        "noInferrableTypes": "error",
+        "noNonNullAssertion": "error"
+      },
+      "a11y": {
+        "useAltText": "error",
+        "useButtonType": "error",
+        "noLabelWithoutControl": "error",
+        "useKeyWithClickEvents": "error",
+        "noStaticElementInteractions": "error",
+        "useSemanticElements": "error",
+        "noSvgWithoutTitle": "error"
+      },
+      "performance": {
+        "noReExportAll": "error"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "jsxQuoteStyle": "double",
+      "trailingCommas": "all",
+      "semicolons": "always"
+    }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "src/shared/config/env.ts",
+        "src/instrumentation.ts",
+        "src/instrumentation-client.ts",
+        "next.config.ts",
+        "sentry.server.config.ts",
+        "sentry.edge.config.ts",
+        "vitest.config.mts",
+        "playwright.config.ts",
+        "tests/**",
+        "scripts/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noProcessEnv": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["tests/**"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useButtonType": "off"
+          },
+          "suspicious": {
+            "noExplicitAny": "off",
+            "noArrayIndexKey": "off"
+          },
+          "style": {
+            "noNonNullAssertion": "off"
+          },
+          "correctness": {
+            "noUnusedFunctionParameters": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/shared/lib/logger.ts", "src/shared/components/theme-provider.tsx"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    }
+  ],
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    },
+    "linter": {
+      "enabled": false
+    },
+    "formatter": {
+      "enabled": true,
+      "indentStyle": "space",
+      "indentWidth": 2,
+      "lineWidth": 100
+    }
+  }
+}
