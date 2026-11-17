@@ -1,0 +1,315 @@
+diff --git a/src/features/pricing/reportes/api/objetivo-hit-rate.ts b/src/features/pricing/reportes/api/objetivo-hit-rate.ts
+new file mode 100644
+index 0000000..ead310e
+--- /dev/null
++++ b/src/features/pricing/reportes/api/objetivo-hit-rate.ts
+@@ -0,0 +1,20 @@
++import { objetivos } from "@/features/objetivos/api/objetivos";
++
++/** Objetivo de negocio que define la meta del Hit Rate (`lista-objetivos`). */
++export const COD_OBJETIVO_HIT_RATE = 85;
++
++/**
++ * Meta del Hit Rate como fracción (0–1). `cantidad` llega como porcentaje entero
++ * (85 → 0.85). `undefined` mientras carga, si falla o si el objetivo no existe:
++ * el reporte se muestra sin la línea ni la columna de objetivo.
++ */
++export function useObjetivoHitRate() {
++  const consulta = objetivos.useLista({ cod_objetivo: COD_OBJETIVO_HIT_RATE });
++  const objetivo = consulta.data?.find(
++    (fila) => String(fila.codObjetivo) === String(COD_OBJETIVO_HIT_RATE),
++  );
++  return {
++    objetivo: objetivo == null ? undefined : objetivo.cantidad / 100,
++    isLoading: consulta.isLoading,
++  };
++}
+diff --git a/src/features/pricing/reportes/components/hit-rate.tsx b/src/features/pricing/reportes/components/hit-rate.tsx
+index 8b987d9..8434d06 100644
+--- a/src/features/pricing/reportes/components/hit-rate.tsx
++++ b/src/features/pricing/reportes/components/hit-rate.tsx
+@@ -25,13 +25,13 @@ import {
+ } from "@/shared/components/ui/table";
+ import { cn } from "@/shared/lib/utils";
+ import { type HitRateCentroCosto, type HitRateUsuario, useHitRate } from "../api/hit-rate";
++import { useObjetivoHitRate } from "../api/objetivo-hit-rate";
+ import { usePdfReporte } from "../hooks/use-pdf-reporte";
+ import type { Filtros } from "../lib/filtros-types";
+ import type { BloquePdf } from "../lib/pdf-reporte";
+ 
+ const COLORES = ["#2563eb", "#16a34a", "#ea580c", "#9333ea", "#0891b2", "#dc2626"];
+ const color = (indice: number) => COLORES[indice % COLORES.length] ?? "#2563eb";
+-const objetivo = 0.85;
+ const clase = "flex flex-col w-full bg-card border rounded-md p-2";
+ 
+ export type BarCharObj = {
+@@ -49,13 +49,17 @@ export type BarCharObj = {
+ 
+ const formatNumber = (valor: number, decimal: number) => valor.toFixed(decimal);
+ 
++/** Fracción → porcentaje sin ruido de punto flotante (0.29 → 29, no 28.999…). */
++const porcentajeObjetivo = (objetivo: number) => Number((objetivo * 100).toFixed(2));
++
+ function GenerarTabla({
+   data,
+   objetivo,
+   diferencial = false,
+ }: {
+   data: BarCharObj[];
+-  objetivo?: number;
++  /** Porcentaje (85 = 85 %); sin valor no se muestra la columna. */
++  objetivo?: number | undefined;
+   diferencial?: boolean;
+ }) {
+   const style = {};
+@@ -78,7 +82,7 @@ function GenerarTabla({
+             <TableHead style={style} className={cn(classRight, classBase)}>
+               Alcance
+             </TableHead>
+-            {objetivo && (
++            {objetivo != null && (
+               <TableHead style={style} className={cn(classRight, classBase)}>
+                 Objetivo
+               </TableHead>
+@@ -94,13 +98,14 @@ function GenerarTabla({
+           {data.map((i) => {
+             const { total = 0, total_individual = 0 } = i;
+             const valor = Number(i.valor ?? 0);
+-            const color = !objetivo
+-              ? ""
+-              : valor < objetivo
+-                ? "text-destructive"
+-                : valor === objetivo
+-                  ? ""
+-                  : "text-success";
++            const color =
++              objetivo == null
++                ? ""
++                : valor < objetivo
++                  ? "text-destructive"
++                  : valor === objetivo
++                    ? ""
++                    : "text-success";
+             const resto = 100 - valor;
+ 
+             return (
+@@ -115,7 +120,7 @@ function GenerarTabla({
+                 <TableCell className={`py-0 px-2 m-0 text-right ${color}`}>
+                   <pre>{formatNumber(valor, 2)}%</pre>
+                 </TableCell>
+-                {objetivo && (
++                {objetivo != null && (
+                   <TableCell className="py-0 px-2 m-0 text-right">
+                     <pre>{formatNumber(objetivo, 2)}%</pre>
+                   </TableCell>
+@@ -204,7 +209,7 @@ function SimplePieChart({
+ const SimpleBarChart = ({
+   data,
+   clave = "Alcance",
+-  objetivo = 0.85,
++  objetivo,
+   titulo,
+   ref,
+   isAnimationActive = true,
+@@ -212,7 +217,8 @@ const SimpleBarChart = ({
+   data: BarCharObj[];
+   clave?: string;
+   isAnimationActive?: boolean;
+-  objetivo?: number;
++  /** Fracción (0.85 = 85 %); sin valor no se dibuja la línea de objetivo. */
++  objetivo?: number | undefined;
+   titulo: string;
+   ref?: React.Ref<HTMLDivElement>;
+ }) => {
+@@ -251,27 +257,29 @@ const SimpleBarChart = ({
+           allowDataOverflow
+           tickFormatter={(value: number) => `${(value * 100).toFixed(0)}%`}
+         />
+-        <YAxis
+-          yAxisId="right"
+-          ticks={[objetivo]}
+-          orientation="right"
+-          domain={[0, 1]}
+-          allowDataOverflow
+-          tick={({ x, y }) => (
+-            <text
+-              x={Number(x) + 5}
+-              y={y}
+-              textAnchor="start"
+-              dominantBaseline="middle"
+-              fill={color(5)}
+-              fontSize={12}
+-              fontWeight="bold"
+-            >
+-              {`${(objetivo * 100).toFixed(0)}%`}
+-            </text>
+-          )}
+-          tickFormatter={(value: number) => `${(value * 100).toFixed(0)}%`}
+-        />
++        {objetivo != null && (
++          <YAxis
++            yAxisId="right"
++            ticks={[objetivo]}
++            orientation="right"
++            domain={[0, 1]}
++            allowDataOverflow
++            tick={({ x, y }) => (
++              <text
++                x={Number(x) + 5}
++                y={y}
++                textAnchor="start"
++                dominantBaseline="middle"
++                fill={color(5)}
++                fontSize={12}
++                fontWeight="bold"
++              >
++                {`${porcentajeObjetivo(objetivo).toFixed(0)}%`}
++              </text>
++            )}
++            tickFormatter={(value: number) => `${(value * 100).toFixed(0)}%`}
++          />
++        )}
+         <XAxis
+           dataKey="name"
+           interval={0}
+@@ -291,10 +299,12 @@ const SimpleBarChart = ({
+                 </div>
+               ))}
+ 
+-              <div className="flex items-center gap-1">
+-                <div className="w-5 border-t-2 border" style={{ borderColor: color(5) }} />
+-                <span style={{ color: color(5) }}>Objetivo {objetivo * 100}%</span>
+-              </div>
++              {objetivo != null && (
++                <div className="flex items-center gap-1">
++                  <div className="w-5 border-t-2 border" style={{ borderColor: color(5) }} />
++                  <span style={{ color: color(5) }}>Objetivo {porcentajeObjetivo(objetivo)}%</span>
++                </div>
++              )}
+             </div>
+           )}
+         />
+@@ -316,7 +326,9 @@ const SimpleBarChart = ({
+         {/* <Bar className="block max-[1400px]:hidden" yAxisId="left" dataKey="extra" fill="transparent" stackId="a" isAnimationActive={isAnimationActive}>
+           <LabelList dataKey="valor" position="middle" fontSize={11} formatter={(value) => `${value}%`} />
+         </Bar> */}
+-        <ReferenceLine yAxisId="left" y={objetivo} stroke={color(5)} strokeWidth={2} />
++        {objetivo != null && (
++          <ReferenceLine yAxisId="left" y={objetivo} stroke={color(5)} strokeWidth={2} />
++        )}
+         <ReferenceLine yAxisId="left" y={1} stroke="#000" strokeWidth={1} />
+       </BarChart>
+     </div>
+@@ -458,6 +470,8 @@ function HitRateDescarga({
+     consulta: { data, isLoading, error },
+     datos: { hrpp, hrse_terrestre, hrse_aereo, hrse_maritimo, hrse_cc },
+   } = useDatosHitRate(filtros);
++  const { objetivo, isLoading: cargandoObjetivo } = useObjetivoHitRate();
++  const listo = Boolean(data) && !cargandoObjetivo;
+ 
+   const generarPdf = React.useCallback(() => {
+     if (generandoPdf) return;
+@@ -489,10 +503,14 @@ function HitRateDescarga({
+                       dato: `${Number(fila.valor ?? 0).toFixed(2)}%`,
+                       alignFormat: { horizontal: "right" },
+                     },
+-                    Objetivo: {
+-                      dato: `${(objetivo * 100).toFixed(2)}%`,
+-                      alignFormat: { horizontal: "right" },
+-                    },
++                    ...(objetivo == null
++                      ? {}
++                      : {
++                          Objetivo: {
++                            dato: `${porcentajeObjetivo(objetivo).toFixed(2)}%`,
++                            alignFormat: { horizontal: "right" },
++                          },
++                        }),
+                   }))
+                 : [{ "": "Sin datos" }],
+             },
+@@ -502,7 +520,14 @@ function HitRateDescarga({
+                 tipo: "leyenda",
+                 entradas: [
+                   { texto: "Alcance", color: color(0) },
+-                  { texto: `Objetivo: ${(objetivo * 100).toFixed(2)}%`, color: "#dc2626" },
++                  ...(objetivo == null
++                    ? []
++                    : [
++                        {
++                          texto: `Objetivo: ${porcentajeObjetivo(objetivo).toFixed(2)}%`,
++                          color: "#dc2626",
++                        },
++                      ]),
+                 ],
+               },
+             ],
+@@ -580,6 +605,7 @@ function HitRateDescarga({
+   }, [
+     filtros,
+     data,
++    objetivo,
+     generandoPdf,
+     hrpp,
+     hrse_aereo,
+@@ -592,12 +618,12 @@ function HitRateDescarga({
+   ]);
+ 
+   React.useEffect(() => {
+-    if (descargar === ultimaDescarga.current || !data) return;
++    if (descargar === ultimaDescarga.current || !listo) return;
+     ultimaDescarga.current = descargar;
+     generarPdf();
+-  }, [descargar, data, generarPdf]);
++  }, [descargar, listo, generarPdf]);
+ 
+-  if (isLoading || error) return null;
++  if (isLoading || cargandoObjetivo || error) return null;
+ 
+   return (
+     <div
+@@ -659,6 +685,8 @@ function HitRateVista({ filtros, tipo }: { filtros: Filtros; tipo: TipoVistaHitR
+     consulta: { isLoading, error },
+     datos: { hrpp, hrse_terrestre, hrse_aereo, hrse_maritimo, hrse_cc },
+   } = useDatosHitRate(filtros);
++  const { objetivo, isLoading: cargandoObjetivo } = useObjetivoHitRate();
++  const objetivoTabla = objetivo == null ? undefined : porcentajeObjetivo(objetivo);
+ 
+   const tipoTransporte = filtros.cod_tipo_transporte?.label ?? "AEREO";
+   const transporte =
+@@ -670,7 +698,7 @@ function HitRateVista({ filtros, tipo }: { filtros: Filtros; tipo: TipoVistaHitR
+           ? { titulo: "HRse Maritimo", data: hrse_maritimo }
+           : null;
+ 
+-  if (isLoading) return <Loader />;
++  if (isLoading || cargandoObjetivo) return <Loader />;
+ 
+   if (error) return <div>Error</div>;
+ 
+@@ -679,8 +707,8 @@ function HitRateVista({ filtros, tipo }: { filtros: Filtros; tipo: TipoVistaHitR
+       <div className={clase}>
+         {tipo === "tablas" && (
+           <div className="w-full">
+-            <GenerarTabla objetivo={objetivo * 100} data={hrpp} />
+-            {transporte && <GenerarTabla objetivo={objetivo * 100} data={transporte.data} />}
++            <GenerarTabla objetivo={objetivoTabla} data={hrpp} />
++            {transporte && <GenerarTabla objetivo={objetivoTabla} data={transporte.data} />}
+             {hrse_cc.map((seccion) => (
+               <div className="flex flex-col" key={seccion.id}>
+                 <GenerarTabla diferencial data={filasAlcanceCc(seccion)} />
+@@ -691,13 +719,13 @@ function HitRateVista({ filtros, tipo }: { filtros: Filtros; tipo: TipoVistaHitR
+         {tipo === "grafica-usuario" && (
+           <div className="w-full">
+             <SimpleBarChart titulo="HRpp" objetivo={objetivo} data={hrpp} />
+-            <GenerarTabla objetivo={objetivo * 100} data={hrpp} />
++            <GenerarTabla objetivo={objetivoTabla} data={hrpp} />
+           </div>
+         )}
+         {tipo === "grafica-transporte" && transporte && (
+           <div className="w-full">
+             <SimpleBarChart titulo={transporte.titulo} objetivo={objetivo} data={transporte.data} />
+-            <GenerarTabla objetivo={objetivo * 100} data={transporte.data} />
++            <GenerarTabla objetivo={objetivoTabla} data={transporte.data} />
+           </div>
+         )}
+         {tipo === "grafica-otros" && (
