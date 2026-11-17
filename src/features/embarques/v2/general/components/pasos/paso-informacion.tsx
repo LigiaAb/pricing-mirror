@@ -22,6 +22,7 @@ import {
   CAMPOS_DETALLES,
   CAMPOS_FECHAS,
   CAMPOS_NOTIFICACION,
+  CAMPOS_PRODUCTO,
   CAMPOS_RUTA,
   type CampoEmbarque,
 } from "../../../shared/lib/campos-embarque";
@@ -298,14 +299,26 @@ function CardProducto({
                 />
               </div>
               <div className="text-xs text-muted-foreground sm:text-right">
-                <p className="text-sm font-semibold text-foreground">
-                  {texto(carga, "valor") ?? VACIO}
+                {/* Cada dato con su nombre en la CTS (`CAMPOS_PRODUCTO`). */}
+                <p className="text-sm text-foreground">
+                  <span className="text-xs text-muted-foreground">
+                    {etiqueta(CAMPOS_PRODUCTO, "valor")}{" "}
+                  </span>
+                  <span className="font-semibold">{texto(carga, "valor") ?? VACIO}</span>
                 </p>
                 {unir([
-                  texto(carga, "paisOrigenId"),
-                  prefijo("Partida", texto(carga, "partidaArancelaria")),
+                  prefijo(etiqueta(CAMPOS_PRODUCTO, "paisOrigenId"), texto(carga, "paisOrigenId")),
+                  prefijo(
+                    etiqueta(CAMPOS_PRODUCTO, "partidaArancelaria"),
+                    texto(carga, "partidaArancelaria"),
+                  ),
                 ])}
-                <Secundario texto={texto(carga, "regimenAduanal")} />
+                <Secundario
+                  texto={prefijo(
+                    etiqueta(CAMPOS_PRODUCTO, "regimenAduanal"),
+                    texto(carga, "regimenAduanal"),
+                  )}
+                />
               </div>
             </li>
           ))}
