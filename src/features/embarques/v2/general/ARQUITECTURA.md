@@ -220,7 +220,9 @@ Las pantallas de cada actor montan `VistaGeneral` con su perfil.
 
 La tab **Archivos** (`pasos/paso-archivos.tsx`, grupo `extra`, `paraTodos`) es solo la **lista** de los archivos
 del embarque para consulta y descarga: archivo, tipo, dónde se subió (actividad o Tracking), paso, usuario y
-fecha; botones Ver y Descargar (deshabilitados en la maqueta). No tiene botón ni zona de subida. Datos de
+fecha; botones Ver y Descargar (deshabilitados en la maqueta). Usa una **tabla propia** (no `DataTable`), con el
+mismo formato que `VersionesTable` de Cotizaciones: encabezado con título, conteo y búsqueda (con x para limpiar,
+`BotonLimpiar` de `shared/components/campos.tsx`) y `Table` simple sin paginación. No tiene botón ni zona de subida. Datos de
 `ARCHIVOS_MAQUETA` (por `id` del embarque) hasta que exista la API.
 
 **Facturación** (solo visualización): en pausa. Cuando se retome, sería otra entrada `grupo: "extra"` en
