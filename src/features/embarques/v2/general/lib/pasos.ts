@@ -9,7 +9,7 @@
  *
  * Agregar una tab = 1 entrada aquí + su icono en `tabs-embarque.tsx`. Se
  * muestra con el componente genérico `pasos/paso-actividades.tsx` (salvo
- * Información y Documentos, que tienen el suyo).
+ * Información y Archivos, que tienen el suyo).
  * ========================================================================== */
 
 import { type ActividadTracking, actividadesPorId } from "../../shared/lib/actividades-tracking";
@@ -96,7 +96,7 @@ export type ValorPasoEmbarque =
   | "salida"
   | "complementaria"
   | "cierre"
-  | "documentos"
+  | "archivos"
   | "cancelacion";
 
 export type PasoEmbarque = {
@@ -115,7 +115,7 @@ export type PasoEmbarque = {
   grupo: "flujo" | "extra";
   /** Aviso destacado arriba del contenido. */
   aviso?: string;
-  /** Tab sin actividades que ven todos los perfiles (Información). */
+  /** Tab sin actividades que ven todos los perfiles (Información, Archivos). */
   paraTodos?: boolean;
 };
 
@@ -280,12 +280,14 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
   },
   /* ---------- Separadas ---------- */
   {
-    value: "documentos",
-    label: "Documentos",
-    detalle: "Disponible siempre",
-    descripcion: "Disponible en cualquier paso del embarque.",
+    value: "archivos",
+    label: "Archivos",
+    detalle: "Consulta y descarga",
+    descripcion:
+      "Archivos del embarque para consulta y descarga. Se suben en la actividad que los pide o en el tracking.",
     actividades: [],
     grupo: "extra",
+    paraTodos: true,
   },
   {
     value: "cancelacion",
@@ -315,7 +317,8 @@ export const PERFIL_DE_RESPONSABLE: Record<ResponsableTracking, PerfilEmbarque> 
  * - Bodegas y Combex ven solo su parte: las tabs con actividades de su área
  *   y, dentro de ellas, solo sus actividades.
  * - Información la ven todos; solo Operaciones la edita.
- * - Documentos y Cancelación: solo Operaciones.
+ * - Archivos la ven todos (solo consulta y descarga).
+ * - Cancelación: solo Operaciones.
  * ------------------------------------------------------------------------ */
 
 /** Perfiles que ven la tab. */
@@ -355,7 +358,7 @@ export function puedeEditarInformacion(perfil: PerfilEmbarque): boolean {
 
 /**
  * Paso del tracking de una tab: el último paso de sus actividades
- * (null = la tab no depende de un paso, p. ej. Información o Documentos).
+ * (null = la tab no depende de un paso, p. ej. Información o Archivos).
  * Cancelación (OPS 4.4) es una excepción y no se marca como completada.
  */
 export function pasoDeTab(paso: PasoEmbarque): number | null {
