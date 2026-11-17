@@ -2,20 +2,18 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
+import {
+  activarCotizacionDetalle,
+  cotizacionCabeceraSchema,
+  criterioGuardadoSchema,
+  listarRubrosVersion,
+  recuperarArchivoPdf,
+  versionCotizacionSchema,
+} from "@/features/pricing/cotizacion/calculo";
 import { CACHE_DYNAMIC } from "@/shared/api/cache";
 import { http } from "@/shared/api/client";
 import { parseEnvelope } from "@/shared/api/envelope";
 import { zId } from "@/shared/lib/zod-scalars";
-import { cotizacionCabeceraSchema } from "../../cotizacion/calculo/api/cotizacion-cabecera";
-import {
-  activarCotizacionDetalle,
-  recuperarArchivoPdf,
-} from "../../cotizacion/calculo/api/cotizacion-detalle";
-import {
-  criterioGuardadoSchema,
-  listarRubrosVersion,
-  versionCotizacionSchema,
-} from "../../cotizacion/calculo/api/versiones";
 
 type Id = string | number;
 

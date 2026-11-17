@@ -11,20 +11,20 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import {
+  type CatalogosFormularioCotizacion,
+  type CotizacionCabeceraPayload,
+  CotizacionForm,
+  filtrarPorTipoTabla,
+  formatNumero,
+  normalizarOpciones,
+  type OpcionFormularioCotizacion,
+} from "@/features/pricing/cotizacion/calculo";
+import { useCatalogosTarifas, useReferenciaEstable } from "@/features/pricing/tarifas";
 import { useContextoOperativoStore } from "@/features/shell";
 import { Button } from "@/shared/components/ui/button";
 import { encodeId } from "@/shared/lib/sqids";
 import { useAuthStore } from "@/shared/stores/auth-store";
-import type { CotizacionCabeceraPayload } from "../../cotizacion/calculo/api/cotizacion-cabecera";
-import { CotizacionForm } from "../../cotizacion/calculo/components/cotizacion-form";
-import type {
-  CatalogosFormularioCotizacion,
-  OpcionFormularioCotizacion,
-} from "../../cotizacion/calculo/hooks/use-formulario-cotizacion";
-import { filtrarPorTipoTabla, normalizarOpciones } from "../../cotizacion/calculo/lib/catalogos";
-import { formatNumero } from "../../cotizacion/calculo/lib/utils";
-import { useCatalogosTarifas } from "../../tarifas/hooks/use-catalogos-tarifas";
-import { useReferenciaEstable } from "../../tarifas/hooks/use-referencia-estable";
 import {
   obtenerCwSpot,
   obtenerOriginalSpot,

@@ -2,19 +2,19 @@
 
 import { Eye, ListRestart, Plus, Trash2 } from "lucide-react";
 import * as React from "react";
+import {
+  type CatalogosFormularioCotizacion,
+  type CotizacionCabeceraPayload,
+  CotizacionForm,
+  type OpcionFormularioCotizacion,
+} from "@/features/pricing/cotizacion/calculo";
+import { useCatalogosTarifas } from "@/features/pricing/tarifas";
 import { useContextoOperativoStore } from "@/features/shell";
 import { DataTable, DataTableColumnHeader } from "@/shared/components/data-table/data-table";
 import { Button } from "@/shared/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import type { ColumnDef } from "@/shared/lib/tanstack-table";
 import { useAuthStore } from "@/shared/stores/auth-store";
-import type { CotizacionCabeceraPayload } from "../../cotizacion/calculo/api/cotizacion-cabecera";
-import { CotizacionForm } from "../../cotizacion/calculo/components/cotizacion-form";
-import type {
-  CatalogosFormularioCotizacion,
-  OpcionFormularioCotizacion,
-} from "../../cotizacion/calculo/hooks/use-formulario-cotizacion";
-import { useCatalogosTarifas } from "../../tarifas/hooks/use-catalogos-tarifas";
 import {
   type PlantillaCliente,
   useActualizarPlantillaCliente,

@@ -277,6 +277,7 @@ export {
   useOpcionesMonedas,
   useOpcionesRubros,
 } from "./hooks/use-opciones-tarifa";
+export { useReferenciaEstable } from "./hooks/use-referencia-estable";
 export {
   booleano,
   type CampoBooleano,
