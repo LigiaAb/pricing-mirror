@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   Download,
   ExternalLink,
-  Eye,
   FileText,
   FileX,
   SquareArrowOutUpRight,
@@ -13,30 +12,29 @@ import {
 import Link from "next/link";
 import * as React from "react";
 import { useContextoOperativoStore } from "@/features/shell";
-import { DataTable, DataTableColumnHeader } from "@/shared/components/data-table/data-table";
 import { Button } from "@/shared/components/ui/button";
 import { encodeId } from "@/shared/lib/sqids";
-import type { ColumnDef } from "@/shared/lib/tanstack-table";
 import { useAuthStore } from "@/shared/stores/auth-store";
 import type { CotizacionCabeceraPayload } from "../../cotizacion/calculo/api/cotizacion-cabecera";
-import { filtrarPorTipoTabla, normalizarOpciones } from "../../cotizacion/calculo/lib/catalogos";
-import { formatNumero } from "../../cotizacion/calculo/lib/utils";
 import { CotizacionForm } from "../../cotizacion/calculo/components/cotizacion-form";
 import type {
   CatalogosFormularioCotizacion,
   OpcionFormularioCotizacion,
 } from "../../cotizacion/calculo/hooks/use-formulario-cotizacion";
+import { filtrarPorTipoTabla, normalizarOpciones } from "../../cotizacion/calculo/lib/catalogos";
+import { formatNumero } from "../../cotizacion/calculo/lib/utils";
 import { useCatalogosTarifas } from "../../tarifas/hooks/use-catalogos-tarifas";
+import { useReferenciaEstable } from "../../tarifas/hooks/use-referencia-estable";
 import {
   obtenerCwSpot,
   obtenerOriginalSpot,
-  type OriginalSpot,
   recuperarArchivoPdf,
   type TarifaSpotFila,
   useActualizarTarifaSpot,
   useAutorizacionSpot,
   useAutorizarTarifaSpot,
 } from "../api/autorizacion-spot";
+import { type FilaTarifaSpot, TablaTarifasSpot } from "./tabla-tarifas-spot";
 
 type Id = string | number;
 type UnknownRecord = Record<string, unknown>;
@@ -79,7 +77,9 @@ const opciones = (value: unknown): OpcionFormularioCotizacion[] =>
   });
 /** Monto con 2 decimales; "—" si no hay valor numérico. */
 const monto = (value: unknown) =>
-  value == null || value === "" || !Number.isFinite(Number(value)) ? "—" : formatNumero(Number(value));
+  value == null || value === "" || !Number.isFinite(Number(value))
+    ? "—"
+    : formatNumero(Number(value));
 const etiqueta = (items: OpcionFormularioCotizacion[], value: unknown) =>
   items.find((item) => mismoId(item.value, value))?.label ?? "";
 const normalizar = (value: unknown) =>
@@ -89,21 +89,7 @@ const normalizar = (value: unknown) =>
     .trim()
     .toUpperCase();
 
-type Fila = TarifaSpotFila & {
-  cod_cotizacion_cabecera?: Id | null;
-  version?: string | number | null;
-  entidad_nombre?: string | null;
-  tipo_transporte: string;
-  tipo_servicio: string;
-  tipo_carga: string;
-  tipo_pago: string;
-  clasificacion_carga: string;
-  solicitante: string;
-  autorizador: string;
-  reason_code_nombre: string;
-  /** Se completa al abrir el detalle (rubro SPOT guardado en la versión). */
-  original?: OriginalSpot | null;
-};
+type Fila = FilaTarifaSpot;
 
 type EstadoSpot = "pendiente" | "sin-documento" | "autorizada" | "rechazada";
 
@@ -211,7 +197,9 @@ export function AutorizarTarifaSpot() {
 
   const nombreUsuario = React.useCallback(
     (codigo: unknown) =>
-      codigo == null || codigo === "" ? "" : (nombresUsuarios.get(String(codigo)) ?? String(codigo)),
+      codigo == null || codigo === ""
+        ? ""
+        : (nombresUsuarios.get(String(codigo)) ?? String(codigo)),
     [nombresUsuarios],
   );
 
@@ -224,7 +212,7 @@ export function AutorizarTarifaSpot() {
     [estados],
   );
 
-  const data = React.useMemo<Fila[]>(() => {
+  const dataCalculada = React.useMemo<Fila[]>(() => {
     const { tarifas = [], cotizaciones = [], detalles = [] } = consulta.data ?? {};
     return tarifas
       .flatMap((tarifa) => {
@@ -287,6 +275,8 @@ export function AutorizarTarifaSpot() {
     nombreUsuario,
     reasonCodes,
   ]);
+  // Misma referencia mientras el contenido no cambie (recargas que traen lo mismo).
+  const data = useReferenciaEstable(dataCalculada);
 
   React.useEffect(
     () => () => {
@@ -303,37 +293,43 @@ export function AutorizarTarifaSpot() {
     if (nuevaVentana) nuevaVentana.opener = null;
   }, [pdfUrl]);
 
-  const seleccionar = React.useCallback(
-    async (row: Fila) => {
-      // Se abre de inmediato; CW y documento se completan al llegar (un error no bloquea el detalle).
-      seleccionRef.current = row.cod_tarifa_spot;
-      setSeleccionada(row);
-      setPdfUrl(null);
-      setEstadoPdf(row.url_documento ? "cargando" : null);
+  const seleccionar = React.useCallback(async (row: Fila) => {
+    // Se abre de inmediato; CW y documento se completan al llegar (un error no bloquea el detalle).
+    seleccionRef.current = row.cod_tarifa_spot;
+    setSeleccionada(row);
+    setPdfUrl(null);
+    setEstadoPdf(row.url_documento ? "cargando" : null);
 
-      const [cw, original, documento] = await Promise.allSettled([
-        obtenerCwSpot(row.cod_cotizacion_cabecera as Id, row.cod_cotizaciondetalle),
-        obtenerOriginalSpot(row.cod_cotizaciondetalle),
-        row.url_documento ? recuperarArchivoPdf(row.url_documento) : Promise.resolve(null),
-      ]);
+    const [cw, original, documento] = await Promise.allSettled([
+      obtenerCwSpot(row.cod_cotizacion_cabecera as Id, row.cod_cotizaciondetalle),
+      obtenerOriginalSpot(row.cod_cotizaciondetalle),
+      row.url_documento ? recuperarArchivoPdf(row.url_documento) : Promise.resolve(null),
+    ]);
 
-      // Si mientras tanto se eligió otra fila, se descarta esta respuesta.
-      if (seleccionRef.current !== row.cod_tarifa_spot) return;
-      setSeleccionada((actual) =>
-        actual
-          ? {
-              ...actual,
-              ...(cw.status === "fulfilled" ? { cw: cw.value } : {}),
-              original: original.status === "fulfilled" ? original.value : null,
-            }
-          : actual,
-      );
-      if (documento.status === "fulfilled" && documento.value) {
-        const url = URL.createObjectURL(documento.value);
-        setPdfUrl(url);
-        setEstadoPdf(null);
-      } else if (row.url_documento) setEstadoPdf("error");
-    },
+    // Si mientras tanto se eligió otra fila, se descarta esta respuesta.
+    if (seleccionRef.current !== row.cod_tarifa_spot) return;
+    setSeleccionada((actual) =>
+      actual
+        ? {
+            ...actual,
+            ...(cw.status === "fulfilled" ? { cw: cw.value } : {}),
+            original: original.status === "fulfilled" ? original.value : null,
+          }
+        : actual,
+    );
+    if (documento.status === "fulfilled" && documento.value) {
+      const url = URL.createObjectURL(documento.value);
+      setPdfUrl(url);
+      setEstadoPdf(null);
+    } else if (row.url_documento) setEstadoPdf("error");
+  }, []);
+
+  // Props estables para que la tabla memoizada no se vuelva a dibujar al seleccionar.
+  const onSeleccionar = React.useCallback((row: Fila) => void seleccionar(row), [seleccionar]);
+  const { refetch } = consulta;
+  const onRefresh = React.useCallback(() => void refetch(), [refetch]);
+  const onAlternarAutorizados = React.useCallback(
+    () => setMostrarAutorizados((value) => !value),
     [],
   );
 
@@ -344,67 +340,6 @@ export function AutorizarTarifaSpot() {
     cod_usuario_autoriza_tarifaspot: codUsuario,
     cod_estado: codEstado,
   });
-
-  const columns = React.useMemo<ColumnDef<Fila>[]>(
-    () => [
-      {
-        accessorKey: "cod_tarifa_spot",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Tarifa spot" />,
-      },
-      {
-        accessorKey: "cod_cotizacion_cabecera",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Cotización" />,
-      },
-      {
-        accessorKey: "version",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Versión" />,
-      },
-      {
-        accessorKey: "venta",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Tarifa" />,
-      },
-      {
-        accessorKey: "entidad_nombre",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Cliente" />,
-      },
-      {
-        accessorKey: "solicitante",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Solicitante" />,
-      },
-      {
-        accessorKey: "tipo_transporte",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Transporte" />,
-      },
-      {
-        accessorKey: "tipo_servicio",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Servicio" />,
-      },
-      {
-        accessorKey: "tipo_carga",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Carga" />,
-      },
-      {
-        accessorKey: "tipo_pago",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Pago" />,
-      },
-      {
-        id: "acciones",
-        header: "Acciones",
-        cell: ({ row }) => (
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            aria-label="Ver tarifa Spot"
-            onClick={() => void seleccionar(row.original)}
-          >
-            <Eye className="size-4" />
-          </Button>
-        ),
-      },
-    ],
-    [seleccionar],
-  );
 
   if (cargandoCatalogos)
     return <p className="p-4 text-sm text-muted-foreground">Cargando catálogos…</p>;
@@ -427,24 +362,14 @@ export function AutorizarTarifaSpot() {
 
   return (
     <div className="space-y-4">
-      <DataTable
-        title="Autorización de tarifas Spot"
-        columns={columns}
+      <TablaTarifasSpot
         data={data}
-        searchKeys={["cod_cotizacion_cabecera", "entidad_nombre", "solicitante"]}
         isLoading={consulta.isLoading}
         isRefreshing={consulta.isFetching}
-        onRefresh={() => void consulta.refetch()}
-        extraActions={
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setMostrarAutorizados((value) => !value)}
-          >
-            {mostrarAutorizados ? "Ocultar autorizadas" : "Mostrar autorizadas"}
-          </Button>
-        }
+        onRefresh={onRefresh}
+        mostrarAutorizados={mostrarAutorizados}
+        onAlternarAutorizados={onAlternarAutorizados}
+        onSeleccionar={onSeleccionar}
       />
       {seleccionada && estadoSeleccionada ? (
         <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
