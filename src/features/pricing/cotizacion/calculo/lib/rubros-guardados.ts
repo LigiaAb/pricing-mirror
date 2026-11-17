@@ -46,6 +46,13 @@ export type RubroGuardado = {
   metodo_detalle?: unknown;
   metodo_detalles?: unknown;
 
+  /*
+   * Marca SPOT del rubro guardado (true o 1). Según el endpoint
+   * llega en mayúsculas o minúsculas.
+   */
+  COTIZACIONDETALLE_ES_SPOT?: unknown;
+  cotizaciondetalle_es_spot?: unknown;
+
   [key: string]: unknown;
 };
 
@@ -61,6 +68,12 @@ export type RubroGuardadoProcesado = {
   cod_tipo_pago?: Id | null;
 
   gruporubro_nombre: string;
+
+  /*
+   * Sale de COTIZACIONDETALLE_ES_SPOT: Due Carrier / Due Agent
+   * muestran la etiqueta SPOT con este campo, igual que en el cálculo.
+   */
+  es_tarifa_spot: boolean;
 
   clasificacion?: Id | null;
   servicio_clasificacion?: Id | null;
@@ -227,6 +240,13 @@ export function unirDetallesGuardados(...fuentes: unknown[]) {
  * NORMALIZACIÓN
  * ============================================================ */
 
+/** `COTIZACIONDETALLE_ES_SPOT` del rubro guardado: SPOT si es true o 1. */
+export function esRubroGuardadoSpot(item: RubroGuardado) {
+  const valor = item.COTIZACIONDETALLE_ES_SPOT ?? item.cotizaciondetalle_es_spot;
+
+  return valor === true || valor === 1 || valor === "1" || valor === "true";
+}
+
 export function normalizarRubrosGuardados({
   rubros,
   rubrosCatalogo,
@@ -369,6 +389,8 @@ export function normalizarRubrosGuardados({
       cod_tipo_pago: item.cod_tipo_pago ?? null,
 
       gruporubro_nombre: item.gruporubro_nombre ?? "",
+
+      es_tarifa_spot: esRubroGuardadoSpot(item),
 
       /*
        * El legado conserva dos formas simultáneas:
