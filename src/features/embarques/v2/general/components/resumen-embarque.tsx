@@ -1,6 +1,6 @@
 "use client";
 
-import { FileUp, ListChecks, Route } from "lucide-react";
+import { ListChecks, Route } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Dato, SeccionEmbarque } from "../../shared/components/utils";
 import type { EmbarqueMaqueta } from "../../shared/lib/tipos";
@@ -14,13 +14,13 @@ export function ResumenEmbarque({
   embarque,
   onVerTracking,
   onVerActividades,
-  onSubirDocumentos,
+  // onSubirDocumentos,
 }: {
   embarque: EmbarqueMaqueta;
   onVerTracking: () => void;
   onVerActividades: () => void;
   /** Sin él no se muestra el botón (perfiles que no ven Documentos). */
-  onSubirDocumentos?: (() => void) | undefined;
+  // onSubirDocumentos?: (() => void) | undefined;
 }) {
   return (
     <section className="space-y-4">
@@ -36,12 +36,6 @@ export function ResumenEmbarque({
           <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
             {embarque.estado}
           </span>
-          {onSubirDocumentos ? (
-            <Button type="button" size="sm" variant="outline" onClick={onSubirDocumentos}>
-              <FileUp className="size-4" aria-hidden="true" />
-              Documentos
-            </Button>
-          ) : null}
           <Button type="button" size="sm" variant="outline" onClick={onVerActividades}>
             <ListChecks className="size-4" aria-hidden="true" />
             Actividades

@@ -91,14 +91,18 @@ function TriggerPaso({ paso, pasoActual }: { paso: PasoEmbarque; pasoActual: num
 
       <div className="flex w-full flex-wrap">
         <span className="text-left">{paso.label}</span>
-        <span className="w-full text-left text-[9px]">
-          {paso.detalle}
-        </span>
+        <span className="w-full text-left text-[9px]">{paso.detalle}</span>
       </div>
 
-      {completado ? <Check className="size-4 shrink-0 text-primary" aria-label="Completado" /> : null}
+      {completado ? (
+        <Check className="size-4 shrink-0 text-primary" aria-label="Completado" />
+      ) : null}
       {actual ? (
-        <span className="size-2 shrink-0 rounded-full bg-primary" role="img" aria-label="Paso actual" />
+        <span
+          className="size-2 shrink-0 rounded-full bg-primary"
+          role="img"
+          aria-label="Paso actual"
+        />
       ) : null}
     </TabsTrigger>
   );
@@ -161,7 +165,9 @@ export function TabsEmbarque({
           </div>
         ))}
 
-        {extra.length > 0 ? <div className="my-1 h-px w-full bg-border" aria-hidden="true" /> : null}
+        {extra.length > 0 ? (
+          <div className="my-1 h-px w-full bg-border" aria-hidden="true" />
+        ) : null}
 
         {extra.map((paso) => (
           <TriggerPaso key={paso.value} paso={paso} pasoActual={embarque.pasoActual} />

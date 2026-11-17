@@ -194,7 +194,7 @@ export async function listarVersionesConSpot(codCotizacionCabecera: Id) {
     }),
   );
 }
-export async function listarRubrosVersion(codCotizacionDetalle: Id) {
+async function listarRubrosVersion(codCotizacionDetalle: Id) {
   return parseEnvelope(
     await http.get<unknown>("/api/appweb/lista-cotizacion-detalle-rubro", {
       params: {

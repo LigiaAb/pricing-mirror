@@ -6,8 +6,8 @@ import {
   ExternalLink,
   Eye,
   FileText,
-  FileX,
   SquareArrowOutUpRight,
+  Upload,
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
@@ -19,8 +19,6 @@ import { encodeId } from "@/shared/lib/sqids";
 import type { ColumnDef } from "@/shared/lib/tanstack-table";
 import { useAuthStore } from "@/shared/stores/auth-store";
 import type { CotizacionCabeceraPayload } from "../../cotizacion/calculo/api/cotizacion-cabecera";
-import { filtrarPorTipoTabla, normalizarOpciones } from "../../cotizacion/calculo/lib/catalogos";
-import { formatNumero } from "../../cotizacion/calculo/lib/utils";
 import { CotizacionForm } from "../../cotizacion/calculo/components/cotizacion-form";
 import type {
   CatalogosFormularioCotizacion,
@@ -29,13 +27,12 @@ import type {
 import { useCatalogosTarifas } from "../../tarifas/hooks/use-catalogos-tarifas";
 import {
   obtenerCwSpot,
-  obtenerOriginalSpot,
-  type OriginalSpot,
   recuperarArchivoPdf,
   type TarifaSpotFila,
   useActualizarTarifaSpot,
   useAutorizacionSpot,
   useAutorizarTarifaSpot,
+  useCargarArchivoSpot,
 } from "../api/autorizacion-spot";
 
 type Id = string | number;
@@ -77,9 +74,6 @@ const opciones = (value: unknown): OpcionFormularioCotizacion[] =>
       optionValue;
     return [{ ...item, value: optionValue, label: String(text) } as OpcionFormularioCotizacion];
   });
-/** Monto con 2 decimales; "—" si no hay valor numérico. */
-const monto = (value: unknown) =>
-  value == null || value === "" || !Number.isFinite(Number(value)) ? "—" : formatNumero(Number(value));
 const etiqueta = (items: OpcionFormularioCotizacion[], value: unknown) =>
   items.find((item) => mismoId(item.value, value))?.label ?? "";
 const normalizar = (value: unknown) =>
@@ -98,39 +92,7 @@ type Fila = TarifaSpotFila & {
   tipo_carga: string;
   tipo_pago: string;
   clasificacion_carga: string;
-  solicitante: string;
-  autorizador: string;
-  reason_code_nombre: string;
-  /** Se completa al abrir el detalle (rubro SPOT guardado en la versión). */
-  original?: OriginalSpot | null;
 };
-
-type EstadoSpot = "pendiente" | "sin-documento" | "autorizada" | "rechazada";
-
-const ESTADO_SPOT: Record<EstadoSpot, { texto: string; color: string }> = {
-  pendiente: { texto: "Pendiente de autorización", color: "bg-amber-500" },
-  "sin-documento": { texto: "Sin documento", color: "bg-muted-foreground" },
-  autorizada: { texto: "Autorizada", color: "bg-emerald-500" },
-  rechazada: { texto: "Rechazada", color: "bg-destructive" },
-};
-
-/** Nombre visible de cada usuario por código (el catálogo puede venir en camelCase o snake_case). */
-function mapaNombresUsuarios(usuarios: unknown): Map<string, string> {
-  const mapa = new Map<string, string>();
-  for (const usuario of Array.isArray(usuarios) ? usuarios : []) {
-    if (!isRecord(usuario)) continue;
-    const codigo = usuario.codUsuario ?? usuario.cod_usuario ?? usuario.value;
-    const nombre =
-      usuario.nombreCompleto ??
-      usuario.nombre_completo ??
-      usuario.label ??
-      usuario.nombre ??
-      usuario.usuario;
-    if (codigo == null || nombre == null || String(nombre).trim() === "") continue;
-    if (!mapa.has(String(codigo))) mapa.set(String(codigo), String(nombre).trim());
-  }
-  return mapa;
-}
 
 function Resumen({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -160,12 +122,12 @@ export function AutorizarTarifaSpot() {
   const consulta = useAutorizacionSpot();
   const actualizar = useActualizarTarifaSpot();
   const autorizar = useAutorizarTarifaSpot();
+  const cargar = useCargarArchivoSpot();
   const { catalogos, isLoading: cargandoCatalogos } = useCatalogosTarifas({});
   const [mostrarAutorizados, setMostrarAutorizados] = React.useState(false);
   const [seleccionada, setSeleccionada] = React.useState<Fila | null>(null);
+  const [archivo, setArchivo] = React.useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = React.useState<string | null>(null);
-  const [estadoPdf, setEstadoPdf] = React.useState<"cargando" | "error" | null>(null);
-  const seleccionRef = React.useRef<Id | null>(null);
 
   const catalogosFormulario = React.useMemo<CatalogosFormularioCotizacion>(
     () => ({
@@ -198,31 +160,6 @@ export function AutorizarTarifaSpot() {
       rechazado: buscar("RECHAZADO"),
     };
   }, [catalogos.estados]);
-
-  const reasonCodes = React.useMemo(
-    () => normalizarOpciones(filtrarPorTipoTabla(catalogos.tipos, ["REASON_CODE_SPOT"])),
-    [catalogos.tipos],
-  );
-
-  const nombresUsuarios = React.useMemo(
-    () => mapaNombresUsuarios(catalogos.usuarios),
-    [catalogos.usuarios],
-  );
-
-  const nombreUsuario = React.useCallback(
-    (codigo: unknown) =>
-      codigo == null || codigo === "" ? "" : (nombresUsuarios.get(String(codigo)) ?? String(codigo)),
-    [nombresUsuarios],
-  );
-
-  const estadoSpot = React.useCallback(
-    (fila: Fila): EstadoSpot => {
-      if (mismoId(fila.cod_estado, estados.autorizado)) return "autorizada";
-      if (mismoId(fila.cod_estado, estados.rechazado)) return "rechazada";
-      return fila.url_documento ? "pendiente" : "sin-documento";
-    },
-    [estados],
-  );
 
   const data = React.useMemo<Fila[]>(() => {
     const { tarifas = [], cotizaciones = [], detalles = [] } = consulta.data ?? {};
@@ -259,11 +196,6 @@ export function AutorizarTarifaSpot() {
               catalogosFormulario.clasificacionesCarga ?? [],
               merged.cod_clasificacion_carga,
             ),
-            solicitante: nombreUsuario(merged.cod_usuario_tarifaspot),
-            autorizador: nombreUsuario(merged.cod_usuario_autoriza_tarifaspot),
-            reason_code_nombre:
-              etiqueta(reasonCodes, merged.reason_code) ||
-              (merged.reason_code == null ? "" : String(merged.reason_code)),
           } as Fila,
         ];
       })
@@ -278,15 +210,7 @@ export function AutorizarTarifaSpot() {
             numeric: true,
           }),
       );
-  }, [
-    consulta.data,
-    codCc,
-    mostrarAutorizados,
-    estados,
-    catalogosFormulario,
-    nombreUsuario,
-    reasonCodes,
-  ]);
+  }, [consulta.data, codCc, mostrarAutorizados, estados, catalogosFormulario]);
 
   React.useEffect(
     () => () => {
@@ -305,36 +229,16 @@ export function AutorizarTarifaSpot() {
 
   const seleccionar = React.useCallback(
     async (row: Fila) => {
-      // Se abre de inmediato; CW y documento se completan al llegar (un error no bloquea el detalle).
-      seleccionRef.current = row.cod_tarifa_spot;
-      setSeleccionada(row);
-      setPdfUrl(null);
-      setEstadoPdf(row.url_documento ? "cargando" : null);
-
-      const [cw, original, documento] = await Promise.allSettled([
-        obtenerCwSpot(row.cod_cotizacion_cabecera as Id, row.cod_cotizaciondetalle),
-        obtenerOriginalSpot(row.cod_cotizaciondetalle),
-        row.url_documento ? recuperarArchivoPdf(row.url_documento) : Promise.resolve(null),
-      ]);
-
-      // Si mientras tanto se eligió otra fila, se descarta esta respuesta.
-      if (seleccionRef.current !== row.cod_tarifa_spot) return;
-      setSeleccionada((actual) =>
-        actual
-          ? {
-              ...actual,
-              ...(cw.status === "fulfilled" ? { cw: cw.value } : {}),
-              original: original.status === "fulfilled" ? original.value : null,
-            }
-          : actual,
-      );
-      if (documento.status === "fulfilled" && documento.value) {
-        const url = URL.createObjectURL(documento.value);
-        setPdfUrl(url);
-        setEstadoPdf(null);
-      } else if (row.url_documento) setEstadoPdf("error");
+      const cw = await obtenerCwSpot(row.cod_cotizacion_cabecera as Id, row.cod_cotizaciondetalle);
+      setSeleccionada({ ...row, cw });
+      setArchivo(null);
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+      if (row.url_documento) {
+        const blob = await recuperarArchivoPdf(row.url_documento);
+        setPdfUrl(URL.createObjectURL(blob));
+      } else setPdfUrl(null);
     },
-    [],
+    [pdfUrl],
   );
 
   const payloadEstado = (row: Fila, codEstado: Id | null) => ({
@@ -366,10 +270,6 @@ export function AutorizarTarifaSpot() {
       {
         accessorKey: "entidad_nombre",
         header: ({ column }) => <DataTableColumnHeader column={column} title="Cliente" />,
-      },
-      {
-        accessorKey: "solicitante",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Solicitante" />,
       },
       {
         accessorKey: "tipo_transporte",
@@ -408,22 +308,7 @@ export function AutorizarTarifaSpot() {
 
   if (cargandoCatalogos)
     return <p className="p-4 text-sm text-muted-foreground">Cargando catálogos…</p>;
-  const mutando = actualizar.isPending || autorizar.isPending;
-  const estadoSeleccionada = seleccionada ? estadoSpot(seleccionada) : null;
-  const puedeResolver =
-    seleccionada != null &&
-    Boolean(seleccionada.url_documento) &&
-    mismoId(seleccionada.cod_estado, estados.activo);
-  // Mínimo: el original es el monto del rubro (original_venta), no tarifa × CW.
-  const minimoOriginal =
-    seleccionada?.original?.esMinimo && seleccionada.original.minimo != null
-      ? seleccionada.original.minimo
-      : null;
-  const tieneOriginal = Number(seleccionada?.venta_original ?? 0) !== 0;
-  const cerrar = () => {
-    seleccionRef.current = null;
-    setSeleccionada(null);
-  };
+  const mutando = actualizar.isPending || autorizar.isPending || cargar.isPending;
 
   return (
     <div className="space-y-4">
@@ -431,7 +316,7 @@ export function AutorizarTarifaSpot() {
         title="Autorización de tarifas Spot"
         columns={columns}
         data={data}
-        searchKeys={["cod_cotizacion_cabecera", "entidad_nombre", "solicitante"]}
+        searchKeys={["cod_cotizacion_cabecera", "entidad_nombre"]}
         isLoading={consulta.isLoading}
         isRefreshing={consulta.isFetching}
         onRefresh={() => void consulta.refetch()}
@@ -446,7 +331,7 @@ export function AutorizarTarifaSpot() {
           </Button>
         }
       />
-      {seleccionada && estadoSeleccionada ? (
+      {seleccionada ? (
         <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
           <header className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/25 px-5 py-4">
             <div>
@@ -457,72 +342,55 @@ export function AutorizarTarifaSpot() {
                 Tarifa SPOT #{seleccionada.cod_tarifa_spot}
               </h2>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="flex items-center gap-2 rounded-full border bg-background px-3 py-1.5 text-xs font-medium">
-                <span className={`size-2 rounded-full ${ESTADO_SPOT[estadoSeleccionada].color}`} />
-                {ESTADO_SPOT[estadoSeleccionada].texto}
-              </span>
-              <span className="rounded-full border bg-background px-3 py-1.5 text-xs font-medium">
-                Cotización {seleccionada.cod_cotizacion_cabecera} · versión {seleccionada.version}
-              </span>
+            <div className="flex items-center gap-2 rounded-full border bg-background px-3 py-1.5 text-xs font-medium">
+              <span className="size-2 rounded-full bg-amber-500" />
+              Cotización {seleccionada.cod_cotizacion_cabecera} · versión {seleccionada.version}
             </div>
           </header>
 
           <div className="grid items-start gap-5 p-5 lg:grid-cols-3">
             <div className="col-span-2 min-w-0 space-y-5">
               <div className="grid gap-3 sm:grid-cols-2">
-                <Resumen label="Usuario solicitante" value={seleccionada.solicitante || "—"} />
-                <Resumen label="Usuario autorizador" value={seleccionada.autorizador || "—"} />
+                <Resumen label="Usuario solicitante" value={seleccionada.cod_usuario_tarifaspot} />
+                <Resumen
+                  label="Usuario autorizador"
+                  value={seleccionada.cod_usuario_autoriza_tarifaspot}
+                />
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
                   <p className="mb-3 text-sm font-semibold text-primary">Nuevos valores</p>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <Resumen label="Nueva tarifa" value={monto(seleccionada.venta)} />
+                    <Resumen label="Nueva tarifa" value={seleccionada.venta} />
                     <Resumen
                       label="Nuevo valor"
-                      value={monto(
-                        Number(seleccionada.flete) ||
-                          (seleccionada.cw == null
-                            ? null
-                            : Number(seleccionada.venta ?? 0) * Number(seleccionada.cw)),
-                      )}
+                      value={
+                        seleccionada.flete ||
+                        Number(seleccionada.venta ?? 0) * Number(seleccionada.cw ?? 0)
+                      }
                     />
                   </div>
                 </div>
                 <div className="rounded-lg border p-4">
                   <p className="mb-3 text-sm font-semibold">Valores originales</p>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    {minimoOriginal != null ? (
-                      <>
-                        <Resumen label="Mínimo original" value={monto(minimoOriginal)} />
-                        <Resumen label="Valor original" value={monto(minimoOriginal)} />
-                      </>
-                    ) : (
-                      <>
-                        {/* Igual que el legado: sin tarifa original (0 o vacía) no hay valores que comparar. */}
-                        <Resumen
-                          label="Tarifa original"
-                          value={tieneOriginal ? monto(seleccionada.venta_original) : "—"}
-                        />
-                        <Resumen
-                          label="Valor original"
-                          value={
-                            tieneOriginal && seleccionada.cw != null
-                              ? monto(Number(seleccionada.venta_original) * Number(seleccionada.cw))
-                              : "—"
-                          }
-                        />
-                      </>
-                    )}
+                    <Resumen label="Tarifa original" value={seleccionada.venta_original} />
+                    <Resumen
+                      label="Valor original"
+                      value={
+                        seleccionada.venta_original == null
+                          ? "—"
+                          : Number(seleccionada.venta_original) * Number(seleccionada.cw ?? 0)
+                      }
+                    />
                   </div>
                 </div>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
-                <Resumen label="Reason code" value={seleccionada.reason_code_nombre || "—"} />
-                <Resumen label="Justificación" value={seleccionada.jusificacion || "—"} />
+                <Resumen label="Reason code" value={seleccionada.reason_code} />
+                <Resumen label="Justificación" value={seleccionada.jusificacion} />
               </div>
 
               <div className="rounded-lg border p-4">
@@ -540,7 +408,7 @@ export function AutorizarTarifaSpot() {
                 />
               </div>
               <div className="grid grid-cols-3 gap-3">
-                {puedeResolver ? (
+                {seleccionada.url_documento && mismoId(seleccionada.cod_estado, estados.activo) ? (
                   <Button
                     type="button"
                     disabled={mutando}
@@ -551,14 +419,14 @@ export function AutorizarTarifaSpot() {
                           codCotizacionCabecera: seleccionada.cod_cotizacion_cabecera as Id,
                           codCotizacionDetalle: seleccionada.cod_cotizaciondetalle,
                         })
-                        .then(cerrar)
+                        .then(() => setSeleccionada(null))
                     }
                   >
                     <CheckCircle2 className="size-4" />
                     Autorizar
                   </Button>
                 ) : null}
-                {puedeResolver ? (
+                {seleccionada.url_documento && mismoId(seleccionada.cod_estado, estados.activo) ? (
                   <Button
                     type="button"
                     variant="destructive"
@@ -566,7 +434,7 @@ export function AutorizarTarifaSpot() {
                     onClick={() =>
                       void actualizar
                         .mutateAsync(payloadEstado(seleccionada, estados.rechazado))
-                        .then(cerrar)
+                        .then(() => setSeleccionada(null))
                     }
                   >
                     <XCircle className="size-4" />
@@ -596,37 +464,43 @@ export function AutorizarTarifaSpot() {
                 </div>
 
                 {!seleccionada.url_documento ? (
-                  <div className="flex min-h-48 flex-col items-center justify-center gap-3 p-6 text-center">
-                    <FileX className="size-10 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Sin documento adjunto</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        El documento se adjunta al guardar la versión en Cotizaciones, cuando la
-                        tarifa SPOT no supera a la original. Sin documento no se puede autorizar ni
-                        rechazar.
-                      </p>
-                    </div>
-                  </div>
-                ) : null}
-
-                {seleccionada.url_documento && !pdfUrl ? (
-                  <div className="flex min-h-48 flex-col items-center justify-center gap-3 p-6 text-center">
-                    <FileText className="size-10 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      {estadoPdf === "error"
-                        ? "No se pudo cargar el documento."
-                        : "Cargando documento…"}
-                    </p>
-                    {estadoPdf === "error" ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void seleccionar(seleccionada)}
-                      >
-                        Reintentar
-                      </Button>
-                    ) : null}
+                  <div className="space-y-4 p-4">
+                    <label
+                      className="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed bg-muted/15 p-5 text-center transition-colors hover:bg-muted/30"
+                      htmlFor="archivo-spot"
+                    >
+                      <Upload className="mb-2 size-7 text-muted-foreground" />
+                      <span className="text-sm font-medium">Seleccionar documento</span>
+                      <span className="mt-1 text-xs text-muted-foreground">
+                        PDF, EML, MSG o MBOX
+                      </span>
+                      {archivo ? (
+                        <span className="mt-3 max-w-full truncate text-xs font-medium text-primary">
+                          {archivo.name}
+                        </span>
+                      ) : null}
+                    </label>
+                    <input
+                      id="archivo-spot"
+                      className="sr-only"
+                      type="file"
+                      accept="application/pdf,.pdf,.eml,.msg,.mbox"
+                      onChange={(event) => setArchivo(event.target.files?.[0] ?? null)}
+                    />
+                    <Button
+                      className="w-full"
+                      type="button"
+                      disabled={!archivo || mutando}
+                      onClick={() =>
+                        archivo &&
+                        void cargar
+                          .mutateAsync({ codTarifaSpot: seleccionada.cod_tarifa_spot, archivo })
+                          .then(() => consulta.refetch())
+                      }
+                    >
+                      <Upload className="size-4" />
+                      Subir archivo
+                    </Button>
                   </div>
                 ) : null}
 

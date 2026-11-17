@@ -44,7 +44,11 @@ export const GESTION_COMBEX: DefinicionesGestion = {
     ],
   },
   "CBX 8.4": { interaccion: "evidencia" },
-  "CBX 8.5": { interaccion: "notificacion", accion: "Informar al cliente", requiere: ["CBX 8.2", "CBX 8.4"] },
+  "CBX 8.5": {
+    interaccion: "notificacion",
+    accion: "Informar al cliente",
+    requiere: ["CBX 8.2", "CBX 8.4"],
+  },
   "CBX 10.1": {
     interaccion: "documento",
     accion: "Adjuntar hojas de seguridad",
@@ -83,9 +87,21 @@ export const GESTION_COMBEX: DefinicionesGestion = {
       { label: "Fecha y hora de salida real", tipo: "fecha-hora", requerido: true },
     ],
   },
-  "CBX 12.2": { interaccion: "notificacion", accion: "Solicitar complementaria", requiere: ["CBX 12.1"] },
-  "CBX 12.3": { interaccion: "notificacion", accion: "Enviar aviso al cliente", requiere: ["CBX 12.1"] },
-  "CBX 12.4": { interaccion: "notificacion", accion: "Enviar aviso a destino", requiere: ["CBX 12.1"] },
+  "CBX 12.2": {
+    interaccion: "notificacion",
+    accion: "Solicitar complementaria",
+    requiere: ["CBX 12.1"],
+  },
+  "CBX 12.3": {
+    interaccion: "notificacion",
+    accion: "Enviar aviso al cliente",
+    requiere: ["CBX 12.1"],
+  },
+  "CBX 12.4": {
+    interaccion: "notificacion",
+    accion: "Enviar aviso a destino",
+    requiere: ["CBX 12.1"],
+  },
   "CBX 13.1": { interaccion: "seguimiento", requiere: ["CBX 12.2"] },
   "CBX 13.2": {
     interaccion: "notificacion",
@@ -101,7 +117,14 @@ export const GESTION_COMBEX: DefinicionesGestion = {
   "CBX E3": {
     interaccion: "incidencia",
     accion: "Informar incidencia",
-    campos: [{ label: "Tipo", tipo: "seleccion", requerido: true, opciones: ["Cambio", "Cancelación", "Descarga"] }],
+    campos: [
+      {
+        label: "Tipo",
+        tipo: "seleccion",
+        requerido: true,
+        opciones: ["Cambio", "Cancelación", "Descarga"],
+      },
+    ],
   },
   "CBX E4": {
     interaccion: "seguimiento",

@@ -37,7 +37,10 @@ import {
  * ========================================================================== */
 
 /** Formulario de cada actor (carpeta del actor). */
-const FORMULARIO_DE_RESPONSABLE: Record<ResponsableTracking, (props: PropsActividad) => React.ReactNode> = {
+const FORMULARIO_DE_RESPONSABLE: Record<
+  ResponsableTracking,
+  (props: PropsActividad) => React.ReactNode
+> = {
   OPS: ActividadOperaciones,
   Bodega: ActividadBodegas,
   CBX: ActividadCombex,
@@ -49,7 +52,13 @@ function FormularioActividad(props: PropsActividad) {
 }
 
 /** Orden de las tabs por tipo (siempre todas; abre la primera con actividades). */
-const ORDEN_TIPOS: readonly TipoActividad[] = ["Principal", "Opcional", "Condicional", "Transversal", "Excepción"];
+const ORDEN_TIPOS: readonly TipoActividad[] = [
+  "Principal",
+  "Opcional",
+  "Condicional",
+  "Transversal",
+  "Excepción",
+];
 
 /** Agrupa actividades consecutivas con el mismo proceso. */
 function porProceso(actividades: readonly ActividadTracking[]) {

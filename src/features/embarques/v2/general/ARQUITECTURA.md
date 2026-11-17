@@ -8,12 +8,12 @@ campos sin guardado (los de las actividades se pueden llenar solo en pantalla; l
 `general/` es **solo la vista general** (tabla, resumen, tracking, tabs y Sheets). Los formularios de las
 actividades van en la carpeta de su actor, y lo que usan todos en `shared/`:
 
-| Carpeta        | Qué tiene                                                                          |
-| -------------- | ---------------------------------------------------------------------------------- |
-| `general/`     | Vista general: `VistaGeneral`, tabla, resumen, tracking general, tabs, Sheets, Información; `lib/pasos.ts` y `lib/datos-maqueta.ts` |
-| `operaciones/` | Formularios de OPS: `lib/gestion-actividades.ts` (`GESTION_OPERACIONES`), `components/actividad-operaciones.tsx`, `components/paso-documentos.tsx` |
-| `bodegas/`     | Formularios de Bodega: `lib/gestion-actividades.ts` (`GESTION_BODEGAS`), `components/actividad-bodegas.tsx` |
-| `combex/`      | Formularios de CBX: `lib/gestion-actividades.ts` (`GESTION_COMBEX`), `components/actividad-combex.tsx` |
+| Carpeta        | Qué tiene                                                                                                                                                  |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `general/`     | Vista general: `VistaGeneral`, tabla, resumen, tracking general, tabs, Sheets, Información; `lib/pasos.ts` y `lib/datos-maqueta.ts`                        |
+| `operaciones/` | Formularios de OPS: `lib/gestion-actividades.ts` (`GESTION_OPERACIONES`), `components/actividad-operaciones.tsx`, `components/paso-documentos.tsx`         |
+| `bodegas/`     | Formularios de Bodega: `lib/gestion-actividades.ts` (`GESTION_BODEGAS`), `components/actividad-bodegas.tsx`                                                |
+| `combex/`      | Formularios de CBX: `lib/gestion-actividades.ts` (`GESTION_COMBEX`), `components/actividad-combex.tsx`                                                     |
 | `shared/`      | Común: tipos, actividades del Excel, tipos de interacción, motor de gestión (`gestionDe`, `camposDe`, `accionDe`), tarjeta genérica y piezas (`utils.tsx`) |
 
 Dependencias: `general` → actores → `shared`. `shared` no importa de `general` ni de los actores, y un actor
@@ -21,7 +21,7 @@ no importa de otro.
 
 Las rutas de abajo sin carpeta son relativas a `general/`.
 
-## Pantalla (`components/vista-general.tsx`)
+## Pantalla (`components/VistaGeneral.tsx`)
 
 1. **Tabla de embarques** — `embarques-table.tsx` (`DataTable`, mismo patrón que Cotizaciones).
 2. **Resumen del seleccionado** (siempre visible) — `resumen-embarque.tsx`: franja con file/estado,
@@ -40,26 +40,26 @@ Las rutas de abajo sin carpeta son relativas a `general/`.
 
 ## Dónde vive cada cosa
 
-| Qué                                   | Dónde                                    |
-| ------------------------------------- | ---------------------------------------- |
-| Pasos del tracking (6) y de las tabs  | `lib/pasos.ts` (definición única)        |
-| Tipos (`PerfilEmbarque`, embarque)    | `shared/lib/tipos.ts`                    |
-| Datos de ejemplo (borrar con la API)  | `lib/datos-maqueta.ts`                   |
-| Piezas reutilizables (sección, dato…) | `shared/components/utils.tsx`            |
-| Campos de captura (input por tipo)    | `shared/components/campos.tsx`           |
-| Campos de Información (corporativos)  | `shared/lib/campos-embarque.ts`          |
-| Actividades del Excel (69)            | `shared/lib/actividades-tracking.ts`     |
-| Tipos de interacción (9)              | `shared/lib/interacciones.ts`            |
-| Motor de gestión (tipo y helpers)     | `shared/lib/gestion-actividades.ts`      |
-| Cómo se trabaja cada actividad        | `<actor>/lib/gestion-actividades.ts`     |
-| Formulario de una actividad del actor | `<actor>/components/actividad-<actor>.tsx` |
-| Tarjeta genérica de una actividad     | `shared/components/tarjeta-actividad.tsx` |
-| Tab genérica (todas las del flujo)    | `components/pasos/paso-actividades.tsx`  |
+| Qué                                   | Dónde                                                                      |
+| ------------------------------------- | -------------------------------------------------------------------------- |
+| Pasos del tracking (6) y de las tabs  | `lib/pasos.ts` (definición única)                                          |
+| Tipos (`PerfilEmbarque`, embarque)    | `shared/lib/tipos.ts`                                                      |
+| Datos de ejemplo (borrar con la API)  | `lib/datos-maqueta.ts`                                                     |
+| Piezas reutilizables (sección, dato…) | `shared/components/utils.tsx`                                              |
+| Campos de captura (input por tipo)    | `shared/components/campos.tsx`                                             |
+| Campos de Información (corporativos)  | `shared/lib/campos-embarque.ts`                                            |
+| Actividades del Excel (69)            | `shared/lib/actividades-tracking.ts`                                       |
+| Tipos de interacción (9)              | `shared/lib/interacciones.ts`                                              |
+| Motor de gestión (tipo y helpers)     | `shared/lib/gestion-actividades.ts`                                        |
+| Cómo se trabaja cada actividad        | `<actor>/lib/gestion-actividades.ts`                                       |
+| Formulario de una actividad del actor | `<actor>/components/actividad-<actor>.tsx`                                 |
+| Tarjeta genérica de una actividad     | `shared/components/tarjeta-actividad.tsx`                                  |
+| Tab genérica (todas las del flujo)    | `components/pasos/paso-actividades.tsx`                                    |
 | Tabs con contenido propio             | `pasos/paso-informacion.tsx`, `operaciones/components/paso-documentos.tsx` |
 
 ## Tracking general (Exportación Aérea)
 
-Fuente: `Tracking-Expo-Aereo-6Pasos.xlsx` (hoja *Tracking 6 pasos*). Cada paso tiene nombre corto, nombre
+Fuente: `Tracking-Expo-Aereo-6Pasos.xlsx` (hoja _Tracking 6 pasos_). Cada paso tiene nombre corto, nombre
 consolidado, alcance (tooltip) y áreas responsables (OPS, Bodega, CBX):
 
 1. **Reserva** — Coordinación y reserva (OPS, Bodega)
@@ -71,9 +71,9 @@ consolidado, alcance (tooltip) y áreas responsables (OPS, Bodega, CBX):
 
 ### Actividades (qué paso original va en cada paso)
 
-`shared/lib/actividades-tracking.ts` (`ACTIVIDADES_TRACKING`) es la hoja *Detalle original*: 69 actividades con
+`shared/lib/actividades-tracking.ts` (`ACTIVIDADES_TRACKING`) es la hoja _Detalle original_: 69 actividades con
 paso nuevo, responsable, código original, proceso, entrada, actividad, resultado, tipo
-(Principal/Opcional/Condicional/Excepción/Transversal) y control. Cuadra con la hoja *Tracking 6 pasos*.
+(Principal/Opcional/Condicional/Excepción/Transversal) y control. Cuadra con la hoja _Tracking 6 pasos_.
 El `id` es `"<responsable> <código>"` (ej. `"OPS 4.1"`, `"Bodega 0.1"`) porque los códigos se repiten entre
 áreas. Se usa en:
 
@@ -86,29 +86,29 @@ operación.
 
 ## Tabs: actividades generalizadas
 
-Las tabs cubren **las 69 actividades** de la hoja *Detalle original*, cada una en **exactamente una** tab
+Las tabs cubren **las 69 actividades** de la hoja _Detalle original_, cada una en **exactamente una** tab
 (`PASOS_EMBARQUE[].actividades`, en el orden en que se trabajan). En la lista lateral se agrupan por paso del
 tracking (`1 · Reserva`, `2 · Documentación`…); la tab muestra check si su paso ya pasó y un punto si es el actual.
 
-| Paso | Tab                    | Actividades                                         |
-| ---- | ---------------------- | --------------------------------------------------- |
-| —    | Información            | —                                                   |
-| 1    | Recolección y empaque  | OPS 0.1–0.5, Bodega 0.1–0.5 (opcionales)            |
-| 1    | Asignación de guías    | OPS 1.1–1.3                                         |
-| 1    | Reservas               | OPS 2.1, 2.2, 3.1, 3.2                              |
-| 2    | Draft y preaviso       | OPS 4.1, 4.2, 4.3                                   |
-| 2    | Gestión aduanera       | OPS 5.1–5.4, CBX E1                                 |
-| 3    | Recepción en bodega    | Bodega 7.1–7.5, E1, E2                              |
-| 3    | Liberación y despacho  | OPS 6.1, Bodega 7.6–7.9                             |
-| 4    | Recepción en COMBEX    | CBX 8.1–8.5                                         |
-| 4    | Guía final             | OPS 9.1, 9.3, 9.4, 9.5, E2                          |
-| 4    | Tarifas y cargos       | OPS 9.2                                             |
-| 4    | Documentación final    | CBX 10.1–10.5                                       |
-| 5    | Despacho y salida      | CBX 11.1, 12.1, 12.3, 12.4, E2, E3, E4; OPS E1      |
-| 5    | Complementaria         | CBX 12.2, 13.1, 13.2                                |
-| 6    | Arribo y cierre        | CBX 14.1; OPS 15, 16, 17                            |
-| —    | Documentos (extra)     | —                                                   |
-| —    | Cancelación (extra)    | OPS 4.4                                             |
+| Paso | Tab                   | Actividades                                    |
+| ---- | --------------------- | ---------------------------------------------- |
+| —    | Información           | —                                              |
+| 1    | Recolección y empaque | OPS 0.1–0.5, Bodega 0.1–0.5 (opcionales)       |
+| 1    | Asignación de guías   | OPS 1.1–1.3                                    |
+| 1    | Reservas              | OPS 2.1, 2.2, 3.1, 3.2                         |
+| 2    | Draft y preaviso      | OPS 4.1, 4.2, 4.3                              |
+| 2    | Gestión aduanera      | OPS 5.1–5.4, CBX E1                            |
+| 3    | Recepción en bodega   | Bodega 7.1–7.5, E1, E2                         |
+| 3    | Liberación y despacho | OPS 6.1, Bodega 7.6–7.9                        |
+| 4    | Recepción en COMBEX   | CBX 8.1–8.5                                    |
+| 4    | Guía final            | OPS 9.1, 9.3, 9.4, 9.5, E2                     |
+| 4    | Tarifas y cargos      | OPS 9.2                                        |
+| 4    | Documentación final   | CBX 10.1–10.5                                  |
+| 5    | Despacho y salida     | CBX 11.1, 12.1, 12.3, 12.4, E2, E3, E4; OPS E1 |
+| 5    | Complementaria        | CBX 12.2, 13.1, 13.2                           |
+| 6    | Arribo y cierre       | CBX 14.1; OPS 15, 16, 17                       |
+| —    | Documentos (extra)    | —                                              |
+| —    | Cancelación (extra)   | OPS 4.4                                        |
 
 ### Tipos de interacción (`shared/lib/interacciones.ts`)
 
@@ -116,32 +116,32 @@ Cada actividad se trabaja con uno de 9 tipos; todos se ven con la misma tarjeta.
 nombre del tipo no se muestra al usuario** (solo define icono, campos base y botón). En pantalla no usar
 términos técnicos: el usuario ve la actividad, sus campos y el botón con la acción.
 
-| Tipo            | Para qué                                     | Campos base                                  |
-| --------------- | -------------------------------------------- | -------------------------------------------- |
-| Formulario      | Registro de datos                            | Observaciones                                |
-| Dato especial   | Peso, medidas, correlativo vs. referencia    | — (los de la actividad + comparación)        |
-| Confirmación    | Verificar y dejar constancia                 | Fecha y hora, Confirmado por                 |
-| Correo          | Aviso a cliente, destino o proveedor         | Destinatarios, Asunto, Fecha de envío, Adjuntos |
-| Orden de compra | OC del embarque                              | Proveedor, No. OC, Monto, Moneda             |
-| Documento       | Generar, emitir o imprimir                   | Fecha                                        |
-| Evidencia       | Fotografías                                  | Fotografías                                  |
-| Seguimiento     | Trámite hasta que concluye                   | Estado, Fecha, Observaciones                 |
-| Incidencia      | Excepción con motivo y autorización          | Motivo, Autorizado por, Detalle              |
+| Tipo            | Para qué                                  | Campos base                                     |
+| --------------- | ----------------------------------------- | ----------------------------------------------- |
+| Formulario      | Registro de datos                         | Observaciones                                   |
+| Dato especial   | Peso, medidas, correlativo vs. referencia | — (los de la actividad + comparación)           |
+| Confirmación    | Verificar y dejar constancia              | Fecha y hora, Confirmado por                    |
+| Correo          | Aviso a cliente, destino o proveedor      | Destinatarios, Asunto, Fecha de envío, Adjuntos |
+| Orden de compra | OC del embarque                           | Proveedor, No. OC, Monto, Moneda                |
+| Documento       | Generar, emitir o imprimir                | Fecha                                           |
+| Evidencia       | Fotografías                               | Fotografías                                     |
+| Seguimiento     | Trámite hasta que concluye                | Estado, Fecha, Observaciones                    |
+| Incidencia      | Excepción con motivo y autorización       | Motivo, Autorizado por, Detalle                 |
 
 ### Campos de captura (`shared/components/campos.tsx`)
 
 Un componente por tipo de dato, con los mismos componentes que ya usa el proyecto (no inputs a mano):
 
-| `tipo` del campo | Componente        | Se ve como                                       | Patrón existente                         |
-| ---------------- | ----------------- | ------------------------------------------------ | ---------------------------------------- |
-| `casillas`       | `CampoCasillas`   | `Checkbox` por opción                            | embarques `formulario-alternativo`, detalles |
-| `texto`, `numero`| `CampoTexto`      | `Field` + `InputGroupInput`                      | pricing (`CampoMetodo`)                  |
-| `seleccion`      | `CampoSeleccion`  | `Select` con `opciones` fijas (obligatorias)     | embarques `ruta-dialog`, `formulario-alternativo` |
-| `catalogo`       | `CampoCatalogo`   | `Combobox` con búsqueda (catálogo por conectar)  | embarques `ruta-dialog`, `nueva-entidad-captura` |
-| `fecha`          | `CampoFecha`      | `Popover` + `Calendar` (fecha en español, `PPP`) | embarques `paso-confirmar-destino`       |
-| `fecha-hora`     | `CampoFecha conHora` | lo mismo + hora (`type="time"`)               | —                                        |
-| `area`           | `CampoArea`       | `Textarea`                                       | embarques `formulario-alternativo`       |
-| `archivo`        | `CampoArchivos`   | zona de arrastrar o seleccionar (`acepta`)       | embarques `public/file-dropzone`         |
+| `tipo` del campo  | Componente           | Se ve como                                       | Patrón existente                                  |
+| ----------------- | -------------------- | ------------------------------------------------ | ------------------------------------------------- |
+| `casillas`        | `CampoCasillas`      | `Checkbox` por opción                            | embarques `formulario-alternativo`, detalles      |
+| `texto`, `numero` | `CampoTexto`         | `Field` + `InputGroupInput`                      | pricing (`CampoMetodo`)                           |
+| `seleccion`       | `CampoSeleccion`     | `Select` con `opciones` fijas (obligatorias)     | embarques `ruta-dialog`, `formulario-alternativo` |
+| `catalogo`        | `CampoCatalogo`      | `Combobox` con búsqueda (catálogo por conectar)  | embarques `ruta-dialog`, `nueva-entidad-captura`  |
+| `fecha`           | `CampoFecha`         | `Popover` + `Calendar` (fecha en español, `PPP`) | embarques `paso-confirmar-destino`                |
+| `fecha-hora`      | `CampoFecha conHora` | lo mismo + hora (`type="time"`)                  | —                                                 |
+| `area`            | `CampoArea`          | `Textarea`                                       | embarques `formulario-alternativo`                |
+| `archivo`         | `CampoArchivos`      | zona de arrastrar o seleccionar (`acepta`)       | embarques `public/file-dropzone`                  |
 
 Regla: lista corta y fija (Sí/No, PP/CC, estado…) → `seleccion` con `opciones`; proveedores, líneas aéreas,
 agentes, monedas, clientes… → `catalogo`. Fotografías → `acepta: "image/*"`. `soloLectura` deshabilita el control.
@@ -156,7 +156,7 @@ v2 es un **rediseño**: la tab Información conserva su diseño (General · Part
 `CAMPOS_FACTURACION`, `CAMPOS_DETALLES`, `CAMPOS_PRODUCTO`, `CAMPOS_RUTA`, `CAMPOS_FECHAS`, `CAMPO_COD_FILE`).
 `key` es el nombre del dato en el módulo actual, para conectar la API sin traducir; el origen de cada lista
 está anotado en el archivo. Dónde va cada campo lo decide `pasos/paso-informacion.tsx`. Las actividades que
-piden un dato que ya existe usan el mismo nombre (p. ej. *Aerolínea*, *Nro. Vuelo*, *Cantidad (bultos)*).
+piden un dato que ya existe usan el mismo nombre (p. ej. _Aerolínea_, _Nro. Vuelo_, _Cantidad (bultos)_).
 
 ### Gestión de cada actividad (`<actor>/lib/gestion-actividades.ts`)
 
@@ -190,15 +190,15 @@ conteo; las que no tienen actividades quedan bloqueadas; abre la primera con act
 
 ## Perfiles: Operaciones, Bodegas, Combex
 
-`VistaGeneral` recibe `perfil` (por defecto `"operaciones"`). Reglas en `lib/pasos.ts` (sección *Permisos por
-perfil*), según el responsable de cada actividad del Excel (`PERFIL_DE_RESPONSABLE`: OPS → operaciones,
+`VistaGeneral` recibe `perfil` (por defecto `"operaciones"`). Reglas en `lib/pasos.ts` (sección _Permisos por
+perfil_), según el responsable de cada actividad del Excel (`PERFIL_DE_RESPONSABLE`: OPS → operaciones,
 Bodega → bodegas, CBX → combex):
 
-| Perfil      | Tabs                                                   | Actividades                                  | Información |
-| ----------- | ------------------------------------------------------ | -------------------------------------------- | ----------- |
-| Operaciones | Todas (incluye Documentos y Cancelación)               | Ve las 69; edita las 31 de OPS; las de Bodega y Combex en **solo consulta** | Edita |
-| Bodegas     | Información + tabs con actividades de Bodega (3)       | Solo las 16 de Bodega                        | Solo consulta |
-| Combex      | Información + tabs con actividades de CBX (6)          | Solo las 22 de CBX                           | Solo consulta |
+| Perfil      | Tabs                                             | Actividades                                                                 | Información   |
+| ----------- | ------------------------------------------------ | --------------------------------------------------------------------------- | ------------- |
+| Operaciones | Todas (incluye Documentos y Cancelación)         | Ve las 69; edita las 31 de OPS; las de Bodega y Combex en **solo consulta** | Edita         |
+| Bodegas     | Información + tabs con actividades de Bodega (3) | Solo las 16 de Bodega                                                       | Solo consulta |
+| Combex      | Información + tabs con actividades de CBX (6)    | Solo las 22 de CBX                                                          | Solo consulta |
 
 - `perfilesDeTab`: qué perfiles ven la tab (`paraTodos` = Información; sin actividades y sin `paraTodos` =
   solo Operaciones).

@@ -4,7 +4,7 @@ import { MousePointerClick } from "lucide-react";
 import * as React from "react";
 import type { EmbarqueMaqueta, PerfilEmbarque } from "../../shared/lib/tipos";
 import { EMBARQUES_MAQUETA } from "../lib/datos-maqueta";
-import { pasosDelPerfil, type ValorPasoEmbarque } from "../lib/pasos";
+import type { ValorPasoEmbarque } from "../lib/pasos";
 import { DetalleActividadesSheet } from "./detalle-actividades-sheet";
 import { EmbarquesTable } from "./embarques-table";
 import { ResumenEmbarque } from "./resumen-embarque";
@@ -46,7 +46,7 @@ export const VistaGeneral = ({
   const [actividadesOpen, setActividadesOpen] = React.useState(false);
 
   const seccionRef = React.useRef<HTMLDivElement | null>(null);
-  const veDocumentos = pasosDelPerfil(perfil).some((paso) => paso.value === "documentos");
+  // const veDocumentos = pasosDelPerfil(perfil).some((paso) => paso.value === "documentos");
 
   const seleccionar = React.useCallback((embarque: EmbarqueMaqueta) => {
     setSeleccionado(embarque);
@@ -64,7 +64,11 @@ export const VistaGeneral = ({
           LISTADO
       ================================================================= */}
       <section className="rounded-lg border bg-card p-4 shadow-sm">
-        <EmbarquesTable data={EMBARQUES_MAQUETA} seleccionado={seleccionado} onSeleccionar={seleccionar} />
+        <EmbarquesTable
+          data={EMBARQUES_MAQUETA}
+          seleccionado={seleccionado}
+          onSeleccionar={seleccionar}
+        />
       </section>
 
       {/* ================================================================
@@ -76,11 +80,16 @@ export const VistaGeneral = ({
             embarque={seleccionado}
             onVerTracking={() => setTrackingOpen(true)}
             onVerActividades={() => setActividadesOpen(true)}
-            onSubirDocumentos={veDocumentos ? () => setTab("documentos") : undefined}
+            // onSubirDocumentos={veDocumentos ? () => setTab("documentos") : undefined}
           />
 
           <section className="rounded-lg border bg-card p-2 shadow-sm">
-            <TabsEmbarque embarque={seleccionado} perfil={perfil} value={tab} onValueChange={setTab} />
+            <TabsEmbarque
+              embarque={seleccionado}
+              perfil={perfil}
+              value={tab}
+              onValueChange={setTab}
+            />
           </section>
         </div>
       ) : (
@@ -98,7 +107,12 @@ export const VistaGeneral = ({
         onActualizarEstado={onActualizarEstadoTracking}
       />
 
-      <DetalleActividadesSheet open={actividadesOpen} onOpenChange={setActividadesOpen} embarque={seleccionado} perfil={perfil} />
+      <DetalleActividadesSheet
+        open={actividadesOpen}
+        onOpenChange={setActividadesOpen}
+        embarque={seleccionado}
+        perfil={perfil}
+      />
     </div>
   );
 };

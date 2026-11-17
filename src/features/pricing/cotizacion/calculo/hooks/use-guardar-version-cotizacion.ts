@@ -160,8 +160,7 @@ async function persistirVersion({
 
     const codTarifaSpot = await insertarTarifaSpot(spotPayload);
 
-    // El documento solo se adjunta cuando el SPOT lo exige (no supera al original).
-    if (archivoSpot && !esSpotMayorAlOriginal(rubroSpot)) {
+    if (archivoSpot) {
       await cargarArchivoTarifaSpot({
         codTarifaSpot,
         archivo: archivoSpot,

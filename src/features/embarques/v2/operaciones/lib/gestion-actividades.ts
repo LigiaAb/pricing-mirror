@@ -35,10 +35,19 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
     campos: [
       { label: "Proveedor de empaque", tipo: "catalogo", requerido: true },
       { label: "Tipo de empaque" },
-      { label: "Autorización del cliente", tipo: "seleccion", requerido: true, opciones: ["Autorizado", "No autorizado"] },
+      {
+        label: "Autorización del cliente",
+        tipo: "seleccion",
+        requerido: true,
+        opciones: ["Autorizado", "No autorizado"],
+      },
     ],
   },
-  "OPS 0.5": { interaccion: "orden-compra", accion: "Generar OC de empaque", requiere: ["OPS 0.4"] },
+  "OPS 0.5": {
+    interaccion: "orden-compra",
+    accion: "Generar OC de empaque",
+    requiere: ["OPS 0.4"],
+  },
   "OPS 1.1": {
     interaccion: "formulario",
     accion: "Asignar HAWB",
@@ -101,7 +110,11 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
       { label: "Condiciones", tipo: "area" },
     ],
   },
-  "OPS 3.2": { interaccion: "notificacion", accion: "Enviar confirmación al cliente", requiere: ["OPS 3.1"] },
+  "OPS 3.2": {
+    interaccion: "notificacion",
+    accion: "Enviar confirmación al cliente",
+    requiere: ["OPS 3.1"],
+  },
 
   /* ---------- Paso 2 · Documentación y gestión aduanera ---------- */
   "OPS 4.1": {
@@ -131,7 +144,14 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
   "OPS 4.4": {
     interaccion: "incidencia",
     accion: "Solicitar anulación",
-    campos: [{ label: "Qué se anula", tipo: "seleccion", requerido: true, opciones: ["OC", "Reserva", "OC y reserva"] }],
+    campos: [
+      {
+        label: "Qué se anula",
+        tipo: "seleccion",
+        requerido: true,
+        opciones: ["OC", "Reserva", "OC y reserva"],
+      },
+    ],
   },
   "OPS 5.1": {
     interaccion: "notificacion",
@@ -206,7 +226,10 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
   "OPS E2": {
     interaccion: "incidencia",
     accion: "Solicitar CCA",
-    campos: [{ label: "Dato original", requerido: true }, { label: "Dato corregido", requerido: true }],
+    campos: [
+      { label: "Dato original", requerido: true },
+      { label: "Dato corregido", requerido: true },
+    ],
   },
 
   /* ---------- Paso 5 · Despacho, salida aérea y complementaria ---------- */
@@ -223,7 +246,9 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
   "OPS 15": {
     interaccion: "confirmacion",
     accion: "Enviar a facturación",
-    campos: [{ label: "¿Cargos pendientes?", tipo: "seleccion", requerido: true, opciones: ["Sí", "No"] }],
+    campos: [
+      { label: "¿Cargos pendientes?", tipo: "seleccion", requerido: true, opciones: ["Sí", "No"] },
+    ],
   },
   "OPS 16": {
     interaccion: "seguimiento",

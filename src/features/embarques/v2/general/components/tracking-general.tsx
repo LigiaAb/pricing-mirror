@@ -28,11 +28,16 @@ export function TrackingGeneral({ pasoActual }: { pasoActual: number }) {
                 className={cn(
                   "flex size-10 items-center justify-center rounded-full border-2 text-sm font-semibold",
                   estado === "completado" && "border-primary bg-primary text-primary-foreground",
-                  estado === "actual" && "border-primary bg-primary/10 text-primary ring-4 ring-primary/20",
+                  estado === "actual" &&
+                    "border-primary bg-primary/10 text-primary ring-4 ring-primary/20",
                   estado === "pendiente" && "border-muted bg-muted text-muted-foreground",
                 )}
               >
-                {estado === "completado" ? <Check className="size-5" aria-hidden="true" /> : paso.id}
+                {estado === "completado" ? (
+                  <Check className="size-5" aria-hidden="true" />
+                ) : (
+                  paso.id
+                )}
               </span>
               <span
                 className={cn(

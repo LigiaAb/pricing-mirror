@@ -66,7 +66,13 @@ function Etiqueta({ id, label, requerido }: Pick<BaseCampo, "id" | "label" | "re
  * "x" para limpiar el valor del campo. Mismo estilo que la de `AsyncComboboxInput`.
  * Fuera del tab (`tabIndex={-1}`): el teclado sigue de un campo al siguiente.
  */
-function BotonLimpiar({ onClick, className }: { onClick: () => void; className?: string | undefined }) {
+function BotonLimpiar({
+  onClick,
+  className,
+}: {
+  onClick: () => void;
+  className?: string | undefined;
+}) {
   return (
     <button
       type="button"
@@ -344,7 +350,8 @@ export function CampoArchivos({
     if (!lista?.length) return;
     setArchivos((previos) => [...previos, ...Array.from(lista, (archivo) => archivo.name)]);
   };
-  const quitar = (indice: number) => setArchivos((previos) => previos.filter((_, i) => i !== indice));
+  const quitar = (indice: number) =>
+    setArchivos((previos) => previos.filter((_, i) => i !== indice));
   const puedeLimpiar = archivos.length > 0 && !soloLectura;
 
   return (
@@ -385,7 +392,9 @@ export function CampoArchivos({
           />
           <UploadCloud className="size-5 text-muted-foreground opacity-80" aria-hidden="true" />
           <span className="text-xs font-medium">
-            {arrastrando ? "Suelta los archivos aquí..." : "Arrastra los archivos aquí o haz clic para seleccionar"}
+            {arrastrando
+              ? "Suelta los archivos aquí..."
+              : "Arrastra los archivos aquí o haz clic para seleccionar"}
           </span>
         </button>
         {puedeLimpiar ? (
@@ -396,7 +405,7 @@ export function CampoArchivos({
         <ul className="flex flex-wrap gap-1">
           {archivos.map((nombre, indice) => (
             <li
-              key={`${indice}-${nombre}`}
+              key={`${nombre}`}
               className="flex items-center gap-1 rounded-md border bg-muted/30 px-2 py-0.5 text-xs text-muted-foreground"
             >
               <span className="max-w-48 truncate" title={nombre}>
@@ -442,7 +451,11 @@ export function CampoPorTipo({
     case "fecha-hora":
       return <CampoFecha {...base} conHora className="sm:col-span-2" />;
     case "seleccion":
-      return opciones.length > 0 ? <CampoSeleccion {...base} opciones={opciones} /> : <CampoCatalogo {...base} valor={valor} />;
+      return opciones.length > 0 ? (
+        <CampoSeleccion {...base} opciones={opciones} />
+      ) : (
+        <CampoCatalogo {...base} valor={valor} />
+      );
     case "catalogo":
       return <CampoCatalogo {...base} valor={valor} />;
     case "numero":

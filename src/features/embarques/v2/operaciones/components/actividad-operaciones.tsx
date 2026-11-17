@@ -9,5 +9,7 @@ import { GESTION_OPERACIONES } from "../lib/gestion-actividades";
  * `lib/gestion-actividades.ts` de esta carpeta).
  */
 export function ActividadOperaciones(props: PropsActividad) {
-  return <TarjetaActividad {...props} gestion={gestionDe(GESTION_OPERACIONES, props.actividad.id)} />;
+  return (
+    <TarjetaActividad {...props} gestion={gestionDe(GESTION_OPERACIONES, props.actividad.id)} />
+  );
 }

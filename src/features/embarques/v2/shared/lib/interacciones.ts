@@ -109,7 +109,12 @@ export const INTERACCIONES: Record<TipoInteraccion, DefinicionInteraccion> = {
   seguimiento: {
     accion: "Actualizar seguimiento",
     base: [
-      { label: "Estado", tipo: "seleccion", requerido: true, opciones: ["En trámite", "Detenido", "Concluido"] },
+      {
+        label: "Estado",
+        tipo: "seleccion",
+        requerido: true,
+        opciones: ["En trámite", "Detenido", "Concluido"],
+      },
       { label: "Fecha", tipo: "fecha" },
       { label: "Observaciones", tipo: "area" },
     ],

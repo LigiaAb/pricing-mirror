@@ -33,7 +33,10 @@ export type DefinicionesGestion = Record<string, GestionActividad>;
 const GESTION_DEFAULT: GestionActividad = { interaccion: "formulario" };
 
 /** Definición de la actividad (sin entrada: formulario genérico). */
-export function gestionDe(definiciones: DefinicionesGestion, idActividad: string): GestionActividad {
+export function gestionDe(
+  definiciones: DefinicionesGestion,
+  idActividad: string,
+): GestionActividad {
   return definiciones[idActividad] ?? GESTION_DEFAULT;
 }
 

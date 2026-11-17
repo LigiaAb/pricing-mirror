@@ -435,19 +435,11 @@ export function crearTarifaSpotDueCarrier({
    */
   const esRubroFlete = servicioBase.es_flete === true;
 
-  /*
-   * Regla aprobada del legado (agregarTarifaSpotDueCarrier): el detalle muestra
-   * "Tarifa <moneda> <mínimo original>" cuando el flete usa mínimo (rate_costo = 0)
-   * o el Spot se aplicó sin rango (rate = 0); si no, la tarifa por unidad.
-   * El legado tomaba el mínimo solo con rate = 0 y dejaba "undefined" en el otro
-   * caso; aquí ambos usan la misma fuente (venta del método base).
-   */
-  const rateCostoBase = rubroBase.metodo?.rate_costo;
-  const usaMinimo =
-    esRubroFlete &&
-    ((rateCostoBase != null && String(rateCostoBase).trim() !== "" && Number(rateCostoBase) === 0) ||
-      (rate != null && rate === 0));
-  const minimo = usaMinimo ? (metodoBase.venta ?? undefined) : undefined;
+  // Si la tarifa original era un monto fijo (rate = 0), el Spot se muestra como monto fijo.
+  const minimo =
+    esRubroFlete && Number(rubroBase.metodo?.rate_venta ?? metodoBase.rate_venta) === 0
+      ? valor
+      : undefined;
 
   const detalleFlete = construirDetalleFlete(codTipoTransporte, {
     tipo: "spot",

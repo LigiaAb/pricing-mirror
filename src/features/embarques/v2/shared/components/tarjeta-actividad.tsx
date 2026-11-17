@@ -71,7 +71,10 @@ const ESTADO: Record<EstadoActividad, { label: string; clase: string }> = {
   hecha: { label: "Hecha", clase: "bg-primary text-primary-foreground" },
   "en-curso": { label: "En curso", clase: "border border-primary text-primary" },
   pendiente: { label: "Pendiente", clase: "bg-muted text-muted-foreground" },
-  "si-ocurre": { label: "Solo si aplica", clase: "border border-amber-500/40 text-amber-800 dark:text-amber-200" },
+  "si-ocurre": {
+    label: "Solo si aplica",
+    clase: "border border-amber-500/40 text-amber-800 dark:text-amber-200",
+  },
 };
 
 /** Estado de maqueta: sale del paso del embarque (sin datos reales todavía). */
@@ -94,7 +97,11 @@ function idCampo(actividad: ActividadTracking, campo: CampoGestion): string {
 
 /** Valor registrado de un campo, en solo consulta (sin datos todavía). */
 function ValorCampo({ campo }: { campo: CampoGestion }) {
-  const ancho = campo.tipo === "area" || campo.tipo === "archivo" || campo.tipo === "fecha-hora" || campo.tipo === "casillas";
+  const ancho =
+    campo.tipo === "area" ||
+    campo.tipo === "archivo" ||
+    campo.tipo === "fecha-hora" ||
+    campo.tipo === "casillas";
   return (
     <div className={cn(ancho && "sm:col-span-2")}>
       <Dato label={campo.label} valor={campo.tipo === "archivo" ? "Sin archivos" : "—"} />
@@ -122,7 +129,10 @@ export function TarjetaActividad({
   const estado = ESTADO[estadoActividad(actividad, pasoActual)];
   const requiere = actividadesPorId(gestion.requiere ?? []);
   const excepcion = gestion.interaccion === "incidencia";
-  const abierta = editable && estadoActividad(actividad, pasoActual) === "en-curso";
+  const abierta =
+    editable &&
+    estadoActividad(actividad, pasoActual) === "en-curso" &&
+    actividad.tipo !== "Opcional";
 
   return (
     <Accordion type="single" collapsible {...(abierta ? { defaultValue: actividad.id } : {})}>
@@ -137,14 +147,16 @@ export function TarjetaActividad({
         <AccordionTrigger
           className={cn(
             "items-start gap-3 rounded-none px-4 py-3 text-left hover:no-underline data-[state=open]:border-b",
-            excepcion ? "bg-amber-500/10" : "bg-muted/40",
+            excepcion ? "bg-amber-500/10 hover:bg-amber-500/30" : "bg-muted/40 hover:bg-muted/90",
           )}
         >
           <span className="flex min-w-0 flex-1 flex-wrap items-start gap-3">
             <span
               className={cn(
                 "flex size-9 shrink-0 items-center justify-center rounded-lg",
-                excepcion ? "bg-amber-500/20 text-amber-800 dark:text-amber-200" : "bg-primary/10 text-primary",
+                excepcion
+                  ? "bg-amber-500/20 text-amber-800 dark:text-amber-200"
+                  : "bg-primary/10 text-primary",
               )}
             >
               <Icono className="size-5" aria-hidden="true" />
@@ -165,7 +177,9 @@ export function TarjetaActividad({
 
             <span className="flex flex-wrap items-center gap-1.5">
               {editable ? null : <SoloConsulta />}
-              <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", estado.clase)}>
+              <span
+                className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", estado.clase)}
+              >
                 {estado.label}
               </span>
             </span>
@@ -184,7 +198,11 @@ export function TarjetaActividad({
                 <Link2 className="size-3.5" aria-hidden="true" />
                 Antes:
                 {requiere.map((previa) => (
-                  <span key={previa.id} className="rounded border px-1.5" title={`${previa.responsable} ${previa.codigo}`}>
+                  <span
+                    key={previa.id}
+                    className="rounded border px-1.5"
+                    title={`${previa.responsable} ${previa.codigo}`}
+                  >
                     {previa.actividad}
                   </span>
                 ))}

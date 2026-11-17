@@ -52,7 +52,9 @@ export function DetalleActividadesSheet({
         </SheetHeader>
 
         <div className="space-y-5 p-4 sm:space-y-6 sm:p-6">
-          {embarque ? <ActividadesPorPaso pasoActual={embarque.pasoActual} perfil={perfil} /> : null}
+          {embarque ? (
+            <ActividadesPorPaso pasoActual={embarque.pasoActual} perfil={perfil} />
+          ) : null}
         </div>
       </SheetContent>
     </Sheet>
@@ -62,9 +64,17 @@ export function DetalleActividadesSheet({
 const AREAS: readonly ResponsableTracking[] = ["OPS", "Bodega", "CBX"];
 
 /** Maqueta del detalle: actividades del Excel por paso y por área. */
-function ActividadesPorPaso({ pasoActual, perfil }: { pasoActual: number; perfil: PerfilEmbarque }) {
+function ActividadesPorPaso({
+  pasoActual,
+  perfil,
+}: {
+  pasoActual: number;
+  perfil: PerfilEmbarque;
+}) {
   const areas =
-    perfil === "operaciones" ? AREAS : AREAS.filter((area) => PERFIL_DE_RESPONSABLE[area] === perfil);
+    perfil === "operaciones"
+      ? AREAS
+      : AREAS.filter((area) => PERFIL_DE_RESPONSABLE[area] === perfil);
 
   return (
     <div className="space-y-3">

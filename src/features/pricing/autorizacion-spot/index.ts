@@ -1,8 +1,6 @@
 export {
   AUTORIZACION_SPOT_KEY,
   obtenerCwSpot,
-  obtenerOriginalSpot,
-  type OriginalSpot,
   recuperarArchivoPdf,
   type TarifaSpotAutorizacion,
   type TarifaSpotFila,
@@ -10,5 +8,6 @@ export {
   useActualizarTarifaSpot,
   useAutorizacionSpot,
   useAutorizarTarifaSpot,
+  useCargarArchivoSpot,
 } from "./api/autorizacion-spot";
 export { AutorizarTarifaSpot } from "./components/autorizar-tarifa-spot";

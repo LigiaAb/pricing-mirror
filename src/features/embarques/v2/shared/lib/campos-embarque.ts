@@ -27,7 +27,11 @@ export type CampoEmbarque = CampoGestion & {
   soloLectura?: boolean;
 };
 
-export const CAMPO_COD_FILE: CampoEmbarque = { key: "cod_file", label: "Cod File", soloLectura: true };
+export const CAMPO_COD_FILE: CampoEmbarque = {
+  key: "cod_file",
+  label: "Cod File",
+  soloLectura: true,
+};
 
 /** Shipper y Consignatario: `buildEntidadPublicFields` (obligatorios: `ENTIDAD_PUBLIC_REQUIRED_FIELDS`). */
 function camposEntidad(titulo: string): readonly CampoEmbarque[] {
@@ -37,7 +41,12 @@ function camposEntidad(titulo: string): readonly CampoEmbarque[] {
     { key: "entidad_pais", label: "País", tipo: "catalogo", requerido: true },
     { key: "direccion_recoleccion_ciudad", label: "Ciudad", tipo: "catalogo" },
     { key: "entidad_industria", label: "Industria", tipo: "catalogo", requerido: true },
-    { key: "direccion_recoleccion", label: "Dirección de Recolección", tipo: "area", requerido: true },
+    {
+      key: "direccion_recoleccion",
+      label: "Dirección de Recolección",
+      tipo: "area",
+      requerido: true,
+    },
     {
       key: "direccion_recoleccion_pais",
       label: "País",

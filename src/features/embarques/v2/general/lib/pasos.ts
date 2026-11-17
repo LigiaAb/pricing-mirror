@@ -13,7 +13,12 @@
  * ========================================================================== */
 
 import { type ActividadTracking, actividadesPorId } from "../../shared/lib/actividades-tracking";
-import type { EstadoPaso, PasoTracking, PerfilEmbarque, ResponsableTracking } from "../../shared/lib/tipos";
+import type {
+  EstadoPaso,
+  PasoTracking,
+  PerfilEmbarque,
+  ResponsableTracking,
+} from "../../shared/lib/tipos";
 
 /**
  * Tracking de Exportación Aérea (6 pasos consolidados).
@@ -41,16 +46,14 @@ export const TRACKING_PASOS: readonly PasoTracking[] = [
     id: 3,
     corto: "Bodega",
     titulo: "Liberación y despacho de bodega",
-    alcance:
-      "Salida en sistema; preparación, pase de salida, despacho e inventario de bodega.",
+    alcance: "Salida en sistema; preparación, pase de salida, despacho e inventario de bodega.",
     responsables: ["OPS", "Bodega"],
   },
   {
     id: 4,
     corto: "COMBEX",
     titulo: "Recepción en COMBEX y documentación final",
-    alcance:
-      "Recepción y repeso oficial; boleta, guía definitiva, cargos y documentación final.",
+    alcance: "Recepción y repeso oficial; boleta, guía definitiva, cargos y documentación final.",
     responsables: ["OPS", "CBX"],
   },
   {
@@ -131,7 +134,8 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
     value: "recoleccion",
     label: "Recolección y empaque",
     detalle: "Cuando apliquen",
-    descripcion: "Recolección de la carga, recepción en bodega y empaque. Solo si el servicio los incluye.",
+    descripcion:
+      "Recolección de la carga, recepción en bodega y empaque. Solo si el servicio los incluye.",
     actividades: [
       "OPS 0.1",
       "OPS 0.2",
@@ -167,7 +171,8 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
     value: "draft",
     label: "Draft y preaviso",
     detalle: "Borrador, preaviso y pago aéreo",
-    descripcion: "Borrador de la guía, preaviso al destino y OC para autorizar el pago a la línea aérea.",
+    descripcion:
+      "Borrador de la guía, preaviso al destino y OC para autorizar el pago a la línea aérea.",
     actividades: ["OPS 4.1", "OPS 4.2", "OPS 4.3"],
     grupo: "flujo",
   },
@@ -217,7 +222,8 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
     value: "guia-final",
     label: "Guía final",
     detalle: "Datos definitivos y emisión",
-    descripcion: "Datos finales con el peso oficial, emisión de la guía, aviso al cliente y seguro.",
+    descripcion:
+      "Datos finales con el peso oficial, emisión de la guía, aviso al cliente y seguro.",
     actividades: ["OPS 9.1", "OPS 9.3", "OPS 9.4", "OPS 9.5", "OPS E2"],
     grupo: "flujo",
   },
@@ -288,7 +294,8 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
     descripcion: "Anulación de OC o reserva. Opcional: detiene el flujo del embarque.",
     actividades: ["OPS 4.4"],
     grupo: "extra",
-    aviso: "Al cancelar o anular, el embarque deja de avanzar en el tracking y queda solo para consulta.",
+    aviso:
+      "Al cancelar o anular, el embarque deja de avanzar en el tracking y queda solo para consulta.",
   },
 ];
 
@@ -327,7 +334,10 @@ export function pasosDelPerfil(perfil: PerfilEmbarque): PasoEmbarque[] {
 }
 
 /** Actividades de la tab que ve el perfil (Operaciones: todas; los demás: las de su área). */
-export function actividadesDelPerfil(paso: PasoEmbarque, perfil: PerfilEmbarque): ActividadTracking[] {
+export function actividadesDelPerfil(
+  paso: PasoEmbarque,
+  perfil: PerfilEmbarque,
+): ActividadTracking[] {
   const actividades = actividadesPorId(paso.actividades);
   if (perfil === "operaciones") return actividades;
   return actividades.filter((actividad) => PERFIL_DE_RESPONSABLE[actividad.responsable] === perfil);
