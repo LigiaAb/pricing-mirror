@@ -218,7 +218,12 @@ export function TarifasTabs({
         break;
     }
 
-    const detalleCliente = aplicaATodosLosClientes(values) ? "No Aplicados" : "Aplicados";
+    const detalleCliente = aplicaATodosLosClientes({
+      todos_los_clientes: values.todos_los_clientes,
+      cod_tipo_tarifa: values.cod_tipo_tarifa,
+    })
+      ? "No Aplicados"
+      : "Aplicados";
 
     const detalleContinente = values.todos_los_paises ? "No Aplicados" : "Aplicados";
 
