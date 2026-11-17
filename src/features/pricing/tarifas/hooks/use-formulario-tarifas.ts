@@ -77,6 +77,28 @@ const TIPO_CALCULO_POR_METODO: Readonly<Record<number, number>> = {
 const obtenerTipoCalculoFijo = (codMetodo: unknown): number | undefined =>
   typeof codMetodo === "number" ? TIPO_CALCULO_POR_METODO[codMetodo] : undefined;
 
+// Tipos de cálculo que fijan el método de cálculo (relación inversa de TIPO_CALCULO_POR_METODO).
+// Por nombre y no por código: los nombres se mantienen, los códigos pueden cambiar.
+// Al elegir el tipo se asigna el método, el select de método solo ofrece ese y queda de solo lectura.
+const METODO_POR_TIPO_CALCULO: Readonly<Record<string, string>> = {
+  ABIERTO: "COSTO/VENTA",
+};
+
+const normalizarNombreCatalogo = (texto: unknown): string =>
+  String(texto ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s*\/\s*/g, "/")
+    .replace(/\s+/g, " ");
+
+const obtenerMetodoFijo = (tipoCalculo: unknown): string | undefined =>
+  isRecord(tipoCalculo)
+    ? METODO_POR_TIPO_CALCULO[normalizarNombreCatalogo(tipoCalculo.label)]
+    : undefined;
+
+const esMetodo = (opcion: unknown, nombreMetodo: string): boolean =>
+  isRecord(opcion) && normalizarNombreCatalogo(opcion.label) === nombreMetodo;
+
 const CAMPOS_SIEMPRE_LECTURA = [
   "usuario",
   "empresa",
@@ -348,13 +370,15 @@ export function useFormulario({
       }
 
       if (id === "metodoCalculo") {
-        return esScale
-          ? ((catalogosProcesados?.metodosCalculo || []) as readonly TipoOption[]).filter(
-              (td) => td.value === 342,
-            )
-          : ((catalogosProcesados?.metodosCalculo || []) as readonly TipoOption[]).filter(
-              (td) => td.value !== 342,
-            );
+        const metodos = (catalogosProcesados?.metodosCalculo || []) as readonly TipoOption[];
+
+        if (esScale) return metodos.filter((td) => td.value === 342);
+
+        const metodoFijo = obtenerMetodoFijo(values_inter.tipoCalculo);
+
+        if (metodoFijo !== undefined) return metodos.filter((td) => esMetodo(td, metodoFijo));
+
+        return metodos.filter((td) => td.value !== 342);
       }
 
       return catalogosProcesados?.[catalogoId] ?? [];
@@ -558,6 +582,20 @@ export function useFormulario({
           }
         }
 
+        if (id === "tipoCalculo" && prev.cod_rubro !== 134) {
+          const metodoFijo = obtenerMetodoFijo(val);
+
+          if (metodoFijo !== undefined) {
+            const metodoCalculoFijo =
+              ((catalogosProcesados?.metodosCalculo || []) as readonly TipoOption[]).find((td) =>
+                esMetodo(td, metodoFijo),
+              ) ?? null;
+
+            next.metodoCalculo = metodoCalculoFijo;
+            next.cod_tipo = getPlainValue(metodoCalculoFijo);
+          }
+        }
+
         if (id === "aplicaTodosClientes") {
           const tipoTarifa = obtenerTipoTarifaSegunClientes(val === true);
 
@@ -642,6 +680,9 @@ export function useFormulario({
           resultadoFinal = true;
         } else if (id === "tipoCalculo" && obtenerTipoCalculoFijo(values?.cod_tipo) !== undefined) {
           // El método seleccionado fija el tipo de cálculo (TIPO_CALCULO_POR_METODO).
+          resultadoFinal = true;
+        } else if (id === "metodoCalculo" && obtenerMetodoFijo(values?.tipoCalculo) !== undefined) {
+          // El tipo de cálculo seleccionado fija el método (METODO_POR_TIPO_CALCULO).
           resultadoFinal = true;
         } else {
           const require = fieldRules[id]?.require;
