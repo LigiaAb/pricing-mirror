@@ -1,0 +1,88 @@
+diff --git a/src/features/pricing/shared/lib/campos-metodo.ts b/src/features/pricing/shared/lib/campos-metodo.ts
+index 021d01f..a659d57 100644
+--- a/src/features/pricing/shared/lib/campos-metodo.ts
++++ b/src/features/pricing/shared/lib/campos-metodo.ts
+@@ -86,6 +86,8 @@ export type FormularioCampo = {
+   simboloDe?: string;
+   /** Texto fijo al final del input (ej. "%"). */
+   sufijo?: string;
++  /** Nota debajo del input (ej. "Ej.: 50 para un 50%"). */
++  nota?: string;
+ };
+ 
+ export type DefCampo<TPayload = unknown> = {
+diff --git a/src/features/pricing/tarifas/components/metodos/campo-metodo.tsx b/src/features/pricing/tarifas/components/metodos/campo-metodo.tsx
+index 1a27505..895b3ef 100644
+--- a/src/features/pricing/tarifas/components/metodos/campo-metodo.tsx
++++ b/src/features/pricing/tarifas/components/metodos/campo-metodo.tsx
+@@ -101,7 +101,7 @@ export function CampoMetodo<C extends Record<string, DefCampo>, F extends object
+   }
+ 
+   if (def.tipo === "monto") {
+-    const { min, max, step, simboloDe, sufijo } = def.formulario ?? {};
++    const { min, max, step, simboloDe, sufijo, nota } = def.formulario ?? {};
+     const addon =
+       sufijo ??
+       (simboloDe == null
+@@ -128,6 +128,8 @@ export function CampoMetodo<C extends Record<string, DefCampo>, F extends object
+           {addon && <InputGroupAddon align="inline-end">{addon}</InputGroupAddon>}
+         </InputGroup>
+ 
++        {nota && <p className="mt-1 text-xs text-muted-foreground">{nota}</p>}
++
+         {mensajes}
+ 
+         {children}
+diff --git a/src/features/pricing/tarifas/components/metodos/costo-porcentaje/costo-porcentaje-form.tsx b/src/features/pricing/tarifas/components/metodos/costo-porcentaje/costo-porcentaje-form.tsx
+index e558ba7..4ad05a6 100644
+--- a/src/features/pricing/tarifas/components/metodos/costo-porcentaje/costo-porcentaje-form.tsx
++++ b/src/features/pricing/tarifas/components/metodos/costo-porcentaje/costo-porcentaje-form.tsx
+@@ -114,9 +114,7 @@ export function CostoPorcentajeForm({
+           </InputGroup>
+ 
+           {row.es_porcentaje && (
+-            <p className="mt-1 text-xs text-muted-foreground">
+-              Ingrese el porcentaje en enteros con decimales (ej. 25.26 para 25.26 %).
+-            </p>
++            <p className="mt-1 text-xs text-muted-foreground">Ej.: 50 para un 50%</p>
+           )}
+ 
+           {errores.porcentaje_venta?.map((mensaje) => (
+diff --git a/src/features/pricing/tarifas/lib/metodos/cobertura.ts b/src/features/pricing/tarifas/lib/metodos/cobertura.ts
+index 72951ff..e7aa689 100644
+--- a/src/features/pricing/tarifas/lib/metodos/cobertura.ts
++++ b/src/features/pricing/tarifas/lib/metodos/cobertura.ts
+@@ -13,7 +13,13 @@ import { zId } from "@/shared/lib/zod-scalars";
+ import type { MonedaOpcion } from "../../hooks/use-opciones-tarifa";
+ import { definirMetodo, fijo, moneda, monto, ventaNoMenorQueCosto } from "../campos-metodo";
+ 
+-const PORCENTAJE = { min: 0, max: 100, step: "0.01", sufijo: "%" } as const;
++const PORCENTAJE = {
++  min: 0,
++  max: 100,
++  step: "0.01",
++  sufijo: "%",
++  nota: "Ej.: 50 para un 50%",
++} as const;
+ 
+ export const METODO_COBERTURA = definirMetodo({
+   id: { cod: "cod_tarifa_cobertura", siFalta: 0 },
+diff --git a/src/features/pricing/tarifas/lib/metodos/porcentaje.ts b/src/features/pricing/tarifas/lib/metodos/porcentaje.ts
+index 282fbeb..b3c2854 100644
+--- a/src/features/pricing/tarifas/lib/metodos/porcentaje.ts
++++ b/src/features/pricing/tarifas/lib/metodos/porcentaje.ts
+@@ -21,7 +21,13 @@ import {
+   ventaNoMenorQueCosto,
+ } from "../campos-metodo";
+ 
+-const PORCENTAJE = { min: 0, max: 100, step: "0.01", sufijo: "%" } as const;
++const PORCENTAJE = {
++  min: 0,
++  max: 100,
++  step: "0.01",
++  sufijo: "%",
++  nota: "Ej.: 50 para un 50%",
++} as const;
+ 
+ const FUERA_DE_RANGO = "El porcentaje debe estar entre 0 y 100.";
+ 

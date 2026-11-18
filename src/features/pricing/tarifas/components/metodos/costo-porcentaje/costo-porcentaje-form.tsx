@@ -114,9 +114,7 @@ export function CostoPorcentajeForm({
           </InputGroup>
 
           {row.es_porcentaje && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Ingrese el porcentaje en enteros con decimales (ej. 25.26 para 25.26 %).
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">Ej.: 50 para un 50%</p>
           )}
 
           {errores.porcentaje_venta?.map((mensaje) => (
