@@ -483,13 +483,17 @@ export function crearTarifaSpotDueCarrier({
 
     rate_venta: rate,
 
-    original_rate_costo: rubroBase.metodo?.rate_costo ?? rate,
+    /*
+     * El valor original siempre sale del flete normal (método de la raíz o del
+     * servicio), nunca del monto SPOT ingresado.
+     */
+    original_rate_costo: rubroBase.metodo?.rate_costo ?? metodoBase.rate_costo ?? null,
 
-    original_rate_venta: rubroBase.metodo?.rate_venta ?? rate,
+    original_rate_venta: rubroBase.metodo?.rate_venta ?? metodoBase.rate_venta ?? null,
 
-    original_venta: rubroBase.metodo?.venta ?? valor,
+    original_venta: rubroBase.metodo?.venta ?? metodoBase.venta ?? null,
 
-    original_costo: rubroBase.metodo?.costo ?? valor,
+    original_costo: rubroBase.metodo?.costo ?? metodoBase.costo ?? null,
   };
 
   const servicioSpot: ServicioFlete = {
