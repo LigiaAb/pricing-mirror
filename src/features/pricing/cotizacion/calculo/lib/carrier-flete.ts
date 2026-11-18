@@ -1,5 +1,5 @@
 import { construirDetalleFlete } from "./detalle-flete";
-import type { CatalogoTipo, Id, MonedaCatalogo } from "./tipos";
+import type { CatalogoTipo, DetalleTarifa, Id, MonedaCatalogo } from "./tipos";
 import { buscarMoneda } from "./utils";
 
 export type MetodoFlete = {
@@ -23,7 +23,7 @@ export type MetodoFlete = {
   original_venta?: string | number | null;
   original_costo?: string | number | null;
 
-  detalles?: Array<Record<string, unknown>>;
+  detalles?: DetalleTarifa[];
 
   [key: string]: unknown;
 };
@@ -66,12 +66,12 @@ export type RubroFlete = {
   es_flete?: boolean | null;
   es_tarifa_spot?: boolean | null;
 
-  cod_tipo_pago?: Id | null;
+  cod_tipo_pago?: Id | null | undefined;
 
   entidad_id?: Id | null;
   entidad_nombre?: string | null;
 
-  cod_servicio?: Id | null;
+  cod_servicio?: Id | null | undefined;
 
   venta?: string | number | null;
   costo?: string | number | null;
@@ -402,7 +402,7 @@ export function crearTarifaSpotDueCarrier({
 
   /** Define el texto del detalle de flete (ver lib/detalle-flete.ts). */
   codTipoTransporte?: Id | null | undefined;
-}) {
+}): RubroFlete | null {
   const valor = Number(valorSpot);
 
   if (!rubroBase) {
@@ -542,5 +542,5 @@ export function crearTarifaSpotDueCarrier({
     entidad_id: entidadId,
 
     entidad_nombre: entidadNombre,
-  } as RubroFlete;
+  };
 }

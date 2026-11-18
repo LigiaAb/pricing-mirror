@@ -204,7 +204,7 @@ Resumen:
 ## Pendientes (optimización, no urgentes)
 
 Viven como **issues con la etiqueta `backlog`** (ver *Issues y etiquetas*); no se listan aquí para no duplicar:
-#95 dividir archivos grandes del cálculo · #96 tipo `Rubro` · #97 decisiones por texto → constantes ·
+#95 dividir archivos grandes del cálculo · #97 decisiones por texto → constantes ·
 #98 formularios de equipo/rango/scalling a `<CampoMetodo>` · #99 `crear-api-metodo.ts` sin uso ·
 #101 `tarifas/api/monedas.ts` → catálogo `monedas`.
 
