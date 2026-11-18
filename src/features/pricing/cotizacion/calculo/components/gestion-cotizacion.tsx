@@ -39,7 +39,7 @@ import { CalculoCotizacionContainer } from "./calculo-cotizacion-container";
 import { CotizacionForm } from "./cotizacion-form";
 import { CotizacionesTable, type CotizacionesTableProps } from "./cotizaciones-table";
 import { PlantillasPosiblesDialog } from "./plantillas-posibles-dialog";
-import { SectionHeader } from "./utils";
+import { EncabezadoColapsable } from "./utils";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -635,7 +635,7 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
           ============================================================= */}
 
           <section className="overflow-hidden rounded-lg border bg-card">
-            <SectionHeader
+            <EncabezadoColapsable
               title="Información"
               open={informacionOpen}
               onToggle={() => setInformacionOpen((prev) => !prev)}

@@ -1,6 +1,7 @@
 # Pricing compartido: guía rápida
 
-Código que usan **Tarifas y Cotizaciones**. Ninguno de esos módulos importa al otro; ambos dependen solo de aquí.
+Código que usan **Tarifas y Cotizaciones**, y componentes de pantalla reutilizables en todo pricing (por ejemplo,
+`Panel` / `SectionHeader`). Ninguno de esos módulos importa al otro; ambos dependen solo de aquí.
 Importar siempre por el barrel: `import { ... } from "@/features/pricing/shared";`
 
 ```
@@ -21,6 +22,8 @@ shared/
    │                        limpiar; selects de Tarifas y de la cabecera de Cotizaciones. Búsqueda en servidor:
    │                        AsyncComboboxInput
    ├─ ficha-resumen.tsx  ← FichaResumen (lee sus propios catálogos; funciona dentro o fuera de cualquier provider)
+   ├─ panel-dashboard.tsx ← Panel (contenedor con borde y sombra), SectionHeader (ícono, título, subtítulo y
+   │                        acción) y MensajeVacio. Copia propia de wms-hn (mismo markup); hoy los usa Reportes
    └─ resumen-item.tsx
 └─ calculadora-embarque/  ← CALCULADORA DE EMBARQUES (corporativa, ver abajo)
    ├─ constantes.ts       ← TIPO_TRANSPORTE (49/50/51), TIPOS_TRANSPORTE, UNIDAD_DEFAULT (165/162)
@@ -31,8 +34,13 @@ shared/
    └─ calculadora-medidas.tsx  ← CalculadoraMedidas (diálogo)
 ```
 
-**Regla:** aquí solo entra lo que usan ambos módulos y que no depende de ninguno de ellos. Si algo lo usa uno
-solo, va en ese módulo. `shared` nunca importa de `tarifas/` ni de `cotizacion/`.
+**Regla:** aquí entra (1) lo que usan ambos módulos o (2) componentes de pantalla reutilizables en pricing
+(paneles, encabezados), en los dos casos **sin depender de ningún submódulo**. Lógica que usa un submódulo
+solo va en ese submódulo. `shared` nunca importa de `tarifas/`, `cotizacion/`, `reportes/` ni de su propio
+`index.ts` (ciclo): dentro de `shared` se usan rutas relativas.
+
+`SectionHeader` (aquí) es el encabezado fijo de un `Panel`. El encabezado que abre y cierra secciones en
+Cotización es otro componente: `EncabezadoColapsable` (`cotizacion/calculo/components/utils.tsx`).
 
 ## Permisos de botones
 
