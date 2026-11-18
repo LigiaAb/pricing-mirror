@@ -1,15 +1,58 @@
-import { construirAgrupacionAutomatica } from "../agrupacion-rubros";
-import { TIPO_PAGO } from "../constantes";
-import { getLetraTipoPago, getMetodo } from "./metodo-tipo-pago";
+import { construirAgrupacionAutomatica } from "./agrupacion-rubros";
+import { TIPO_PAGO } from "./constantes";
+import type { Id } from "./tipos";
+import { getLetraTipoPago, getMetodo } from "./totales-rubros-helpers";
 import type {
-  ElementoAgrupado,
   GruposPorRubro,
-  Id,
   NombresGrupo,
   RubroTotal,
   TipoPagoPorRubro,
-} from "./tipos";
+} from "./totales-rubros-tipos";
 
+/* ==========================================================================
+ * IVA / FLETE SPOT
+ * ========================================================================== */
+
+function esRubroIva(item: RubroTotal, codRubroIVA?: Id | null) {
+  const nombre = String(item.nombre ?? item.gruporubro_nombre ?? "")
+    .trim()
+    .toUpperCase();
+
+  return (
+    (codRubroIVA != null && String(item.cod_rubro) === String(codRubroIVA)) || nombre === "IVA"
+  );
+}
+
+export function separarRubrosParaTotales({
+  rubros,
+  codRubroIVA,
+}: {
+  rubros: RubroTotal[];
+  codRubroIVA?: Id | null;
+}) {
+  const tieneTarifaSpot = rubros.some((item) => item.es_tarifa_spot === true);
+
+  /*
+   * Comportamiento actual:
+   *
+   * - los no-flete siempre permanecen.
+   * - si existe SPOT:
+   *      de los fletes únicamente queda el SPOT.
+   * - si no existe SPOT:
+   *      permanecen los fletes normales.
+   */
+  const rubrosAplicables = rubros.filter(
+    (item) => !item.es_flete || (tieneTarifaSpot ? item.es_tarifa_spot : item.es_flete),
+  );
+
+  return {
+    tieneTarifaSpot,
+
+    rubrosIvaEnCalculo: rubrosAplicables.filter((item) => esRubroIva(item, codRubroIVA)),
+
+    rubrosSinIva: rubrosAplicables.filter((item) => !esRubroIva(item, codRubroIVA)),
+  };
+}
 /* ==========================================================================
  * AGRUPACIÓN GUARDADA
  * ========================================================================== */
@@ -226,105 +269,4 @@ export function construirSugerenciasNombreGrupo({
   }
 
   return resultado;
-}
-/* ==========================================================================
- * ELEMENTOS AGRUPADOS PARA MOSTRAR
- * ========================================================================== */
-
-export function construirElementosAgrupados({
-  listaElementos,
-  gruposIngresadosSegunRubro,
-  tipoPagoSeleccionado,
-  letraTipoPagoDefault,
-}: {
-  listaElementos: RubroTotal[];
-
-  gruposIngresadosSegunRubro: GruposPorRubro;
-
-  tipoPagoSeleccionado: TipoPagoPorRubro;
-
-  letraTipoPagoDefault: "P" | "C";
-}): ElementoAgrupado[] {
-  const salida: ElementoAgrupado[] = [];
-
-  const gruposMap = new Map<string, ElementoAgrupado>();
-
-  for (const item of listaElementos) {
-    const rubroId = String(item.value ?? "");
-
-    const metodo = getMetodo(item);
-
-    const codMoneda = metodo?.cod_moneda_venta ?? "SIN_MONEDA";
-
-    const venta = Number(metodo?.venta ?? 0);
-
-    const idDeGrupo = gruposIngresadosSegunRubro[rubroId]?.idDeGrupo;
-
-    /*
-     * Sin grupo:
-     * permanece como rubro normal.
-     */
-    if (!idDeGrupo) {
-      salida.push({
-        ...item,
-        __tipo: "ITEM",
-      });
-
-      continue;
-    }
-
-    const tipoPago = tipoPagoSeleccionado[rubroId] ?? item.letra_tipo_pago ?? letraTipoPagoDefault;
-
-    /*
-     * No mezclar:
-     *
-     * grupo + moneda + P/C
-     */
-    const key = `${idDeGrupo}__${codMoneda}__${tipoPago}`;
-
-    const existente = gruposMap.get(key);
-
-    if (!existente) {
-      gruposMap.set(key, {
-        value: `GRUPO_${key}`,
-
-        __tipo: "GRUPO",
-
-        __idDeGrupo: idDeGrupo,
-
-        __codMoneda: codMoneda,
-
-        letra_tipo_pago: tipoPago,
-
-        metodo: {
-          ...(metodo ?? {}),
-
-          cod_moneda_venta: codMoneda,
-
-          venta,
-
-          detalles: [...(metodo?.detalles ?? [])],
-        },
-      });
-
-      continue;
-    }
-
-    const metodoGrupo = getMetodo(existente);
-
-    if (!metodoGrupo) {
-      continue;
-    }
-
-    metodoGrupo.venta = Number(metodoGrupo.venta ?? 0) + venta;
-
-    metodoGrupo.detalles = [...(metodoGrupo.detalles ?? []), ...(metodo?.detalles ?? [])];
-  }
-
-  /*
-   * Igual al legado:
-   * grupos primero,
-   * rubros sueltos después.
-   */
-  return [...Array.from(gruposMap.values()), ...salida];
 }

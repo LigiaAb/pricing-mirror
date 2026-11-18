@@ -1,7 +1,6 @@
-import { TIPO_PAGO } from "../constantes";
-import type { Id, MetodoTotal, RubroTotal, TipoPagoPorRubro } from "./tipos";
-
-export const IVA_DEFAULT = 0.12;
+import { TIPO_PAGO } from "./constantes";
+import type { Id } from "./tipos";
+import type { MetodoTotal, RubroTotal, TipoPagoPorRubro } from "./totales-rubros-tipos";
 
 /* ==========================================================================
  * MÉTODO
