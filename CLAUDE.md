@@ -206,7 +206,7 @@ Resumen:
 Viven como **issues con la etiqueta `backlog`** (ver *Issues y etiquetas*); no se listan aquí para no duplicar:
 #95 dividir archivos grandes del cálculo · #96 tipo `Rubro` · #97 decisiones por texto → constantes ·
 #98 formularios de equipo/rango/scalling a `<CampoMetodo>` · #99 `crear-api-metodo.ts` sin uso ·
-#100 `porcentaje-form.tsx` con `minimo: 0` · #101 `tarifas/api/monedas.ts` → catálogo `monedas`.
+#101 `tarifas/api/monedas.ts` → catálogo `monedas`.
 
 ## Issues y etiquetas (control de pedidos)
 

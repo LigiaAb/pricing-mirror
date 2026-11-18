@@ -25,7 +25,7 @@ const PORCENTAJE = { min: 0, max: 100, step: "0.01", sufijo: "%" } as const;
 
 const FUERA_DE_RANGO = "El porcentaje debe estar entre 0 y 100.";
 
-/** Los mínimos vacíos se envían como 0. */
+/** Los mínimos empiezan en 0 en un registro nuevo; si se vacían, se envían como 0. */
 const numeroOCero = (valores: Record<string, unknown>, cod: string) => Number(valores[cod] ?? 0);
 
 export const METODO_PORCENTAJE = definirMetodo({
@@ -36,9 +36,9 @@ export const METODO_PORCENTAJE = definirMetodo({
 
     porcentaje_venta: monto({ label: "Porcentaje venta", inicial: 0, formulario: PORCENTAJE }),
 
-    minimo_costo: monto({ label: "Mínimo Costo", aPayload: numeroOCero }),
+    minimo_costo: monto({ label: "Mínimo Costo", inicial: 0, aPayload: numeroOCero }),
 
-    minimo_venta: monto({ label: "Mínimo Venta", aPayload: numeroOCero }),
+    minimo_venta: monto({ label: "Mínimo Venta", inicial: 0, aPayload: numeroOCero }),
 
     cod_rubro: rubro({ label: "Rubro", en: "rubro" }),
 
