@@ -101,7 +101,7 @@ export function CampoMetodo<C extends Record<string, DefCampo>, F extends object
   }
 
   if (def.tipo === "monto") {
-    const { min, max, step, simboloDe, sufijo } = def.formulario ?? {};
+    const { min, max, step, simboloDe, sufijo, nota } = def.formulario ?? {};
     const addon =
       sufijo ??
       (simboloDe == null
@@ -127,6 +127,8 @@ export function CampoMetodo<C extends Record<string, DefCampo>, F extends object
 
           {addon && <InputGroupAddon align="inline-end">{addon}</InputGroupAddon>}
         </InputGroup>
+
+        {nota && <p className="mt-1 text-xs text-muted-foreground">{nota}</p>}
 
         {mensajes}
 

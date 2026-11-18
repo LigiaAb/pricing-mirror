@@ -86,6 +86,8 @@ export type FormularioCampo = {
   simboloDe?: string;
   /** Texto fijo al final del input (ej. "%"). */
   sufijo?: string;
+  /** Nota debajo del input (ej. "Ej.: 50 para un 50%"). */
+  nota?: string;
 };
 
 export type DefCampo<TPayload = unknown> = {

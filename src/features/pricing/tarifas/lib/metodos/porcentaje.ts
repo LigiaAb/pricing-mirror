@@ -21,7 +21,13 @@ import {
   ventaNoMenorQueCosto,
 } from "../campos-metodo";
 
-const PORCENTAJE = { min: 0, max: 100, step: "0.01", sufijo: "%" } as const;
+const PORCENTAJE = {
+  min: 0,
+  max: 100,
+  step: "0.01",
+  sufijo: "%",
+  nota: "Ej.: 50 para un 50%",
+} as const;
 
 const FUERA_DE_RANGO = "El porcentaje debe estar entre 0 y 100.";
 
