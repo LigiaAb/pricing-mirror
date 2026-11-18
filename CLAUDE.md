@@ -149,6 +149,11 @@ no lo ha aplicado.
 7. **Registrar cada cambio en `CAMBIOS.md`** (log de cambios, en la raíz) en el mismo commit: entrada nueva arriba,
    bajo la fecha del día (`## DD/MM/AAAA`), con rama, módulo/submódulo, qué se hizo y por qué, y el nombre del
    archivo `diff/` si se generó. Sirve para dar seguimiento a lo hecho entre sesiones; leerlo al iniciar.
+8. **Modificar solo las líneas necesarias; nunca reescribir un archivo completo.** Editar con cambios puntuales
+   (`Edit`), sin regenerar el archivo entero, sin reordenar, reformatear ni renombrar lo que no forma parte del
+   pedido. Así los `diff/` quedan chicos, revisables y aplican en el proyecto real. Excepciones: archivos nuevos,
+   o mover código tal cual a otro archivo en un refactor pedido (decirlo en `CAMBIOS.md`). El formato que pida
+   Biome se aplica solo a las líneas tocadas.
 
 ## Convenciones del módulo
 

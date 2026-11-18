@@ -198,7 +198,8 @@ export function construirPayloadRubrosAgrupados({
 
       es_flete: item.es_flete ?? null,
 
-      original_venta: metodo?.original_venta ?? null,
+      // Valor original: el del SPOT si lo trae; si no, el propio del rubro.
+      original_venta: metodo?.original_venta ?? metodo?.venta ?? null,
 
       cod_moneda_costo: metodo?.cod_moneda_costo ?? metodo?.cod_moneda_venta ?? null,
 
@@ -229,9 +230,9 @@ export function construirPayloadRubrosAgrupados({
 
       rate_venta: metodo?.rate_venta ?? null,
 
-      original_rate_costo: metodo?.original_rate_costo ?? null,
+      original_rate_costo: metodo?.original_rate_costo ?? metodo?.rate_costo ?? null,
 
-      original_rate_venta: metodo?.original_rate_venta ?? null,
+      original_rate_venta: metodo?.original_rate_venta ?? metodo?.rate_venta ?? null,
 
       detalle: construirDetalleMetodo(metodo),
     };
