@@ -4,8 +4,6 @@
 //   npm run check:biome            → revisa (incluido en check:nuevos)
 //   npm run biome:arreglar         → aplica formato, orden de imports y arreglos seguros
 //
-// Única excepción del espejo: `next` no está instalado (next/link es stub), así que se ignora
-// `noUndeclaredDependencies` para `next`. En el proyecto real sí está en package.json.
 import { execFileSync } from "node:child_process";
 
 const RUTAS = [
@@ -44,10 +42,7 @@ try {
   process.exit(2);
 }
 
-const esStubNext = (d) =>
-  d.category === "lint/correctness/noUndeclaredDependencies" && /Dependency next\b/.test(d.message);
-
-const diagnosticos = resultado.diagnostics.filter((d) => !esStubNext(d));
+const diagnosticos = resultado.diagnostics;
 const errores = diagnosticos.filter((d) => d.severity === "error" || d.severity === "fatal");
 const avisos = diagnosticos.filter((d) => d.severity === "warning");
 

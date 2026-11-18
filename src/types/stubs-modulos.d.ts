@@ -5,4 +5,3 @@ declare module "@/features/shell";
 declare module "@/features/entidades";
 declare module "@/features/wms-hn/*";
 declare module "@/features/accesos/*";
-declare module "next/link";

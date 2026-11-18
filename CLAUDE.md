@@ -32,7 +32,10 @@ al proyecto completo. Responder siempre en **español**.
 ## Versiones (iguales al proyecto real)
 
 TypeScript 7 · React 19.3 · zod 4.6 · @tanstack/react-query 5.107 · react-table 9 · date-fns 4 · lucide-react 1.70 · Biome 2.6 ·
-Next 16 (no instalado: `next/link` es stub). Referencia: `package.json` de producción de `erp-web` 2.1.0.
+Next 16.4.5. Referencia: `package.json` de producción de `erp-web` 2.1.0. Además están instaladas, con los mismos
+rangos de producción, las librerías que usa el código real de `src/shared` (Radix, `class-variance-authority`, `sonner`,
+`zustand`, `react-hook-form`, `@sentry/nextjs`, etc.). Si un `SYNC` trae código que importa otra librería, agregarla con
+el rango de producción (no stubs).
 
 `tsconfig` estricto — lo que más impacta al escribir código:
 
@@ -62,7 +65,6 @@ Regla: **ningún cambio debe dejar errores nuevos** en `check:nuevos`. Si se res
 en el espejo `check:biome` no acepta **ningún error** (no hay línea base): formato (2 espacios, ancho 100, comillas dobles,
 `;`, trailing commas), imports ordenados y con `import type`, nombres de archivo en **kebab-case**, sin `any`, sin `!`,
 sin `console`, sin `key` por índice, dependencias de hooks exhaustivas, `type` en `<button>`, etc.
-Única excepción del espejo: se ignora `noUndeclaredDependencies` de `next` (aquí no está instalado).
 El resto de `src/features/embarques/` (referencia) no se revisa.
 
 ## Finales de línea
