@@ -1,2 +1,6 @@
-/* STUB del repo espejo: solo tipos para verificar pricing. NO copiar al proyecto real. */
-export declare function cn(...clases: unknown[]): string;
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
