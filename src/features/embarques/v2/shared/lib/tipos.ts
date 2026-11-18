@@ -97,3 +97,16 @@ export type ArchivoEmbarque = {
   usuario: string;
   fecha: string;
 };
+
+/** Registro de la bitácora del embarque (tab Bitácora, solo consulta). */
+export type RegistroBitacora = {
+  id: number;
+  /** "dd-MM-yyyy HH:mm". */
+  fecha: string;
+  usuario: string;
+  /** Qué pasó (ej. "Creación", "Archivo", "Paso completado"). */
+  accion: string;
+  detalle: string;
+  /** Paso del tracking (1..6) si el registro es de un paso. */
+  paso?: number | undefined;
+};

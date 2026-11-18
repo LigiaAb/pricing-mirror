@@ -23,7 +23,7 @@
 
 import type { CampoGestion } from "./interacciones";
 
-export type CampoEmbarque = CampoGestion & {
+export type CampoEmbarque = Omit<CampoGestion, "key"> & {
   /** Clave del dato en el módulo actual. */
   key: string;
   /** Solo consulta también al editar (en el módulo actual viene del maestro). */

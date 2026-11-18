@@ -12,6 +12,8 @@
  * antes (ver `gestion-actividades.ts`).
  * ========================================================================== */
 
+import type { InformacionEmbarque } from "./tipos";
+
 export type TipoInteraccion =
   | "formulario"
   | "dato-especial"
@@ -48,6 +50,12 @@ export type CampoGestion = {
   opciones?: readonly string[];
   /** `archivo`: tipos aceptados (`accept`), ej. `"image/*"`. */
   acepta?: string;
+  /**
+   * Dato del embarque que registra o usa, como `"<sección>.<key>"` de
+   * `InformacionEmbarque` y `campos-embarque.ts` (ej. `"cargas.pesoTotal"`).
+   * Es el mismo dato que en Información: se consulta si ya se ingresó.
+   */
+  key?: `${keyof InformacionEmbarque}.${string}`;
 };
 
 export type DefinicionInteraccion = {

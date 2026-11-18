@@ -97,6 +97,7 @@ export type ValorPasoEmbarque =
   | "complementaria"
   | "cierre"
   | "archivos"
+  | "bitacora"
   | "cancelacion";
 
 export type PasoEmbarque = {
@@ -285,6 +286,15 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
     detalle: "Consulta y descarga",
     descripcion:
       "Archivos del embarque para consulta y descarga. Se suben en la actividad que los pide o en el tracking.",
+    actividades: [],
+    grupo: "extra",
+    paraTodos: true,
+  },
+  {
+    value: "bitacora",
+    label: "Bitácora",
+    detalle: "Historial del embarque",
+    descripcion: "Historial de lo que se hizo en el embarque: quién, qué y cuándo.",
     actividades: [],
     grupo: "extra",
     paraTodos: true,

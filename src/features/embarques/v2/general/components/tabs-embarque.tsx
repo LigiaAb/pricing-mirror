@@ -7,6 +7,7 @@ import {
   FileStack,
   FileText,
   FolderOpen,
+  History,
   Landmark,
   type LucideIcon,
   PackageCheck,
@@ -34,6 +35,7 @@ import {
 } from "../lib/pasos";
 import { PasoActividades } from "./pasos/paso-actividades";
 import { PasoArchivos } from "./pasos/paso-archivos";
+import { PasoBitacora } from "./pasos/paso-bitacora";
 import { PasoInformacion } from "./pasos/paso-informacion";
 
 const ICONOS: Record<ValorPasoEmbarque, LucideIcon> = {
@@ -53,6 +55,7 @@ const ICONOS: Record<ValorPasoEmbarque, LucideIcon> = {
   complementaria: FileText,
   cierre: PlaneLanding,
   archivos: FolderOpen,
+  bitacora: History,
   cancelacion: Ban,
 };
 
@@ -71,6 +74,8 @@ function contenidoPaso(
       return <PasoInformacion embarque={embarque} editable={puedeEditarInformacion(perfil)} />;
     case "archivos":
       return <PasoArchivos paso={paso} embarque={embarque} />;
+    case "bitacora":
+      return <PasoBitacora paso={paso} embarque={embarque} />;
     default:
       return <PasoActividades paso={paso} pasoActual={embarque.pasoActual} perfil={perfil} />;
   }
