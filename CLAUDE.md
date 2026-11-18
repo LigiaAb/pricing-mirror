@@ -8,13 +8,17 @@ al proyecto completo. Responder siempre en **español**.
 | Ruta                                         | Qué es                                                | ¿Se copia al proyecto real?      |
 | -------------------------------------------- | ----------------------------------------------------- | -------------------------------- |
 | `src/features/pricing/`, `src/features/embarques/` | Código real de los módulos                      | **Sí**, es lo único que se copia |
-| `src/shared/**`, `src/features/catalogos/**` | STUBS: solo tipos de lo que pricing usa (salvo `async-combobox-input.tsx`, real) | **No** (salvo ese archivo) |
+| `src/shared/**`                              | STUBS: solo tipos de lo que pricing usa (salvo `async-combobox-input.tsx`, real) | **No** (salvo ese archivo) |
+| `src/features/catalogos/api/**`              | Código real de los catálogos (`createCatalogo` y cada catálogo)  | **No**                           |
+| `src/features/catalogos/index.ts`            | Copia del `index.ts` real **sin** las exportaciones de `./hooks/...` | **No**                       |
 | `src/features/tracking/**`                   | STUB: solo tipos de `TrackingDetalle` (embarques)     | **No**                           |
 | `src/features/objetivos/**`                  | STUB: copia del catálogo `objetivos` (Hit Rate)       | **No**                           |
 | `src/types/stubs-modulos.d.ts`               | Todo lo demás de `@/shared` / `@/features` como `any` | **No**                           |
 | `tsconfig.json`                              | Copia exacta del proyecto real                        | No (ya existe allá)              |
 
-- `src/features/catalogos/create-catalogo.ts` contiene el **código real** de `createCatalogo` del proyecto.
+- `src/features/catalogos/api/create-catalogo.ts` contiene el **código real** de `createCatalogo` del proyecto; todo
+  `catalogos/api/` es real y `catalogos/index.ts` es el real salvo los hooks (`./hooks/...` no existen en el espejo;
+  pricing y embarques no los usan). El real no exporta `Filtros`.
 - `src/shared/components/form/fields/async-combobox-input.tsx` contiene el **código real** de `AsyncComboboxInput`,
   idéntico al proyecto (para tipar `onOpenChange` hay stub en `src/shared/components/ui/popover.tsx`). Es la única
   ruta de `src/shared` que **sí** sale en los `diff/` (`RUTAS_CODIGO` de `scripts/guardar-diff.mjs`).
