@@ -1,0 +1,895 @@
+diff --git a/src/features/pricing/autorizacion-spot/api/autorizacion-spot.ts b/src/features/pricing/autorizacion-spot/api/autorizacion-spot.ts
+index 31af7af..99c15ee 100644
+--- a/src/features/pricing/autorizacion-spot/api/autorizacion-spot.ts
++++ b/src/features/pricing/autorizacion-spot/api/autorizacion-spot.ts
+@@ -111,6 +111,7 @@ export function useActualizarTarifaSpot() {
+   return useMutation({
+     mutationFn: (payload: Record<string, unknown>) =>
+       http.post("/api/appweb/actualizar-tarifa-spot", payload),
++    meta: { successMessage: "Tarifa spot rechazada" },
+     onSuccess: () => queryClient.invalidateQueries({ queryKey: AUTORIZACION_SPOT_KEY }),
+   });
+ }
+@@ -130,6 +131,7 @@ export function useAutorizarTarifaSpot() {
+       await http.post("/api/appweb/actualizar-tarifa-spot", payload);
+       await activarCotizacionDetalle({ codCotizacionCabecera, codCotizacionDetalle });
+     },
++    meta: { successMessage: "Tarifa spot autorizada" },
+     onSuccess: () => queryClient.invalidateQueries({ queryKey: AUTORIZACION_SPOT_KEY }),
+   });
+ }
+diff --git a/src/features/pricing/carga-masiva-fletes/api/carga-masiva-fletes.ts b/src/features/pricing/carga-masiva-fletes/api/carga-masiva-fletes.ts
+index 72e5e83..8dda235 100644
+--- a/src/features/pricing/carga-masiva-fletes/api/carga-masiva-fletes.ts
++++ b/src/features/pricing/carga-masiva-fletes/api/carga-masiva-fletes.ts
+@@ -114,5 +114,10 @@ export async function cargarFletesMasivos({
+ export function useCargarFletesMasivos() {
+   return useMutation({
+     mutationFn: cargarFletesMasivos,
++    /*
++     * La pantalla ya muestra el resultado (éxito, errores por fila y error general en
++     * su Alert): sin toast de error para no repetirlo, y sin toast de éxito.
++     */
++    meta: { silent: true },
+   });
+ }
+diff --git a/src/features/pricing/cotizacion/calculo/api/cotizacion-cabecera.ts b/src/features/pricing/cotizacion/calculo/api/cotizacion-cabecera.ts
+index ac39bda..ea5c042 100644
+--- a/src/features/pricing/cotizacion/calculo/api/cotizacion-cabecera.ts
++++ b/src/features/pricing/cotizacion/calculo/api/cotizacion-cabecera.ts
+@@ -1,6 +1,7 @@
+ "use client";
+ 
+ import {
++  type MutationMeta,
+   mutationOptions,
+   queryOptions,
+   useMutation,
+@@ -88,6 +89,29 @@ function parseObjectEnvelope<TSchema extends z.ZodTypeAny>(
+   return parsed.data;
+ }
+ 
++/**
++ * Rechazar, validar elegibilidad y confirmar responden `{ success: false }` cuando la
++ * acción no se hizo. Se convierte en error para que se notifique (toast de error) y
++ * para que el `successMessage` solo se muestre cuando la acción sí se completó.
++ */
++function exigirSuccess<T extends { success: boolean }>(resultado: T, mensaje: string): T {
++  if (resultado.success) {
++    return resultado;
++  }
++
++  const respuesta = resultado as Record<string, unknown>;
++  const delBackend = respuesta.message ?? respuesta.mensaje;
++
++  throw new Error(
++    typeof delBackend === "string" && delBackend.trim() !== "" ? delBackend : mensaje,
++  );
++}
++
++/** Opciones de las mutaciones que se usan con distinto `meta` según la pantalla. */
++interface OpcionesMutacion {
++  meta?: MutationMeta;
++}
++
+ /* ==========================================================================
+  * QUERY
+  * ========================================================================== */
+@@ -141,6 +165,8 @@ export function useInsertarCotizacionCabecera() {
+   return useMutation({
+     ...insertarCotizacionCabeceraOptions(),
+ 
++    meta: { successMessage: "Cotización creada" },
++
+     onSuccess: async () => {
+       await queryClient.invalidateQueries({
+         queryKey: COTIZACIONES_CABECERA_QUERY_KEY,
+@@ -164,12 +190,21 @@ export const actualizarCotizacionCabeceraOptions = () =>
+     },
+   });
+ 
+-export function useActualizarCotizacionCabecera() {
++/**
++ * Por defecto muestra "Cotización actualizada". La reactivación de la cabecera al
++ * guardar una versión pasa `{ meta: { silent: true } }`: el cálculo ya muestra su
++ * propio aviso si falla y el éxito lo anuncia "Versión guardada".
++ */
++export function useActualizarCotizacionCabecera({
++  meta = { successMessage: "Cotización actualizada" },
++}: OpcionesMutacion = {}) {
+   const queryClient = useQueryClient();
+ 
+   return useMutation({
+     ...actualizarCotizacionCabeceraOptions(),
+ 
++    meta,
++
+     onSuccess: async () => {
+       await queryClient.invalidateQueries({
+         queryKey: COTIZACIONES_CABECERA_QUERY_KEY,
+@@ -189,10 +224,13 @@ export const rechazarCotizacionCabeceraOptions = () =>
+         cod_cotizacion_cabecera: codCotizacionCabecera,
+       });
+ 
+-      return parseObjectEnvelope(
+-        response,
+-        accionCotizacionResponseSchema,
+-        "rechazar-cotizacion-cabecera",
++      return exigirSuccess(
++        parseObjectEnvelope(
++          response,
++          accionCotizacionResponseSchema,
++          "rechazar-cotizacion-cabecera",
++        ),
++        "No se pudo rechazar la cotización.",
+       );
+     },
+   });
+@@ -203,11 +241,9 @@ export function useRechazarCotizacionCabecera() {
+   return useMutation({
+     ...rechazarCotizacionCabeceraOptions(),
+ 
+-    onSuccess: async (result) => {
+-      if (!result.success) {
+-        return;
+-      }
++    meta: { successMessage: "Cotización rechazada" },
+ 
++    onSuccess: async () => {
+       await queryClient.invalidateQueries({
+         queryKey: COTIZACIONES_CABECERA_QUERY_KEY,
+       });
+@@ -226,10 +262,13 @@ export const validarElegibilidadCotizacionOptions = () =>
+         cod_cotizacion_cabecera: codCotizacionCabecera,
+       });
+ 
+-      return parseObjectEnvelope(
+-        response,
+-        accionCotizacionResponseSchema,
+-        "validar-elegibilidad-cotizacion",
++      return exigirSuccess(
++        parseObjectEnvelope(
++          response,
++          accionCotizacionResponseSchema,
++          "validar-elegibilidad-cotizacion",
++        ),
++        "La cotización no cumple los requisitos para confirmarse.",
+       );
+     },
+   });
+@@ -249,10 +288,13 @@ export const confirmarCotizacionCabeceraOptions = () =>
+         cod_cotizacion_cabecera: codCotizacionCabecera,
+       });
+ 
+-      return parseObjectEnvelope(
+-        response,
+-        accionCotizacionResponseSchema,
+-        "confirmar-cotizacion-cabecera",
++      return exigirSuccess(
++        parseObjectEnvelope(
++          response,
++          accionCotizacionResponseSchema,
++          "confirmar-cotizacion-cabecera",
++        ),
++        "No se pudo confirmar la cotización.",
+       );
+     },
+   });
+@@ -263,11 +305,9 @@ export function useConfirmarCotizacionCabecera() {
+   return useMutation({
+     ...confirmarCotizacionCabeceraOptions(),
+ 
+-    onSuccess: async (result) => {
+-      if (!result.success) {
+-        return;
+-      }
++    meta: { successMessage: "Cotización confirmada" },
+ 
++    onSuccess: async () => {
+       await queryClient.invalidateQueries({
+         queryKey: COTIZACIONES_CABECERA_QUERY_KEY,
+       });
+diff --git a/src/features/pricing/cotizacion/calculo/api/versiones.ts b/src/features/pricing/cotizacion/calculo/api/versiones.ts
+index cfad7df..12b18ea 100644
+--- a/src/features/pricing/cotizacion/calculo/api/versiones.ts
++++ b/src/features/pricing/cotizacion/calculo/api/versiones.ts
+@@ -405,6 +405,8 @@ export function useActivarVersion() {
+   return useMutation({
+     ...activarVersionOptions(),
+ 
++    meta: { successMessage: "Versión activada" },
++
+     onSuccess: async (_, variables) => {
+       await queryClient.invalidateQueries({
+         queryKey: [...VERSIONES_QUERY_KEY, variables.codCotizacionCabecera],
+diff --git a/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx b/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx
+index 7ec4c10..a06fc20 100644
+--- a/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx
+@@ -457,7 +457,7 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
+         throw new Error("La cotización abierta no coincide con la versión guardada.");
+       }
+ 
+-      await actualizarCotizacion({ cod_cotizacion_cabecera, cod_estado });
++      await actualizarCotizacion({ cod_cotizacion_cabecera, cod_estado }, { silencioso: true });
+     },
+     [cotizacionPersistida, actualizarCotizacion],
+   );
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-gestion-cotizaciones.ts b/src/features/pricing/cotizacion/calculo/hooks/use-gestion-cotizaciones.ts
+index 051acde..1a3fd62 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-gestion-cotizaciones.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-gestion-cotizaciones.ts
+@@ -360,6 +360,11 @@ export function useGestionCotizaciones({
+ 
+   const insertarMutation = useInsertarCotizacionCabecera();
+   const actualizarMutation = useActualizarCotizacionCabecera();
++  /*
++   * Misma mutación, sin toasts: la usa la reactivación de la cabecera al guardar una
++   * versión (el cálculo muestra su propio aviso si falla; el éxito es "Versión guardada").
++   */
++  const actualizarSilenciosoMutation = useActualizarCotizacionCabecera({ meta: { silent: true } });
+   const rechazarMutation = useRechazarCotizacionCabecera();
+   const validarElegibilidadMutation = useValidarElegibilidadCotizacion();
+   const confirmarMutation = useConfirmarCotizacionCabecera();
+@@ -442,7 +447,10 @@ export function useGestionCotizaciones({
+   );
+ 
+   const actualizarCotizacion = React.useCallback(
+-    async (cotizacion: CotizacionCabeceraPayload) => {
++    async (
++      cotizacion: CotizacionCabeceraPayload,
++      { silencioso = false }: { silencioso?: boolean } = {},
++    ) => {
+       const estadoVisual = obtenerEstadoVisual(cotizacion);
+ 
+       const payload: CotizacionCabeceraPayload = {
+@@ -458,7 +466,7 @@ export function useGestionCotizaciones({
+         cod_estado: cotizacion.cod_estado || estadoVisual || estados.ACTIVO,
+       };
+ 
+-      await actualizarMutation.mutateAsync(payload);
++      await (silencioso ? actualizarSilenciosoMutation : actualizarMutation).mutateAsync(payload);
+ 
+       setCotizacionSeleccionada((prev) => {
+         if (!prev) {
+@@ -483,29 +491,31 @@ export function useGestionCotizaciones({
+ 
+       return payload;
+     },
+-    [actualizarMutation, estados.ACTIVO],
++    [actualizarMutation, actualizarSilenciosoMutation, estados.ACTIVO],
+   );
+ 
+   const rechazarCotizacion = React.useCallback(
+     async (codCotizacionCabecera: Id) => {
+-      const result = await rechazarMutateAsync(codCotizacionCabecera);
++      try {
++        await rechazarMutateAsync(codCotizacionCabecera);
+ 
+-      return result.success;
++        return true;
++      } catch {
++        // El error (incluido `success: false`) ya se notificó con el toast de la mutación.
++        return false;
++      }
+     },
+     [rechazarMutateAsync],
+   );
+ 
+   const confirmarCotizacion = React.useCallback(
+     async (codCotizacionCabecera: Id) => {
+-      const elegibilidad = await validarElegibilidadMutateAsync(codCotizacionCabecera);
+-
+-      if (!elegibilidad.success) {
+-        return false;
+-      }
+-
+-      const confirmacion = await confirmarMutateAsync(codCotizacionCabecera);
+-
+-      if (!confirmacion.success) {
++      try {
++        // Ambas lanzan error si el backend responde `success: false`.
++        await validarElegibilidadMutateAsync(codCotizacionCabecera);
++        await confirmarMutateAsync(codCotizacionCabecera);
++      } catch {
++        // El error ya se notificó con el toast de la mutación.
+         return false;
+       }
+ 
+@@ -552,6 +562,7 @@ export function useGestionCotizaciones({
+   const isMutating =
+     insertarMutation.isPending ||
+     actualizarMutation.isPending ||
++    actualizarSilenciosoMutation.isPending ||
+     rechazarMutation.isPending ||
+     validarElegibilidadMutation.isPending ||
+     confirmarMutation.isPending;
+@@ -606,7 +617,7 @@ export function useGestionCotizaciones({
+     isMutating,
+ 
+     isInserting: insertarMutation.isPending,
+-    isUpdating: actualizarMutation.isPending,
++    isUpdating: actualizarMutation.isPending || actualizarSilenciosoMutation.isPending,
+     isRejecting: rechazarMutation.isPending,
+     isValidatingEligibility: validarElegibilidadMutation.isPending,
+     isConfirming: confirmarMutation.isPending,
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-guardar-version-cotizacion.ts b/src/features/pricing/cotizacion/calculo/hooks/use-guardar-version-cotizacion.ts
+index b8cea82..5207ee6 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-guardar-version-cotizacion.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-guardar-version-cotizacion.ts
+@@ -77,23 +77,21 @@ type Props = {
+     version: Record<string, unknown>;
+   }) => Promise<void> | void;
+ };
+-async function persistirVersion({
++/**
++ * Validaciones que NO son un error: el cálculo las resuelve en pantalla (p. ej. abre el
++ * diálogo del documento SPOT). Se revisan antes de la mutación para que el toast
++ * "Versión guardada" solo salga cuando la versión sí se guardó.
++ *
++ * Si faltan los códigos de estado no se revisa el documento: la mutación lanza ese error
++ * primero (mismo orden de antes).
++ */
++function validarAntesDeGuardar({
+   codCotizacionCabecera,
+-  codUsuario,
+   versionActual,
+   rubros,
+   criterios,
+-  criterioCobertura,
+-  criteriosCatalogo,
+-  legs,
+-  dimensiones,
+-  codCc,
+-  codTipoTransporte,
+   archivoSpot,
+-  descripcionSpot,
+-  reasonCodeSpot,
+   estados,
+-  onGuardado,
+ }: Props) {
+   if (
+     !versionActual ||
+@@ -109,13 +107,11 @@ async function persistirVersion({
+ 
+   const rubroSpot = obtenerRubroSpot(rubros);
+   const { ACTIVO, INACTIVO, AUTORIZADO } = estados;
+-
+-  // Comprueba los códigos antes de insertar el detalle para evitar un guardado parcial.
+-  if (ACTIVO == null || INACTIVO == null || (rubroSpot && AUTORIZADO == null)) {
+-    throw new Error("Faltan códigos de estado para guardar esta versión.");
+-  }
++  const estadosCompletos =
++    ACTIVO != null && INACTIVO != null && (rubroSpot == null || AUTORIZADO != null);
+ 
+   if (
++    estadosCompletos &&
+     requiereDocumentoSpot({
+       rubroSpot,
+       archivo: archivoSpot ?? null,
+@@ -127,6 +123,46 @@ async function persistirVersion({
+     };
+   }
+ 
++  return null;
++}
++
++/** Guarda la versión. Se llama solo después de `validarAntesDeGuardar`. */
++async function persistirVersion({
++  codCotizacionCabecera,
++  codUsuario,
++  versionActual,
++  rubros,
++  criterios,
++  criterioCobertura,
++  criteriosCatalogo,
++  legs,
++  dimensiones,
++  codCc,
++  codTipoTransporte,
++  archivoSpot,
++  descripcionSpot,
++  reasonCodeSpot,
++  estados,
++  onGuardado,
++}: Props) {
++  if (
++    !versionActual ||
++    codCotizacionCabecera == null ||
++    !rubros.length ||
++    !Object.keys(criterios).length
++  ) {
++    // No ocurre: validarAntesDeGuardar ya lo revisó (aquí solo afina los tipos).
++    throw new Error("Faltan datos para guardar la versión.");
++  }
++
++  const rubroSpot = obtenerRubroSpot(rubros);
++  const { ACTIVO, INACTIVO, AUTORIZADO } = estados;
++
++  // Comprueba los códigos antes de insertar el detalle para evitar un guardado parcial.
++  if (ACTIVO == null || INACTIVO == null || (rubroSpot && AUTORIZADO == null)) {
++    throw new Error("Faltan códigos de estado para guardar esta versión.");
++  }
++
+   // 1. DETALLE
+ 
+   const reqBody = construirPayloadVersion({
+@@ -139,10 +175,7 @@ async function persistirVersion({
+   const codCotizacionDetalle = await insertarCotizacionDetalle(reqBody);
+ 
+   if (codCotizacionDetalle == null) {
+-    return {
+-      ok: false as const,
+-      motivo: "SIN_CODIGO_DETALLE" as const,
+-    };
++    throw new Error("El servidor no devolvió el código de la versión guardada.");
+   }
+ 
+   // 2. SPOT
+@@ -298,10 +331,17 @@ async function persistirVersion({
+ 
+ export function useGuardarVersionCotizacion(props: Props) {
+   const guardarMutation = useMutation(
+-    mutationOptions({ mutationFn: () => persistirVersion(props) }),
++    mutationOptions({
++      mutationFn: () => persistirVersion(props),
++      meta: { successMessage: "Versión guardada" },
++    }),
+   );
++
++  const guardarVersion = async () =>
++    validarAntesDeGuardar(props) ?? (await guardarMutation.mutateAsync());
++
+   return {
+-    guardarVersion: guardarMutation.mutateAsync,
++    guardarVersion,
+     guardando: guardarMutation.isPending,
+     error: guardarMutation.error,
+   };
+diff --git a/src/features/pricing/plantillas-clientes/api/plantillas-clientes.ts b/src/features/pricing/plantillas-clientes/api/plantillas-clientes.ts
+index b0b5059..9bc0ae8 100644
+--- a/src/features/pricing/plantillas-clientes/api/plantillas-clientes.ts
++++ b/src/features/pricing/plantillas-clientes/api/plantillas-clientes.ts
+@@ -95,10 +95,11 @@ function obtenerIdInsertado(response: unknown): Id {
+   return value;
+ }
+ 
+-function useMutationPlantilla(endpoint: string) {
++function useMutationPlantilla(endpoint: string, successMessage: string) {
+   const queryClient = useQueryClient();
+   return useMutation({
+     mutationFn: (payload: PlantillaClientePayload) => http.post<unknown>(endpoint, payload),
++    meta: { successMessage },
+     onSuccess: () => queryClient.invalidateQueries({ queryKey: PLANTILLAS_CLIENTE_KEY }),
+   });
+ }
+@@ -110,14 +111,15 @@ export function useInsertarPlantillaCliente() {
+       obtenerIdInsertado(
+         await http.post<unknown>("/api/appweb/insertar-tarifa-plantilla", payload),
+       ),
++    meta: { successMessage: "Plantilla creada" },
+     onSuccess: () => queryClient.invalidateQueries({ queryKey: PLANTILLAS_CLIENTE_KEY }),
+   });
+ }
+ 
+ export const useActualizarPlantillaCliente = () =>
+-  useMutationPlantilla("/api/appweb/actualizar-tarifa-plantilla");
++  useMutationPlantilla("/api/appweb/actualizar-tarifa-plantilla", "Plantilla actualizada");
+ export const useEliminarPlantillaCliente = () =>
+-  useMutationPlantilla("/api/appweb/eliminar-tarifa-plantilla");
++  useMutationPlantilla("/api/appweb/eliminar-tarifa-plantilla", "Plantilla eliminada");
+ 
+ export function useGuardarPlantillaRubros() {
+   const queryClient = useQueryClient();
+@@ -134,6 +136,7 @@ export function useGuardarPlantillaRubros() {
+         ...eliminar.map((item) => http.post("/api/appweb/eliminar-plantilla-rubro", item)),
+       ]);
+     },
++    meta: { successMessage: "Rubros de la plantilla guardados" },
+     onSuccess: () => queryClient.invalidateQueries({ queryKey: PLANTILLAS_RUBROS_KEY }),
+   });
+ }
+diff --git a/src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx b/src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx
+index 45f6140..65465e8 100644
+--- a/src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx
++++ b/src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx
+@@ -11,6 +11,15 @@ import {
+ import { useCatalogosTarifas } from "@/features/pricing/tarifas";
+ import { useContextoOperativoStore } from "@/features/shell";
+ import { DataTable, DataTableColumnHeader } from "@/shared/components/data-table/data-table";
++import {
++  AlertDialog,
++  AlertDialogCancel,
++  AlertDialogContent,
++  AlertDialogDescription,
++  AlertDialogFooter,
++  AlertDialogHeader,
++  AlertDialogTitle,
++} from "@/shared/components/ui/alert-dialog";
+ import { Button } from "@/shared/components/ui/button";
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+ import type { ColumnDef } from "@/shared/lib/tanstack-table";
+@@ -118,6 +127,8 @@ export function GestionPlantillasClientes() {
+   const eliminar = useEliminarPlantillaCliente();
+   const [seleccionada, setSeleccionada] = React.useState<PlantillaCliente | null>(null);
+   const [nueva, setNueva] = React.useState(false);
++  /** Plantilla que espera confirmación para eliminarse (abre el diálogo). */
++  const [porEliminar, setPorEliminar] = React.useState<Fila | null>(null);
+ 
+   const data = React.useMemo<Fila[]>(
+     () =>
+@@ -199,11 +210,7 @@ export function GestionPlantillasClientes() {
+               size="icon"
+               variant="ghost"
+               aria-label="Eliminar plantilla"
+-              onClick={() =>
+-                void eliminar
+-                  .mutateAsync({ ...row.original, cod_estado: 2 })
+-                  .then(() => setSeleccionada(null))
+-              }
++              onClick={() => setPorEliminar(row.original)}
+             >
+               <Trash2 className="size-4" />
+             </Button>
+@@ -211,9 +218,17 @@ export function GestionPlantillasClientes() {
+         ),
+       },
+     ],
+-    [eliminar],
++    [],
+   );
+ 
++  const confirmarEliminar = () => {
++    if (!porEliminar) return;
++    void eliminar
++      .mutateAsync({ ...porEliminar, cod_estado: 2 })
++      .then(() => setSeleccionada(null))
++      .finally(() => setPorEliminar(null));
++  };
++
+   if (cargandoCatalogos)
+     return <p className="p-4 text-sm text-muted-foreground">Cargando catálogos…</p>;
+ 
+@@ -337,6 +352,34 @@ export function GestionPlantillasClientes() {
+           </TabsContent>
+         </Tabs>
+       ) : null}
++      <AlertDialog
++        open={porEliminar != null}
++        onOpenChange={(abierto: boolean) => {
++          if (!abierto && !eliminar.isPending) setPorEliminar(null);
++        }}
++      >
++        <AlertDialogContent>
++          <AlertDialogHeader>
++            <AlertDialogTitle>Eliminar plantilla</AlertDialogTitle>
++            <AlertDialogDescription>
++              {`Se eliminará la plantilla #${String(porEliminar?.cod_tarifaplantilla ?? "")}`}
++              {porEliminar?.descripcion ? ` (${String(porEliminar.descripcion)})` : ""}. ¿Desea
++              continuar?
++            </AlertDialogDescription>
++          </AlertDialogHeader>
++          <AlertDialogFooter>
++            <AlertDialogCancel disabled={eliminar.isPending}>Cancelar</AlertDialogCancel>
++            <Button
++              type="button"
++              variant="destructive"
++              disabled={eliminar.isPending}
++              onClick={confirmarEliminar}
++            >
++              Eliminar
++            </Button>
++          </AlertDialogFooter>
++        </AlertDialogContent>
++      </AlertDialog>
+     </div>
+   );
+ }
+diff --git a/src/features/pricing/tarifas/api/servicios.ts b/src/features/pricing/tarifas/api/servicios.ts
+index c628e6c..2b9fddc 100644
+--- a/src/features/pricing/tarifas/api/servicios.ts
++++ b/src/features/pricing/tarifas/api/servicios.ts
+@@ -1,4 +1,5 @@
+ import {
++  type MutationMeta,
+   mutationOptions,
+   queryOptions,
+   useMutation,
+@@ -168,12 +169,18 @@ export const actualizarServicioOptions = () =>
+     },
+   });
+ 
+-export function useActualizarServicio() {
++/**
++ * Sin mensaje propio: se usa junto con otra mutación (editar tarifa = servicio + método,
++ * y el mensaje lo pone el método) o con un `meta` propio (anular tarifa).
++ */
++export function useActualizarServicio({ meta }: { meta?: MutationMeta } = {}) {
+   const queryClient = useQueryClient();
+ 
+   return useMutation({
+     ...actualizarServicioOptions(),
+ 
++    ...(meta ? { meta } : {}),
++
+     onSuccess: async () => {
+       await queryClient.invalidateQueries({
+         queryKey: SERVICIOS_QUERY_KEY,
+@@ -213,6 +220,7 @@ export function useReplicarServicio() {
+ 
+   return useMutation({
+     ...replicarServicioOptions(),
++    meta: { successMessage: "Tarifa copiada" },
+     onSuccess: async () => {
+       await queryClient.invalidateQueries({
+         queryKey: SERVICIOS_QUERY_KEY,
+diff --git a/src/features/pricing/tarifas/api/tarifa-entidades.ts b/src/features/pricing/tarifas/api/tarifa-entidades.ts
+index ea135cb..4603ead 100644
+--- a/src/features/pricing/tarifas/api/tarifa-entidades.ts
++++ b/src/features/pricing/tarifas/api/tarifa-entidades.ts
+@@ -79,6 +79,7 @@ export function useGuardarTarifaEntidad() {
+ 
+   return useMutation({
+     ...guardarTarifaEntidadOptions(),
++    meta: { successMessage: "Entidad agregada" },
+     onSuccess: async () => {
+       await queryClient.invalidateQueries({
+         queryKey: TARIFA_ENTIDADES_QUERY_KEY,
+@@ -92,6 +93,7 @@ export function useEliminarTarifaEntidad() {
+ 
+   return useMutation({
+     ...eliminarTarifaEntidadOptions(),
++    meta: { successMessage: "Entidad eliminada" },
+     onSuccess: async () => {
+       await queryClient.invalidateQueries({
+         queryKey: TARIFA_ENTIDADES_QUERY_KEY,
+diff --git a/src/features/pricing/tarifas/api/tarifa-rangos.ts b/src/features/pricing/tarifas/api/tarifa-rangos.ts
+index ce695ad..afad908 100644
+--- a/src/features/pricing/tarifas/api/tarifa-rangos.ts
++++ b/src/features/pricing/tarifas/api/tarifa-rangos.ts
+@@ -39,6 +39,8 @@ export function useGuardarTarifaRangos() {
+   return useMutation({
+     ...guardarTarifaRangosOptions(),
+ 
++    meta: { successMessage: "Rangos guardados" },
++
+     onSuccess: async () => {
+       await queryClient.invalidateQueries({
+         queryKey: TARIFA_RANGOS_QUERY_KEY,
+diff --git a/src/features/pricing/tarifas/components/creacion-tarifa.tsx b/src/features/pricing/tarifas/components/creacion-tarifa.tsx
+index d385727..be31a47 100644
+--- a/src/features/pricing/tarifas/components/creacion-tarifa.tsx
++++ b/src/features/pricing/tarifas/components/creacion-tarifa.tsx
+@@ -28,10 +28,12 @@ export function CreacionTarifa() {
+ 
+   const insertarServicio = useInsertarServicio();
+   const actualizarServicio = useActualizarServicio();
++  const anularServicio = useActualizarServicio({ meta: { successMessage: "Tarifa anulada" } });
+   const replicarServicio = useReplicarServicio();
+ 
+-  const insertarMetodo = useInsertarMetodo();
+-  const actualizarMetodo = useActualizarMetodo();
++  // Crear y editar tarifa = servicio + método: el mensaje lo pone el método (un solo toast).
++  const insertarMetodo = useInsertarMetodo({ meta: { successMessage: "Tarifa creada" } });
++  const actualizarMetodo = useActualizarMetodo({ meta: { successMessage: "Tarifa actualizada" } });
+ 
+   const { refetchServicios, refetchMetodos } = useCatalogosTarifas();
+ 
+@@ -63,7 +65,7 @@ export function CreacionTarifa() {
+        * servicio cambia a anulado.
+        */
+       if (anular) {
+-        await Promise.all([actualizarServicio.mutateAsync({ ...servicio, cod_estado: 4 })]);
++        await Promise.all([anularServicio.mutateAsync({ ...servicio, cod_estado: 4 })]);
+ 
+         await Promise.all([refetchServicios()]);
+ 
+@@ -149,6 +151,7 @@ export function CreacionTarifa() {
+       insertarServicio,
+       insertarMetodo,
+       actualizarServicio,
++      anularServicio,
+       actualizarMetodo,
+       refetchServicios,
+       refetchMetodos,
+@@ -198,12 +201,14 @@ export function CreacionTarifa() {
+       insertarServicio.isPending ||
+       insertarMetodo.isPending ||
+       actualizarServicio.isPending ||
++      anularServicio.isPending ||
+       actualizarMetodo.isPending ||
+       replicarServicio.isPending,
+     [
+       insertarServicio.isPending,
+       insertarMetodo.isPending,
+       actualizarServicio.isPending,
++      anularServicio.isPending,
+       actualizarMetodo.isPending,
+       replicarServicio.isPending,
+     ],
+diff --git a/src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx b/src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx
+index 10631b1..fddbd80 100644
+--- a/src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx
++++ b/src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx
+@@ -35,11 +35,17 @@ export function CommoditiesTable({ codMetodo }: Props) {
+   const commoditiesFetch = fetchCommodities.useLista({ cod_estado: COD_ESTADO_ACTIVO });
+   const estadosFetch = fetchEstados.useLista();
+ 
+-  const insertarCommodity = useInsertarMetodoCommodity();
++  const insertarCommodity = useInsertarMetodoCommodity({
++    meta: { successMessage: "Commodity agregado" },
++  });
+ 
+-  const actualizarCommodity = useActualizarMetodoCommodity();
++  const actualizarCommodity = useActualizarMetodoCommodity({
++    meta: { successMessage: "Commodity actualizado" },
++  });
+ 
+-  const eliminarCommodity = useEliminarMetodoCommodity();
++  const eliminarCommodity = useEliminarMetodoCommodity({
++    meta: { successMessage: "Commodity eliminado" },
++  });
+ 
+   const [filaEditando, setFilaEditando] = React.useState<FilaMetodoCommodity | null>(null);
+ 
+diff --git a/src/features/pricing/tarifas/components/metodo-detalle/detalle-table.tsx b/src/features/pricing/tarifas/components/metodo-detalle/detalle-table.tsx
+index a376fba..77f502b 100644
+--- a/src/features/pricing/tarifas/components/metodo-detalle/detalle-table.tsx
++++ b/src/features/pricing/tarifas/components/metodo-detalle/detalle-table.tsx
+@@ -32,9 +32,15 @@ export function DetalleTable({ codMetodo }: Props) {
+ 
+   const tiposFetch = useFetchTipos.useLista();
+ 
+-  const insertarDetalle = useInsertarTarifaDetalle();
+-  const actualizarDetalle = useActualizarTarifaDetalle();
+-  const eliminarDetalle = useEliminarTarifaDetalle();
++  const insertarDetalle = useInsertarTarifaDetalle({
++    meta: { successMessage: "Detalle agregado" },
++  });
++  const actualizarDetalle = useActualizarTarifaDetalle({
++    meta: { successMessage: "Detalle actualizado" },
++  });
++  const eliminarDetalle = useEliminarTarifaDetalle({
++    meta: { successMessage: "Detalle eliminado" },
++  });
+ 
+   const [filaEditando, setFilaEditando] = React.useState<FilaMetodoDetalle | null>(null);
+ 
+diff --git a/src/features/pricing/tarifas/components/metodo-pais/pais-table.tsx b/src/features/pricing/tarifas/components/metodo-pais/pais-table.tsx
+index bb276a3..a6fc9e5 100644
+--- a/src/features/pricing/tarifas/components/metodo-pais/pais-table.tsx
++++ b/src/features/pricing/tarifas/components/metodo-pais/pais-table.tsx
+@@ -90,9 +90,9 @@ export function PaisTable({ codMetodo, codTipoTransporte }: Props) {
+   //   ciudades: (ciudadesFetch.data ?? []) as RutaOption[],
+   // };
+ 
+-  const insertarRuta = useInsertarTarifaRuta();
+-  const actualizarRuta = useActualizarTarifaRuta();
+-  const eliminarRuta = useEliminarTarifaRuta();
++  const insertarRuta = useInsertarTarifaRuta({ meta: { successMessage: "Ruta agregada" } });
++  const actualizarRuta = useActualizarTarifaRuta({ meta: { successMessage: "Ruta actualizada" } });
++  const eliminarRuta = useEliminarTarifaRuta({ meta: { successMessage: "Ruta eliminada" } });
+ 
+   const [filaEditando, setFilaEditando] = React.useState<FilaMetodoPais | null>(null);
+ 
+diff --git a/src/features/pricing/tarifas/components/metodos/cobertura/cobertura.tsx b/src/features/pricing/tarifas/components/metodos/cobertura/cobertura.tsx
+index 8c68002..5b63a2e 100644
+--- a/src/features/pricing/tarifas/components/metodos/cobertura/cobertura.tsx
++++ b/src/features/pricing/tarifas/components/metodos/cobertura/cobertura.tsx
+@@ -45,9 +45,13 @@ export function MetodoCobertura({ codMetodo, readonly = false, onTarifaCreada =
+ 
+   const monedasQuery = useMonedasCobertura();
+ 
+-  const insertarCobertura = useInsertarTarifaCobertura();
++  const insertarCobertura = useInsertarTarifaCobertura({
++    meta: { successMessage: "Cobertura guardada" },
++  });
+ 
+-  const actualizarCobertura = useActualizarTarifaCobertura();
++  const actualizarCobertura = useActualizarTarifaCobertura({
++    meta: { successMessage: "Cobertura actualizada" },
++  });
+ 
+   const monedas: MonedaCoberturaOption[] = useOpcionesMonedas(monedasQuery.data);
+ 
+diff --git a/src/features/pricing/tarifas/components/metodos/costo-porcentaje/costo-porcentaje.tsx b/src/features/pricing/tarifas/components/metodos/costo-porcentaje/costo-porcentaje.tsx
+index df97a6d..c391d8f 100644
+--- a/src/features/pricing/tarifas/components/metodos/costo-porcentaje/costo-porcentaje.tsx
++++ b/src/features/pricing/tarifas/components/metodos/costo-porcentaje/costo-porcentaje.tsx
+@@ -51,9 +51,13 @@ export function MetodoCostoPorcentaje({
+ 
+   const monedasQuery = useMonedasPorcentaje();
+ 
+-  const insertarPorcentaje = useInsertarTarifaCostoPorcentajeje();
++  const insertarPorcentaje = useInsertarTarifaCostoPorcentajeje({
++    meta: { successMessage: "Costo por porcentaje guardado" },
++  });
+ 
+-  const actualizarPorcentaje = useActualizarTarifaCostoPorcentajeje();
++  const actualizarPorcentaje = useActualizarTarifaCostoPorcentajeje({
++    meta: { successMessage: "Costo por porcentaje actualizado" },
++  });
+ 
+   const monedas: MonedaCostoPorcentajeOption[] = useOpcionesMonedas(monedasQuery.data);
+ 
+diff --git a/src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta.tsx b/src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta.tsx
+index eae13b7..8f266bb 100644
+--- a/src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta.tsx
++++ b/src/features/pricing/tarifas/components/metodos/costoVenta/costo-venta.tsx
+@@ -43,9 +43,13 @@ export function MetodoCostoVenta({
+ 
+   const monedasQuery = useMonedasCostoVenta();
+ 
+-  const insertarCostoVenta = useInsertarTarifaCostoVenta();
++  const insertarCostoVenta = useInsertarTarifaCostoVenta({
++    meta: { successMessage: "Costo / venta guardado" },
++  });
+ 
+-  const actualizarCostoVenta = useActualizarTarifaCostoVenta();
++  const actualizarCostoVenta = useActualizarTarifaCostoVenta({
++    meta: { successMessage: "Costo / venta actualizado" },
++  });
+ 
+   const monedas: MonedaCostoVentaOption[] = useOpcionesMonedas(monedasQuery.data);
+ 
+diff --git a/src/features/pricing/tarifas/components/metodos/equipo/equipo.tsx b/src/features/pricing/tarifas/components/metodos/equipo/equipo.tsx
+index 467ef40..88fbb2e 100644
+--- a/src/features/pricing/tarifas/components/metodos/equipo/equipo.tsx
++++ b/src/features/pricing/tarifas/components/metodos/equipo/equipo.tsx
+@@ -69,9 +69,9 @@ export function MetodoEquipo({ codMetodo, readonly = false, onTarifaCreada = ()
+     equipo_operativo: true,
+   }); */
+ 
+-  const insertar = useInsertarTarifaEquipo();
++  const insertar = useInsertarTarifaEquipo({ meta: { successMessage: "Equipo guardado" } });
+ 
+-  const actualizar = useActualizarTarifaEquipo();
++  const actualizar = useActualizarTarifaEquipo({ meta: { successMessage: "Equipo actualizado" } });
+ 
+   /*
+    * =========================================================
+diff --git a/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje.tsx b/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje.tsx
+index 1118692..4e535da 100644
+--- a/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje.tsx
++++ b/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje.tsx
+@@ -51,9 +51,13 @@ export function MetodoPorcentaje({
+ 
+   const monedasQuery = useMonedasPorcentaje();
+ 
+-  const insertarPorcentaje = useInsertarTarifaPorcentaje();
++  const insertarPorcentaje = useInsertarTarifaPorcentaje({
++    meta: { successMessage: "Porcentaje guardado" },
++  });
+ 
+-  const actualizarPorcentaje = useActualizarTarifaPorcentaje();
++  const actualizarPorcentaje = useActualizarTarifaPorcentaje({
++    meta: { successMessage: "Porcentaje actualizado" },
++  });
+ 
+   const monedas: MonedaPorcentajeOption[] = useOpcionesMonedas(monedasQuery.data);
+ 
+diff --git a/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx b/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx
+index 578519d..945328f 100644
+--- a/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx
++++ b/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx
+@@ -56,11 +56,17 @@ export function ScallingTable({ codMetodo, codTipoTransporte }: Props) {
+ 
+   const monedasFetch = fetchMonedas.useLista({ cod_estado: 1 });
+ 
+-  const insertarScalling = useInsertarTarifaScalling();
++  const insertarScalling = useInsertarTarifaScalling({
++    meta: { successMessage: "Scalling agregado" },
++  });
+ 
+-  const actualizarScalling = useActualizarTarifaScalling();
++  const actualizarScalling = useActualizarTarifaScalling({
++    meta: { successMessage: "Scalling actualizado" },
++  });
+ 
+-  const eliminarScalling = useEliminarTarifaScalling();
++  const eliminarScalling = useEliminarTarifaScalling({
++    meta: { successMessage: "Scalling eliminado" },
++  });
+ 
+   /*
+    * =========================================================

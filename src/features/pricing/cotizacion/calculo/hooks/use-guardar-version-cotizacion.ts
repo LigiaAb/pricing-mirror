@@ -77,6 +77,56 @@ type Props = {
     version: Record<string, unknown>;
   }) => Promise<void> | void;
 };
+/**
+ * Validaciones que NO son un error: el cálculo las resuelve en pantalla (p. ej. abre el
+ * diálogo del documento SPOT). Se revisan antes de la mutación para que el toast
+ * "Versión guardada" solo salga cuando la versión sí se guardó.
+ *
+ * Si faltan los códigos de estado no se revisa el documento: la mutación lanza ese error
+ * primero (mismo orden de antes).
+ */
+function validarAntesDeGuardar({
+  codCotizacionCabecera,
+  versionActual,
+  rubros,
+  criterios,
+  archivoSpot,
+  estados,
+}: Props) {
+  if (
+    !versionActual ||
+    codCotizacionCabecera == null ||
+    !rubros.length ||
+    !Object.keys(criterios).length
+  ) {
+    return {
+      ok: false as const,
+      motivo: "DATOS_INCOMPLETOS" as const,
+    };
+  }
+
+  const rubroSpot = obtenerRubroSpot(rubros);
+  const { ACTIVO, INACTIVO, AUTORIZADO } = estados;
+  const estadosCompletos =
+    ACTIVO != null && INACTIVO != null && (rubroSpot == null || AUTORIZADO != null);
+
+  if (
+    estadosCompletos &&
+    requiereDocumentoSpot({
+      rubroSpot,
+      archivo: archivoSpot ?? null,
+    })
+  ) {
+    return {
+      ok: false as const,
+      motivo: "DOCUMENTO_SPOT_REQUERIDO" as const,
+    };
+  }
+
+  return null;
+}
+
+/** Guarda la versión. Se llama solo después de `validarAntesDeGuardar`. */
 async function persistirVersion({
   codCotizacionCabecera,
   codUsuario,
@@ -101,10 +151,8 @@ async function persistirVersion({
     !rubros.length ||
     !Object.keys(criterios).length
   ) {
-    return {
-      ok: false as const,
-      motivo: "DATOS_INCOMPLETOS" as const,
-    };
+    // No ocurre: validarAntesDeGuardar ya lo revisó (aquí solo afina los tipos).
+    throw new Error("Faltan datos para guardar la versión.");
   }
 
   const rubroSpot = obtenerRubroSpot(rubros);
@@ -113,18 +161,6 @@ async function persistirVersion({
   // Comprueba los códigos antes de insertar el detalle para evitar un guardado parcial.
   if (ACTIVO == null || INACTIVO == null || (rubroSpot && AUTORIZADO == null)) {
     throw new Error("Faltan códigos de estado para guardar esta versión.");
-  }
-
-  if (
-    requiereDocumentoSpot({
-      rubroSpot,
-      archivo: archivoSpot ?? null,
-    })
-  ) {
-    return {
-      ok: false as const,
-      motivo: "DOCUMENTO_SPOT_REQUERIDO" as const,
-    };
   }
 
   // 1. DETALLE
@@ -139,10 +175,7 @@ async function persistirVersion({
   const codCotizacionDetalle = await insertarCotizacionDetalle(reqBody);
 
   if (codCotizacionDetalle == null) {
-    return {
-      ok: false as const,
-      motivo: "SIN_CODIGO_DETALLE" as const,
-    };
+    throw new Error("El servidor no devolvió el código de la versión guardada.");
   }
 
   // 2. SPOT
@@ -298,10 +331,17 @@ async function persistirVersion({
 
 export function useGuardarVersionCotizacion(props: Props) {
   const guardarMutation = useMutation(
-    mutationOptions({ mutationFn: () => persistirVersion(props) }),
+    mutationOptions({
+      mutationFn: () => persistirVersion(props),
+      meta: { successMessage: "Versión guardada" },
+    }),
   );
+
+  const guardarVersion = async () =>
+    validarAntesDeGuardar(props) ?? (await guardarMutation.mutateAsync());
+
   return {
-    guardarVersion: guardarMutation.mutateAsync,
+    guardarVersion,
     guardando: guardarMutation.isPending,
     error: guardarMutation.error,
   };

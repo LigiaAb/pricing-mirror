@@ -1,4 +1,5 @@
 import {
+  type MutationMeta,
   mutationOptions,
   queryOptions,
   useMutation,
@@ -168,11 +169,17 @@ export const actualizarServicioOptions = () =>
     },
   });
 
-export function useActualizarServicio() {
+/**
+ * Sin mensaje propio: se usa junto con otra mutación (editar tarifa = servicio + método,
+ * y el mensaje lo pone el método) o con un `meta` propio (anular tarifa).
+ */
+export function useActualizarServicio({ meta }: { meta?: MutationMeta } = {}) {
   const queryClient = useQueryClient();
 
   return useMutation({
     ...actualizarServicioOptions(),
+
+    ...(meta ? { meta } : {}),
 
     onSuccess: async () => {
       await queryClient.invalidateQueries({
@@ -213,6 +220,7 @@ export function useReplicarServicio() {
 
   return useMutation({
     ...replicarServicioOptions(),
+    meta: { successMessage: "Tarifa copiada" },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: SERVICIOS_QUERY_KEY,

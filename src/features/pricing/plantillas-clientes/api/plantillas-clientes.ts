@@ -95,10 +95,11 @@ function obtenerIdInsertado(response: unknown): Id {
   return value;
 }
 
-function useMutationPlantilla(endpoint: string) {
+function useMutationPlantilla(endpoint: string, successMessage: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: PlantillaClientePayload) => http.post<unknown>(endpoint, payload),
+    meta: { successMessage },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: PLANTILLAS_CLIENTE_KEY }),
   });
 }
@@ -110,14 +111,15 @@ export function useInsertarPlantillaCliente() {
       obtenerIdInsertado(
         await http.post<unknown>("/api/appweb/insertar-tarifa-plantilla", payload),
       ),
+    meta: { successMessage: "Plantilla creada" },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: PLANTILLAS_CLIENTE_KEY }),
   });
 }
 
 export const useActualizarPlantillaCliente = () =>
-  useMutationPlantilla("/api/appweb/actualizar-tarifa-plantilla");
+  useMutationPlantilla("/api/appweb/actualizar-tarifa-plantilla", "Plantilla actualizada");
 export const useEliminarPlantillaCliente = () =>
-  useMutationPlantilla("/api/appweb/eliminar-tarifa-plantilla");
+  useMutationPlantilla("/api/appweb/eliminar-tarifa-plantilla", "Plantilla eliminada");
 
 export function useGuardarPlantillaRubros() {
   const queryClient = useQueryClient();
@@ -134,6 +136,7 @@ export function useGuardarPlantillaRubros() {
         ...eliminar.map((item) => http.post("/api/appweb/eliminar-plantilla-rubro", item)),
       ]);
     },
+    meta: { successMessage: "Rubros de la plantilla guardados" },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: PLANTILLAS_RUBROS_KEY }),
   });
 }

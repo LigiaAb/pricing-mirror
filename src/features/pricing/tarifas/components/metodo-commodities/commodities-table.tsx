@@ -35,11 +35,17 @@ export function CommoditiesTable({ codMetodo }: Props) {
   const commoditiesFetch = fetchCommodities.useLista({ cod_estado: COD_ESTADO_ACTIVO });
   const estadosFetch = fetchEstados.useLista();
 
-  const insertarCommodity = useInsertarMetodoCommodity();
+  const insertarCommodity = useInsertarMetodoCommodity({
+    meta: { successMessage: "Commodity agregado" },
+  });
 
-  const actualizarCommodity = useActualizarMetodoCommodity();
+  const actualizarCommodity = useActualizarMetodoCommodity({
+    meta: { successMessage: "Commodity actualizado" },
+  });
 
-  const eliminarCommodity = useEliminarMetodoCommodity();
+  const eliminarCommodity = useEliminarMetodoCommodity({
+    meta: { successMessage: "Commodity eliminado" },
+  });
 
   const [filaEditando, setFilaEditando] = React.useState<FilaMetodoCommodity | null>(null);
 

@@ -405,6 +405,8 @@ export function useActivarVersion() {
   return useMutation({
     ...activarVersionOptions(),
 
+    meta: { successMessage: "Versión activada" },
+
     onSuccess: async (_, variables) => {
       await queryClient.invalidateQueries({
         queryKey: [...VERSIONES_QUERY_KEY, variables.codCotizacionCabecera],

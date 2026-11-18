@@ -32,9 +32,15 @@ export function DetalleTable({ codMetodo }: Props) {
 
   const tiposFetch = useFetchTipos.useLista();
 
-  const insertarDetalle = useInsertarTarifaDetalle();
-  const actualizarDetalle = useActualizarTarifaDetalle();
-  const eliminarDetalle = useEliminarTarifaDetalle();
+  const insertarDetalle = useInsertarTarifaDetalle({
+    meta: { successMessage: "Detalle agregado" },
+  });
+  const actualizarDetalle = useActualizarTarifaDetalle({
+    meta: { successMessage: "Detalle actualizado" },
+  });
+  const eliminarDetalle = useEliminarTarifaDetalle({
+    meta: { successMessage: "Detalle eliminado" },
+  });
 
   const [filaEditando, setFilaEditando] = React.useState<FilaMetodoDetalle | null>(null);
 
