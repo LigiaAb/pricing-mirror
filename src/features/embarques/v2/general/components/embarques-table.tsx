@@ -5,8 +5,17 @@ import * as React from "react";
 import { DataTable, DataTableColumnHeader } from "@/shared/components/data-table/data-table";
 import { Button } from "@/shared/components/ui/button";
 import type { ColumnDef } from "@/shared/lib/tanstack-table";
+import { pasoTrackingDe } from "../../shared/lib/operacion";
 import type { EmbarqueMaqueta } from "../../shared/lib/tipos";
-import { TRACKING_PASOS } from "../lib/pasos";
+import { operacionDeEmbarque } from "../lib/registro-operaciones";
+
+/** "3/6 · Bodega" con los pasos de la operación del embarque (solo el número si no está definida). */
+function textoPaso(embarque: EmbarqueMaqueta): string {
+  const operacion = operacionDeEmbarque(embarque);
+  if (!operacion) return String(embarque.pasoActual);
+  const corto = pasoTrackingDe(operacion, embarque.pasoActual)?.corto ?? "";
+  return `${embarque.pasoActual}/${operacion.pasos.length} · ${corto}`;
+}
 
 function crearColumnas({
   seleccionado,
@@ -56,12 +65,7 @@ function crearColumnas({
       accessorKey: "pasoActual",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Paso" />,
       enableSorting: true,
-      cell: ({ row }) => (
-        <span className="text-nowrap">
-          {row.original.pasoActual}/{TRACKING_PASOS.length} ·{" "}
-          {TRACKING_PASOS.find((paso) => paso.id === row.original.pasoActual)?.corto ?? ""}
-        </span>
-      ),
+      cell: ({ row }) => <span className="text-nowrap">{textoPaso(row.original)}</span>,
     },
     {
       accessorKey: "estado",

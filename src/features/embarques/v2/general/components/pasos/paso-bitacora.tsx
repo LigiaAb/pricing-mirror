@@ -13,10 +13,15 @@ import {
   TableRow,
 } from "@/shared/components/ui/table";
 import { BotonLimpiar } from "../../../shared/components/campos";
+import { useOperacion } from "../../../shared/components/operacion-context";
 import { EncabezadoPaso } from "../../../shared/components/utils";
+import {
+  type DefinicionOperacion,
+  type PasoEmbarque,
+  pasoTrackingDe,
+} from "../../../shared/lib/operacion";
 import type { EmbarqueMaqueta, RegistroBitacora } from "../../../shared/lib/tipos";
 import { bitacoraMaqueta } from "../../lib/datos-maqueta";
-import { type PasoEmbarque, TRACKING_PASOS } from "../../lib/pasos";
 
 /** Fila de la tabla: el registro + el paso como texto ("3 · Bodega"). */
 type FilaBitacora = RegistroBitacora & { pasoTexto: string };
@@ -24,8 +29,8 @@ type FilaBitacora = RegistroBitacora & { pasoTexto: string };
 /** Columnas de la tabla (encabezados + celda vacía de "sin registros"). */
 const TOTAL_COLUMNAS = 5;
 
-function aFila(registro: RegistroBitacora): FilaBitacora {
-  const corto = TRACKING_PASOS.find((paso) => paso.id === registro.paso)?.corto;
+function aFila(operacion: DefinicionOperacion, registro: RegistroBitacora): FilaBitacora {
+  const corto = pasoTrackingDe(operacion, registro.paso)?.corto;
   return { ...registro, pasoTexto: corto ? `${registro.paso} · ${corto}` : "—" };
 }
 
@@ -50,7 +55,11 @@ export function PasoBitacora({
   embarque: EmbarqueMaqueta;
 }) {
   const [busqueda, setBusqueda] = React.useState("");
-  const filas = React.useMemo(() => bitacoraMaqueta(embarque).map(aFila), [embarque]);
+  const operacion = useOperacion();
+  const filas = React.useMemo(
+    () => bitacoraMaqueta(embarque, operacion.pasos).map((registro) => aFila(operacion, registro)),
+    [operacion, embarque],
+  );
   const texto = busqueda.trim().toLowerCase();
   const visibles = texto ? filas.filter((fila) => coincide(fila, texto)) : filas;
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, ListChecks } from "lucide-react";
+import { use } from "react";
 import {
   Sheet,
   SheetContent,
@@ -10,9 +11,15 @@ import {
 } from "@/shared/components/ui/sheet";
 import { cn } from "@/shared/lib/utils";
 import { ListaActividades } from "../../shared/components/actividades-tracking";
-import { actividadesDelPaso } from "../../shared/lib/actividades-tracking";
-import type { EmbarqueMaqueta, PerfilEmbarque, ResponsableTracking } from "../../shared/lib/tipos";
-import { estadoPaso, PERFIL_DE_RESPONSABLE, TRACKING_PASOS } from "../lib/pasos";
+import { OperacionContext } from "../../shared/components/operacion-context";
+import {
+  actividadesDelPaso,
+  type DefinicionOperacion,
+  perfilDeResponsable,
+  responsablesDe,
+} from "../../shared/lib/operacion";
+import type { EmbarqueMaqueta, PerfilEmbarque } from "../../shared/lib/tipos";
+import { estadoPaso } from "../lib/pasos";
 
 /**
  * Sheet lateral con el detalle de actividades del Excel por paso y área.
@@ -31,6 +38,8 @@ export function DetalleActividadesSheet({
   embarque: EmbarqueMaqueta | null;
   perfil: PerfilEmbarque;
 }) {
+  const operacion = use(OperacionContext);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -52,8 +61,12 @@ export function DetalleActividadesSheet({
         </SheetHeader>
 
         <div className="space-y-5 p-4 sm:space-y-6 sm:p-6">
-          {embarque ? (
-            <ActividadesPorPaso pasoActual={embarque.pasoActual} perfil={perfil} />
+          {embarque && operacion ? (
+            <ActividadesPorPaso
+              operacion={operacion}
+              pasoActual={embarque.pasoActual}
+              perfil={perfil}
+            />
           ) : null}
         </div>
       </SheetContent>
@@ -61,26 +74,25 @@ export function DetalleActividadesSheet({
   );
 }
 
-const AREAS: readonly ResponsableTracking[] = ["OPS", "Bodega", "CBX"];
-
-/** Maqueta del detalle: actividades del Excel por paso y por área. */
+/** Maqueta del detalle: actividades de la operación por paso y por área. */
 function ActividadesPorPaso({
+  operacion,
   pasoActual,
   perfil,
 }: {
+  operacion: DefinicionOperacion;
   pasoActual: number;
   perfil: PerfilEmbarque;
 }) {
-  const areas =
-    perfil === "operaciones"
-      ? AREAS
-      : AREAS.filter((area) => PERFIL_DE_RESPONSABLE[area] === perfil);
+  const areas = responsablesDe(operacion).filter(
+    (area) => perfil === "operaciones" || perfilDeResponsable(operacion, area) === perfil,
+  );
 
   return (
     <div className="space-y-3">
-      {TRACKING_PASOS.map((paso) => {
+      {operacion.pasos.map((paso) => {
         const estado = estadoPaso(paso.id, pasoActual);
-        const actividades = actividadesDelPaso(paso.id).filter((actividad) =>
+        const actividades = actividadesDelPaso(operacion, paso.id).filter((actividad) =>
           areas.includes(actividad.responsable),
         );
         if (actividades.length === 0) return null;

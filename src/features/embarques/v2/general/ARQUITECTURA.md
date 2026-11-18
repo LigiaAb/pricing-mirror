@@ -10,14 +10,52 @@ actividades van en la carpeta de su actor, y lo que usan todos en `shared/`:
 
 | Carpeta        | Qué tiene                                                                                                                                                  |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `general/`     | Vista general: `VistaGeneral`, tabla, resumen, tracking general, tabs, Sheets, Información; `lib/pasos.ts` y `lib/datos-maqueta.ts`                        |
-| `operaciones/` | Formularios de OPS: `lib/gestion-actividades.ts` (`GESTION_OPERACIONES`), `components/actividad-operaciones.tsx`                                           |
-| `bodegas/`     | Formularios de Bodega: `lib/gestion-actividades.ts` (`GESTION_BODEGAS`), `components/actividad-bodegas.tsx`                                                |
-| `combex/`      | Formularios de CBX: `lib/gestion-actividades.ts` (`GESTION_COMBEX`), `components/actividad-combex.tsx`                                                     |
-| `shared/`      | Común: tipos, actividades del Excel, tipos de interacción, motor de gestión (`gestionDe`, `camposDe`, `accionDe`), tarjeta genérica y piezas (`utils.tsx`) |
+| `general/`     | Vista general: `VistaGeneral`, tabla, resumen, tracking general, tabs, Sheets, Información; operaciones (`lib/operaciones/`, `lib/registro-operaciones.ts`), `lib/pasos.ts` y `lib/datos-maqueta.ts` |
+| `operaciones/` | Formularios de OPS: `lib/gestion-actividades.ts` (`GESTION_OPERACIONES`) y formularios propios (`components/asignacion-guias.tsx`, `components/solicitud-reserva.tsx`) |
+| `bodegas/`     | Formularios de Bodega: `lib/gestion-actividades.ts` (`GESTION_BODEGAS`)                                                                                     |
+| `combex/`      | Formularios de CBX: `lib/gestion-actividades.ts` (`GESTION_COMBEX`)                                                                                         |
+| `shared/`      | Común: tipos, `DefinicionOperacion` (`lib/operacion.ts`) y su contexto, actividades del Excel, tipos de interacción, motor de gestión (`camposDe`, `accionDe`), tarjeta genérica y piezas (`utils.tsx`) |
 
 Dependencias: `general` → actores → `shared`. `shared` no importa de `general` ni de los actores, y un actor
-no importa de otro.
+no importa de otro. La definición de cada operación (en `general/`) es la que junta las piezas de los actores.
+
+## Operaciones (transporte × expo/impo)
+
+La vista **no tiene listas fijas**: pasos del tracking, actividades, tabs, responsables y los campos de
+Información que dependen del transporte salen de la **operación del embarque seleccionado**. Agregar o cambiar
+una operación = editar solo su definición. Las definiciones son la **fuente de verdad** (no hay Excel para todas
+las operaciones) y pueden estar a medias mientras llega el análisis.
+
+| Qué                                        | Dónde                                                                         |
+| ------------------------------------------ | ----------------------------------------------------------------------------- |
+| Tipo `DefinicionOperacion` y consultas     | `shared/lib/operacion.ts` (`actividadesPorId`, `actividadesDelPaso`, …)       |
+| Validación de consistencia                 | `validarOperacion` en `shared/lib/operacion.ts`                               |
+| Operación del embarque (contexto)          | `OperacionContext` / `useOperacion()` en `shared/components/operacion-context.tsx` |
+| Definición de cada operación               | `lib/operaciones/<clave>.ts` (hoy: `aereo-expo.ts`, `AEREO_EXPO`)             |
+| Registro y operación de un embarque        | `lib/registro-operaciones.ts` (`OPERACIONES`, `operacionDeEmbarque`)          |
+
+`DefinicionOperacion`: `clave` (`"<transporte>-<expo|impo>"`), `nombre`, `pasos` (tracking general, ids 1..n),
+`actividades` (ids únicos **dentro de la operación**), `tabs` (cada una con su `icono`), `responsables` (por área:
+`perfil` y `gestion`), `formularios` (propios por id de actividad) e `informacion` (`rutas`, `fechas`, `producto`
+e `iconoRutas`).
+
+- `VistaGeneral` obtiene la operación con `operacionDeEmbarque(seleccionado)` y la entrega con
+  `OperacionContext`. Si el embarque es de una operación sin definir, muestra un aviso en lugar del resumen y las
+  tabs. La tabla toma los pasos de la operación de cada fila.
+- `operacionDeEmbarque` usa hoy el tipo de transporte (`AEREO` → `aereo-expo`). **Pendiente:** el campo del
+  backend que dice si es exportación o importación (y, si aplica, FCL/LCL).
+- `validarOperacion(definicion)` devuelve la lista de problemas (vacía = consistente): pasos 1..n; responsables de
+  pasos y actividades definidos; ids de actividades y tabs únicos; cada actividad con gestión y en exactamente una
+  tab; las tabs solo usan ids que existen (Información, Archivos y Bitácora sin actividades); la gestión solo define
+  actividades de su área, con `requiere` y `key` existentes; formularios propios y fechas de Información de
+  actividades que existen. Correrla al agregar o cambiar una operación (prueba rápida con esbuild + node).
+
+### Agregar una operación
+
+1. `lib/operaciones/<clave>.ts` con su `DefinicionOperacion` (actividades, gestión por área en la carpeta de
+   cada actor y formularios propios si los hay).
+2. 1 entrada en `OPERACIONES` y, mientras no venga del backend, su transporte en `OPERACION_POR_TRANSPORTE`.
+3. `validarOperacion` sin errores.
 
 Las rutas de abajo sin carpeta son relativas a `general/`.
 
@@ -41,18 +79,19 @@ Las rutas de abajo sin carpeta son relativas a `general/`.
 
 | Qué                                   | Dónde                                                                |
 | ------------------------------------- | -------------------------------------------------------------------- |
-| Pasos del tracking (6) y de las tabs  | `lib/pasos.ts` (definición única)                                    |
+| Pasos del tracking y tabs             | `lib/operaciones/<clave>.ts` (`pasos`, `tabs`)                       |
+| Reglas de tabs y permisos por perfil  | `lib/pasos.ts` (reciben la operación)                                |
 | Tipos (`PerfilEmbarque`, embarque)    | `shared/lib/tipos.ts`                                                |
 | Datos de ejemplo (borrar con la API)  | `lib/datos-maqueta.ts`                                               |
 | Piezas reutilizables (sección, dato…) | `shared/components/utils.tsx`                                        |
 | Campos de captura (input por tipo)    | `shared/components/campos.tsx`                                       |
 | Campos de Información (corporativos)  | `shared/lib/campos-embarque.ts`                                      |
 | Valores de Información (maqueta)      | `InformacionEmbarque` en `shared/lib/tipos.ts`; `informacionMaqueta` |
-| Actividades del Excel (69)            | `shared/lib/actividades-tracking.ts`                                 |
+| Actividades de Expo Aérea (69)        | `shared/lib/actividades-tracking.ts` (`actividades` de `AEREO_EXPO`) |
 | Tipos de interacción (9)              | `shared/lib/interacciones.ts`                                        |
 | Motor de gestión (tipo y helpers)     | `shared/lib/gestion-actividades.ts`                                  |
-| Cómo se trabaja cada actividad        | `<actor>/lib/gestion-actividades.ts`                                 |
-| Formulario de una actividad del actor | `<actor>/components/actividad-<actor>.tsx`                           |
+| Cómo se trabaja cada actividad        | `<actor>/lib/gestion-actividades.ts` (asignado en `responsables`)    |
+| Formulario propio de una actividad    | `<actor>/components/`, asignado en `formularios` de la operación     |
 | Tarjeta genérica de una actividad     | `shared/components/tarjeta-actividad.tsx`                            |
 | Tab genérica (todas las del flujo)    | `components/pasos/paso-actividades.tsx`                              |
 | Tabs con contenido propio             | `pasos/paso-informacion.tsx`, `pasos/paso-archivos.tsx`              |
@@ -83,13 +122,12 @@ El `id` es `"<responsable> <código>"` (ej. `"OPS 4.1"`, `"Bodega 0.1"`) porque 
 - las tabs (cada actividad es una tarjeta con su formulario, ver abajo);
 - el Sheet de actividades (`detalle-actividades-sheet.tsx`), por paso y área.
 
-Si otras operaciones tienen otros pasos, `TRACKING_PASOS` y las actividades pasan a depender del tipo de
-operación.
+Los pasos son `pasos` de `AEREO_EXPO` (`lib/operaciones/aereo-expo.ts`); otra operación define los suyos.
 
 ## Tabs: actividades generalizadas
 
 Las tabs cubren **las 69 actividades** de la hoja _Detalle original_, cada una en **exactamente una** tab
-(`PASOS_EMBARQUE[].actividades`, en el orden en que se trabajan). En la lista lateral se agrupan por paso del
+(`tabs[].actividades` de la operación, en el orden en que se trabajan). En la lista lateral se agrupan por paso del
 tracking (`1 · Reserva`, `2 · Documentación`…); la tab muestra check si su paso ya pasó y un punto si es el actual.
 
 | Paso | Tab                   | Actividades                                    |
@@ -180,7 +218,8 @@ piden un dato que ya existe usan el mismo nombre (p. ej. _Aerolínea_, _Nro. Vue
 ### Gestión de cada actividad (`<actor>/lib/gestion-actividades.ts`)
 
 Cada actor define las suyas: `GESTION_OPERACIONES` (31, OPS), `GESTION_BODEGAS` (16, Bodega) y
-`GESTION_COMBEX` (22, CBX). Tipo y helpers en `shared/lib/gestion-actividades.ts`.
+`GESTION_COMBEX` (22, CBX), las de Expo Aérea; la operación las asigna a cada área en `responsables`. Tipo y
+helpers en `shared/lib/gestion-actividades.ts`. Toda actividad debe tener su gestión (`validarOperacion`).
 
 `GESTION_<ACTOR>["<id>"]`: `interaccion`, `campos` propios (van antes de los base), `accion` (texto del
 botón), `compara` (referencia del control del Excel: muestra la referencia, "Actual" y "Diferencia"), `requiere`
@@ -198,17 +237,17 @@ del embarque: Hecha / En curso / Pendiente; las excepciones dicen "Solo si aplic
 
 Tab genérica: encabezado (título y descripción), aviso (si la tab lo define) y **tabs horizontales por tipo**
 del Excel (`ORDEN_TIPOS`: Principal, Opcional, Condicional, Transversal, Excepción; siempre las 5, con su
-conteo; las que no tienen actividades quedan bloqueadas; abre la primera con actividades). Dentro de cada tipo, actividades agrupadas por proceso. Cada actividad se muestra con el formulario de su actor
-(`FORMULARIO_DE_RESPONSABLE`: OPS → `ActividadOperaciones`, Bodega → `ActividadBodegas`, CBX →
-`ActividadCombex`), que es la tarjeta común con las definiciones de esa carpeta.
+conteo; las que no tienen actividades quedan bloqueadas; abre la primera con actividades). Dentro de cada tipo, actividades agrupadas por proceso. Cada actividad se muestra con la tarjeta común y la gestión de su
+responsable en la operación (`responsables[<área>].gestion`), o con su formulario propio si la operación lo
+define (`formularios`, ej. OPS 1.1, 1.2 y 2.1 en Expo Aérea).
 
 ### Agregar o mover algo
 
-- Mover una actividad de tab: cambiar su id de lista en `PASOS_EMBARQUE`.
-- Agregar una tab: 1 entrada en `PASOS_EMBARQUE` + su icono en `ICONOS` de `tabs-embarque.tsx`.
+- Mover una actividad de tab: cambiar su id de lista en `tabs` de la operación.
+- Agregar una tab: 1 entrada en `tabs` de la operación (con su `icono`).
 - Cambiar cómo se captura una actividad: su entrada en `<actor>/lib/gestion-actividades.ts`.
-- Un formulario propio de un actor (fuera de la tarjeta común): en `<actor>/components/`, usado desde
-  `actividad-<actor>.tsx`.
+- Un formulario propio de un actor (fuera de la tarjeta común): en `<actor>/components/`, asignado en
+  `formularios` de la operación (recibe `PropsActividad` y `gestion`).
   Ej.: OPS 2.1 (`operaciones/components/solicitud-reserva.tsx`) elige el formato de reserva de la aerolínea
   (`operaciones/lib/formatos-reserva.ts`: Iberia, LATAM, Delta; o General) y pasa sus campos a la tarjeta común; el
   selector va en `antesDeCampos` de `TarjetaActividad`.
@@ -217,8 +256,8 @@ conteo; las que no tienen actividades quedan bloqueadas; abre la primera con act
 ## Perfiles: Operaciones, Bodegas, Combex
 
 `VistaGeneral` recibe `perfil` (por defecto `"operaciones"`). Reglas en `lib/pasos.ts` (sección _Permisos por
-perfil_), según el responsable de cada actividad del Excel (`PERFIL_DE_RESPONSABLE`: OPS → operaciones,
-Bodega → bodegas, CBX → combex):
+perfil_), según el responsable de cada actividad y el `perfil` que la operación le da (`responsables`; en Expo
+Aérea: OPS → operaciones, Bodega → bodegas, CBX → combex):
 
 | Perfil      | Tabs                                       | Actividades                                                                 | Información   |
 | ----------- | ------------------------------------------ | --------------------------------------------------------------------------- | ------------- |
@@ -226,8 +265,8 @@ Bodega → bodegas, CBX → combex):
 | Bodegas     | Información, Archivos + tabs de Bodega (3) | Solo las 16 de Bodega                                                       | Solo consulta |
 | Combex      | Información, Archivos + tabs de CBX (6)    | Solo las 22 de CBX                                                          | Solo consulta |
 
-- `perfilesDeTab`: qué perfiles ven la tab (`paraTodos` = Información y Archivos; sin actividades y sin `paraTodos` =
-  solo Operaciones).
+- `perfilesDeTab`: qué perfiles ven la tab (`paraTodos` = Información y Archivos: Operaciones y los perfiles de
+  las áreas de la operación; sin actividades y sin `paraTodos` = solo Operaciones).
 - `actividadesDelPerfil`: actividades de la tab que ve el perfil.
 - `puedeEditar` / `puedeEditarInformacion`: si edita la actividad / Información. Sin edición la tarjeta muestra
   "Solo consulta", los datos registrados y no tiene botón.
@@ -260,4 +299,4 @@ acción, detalle y paso), con la misma tabla y búsqueda que Archivos. **Mock** 
 pasos completados) mientras se busca la API (#124).
 
 **Facturación** (solo visualización): en pausa. Cuando se retome, sería otra entrada `grupo: "extra"` en
-`PASOS_EMBARQUE`, de solo lectura.
+`tabs` de la operación, de solo lectura.
