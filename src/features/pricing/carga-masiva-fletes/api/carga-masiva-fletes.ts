@@ -114,10 +114,5 @@ export async function cargarFletesMasivos({
 export function useCargarFletesMasivos() {
   return useMutation({
     mutationFn: cargarFletesMasivos,
-    /*
-     * La pantalla ya muestra el resultado (éxito, errores por fila y error general en
-     * su Alert): sin toast de error para no repetirlo, y sin toast de éxito.
-     */
-    meta: { silent: true },
   });
 }

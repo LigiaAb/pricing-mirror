@@ -28,12 +28,10 @@ export function CreacionTarifa() {
 
   const insertarServicio = useInsertarServicio();
   const actualizarServicio = useActualizarServicio();
-  const anularServicio = useActualizarServicio({ meta: { successMessage: "Tarifa anulada" } });
   const replicarServicio = useReplicarServicio();
 
-  // Crear y editar tarifa = servicio + método: el mensaje lo pone el método (un solo toast).
-  const insertarMetodo = useInsertarMetodo({ meta: { successMessage: "Tarifa creada" } });
-  const actualizarMetodo = useActualizarMetodo({ meta: { successMessage: "Tarifa actualizada" } });
+  const insertarMetodo = useInsertarMetodo();
+  const actualizarMetodo = useActualizarMetodo();
 
   const { refetchServicios, refetchMetodos } = useCatalogosTarifas();
 
@@ -65,7 +63,7 @@ export function CreacionTarifa() {
        * servicio cambia a anulado.
        */
       if (anular) {
-        await Promise.all([anularServicio.mutateAsync({ ...servicio, cod_estado: 4 })]);
+        await Promise.all([actualizarServicio.mutateAsync({ ...servicio, cod_estado: 4 })]);
 
         await Promise.all([refetchServicios()]);
 
@@ -151,7 +149,6 @@ export function CreacionTarifa() {
       insertarServicio,
       insertarMetodo,
       actualizarServicio,
-      anularServicio,
       actualizarMetodo,
       refetchServicios,
       refetchMetodos,
@@ -201,14 +198,12 @@ export function CreacionTarifa() {
       insertarServicio.isPending ||
       insertarMetodo.isPending ||
       actualizarServicio.isPending ||
-      anularServicio.isPending ||
       actualizarMetodo.isPending ||
       replicarServicio.isPending,
     [
       insertarServicio.isPending,
       insertarMetodo.isPending,
       actualizarServicio.isPending,
-      anularServicio.isPending,
       actualizarMetodo.isPending,
       replicarServicio.isPending,
     ],

@@ -111,7 +111,6 @@ export function useActualizarTarifaSpot() {
   return useMutation({
     mutationFn: (payload: Record<string, unknown>) =>
       http.post("/api/appweb/actualizar-tarifa-spot", payload),
-    meta: { successMessage: "Tarifa spot rechazada" },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: AUTORIZACION_SPOT_KEY }),
   });
 }
@@ -131,7 +130,6 @@ export function useAutorizarTarifaSpot() {
       await http.post("/api/appweb/actualizar-tarifa-spot", payload);
       await activarCotizacionDetalle({ codCotizacionCabecera, codCotizacionDetalle });
     },
-    meta: { successMessage: "Tarifa spot autorizada" },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: AUTORIZACION_SPOT_KEY }),
   });
 }

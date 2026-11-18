@@ -51,13 +51,9 @@ export function MetodoPorcentaje({
 
   const monedasQuery = useMonedasPorcentaje();
 
-  const insertarPorcentaje = useInsertarTarifaPorcentaje({
-    meta: { successMessage: "Porcentaje guardado" },
-  });
+  const insertarPorcentaje = useInsertarTarifaPorcentaje();
 
-  const actualizarPorcentaje = useActualizarTarifaPorcentaje({
-    meta: { successMessage: "Porcentaje actualizado" },
-  });
+  const actualizarPorcentaje = useActualizarTarifaPorcentaje();
 
   const monedas: MonedaPorcentajeOption[] = useOpcionesMonedas(monedasQuery.data);
 

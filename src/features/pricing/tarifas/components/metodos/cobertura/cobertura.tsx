@@ -45,13 +45,9 @@ export function MetodoCobertura({ codMetodo, readonly = false, onTarifaCreada = 
 
   const monedasQuery = useMonedasCobertura();
 
-  const insertarCobertura = useInsertarTarifaCobertura({
-    meta: { successMessage: "Cobertura guardada" },
-  });
+  const insertarCobertura = useInsertarTarifaCobertura();
 
-  const actualizarCobertura = useActualizarTarifaCobertura({
-    meta: { successMessage: "Cobertura actualizada" },
-  });
+  const actualizarCobertura = useActualizarTarifaCobertura();
 
   const monedas: MonedaCoberturaOption[] = useOpcionesMonedas(monedasQuery.data);
 

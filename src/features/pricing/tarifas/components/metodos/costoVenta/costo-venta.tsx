@@ -43,13 +43,9 @@ export function MetodoCostoVenta({
 
   const monedasQuery = useMonedasCostoVenta();
 
-  const insertarCostoVenta = useInsertarTarifaCostoVenta({
-    meta: { successMessage: "Costo / venta guardado" },
-  });
+  const insertarCostoVenta = useInsertarTarifaCostoVenta();
 
-  const actualizarCostoVenta = useActualizarTarifaCostoVenta({
-    meta: { successMessage: "Costo / venta actualizado" },
-  });
+  const actualizarCostoVenta = useActualizarTarifaCostoVenta();
 
   const monedas: MonedaCostoVentaOption[] = useOpcionesMonedas(monedasQuery.data);
 

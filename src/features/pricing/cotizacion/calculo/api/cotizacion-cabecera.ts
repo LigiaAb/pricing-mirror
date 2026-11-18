@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  type MutationMeta,
   mutationOptions,
   queryOptions,
   useMutation,
@@ -13,7 +12,6 @@ import { z } from "zod";
 import { CACHE_DYNAMIC } from "@/shared/api/cache";
 import { http } from "@/shared/api/client";
 import { parseEnvelope } from "@/shared/api/envelope";
-import { exigirExitoDeMutacion } from "@/shared/api/respuesta-mutacion";
 import { zId } from "@/shared/lib/zod-scalars";
 
 import {
@@ -90,11 +88,6 @@ function parseObjectEnvelope<TSchema extends z.ZodTypeAny>(
   return parsed.data;
 }
 
-/** Opciones de las mutaciones que se usan con distinto `meta` según la pantalla. */
-interface OpcionesMutacion {
-  meta?: MutationMeta;
-}
-
 /* ==========================================================================
  * QUERY
  * ========================================================================== */
@@ -148,8 +141,6 @@ export function useInsertarCotizacionCabecera() {
   return useMutation({
     ...insertarCotizacionCabeceraOptions(),
 
-    meta: { successMessage: "Cotización creada" },
-
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: COTIZACIONES_CABECERA_QUERY_KEY,
@@ -173,20 +164,11 @@ export const actualizarCotizacionCabeceraOptions = () =>
     },
   });
 
-/**
- * Por defecto muestra "Cotización actualizada". La reactivación de la cabecera al
- * guardar una versión pasa `{ meta: { silent: true } }`: el cálculo ya muestra su
- * propio aviso si falla y el éxito lo anuncia "Versión guardada".
- */
-export function useActualizarCotizacionCabecera({
-  meta = { successMessage: "Cotización actualizada" },
-}: OpcionesMutacion = {}) {
+export function useActualizarCotizacionCabecera() {
   const queryClient = useQueryClient();
 
   return useMutation({
     ...actualizarCotizacionCabeceraOptions(),
-
-    meta,
 
     onSuccess: async () => {
       await queryClient.invalidateQueries({
@@ -207,12 +189,6 @@ export const rechazarCotizacionCabeceraOptions = () =>
         cod_cotizacion_cabecera: codCotizacionCabecera,
       });
 
-      /*
-       * `data.success: false` (HTTP 200) pasa a error: así se notifica y el
-       * `successMessage` solo sale cuando la acción sí se hizo.
-       */
-      exigirExitoDeMutacion(response, "Rechazar cotización");
-
       return parseObjectEnvelope(
         response,
         accionCotizacionResponseSchema,
@@ -227,9 +203,11 @@ export function useRechazarCotizacionCabecera() {
   return useMutation({
     ...rechazarCotizacionCabeceraOptions(),
 
-    meta: { successMessage: "Cotización rechazada" },
+    onSuccess: async (result) => {
+      if (!result.success) {
+        return;
+      }
 
-    onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: COTIZACIONES_CABECERA_QUERY_KEY,
       });
@@ -247,8 +225,6 @@ export const validarElegibilidadCotizacionOptions = () =>
       const response = await http.post<unknown>("/api/appweb/validar-elegibilidad-cotizacion", {
         cod_cotizacion_cabecera: codCotizacionCabecera,
       });
-
-      exigirExitoDeMutacion(response, "Validar elegibilidad de la cotización");
 
       return parseObjectEnvelope(
         response,
@@ -273,8 +249,6 @@ export const confirmarCotizacionCabeceraOptions = () =>
         cod_cotizacion_cabecera: codCotizacionCabecera,
       });
 
-      exigirExitoDeMutacion(response, "Confirmar cotización");
-
       return parseObjectEnvelope(
         response,
         accionCotizacionResponseSchema,
@@ -289,9 +263,11 @@ export function useConfirmarCotizacionCabecera() {
   return useMutation({
     ...confirmarCotizacionCabeceraOptions(),
 
-    meta: { successMessage: "Cotización confirmada" },
+    onSuccess: async (result) => {
+      if (!result.success) {
+        return;
+      }
 
-    onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: COTIZACIONES_CABECERA_QUERY_KEY,
       });

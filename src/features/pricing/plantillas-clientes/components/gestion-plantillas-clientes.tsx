@@ -11,15 +11,6 @@ import {
 import { useCatalogosTarifas } from "@/features/pricing/tarifas";
 import { useContextoOperativoStore } from "@/features/shell";
 import { DataTable, DataTableColumnHeader } from "@/shared/components/data-table/data-table";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
 import { Button } from "@/shared/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import type { ColumnDef } from "@/shared/lib/tanstack-table";
@@ -127,8 +118,6 @@ export function GestionPlantillasClientes() {
   const eliminar = useEliminarPlantillaCliente();
   const [seleccionada, setSeleccionada] = React.useState<PlantillaCliente | null>(null);
   const [nueva, setNueva] = React.useState(false);
-  /** Plantilla que espera confirmación para eliminarse (abre el diálogo). */
-  const [porEliminar, setPorEliminar] = React.useState<Fila | null>(null);
 
   const data = React.useMemo<Fila[]>(
     () =>
@@ -210,7 +199,11 @@ export function GestionPlantillasClientes() {
               size="icon"
               variant="ghost"
               aria-label="Eliminar plantilla"
-              onClick={() => setPorEliminar(row.original)}
+              onClick={() =>
+                void eliminar
+                  .mutateAsync({ ...row.original, cod_estado: 2 })
+                  .then(() => setSeleccionada(null))
+              }
             >
               <Trash2 className="size-4" />
             </Button>
@@ -218,16 +211,8 @@ export function GestionPlantillasClientes() {
         ),
       },
     ],
-    [],
+    [eliminar],
   );
-
-  const confirmarEliminar = () => {
-    if (!porEliminar) return;
-    void eliminar
-      .mutateAsync({ ...porEliminar, cod_estado: 2 })
-      .then(() => setSeleccionada(null))
-      .finally(() => setPorEliminar(null));
-  };
 
   if (cargandoCatalogos)
     return <p className="p-4 text-sm text-muted-foreground">Cargando catálogos…</p>;
@@ -352,34 +337,6 @@ export function GestionPlantillasClientes() {
           </TabsContent>
         </Tabs>
       ) : null}
-      <AlertDialog
-        open={porEliminar != null}
-        onOpenChange={(abierto: boolean) => {
-          if (!abierto && !eliminar.isPending) setPorEliminar(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar plantilla</AlertDialogTitle>
-            <AlertDialogDescription>
-              {`Se eliminará la plantilla #${String(porEliminar?.cod_tarifaplantilla ?? "")}`}
-              {porEliminar?.descripcion ? ` (${String(porEliminar.descripcion)})` : ""}. ¿Desea
-              continuar?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={eliminar.isPending}>Cancelar</AlertDialogCancel>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={eliminar.isPending}
-              onClick={confirmarEliminar}
-            >
-              Eliminar
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

@@ -360,11 +360,6 @@ export function useGestionCotizaciones({
 
   const insertarMutation = useInsertarCotizacionCabecera();
   const actualizarMutation = useActualizarCotizacionCabecera();
-  /*
-   * Misma mutación, sin toasts: la usa la reactivación de la cabecera al guardar una
-   * versión (el cálculo muestra su propio aviso si falla; el éxito es "Versión guardada").
-   */
-  const actualizarSilenciosoMutation = useActualizarCotizacionCabecera({ meta: { silent: true } });
   const rechazarMutation = useRechazarCotizacionCabecera();
   const validarElegibilidadMutation = useValidarElegibilidadCotizacion();
   const confirmarMutation = useConfirmarCotizacionCabecera();
@@ -447,10 +442,7 @@ export function useGestionCotizaciones({
   );
 
   const actualizarCotizacion = React.useCallback(
-    async (
-      cotizacion: CotizacionCabeceraPayload,
-      { silencioso = false }: { silencioso?: boolean } = {},
-    ) => {
+    async (cotizacion: CotizacionCabeceraPayload) => {
       const estadoVisual = obtenerEstadoVisual(cotizacion);
 
       const payload: CotizacionCabeceraPayload = {
@@ -466,7 +458,7 @@ export function useGestionCotizaciones({
         cod_estado: cotizacion.cod_estado || estadoVisual || estados.ACTIVO,
       };
 
-      await (silencioso ? actualizarSilenciosoMutation : actualizarMutation).mutateAsync(payload);
+      await actualizarMutation.mutateAsync(payload);
 
       setCotizacionSeleccionada((prev) => {
         if (!prev) {
@@ -491,31 +483,29 @@ export function useGestionCotizaciones({
 
       return payload;
     },
-    [actualizarMutation, actualizarSilenciosoMutation, estados.ACTIVO],
+    [actualizarMutation, estados.ACTIVO],
   );
 
   const rechazarCotizacion = React.useCallback(
     async (codCotizacionCabecera: Id) => {
-      try {
-        await rechazarMutateAsync(codCotizacionCabecera);
+      const result = await rechazarMutateAsync(codCotizacionCabecera);
 
-        return true;
-      } catch {
-        // El error (incluido `success: false`) ya se notificó con el toast de la mutación.
-        return false;
-      }
+      return result.success;
     },
     [rechazarMutateAsync],
   );
 
   const confirmarCotizacion = React.useCallback(
     async (codCotizacionCabecera: Id) => {
-      try {
-        // Ambas lanzan error si el backend responde `success: false`.
-        await validarElegibilidadMutateAsync(codCotizacionCabecera);
-        await confirmarMutateAsync(codCotizacionCabecera);
-      } catch {
-        // El error ya se notificó con el toast de la mutación.
+      const elegibilidad = await validarElegibilidadMutateAsync(codCotizacionCabecera);
+
+      if (!elegibilidad.success) {
+        return false;
+      }
+
+      const confirmacion = await confirmarMutateAsync(codCotizacionCabecera);
+
+      if (!confirmacion.success) {
         return false;
       }
 
@@ -562,7 +552,6 @@ export function useGestionCotizaciones({
   const isMutating =
     insertarMutation.isPending ||
     actualizarMutation.isPending ||
-    actualizarSilenciosoMutation.isPending ||
     rechazarMutation.isPending ||
     validarElegibilidadMutation.isPending ||
     confirmarMutation.isPending;
@@ -617,7 +606,7 @@ export function useGestionCotizaciones({
     isMutating,
 
     isInserting: insertarMutation.isPending,
-    isUpdating: actualizarMutation.isPending || actualizarSilenciosoMutation.isPending,
+    isUpdating: actualizarMutation.isPending,
     isRejecting: rechazarMutation.isPending,
     isValidatingEligibility: validarElegibilidadMutation.isPending,
     isConfirming: confirmarMutation.isPending,

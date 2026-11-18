@@ -79,7 +79,6 @@ export function useGuardarTarifaEntidad() {
 
   return useMutation({
     ...guardarTarifaEntidadOptions(),
-    meta: { successMessage: "Entidad agregada" },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: TARIFA_ENTIDADES_QUERY_KEY,
@@ -93,7 +92,6 @@ export function useEliminarTarifaEntidad() {
 
   return useMutation({
     ...eliminarTarifaEntidadOptions(),
-    meta: { successMessage: "Entidad eliminada" },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: TARIFA_ENTIDADES_QUERY_KEY,
