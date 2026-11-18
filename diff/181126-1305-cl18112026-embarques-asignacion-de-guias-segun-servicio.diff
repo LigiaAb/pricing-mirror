@@ -1,0 +1,433 @@
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx b/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx
+index b07a338..36eeb6a 100644
+--- a/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx
++++ b/src/features/embarques/v2/general/components/pasos/paso-actividades.tsx
+@@ -74,10 +74,12 @@ function porProceso(actividades: readonly ActividadTracking[]) {
+ export function PasoActividades({
+   paso,
+   pasoActual,
++  servicio,
+   perfil,
+ }: {
+   paso: PasoEmbarque;
+   pasoActual: number;
++  servicio: string;
+   perfil: PerfilEmbarque;
+ }) {
+   const actividades = actividadesDelPerfil(paso, perfil);
+@@ -141,6 +143,7 @@ export function PasoActividades({
+                       key={actividad.id}
+                       actividad={actividad}
+                       pasoActual={pasoActual}
++                      servicio={servicio}
+                       editable={puedeEditar(actividad, perfil)}
+                     />
+                   ))}
+diff --git a/src/features/embarques/v2/general/components/tabs-embarque.tsx b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+index 704a78f..01cdcb1 100644
+--- a/src/features/embarques/v2/general/components/tabs-embarque.tsx
++++ b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+@@ -77,7 +77,14 @@ function contenidoPaso(
+     case "bitacora":
+       return <PasoBitacora paso={paso} embarque={embarque} />;
+     default:
+-      return <PasoActividades paso={paso} pasoActual={embarque.pasoActual} perfil={perfil} />;
++      return (
++        <PasoActividades
++          paso={paso}
++          pasoActual={embarque.pasoActual}
++          servicio={embarque.servicio}
++          perfil={perfil}
++        />
++      );
+   }
+ }
+ 
+diff --git a/src/features/embarques/v2/general/lib/datos-maqueta.ts b/src/features/embarques/v2/general/lib/datos-maqueta.ts
+index 5a16a5f..323e00a 100644
+--- a/src/features/embarques/v2/general/lib/datos-maqueta.ts
++++ b/src/features/embarques/v2/general/lib/datos-maqueta.ts
+@@ -24,6 +24,7 @@ export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
+     id: 1001,
+     cliente: "CROPA DSV",
+     tipoTransporte: "AÉREO",
++    servicio: "CONSOLIDADO",
+     origen: "Guatemala, GT",
+     destino: "Miami, US",
+     carrier: "AVIANCA CARGO",
+@@ -42,6 +43,7 @@ export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
+     id: 1002,
+     cliente: "DISTRIBUIDORA ABC",
+     tipoTransporte: "AÉREO",
++    servicio: "DIRECTO",
+     origen: "Guatemala, GT",
+     destino: "Madrid, ES",
+     carrier: "IBERIA CARGO",
+@@ -60,6 +62,7 @@ export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
+     id: 1003,
+     cliente: "IMPORTADORA XYZ",
+     tipoTransporte: "AÉREO",
++    servicio: "CONSOLIDADO",
+     origen: "Guatemala, GT",
+     destino: "Ciudad de México, MX",
+     carrier: "AEROMÉXICO CARGO",
+@@ -78,6 +81,7 @@ export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
+     id: 1004,
+     cliente: "COMERCIAL DEL SUR",
+     tipoTransporte: "AÉREO",
++    servicio: "COURIER",
+     origen: "Guatemala, GT",
+     destino: "Los Ángeles, US",
+     carrier: "COPA CARGO",
+diff --git a/src/features/embarques/v2/operaciones/components/actividad-operaciones.tsx b/src/features/embarques/v2/operaciones/components/actividad-operaciones.tsx
+index f85ca7d..6f649b4 100644
+--- a/src/features/embarques/v2/operaciones/components/actividad-operaciones.tsx
++++ b/src/features/embarques/v2/operaciones/components/actividad-operaciones.tsx
+@@ -3,14 +3,21 @@
+ import { type PropsActividad, TarjetaActividad } from "../../shared/components/tarjeta-actividad";
+ import { gestionDe } from "../../shared/lib/gestion-actividades";
+ import { GESTION_OPERACIONES } from "../lib/gestion-actividades";
++import { AsignacionGuias } from "./asignacion-guias";
+ import { SolicitudReserva } from "./solicitud-reserva";
+ 
+ /**
+  * Formulario de una actividad de OPS (tarjeta común con las definiciones de
+  * `lib/gestion-actividades.ts` de esta carpeta). OPS 2.1 usa su formulario
+- * propio (formato de reserva según la aerolínea).
++ * propio (formato de reserva según la aerolínea); OPS 1.1 y 1.2, el de guías
++ * (según el servicio).
+  */
+ export function ActividadOperaciones(props: PropsActividad) {
++  if (props.actividad.id === "OPS 1.1" || props.actividad.id === "OPS 1.2") {
++    return (
++      <AsignacionGuias {...props} gestion={gestionDe(GESTION_OPERACIONES, props.actividad.id)} />
++    );
++  }
+   if (props.actividad.id === "OPS 2.1") {
+     return (
+       <SolicitudReserva {...props} gestion={gestionDe(GESTION_OPERACIONES, props.actividad.id)} />
+diff --git a/src/features/embarques/v2/operaciones/components/asignacion-guias.tsx b/src/features/embarques/v2/operaciones/components/asignacion-guias.tsx
+new file mode 100644
+index 0000000..34d4173
+--- /dev/null
++++ b/src/features/embarques/v2/operaciones/components/asignacion-guias.tsx
+@@ -0,0 +1,173 @@
++"use client";
++
++import { Info, Plus, Search } from "lucide-react";
++import type { ChangeEvent } from "react";
++import * as React from "react";
++import { Button } from "@/shared/components/ui/button";
++import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/components/ui/input-group";
++import { cn } from "@/shared/lib/utils";
++import { BotonLimpiar } from "../../shared/components/campos";
++import { type PropsActividad, TarjetaActividad } from "../../shared/components/tarjeta-actividad";
++import { Dato } from "../../shared/components/utils";
++import type { GestionActividad } from "../../shared/lib/gestion-actividades";
++import {
++  agruparMasters,
++  filtrarMasters,
++  MASTERS_MAQUETA,
++  type ServicioGuias,
++  servicioGuias,
++} from "../lib/guias";
++
++/* ==========================================================================
++ * ASIGNACIÓN DE GUÍAS · OPS 1.1 (HAWB) Y OPS 1.2 (MAWB) (SOLO MAQUETA)
++ *
++ * Reglas en `lib/guias.ts` (mismas del módulo actual):
++ *   OPS 1.1 → la HAWB la asigna el sistema: solo se consulta.
++ *   OPS 1.2 → según el servicio: consolidado elige de la lista de masters
++ *             disponibles (o crea una nueva); directo la asigna el sistema;
++ *             courier no lleva master.
++ * Servicio sin regla: formulario general de `lib/gestion-actividades.ts`.
++ * ========================================================================== */
++
++function Aviso({ texto }: { texto: string }) {
++  return (
++    <p className="flex items-start gap-2 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
++      <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
++      {texto}
++    </p>
++  );
++}
++
++/** Lista de masters disponibles agrupadas, con búsqueda y selección (consolidado). */
++function MastersDisponibles() {
++  const [busqueda, setBusqueda] = React.useState("");
++  const [seleccionada, setSeleccionada] = React.useState("");
++  const grupos = agruparMasters(filtrarMasters(MASTERS_MAQUETA, busqueda));
++
++  return (
++    <section className="space-y-3">
++      <div className="flex flex-wrap items-center justify-between gap-2">
++        <p className="text-sm font-medium">
++          Masters disponibles{" "}
++          <span className="text-xs text-muted-foreground">({grupos.length})</span>
++        </p>
++        <InputGroup className="w-full sm:w-72">
++          <InputGroupAddon>
++            <Search className="size-4" aria-hidden="true" />
++          </InputGroupAddon>
++          <InputGroupInput
++            value={busqueda}
++            onChange={(e: ChangeEvent<HTMLInputElement>) => setBusqueda(e.target.value)}
++            placeholder="Buscar master, house, cliente…"
++            aria-label="Buscar master"
++          />
++          {busqueda ? (
++            <InputGroupAddon align="inline-end">
++              <BotonLimpiar onClick={() => setBusqueda("")} />
++            </InputGroupAddon>
++          ) : null}
++        </InputGroup>
++      </div>
++
++      {grupos.length === 0 ? (
++        <Aviso
++          texto={
++            busqueda
++              ? "Ninguna master coincide con la búsqueda."
++              : "No hay masters disponibles: cree una nueva."
++          }
++        />
++      ) : (
++        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label="Masters disponibles">
++          {grupos.map((grupo) => {
++            const activa = grupo.masterGuia === seleccionada;
++            return (
++              <li key={grupo.masterGuia}>
++                <button
++                  type="button"
++                  aria-pressed={activa}
++                  onClick={() => setSeleccionada(activa ? "" : grupo.masterGuia)}
++                  className={cn(
++                    "w-full rounded-lg border p-3 text-left text-xs transition-colors hover:bg-muted",
++                    activa && "border-primary bg-primary/5 ring-1 ring-primary",
++                  )}
++                >
++                  <span className="block font-mono text-sm font-semibold">{grupo.masterGuia}</span>
++                  <span className="block text-muted-foreground">
++                    {[grupo.lineaAerea, grupo.paisDestino, grupo.cliente]
++                      .filter(Boolean)
++                      .join(" · ")}
++                  </span>
++                  <span className="mt-1 block text-muted-foreground">
++                    {grupo.houses.length
++                      ? `Houses: ${grupo.houses.join(", ")}`
++                      : "Sin houses asignadas"}
++                  </span>
++                </button>
++              </li>
++            );
++          })}
++        </ul>
++      )}
++
++      {/* Maqueta: crea una master nueva en el backend (`useAsignarMasterCoordinacion` sin número). */}
++      <Button type="button" size="sm" variant="outline" disabled>
++        <Plus className="size-4" aria-hidden="true" />
++        Nueva master
++      </Button>
++    </section>
++  );
++}
++
++/** Cómo se ve OPS 1.2 según el servicio (`null` = formulario general). */
++function contenidoMaster(servicio: ServicioGuias | null): {
++  accion: string;
++  contenido: React.ReactNode;
++} | null {
++  switch (servicio) {
++    case "consolidado":
++      return { accion: "Asignar master", contenido: <MastersDisponibles /> };
++    case "directo":
++      return {
++        accion: "Asignar master",
++        contenido: <Aviso texto="Servicio directo: la master la asigna el sistema al confirmar." />,
++      };
++    case "courier":
++      return {
++        accion: "Confirmar",
++        contenido: <Aviso texto="Courier: no lleva master (retiro en bodega)." />,
++      };
++    default:
++      return null;
++  }
++}
++
++export function AsignacionGuias({
++  gestion,
++  ...props
++}: PropsActividad & { gestion: GestionActividad }) {
++  if (props.actividad.id === "OPS 1.1") {
++    return (
++      <TarjetaActividad
++        {...props}
++        gestion={{ ...gestion, campos: [], accion: "Confirmar HAWB" }}
++        antesDeCampos={
++          <div className="space-y-2">
++            <Aviso texto="La HAWB la asigna el sistema (correlativo, sin duplicados ni saltos)." />
++            <Dato label="No. HAWB" valor="—" />
++          </div>
++        }
++      />
++    );
++  }
++
++  const master = contenidoMaster(servicioGuias(props.servicio));
++  if (!master) return <TarjetaActividad {...props} gestion={gestion} />;
++  return (
++    <TarjetaActividad
++      {...props}
++      gestion={{ ...gestion, campos: [], accion: master.accion }}
++      antesDeCampos={master.contenido}
++    />
++  );
++}
+diff --git a/src/features/embarques/v2/operaciones/lib/guias.ts b/src/features/embarques/v2/operaciones/lib/guias.ts
+new file mode 100644
+index 0000000..5b4b219
+--- /dev/null
++++ b/src/features/embarques/v2/operaciones/lib/guias.ts
+@@ -0,0 +1,114 @@
++/* ==========================================================================
++ * ASIGNACIÓN DE GUÍAS (SOLO MAQUETA)
++ *
++ * Misma lógica que el módulo actual (`components/modales/seleccionar-destino/
++ * destino-model.ts`, paridad con el Legacy), según el servicio del embarque
++ * (por nombre, no por código):
++ *
++ *   CONSOLIDADO → se elige la master de la lista de disponibles (o se crea una
++ *                 nueva si no hay); sin master elegida no se asigna.
++ *   DIRECTO     → la master la asigna el sistema.
++ *   COURIER     → no lleva master (retiro en bodega).
++ *
++ * La HAWB siempre la asigna el sistema (correlativo, sin duplicados ni saltos).
++ * API del módulo actual: `useListarMasterDisponiblesCoordinacion` (lista),
++ * `useAsignarMasterCoordinacion` ({ embarque_id, cod_file, num_guia_master? })
++ * y `useFetchGuiasCoordinacion` (verifica que quedó asignada).
++ * ========================================================================== */
++
++export type ServicioGuias = "consolidado" | "directo" | "courier";
++
++/** Servicio por su nombre (sin distinguir mayúsculas ni tildes); null = sin regla. */
++export function servicioGuias(nombre: string | null | undefined): ServicioGuias | null {
++  const servicio = (nombre ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toUpperCase();
++  if (servicio === "CONSOLIDADO") return "consolidado";
++  if (servicio === "DIRECTO") return "directo";
++  if (servicio === "COURIER") return "courier";
++  return null;
++}
++
++/** Fila de masters disponibles (mismos nombres que el módulo actual). */
++export type MasterDisponibleRow = {
++  correlativoGuiaMaster: string;
++  guiaCoordinacion: string;
++  idFile: string | number;
++  paisDestino: string;
++  clienteCoordinacion: string;
++  lineaAerea: string;
++};
++
++/** Una master con sus houses (tarjeta de la lista). */
++export type MasterAgrupado = {
++  masterGuia: string;
++  houses: string[];
++  paisDestino: string;
++  cliente: string;
++  lineaAerea: string;
++};
++
++/** Búsqueda en master, house, file, país, cliente y línea aérea. */
++export function filtrarMasters(
++  masters: readonly MasterDisponibleRow[],
++  busqueda: string,
++): MasterDisponibleRow[] {
++  const texto = busqueda.trim().toLowerCase();
++  if (!texto) return [...masters];
++  return masters.filter((m) =>
++    `${m.correlativoGuiaMaster} ${m.guiaCoordinacion} ${m.idFile} ${m.paisDestino} ${m.clienteCoordinacion} ${m.lineaAerea}`
++      .toLowerCase()
++      .includes(texto),
++  );
++}
++
++/** Agrupa por master, con sus houses. */
++export function agruparMasters(masters: readonly MasterDisponibleRow[]): MasterAgrupado[] {
++  const grupos = new Map<string, MasterAgrupado>();
++  for (const item of masters) {
++    const grupo = grupos.get(item.correlativoGuiaMaster) ?? {
++      masterGuia: item.correlativoGuiaMaster,
++      houses: [],
++      paisDestino: item.paisDestino,
++      cliente: item.clienteCoordinacion,
++      lineaAerea: item.lineaAerea,
++    };
++    if (item.guiaCoordinacion) grupo.houses.push(item.guiaCoordinacion);
++    grupos.set(item.correlativoGuiaMaster, grupo);
++  }
++  return [...grupos.values()];
++}
++
++/** Masters disponibles de ejemplo (se reemplazan por la API). */
++export const MASTERS_MAQUETA: readonly MasterDisponibleRow[] = [
++  {
++    correlativoGuiaMaster: "202-12345675",
++    guiaCoordinacion: "CRP-000098",
++    idFile: "000098",
++    paisDestino: "ESTADOS UNIDOS",
++    clienteCoordinacion: "AGROEXPORT S.A.",
++    lineaAerea: "AVIANCA",
++  },
++  {
++    correlativoGuiaMaster: "202-12345675",
++    guiaCoordinacion: "CRP-000099",
++    idFile: "000099",
++    paisDestino: "ESTADOS UNIDOS",
++    clienteCoordinacion: "CAFÉ DE ALTURA",
++    lineaAerea: "AVIANCA",
++  },
++  {
++    correlativoGuiaMaster: "075-67690571",
++    guiaCoordinacion: "CRP-000097",
++    idFile: "000097",
++    paisDestino: "SUIZA",
++    clienteCoordinacion: "NELIXIA S.A.",
++    lineaAerea: "IBERIA",
++  },
++  {
++    correlativoGuiaMaster: "006-45464786",
++    guiaCoordinacion: "",
++    idFile: "",
++    paisDestino: "ESTADOS UNIDOS",
++    clienteCoordinacion: "",
++    lineaAerea: "DELTA",
++  },
++];
+diff --git a/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx b/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
+index 77949fa..dc18225 100644
+--- a/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
++++ b/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
+@@ -123,6 +123,8 @@ export type PropsActividad = {
+   actividad: ActividadTracking;
+   pasoActual: number;
+   editable: boolean;
++  /** Servicio del embarque por nombre (ej. "CONSOLIDADO"); define reglas como la de guías. */
++  servicio: string;
+ };
+ 
+ export function TarjetaActividad({
+diff --git a/src/features/embarques/v2/shared/lib/tipos.ts b/src/features/embarques/v2/shared/lib/tipos.ts
+index 64a7107..de338be 100644
+--- a/src/features/embarques/v2/shared/lib/tipos.ts
++++ b/src/features/embarques/v2/shared/lib/tipos.ts
+@@ -47,6 +47,8 @@ export type EmbarqueMaqueta = CoordinacionTracking & {
+   id: number;
+   cliente: string;
+   tipoTransporte: string;
++  /** Tipo de servicio por nombre (tabla de tipos `SERVICIO`, ej. "CONSOLIDADO"). */
++  servicio: string;
+   origen: string;
+   destino: string;
+   carrier: string;
