@@ -47,6 +47,8 @@ export type EmbarqueMaqueta = CoordinacionTracking & {
   id: number;
   cliente: string;
   tipoTransporte: string;
+  /** Tipo de servicio por nombre (tabla de tipos `SERVICIO`, ej. "CONSOLIDADO"). */
+  servicio: string;
   origen: string;
   destino: string;
   carrier: string;

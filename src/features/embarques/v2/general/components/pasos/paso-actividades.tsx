@@ -74,10 +74,12 @@ function porProceso(actividades: readonly ActividadTracking[]) {
 export function PasoActividades({
   paso,
   pasoActual,
+  servicio,
   perfil,
 }: {
   paso: PasoEmbarque;
   pasoActual: number;
+  servicio: string;
   perfil: PerfilEmbarque;
 }) {
   const actividades = actividadesDelPerfil(paso, perfil);
@@ -141,6 +143,7 @@ export function PasoActividades({
                       key={actividad.id}
                       actividad={actividad}
                       pasoActual={pasoActual}
+                      servicio={servicio}
                       editable={puedeEditar(actividad, perfil)}
                     />
                   ))}

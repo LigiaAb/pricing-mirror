@@ -123,6 +123,8 @@ export type PropsActividad = {
   actividad: ActividadTracking;
   pasoActual: number;
   editable: boolean;
+  /** Servicio del embarque por nombre (ej. "CONSOLIDADO"); define reglas como la de guías. */
+  servicio: string;
 };
 
 export function TarjetaActividad({
