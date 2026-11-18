@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type MutationMeta,
   mutationOptions,
   queryOptions,
   useMutation,
@@ -88,6 +89,29 @@ function parseObjectEnvelope<TSchema extends z.ZodTypeAny>(
   return parsed.data;
 }
 
+/**
+ * Rechazar, validar elegibilidad y confirmar responden `{ success: false }` cuando la
+ * acción no se hizo. Se convierte en error para que se notifique (toast de error) y
+ * para que el `successMessage` solo se muestre cuando la acción sí se completó.
+ */
+function exigirSuccess<T extends { success: boolean }>(resultado: T, mensaje: string): T {
+  if (resultado.success) {
+    return resultado;
+  }
+
+  const respuesta = resultado as Record<string, unknown>;
+  const delBackend = respuesta.message ?? respuesta.mensaje;
+
+  throw new Error(
+    typeof delBackend === "string" && delBackend.trim() !== "" ? delBackend : mensaje,
+  );
+}
+
+/** Opciones de las mutaciones que se usan con distinto `meta` según la pantalla. */
+interface OpcionesMutacion {
+  meta?: MutationMeta;
+}
+
 /* ==========================================================================
  * QUERY
  * ========================================================================== */
@@ -141,6 +165,8 @@ export function useInsertarCotizacionCabecera() {
   return useMutation({
     ...insertarCotizacionCabeceraOptions(),
 
+    meta: { successMessage: "Cotización creada" },
+
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: COTIZACIONES_CABECERA_QUERY_KEY,
@@ -164,11 +190,20 @@ export const actualizarCotizacionCabeceraOptions = () =>
     },
   });
 
-export function useActualizarCotizacionCabecera() {
+/**
+ * Por defecto muestra "Cotización actualizada". La reactivación de la cabecera al
+ * guardar una versión pasa `{ meta: { silent: true } }`: el cálculo ya muestra su
+ * propio aviso si falla y el éxito lo anuncia "Versión guardada".
+ */
+export function useActualizarCotizacionCabecera({
+  meta = { successMessage: "Cotización actualizada" },
+}: OpcionesMutacion = {}) {
   const queryClient = useQueryClient();
 
   return useMutation({
     ...actualizarCotizacionCabeceraOptions(),
+
+    meta,
 
     onSuccess: async () => {
       await queryClient.invalidateQueries({
@@ -189,10 +224,13 @@ export const rechazarCotizacionCabeceraOptions = () =>
         cod_cotizacion_cabecera: codCotizacionCabecera,
       });
 
-      return parseObjectEnvelope(
-        response,
-        accionCotizacionResponseSchema,
-        "rechazar-cotizacion-cabecera",
+      return exigirSuccess(
+        parseObjectEnvelope(
+          response,
+          accionCotizacionResponseSchema,
+          "rechazar-cotizacion-cabecera",
+        ),
+        "No se pudo rechazar la cotización.",
       );
     },
   });
@@ -203,11 +241,9 @@ export function useRechazarCotizacionCabecera() {
   return useMutation({
     ...rechazarCotizacionCabeceraOptions(),
 
-    onSuccess: async (result) => {
-      if (!result.success) {
-        return;
-      }
+    meta: { successMessage: "Cotización rechazada" },
 
+    onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: COTIZACIONES_CABECERA_QUERY_KEY,
       });
@@ -226,10 +262,13 @@ export const validarElegibilidadCotizacionOptions = () =>
         cod_cotizacion_cabecera: codCotizacionCabecera,
       });
 
-      return parseObjectEnvelope(
-        response,
-        accionCotizacionResponseSchema,
-        "validar-elegibilidad-cotizacion",
+      return exigirSuccess(
+        parseObjectEnvelope(
+          response,
+          accionCotizacionResponseSchema,
+          "validar-elegibilidad-cotizacion",
+        ),
+        "La cotización no cumple los requisitos para confirmarse.",
       );
     },
   });
@@ -249,10 +288,13 @@ export const confirmarCotizacionCabeceraOptions = () =>
         cod_cotizacion_cabecera: codCotizacionCabecera,
       });
 
-      return parseObjectEnvelope(
-        response,
-        accionCotizacionResponseSchema,
-        "confirmar-cotizacion-cabecera",
+      return exigirSuccess(
+        parseObjectEnvelope(
+          response,
+          accionCotizacionResponseSchema,
+          "confirmar-cotizacion-cabecera",
+        ),
+        "No se pudo confirmar la cotización.",
       );
     },
   });
@@ -263,11 +305,9 @@ export function useConfirmarCotizacionCabecera() {
   return useMutation({
     ...confirmarCotizacionCabeceraOptions(),
 
-    onSuccess: async (result) => {
-      if (!result.success) {
-        return;
-      }
+    meta: { successMessage: "Cotización confirmada" },
 
+    onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: COTIZACIONES_CABECERA_QUERY_KEY,
       });

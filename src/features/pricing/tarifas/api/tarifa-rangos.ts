@@ -39,6 +39,8 @@ export function useGuardarTarifaRangos() {
   return useMutation({
     ...guardarTarifaRangosOptions(),
 
+    meta: { successMessage: "Rangos guardados" },
+
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: TARIFA_RANGOS_QUERY_KEY,

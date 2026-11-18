@@ -457,7 +457,7 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
         throw new Error("La cotización abierta no coincide con la versión guardada.");
       }
 
-      await actualizarCotizacion({ cod_cotizacion_cabecera, cod_estado });
+      await actualizarCotizacion({ cod_cotizacion_cabecera, cod_estado }, { silencioso: true });
     },
     [cotizacionPersistida, actualizarCotizacion],
   );

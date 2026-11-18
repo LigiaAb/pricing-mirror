@@ -56,11 +56,17 @@ export function ScallingTable({ codMetodo, codTipoTransporte }: Props) {
 
   const monedasFetch = fetchMonedas.useLista({ cod_estado: 1 });
 
-  const insertarScalling = useInsertarTarifaScalling();
+  const insertarScalling = useInsertarTarifaScalling({
+    meta: { successMessage: "Scalling agregado" },
+  });
 
-  const actualizarScalling = useActualizarTarifaScalling();
+  const actualizarScalling = useActualizarTarifaScalling({
+    meta: { successMessage: "Scalling actualizado" },
+  });
 
-  const eliminarScalling = useEliminarTarifaScalling();
+  const eliminarScalling = useEliminarTarifaScalling({
+    meta: { successMessage: "Scalling eliminado" },
+  });
 
   /*
    * =========================================================

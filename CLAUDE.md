@@ -175,6 +175,12 @@ Resumen:
   (`tarifas/hooks/use-referencia-estable.ts`).
 - Funciones devueltas por hooks y usadas en `useMemo` de tablas deben estar memoizadas (ej. `mapWithCatalogo`).
 - Equipo (tarifas) usa `value` numérico en monedas porque se envía tal cual al backend.
+- **Toasts de mutaciones** (ADR-0005): `meta: { successMessage }` / `meta: { silent: true }`, nunca toasts a mano.
+  Una acción = un toast: si una acción hace varias mutaciones, el mensaje va en una sola (crear tarifa → método).
+  Si el backend responde `success: false`, lanzar error en el `mutationFn` (si no, sale el toast de éxito).
+  Validaciones que se resuelven en pantalla van **antes** de la mutación (`validarAntesDeGuardar`).
+  Si la pantalla ya muestra el resultado o el error, `silent: true` (carga masiva, reactivar cabecera).
+  Tipos de `meta` en el stub `src/types/tanstack-meta.d.ts` (solo espejo).
 - `CotizacionForm` y `FichaResumen` se usan fuera de sus pantallas (Autorización Spot, Plantillas, Tarifas):
   no depender solo de providers ahí.
 

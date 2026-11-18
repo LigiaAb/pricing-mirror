@@ -90,9 +90,9 @@ export function PaisTable({ codMetodo, codTipoTransporte }: Props) {
   //   ciudades: (ciudadesFetch.data ?? []) as RutaOption[],
   // };
 
-  const insertarRuta = useInsertarTarifaRuta();
-  const actualizarRuta = useActualizarTarifaRuta();
-  const eliminarRuta = useEliminarTarifaRuta();
+  const insertarRuta = useInsertarTarifaRuta({ meta: { successMessage: "Ruta agregada" } });
+  const actualizarRuta = useActualizarTarifaRuta({ meta: { successMessage: "Ruta actualizada" } });
+  const eliminarRuta = useEliminarTarifaRuta({ meta: { successMessage: "Ruta eliminada" } });
 
   const [filaEditando, setFilaEditando] = React.useState<FilaMetodoPais | null>(null);
 

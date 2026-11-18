@@ -69,9 +69,9 @@ export function MetodoEquipo({ codMetodo, readonly = false, onTarifaCreada = () 
     equipo_operativo: true,
   }); */
 
-  const insertar = useInsertarTarifaEquipo();
+  const insertar = useInsertarTarifaEquipo({ meta: { successMessage: "Equipo guardado" } });
 
-  const actualizar = useActualizarTarifaEquipo();
+  const actualizar = useActualizarTarifaEquipo({ meta: { successMessage: "Equipo actualizado" } });
 
   /*
    * =========================================================
