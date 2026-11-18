@@ -1,8 +1,6 @@
-/* ==========================================================================
- * TOTALES DE RUBROS — TIPOS
- * ========================================================================== */
+import type { Id, MonedaCatalogo } from "./tipos";
 
-import type { Id, MonedaCatalogo } from "../tipos";
+export const IVA_DEFAULT = 0.12;
 
 export type { Id };
 

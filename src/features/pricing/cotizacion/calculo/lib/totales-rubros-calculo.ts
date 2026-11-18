@@ -1,5 +1,14 @@
-import { esTipoPagoPrepaid, getLetraTipoPago, getMetodo, IVA_DEFAULT } from "./metodo-tipo-pago";
-import type { Id, MonedaTotal, RubroTotal, TipoPagoPorRubro, TotalesPorMoneda } from "./tipos";
+import type { Id } from "./tipos";
+import { esTipoPagoPrepaid, getLetraTipoPago, getMetodo } from "./totales-rubros-helpers";
+import {
+  type ElementoAgrupado,
+  type GruposPorRubro,
+  IVA_DEFAULT,
+  type MonedaTotal,
+  type RubroTotal,
+  type TipoPagoPorRubro,
+  type TotalesPorMoneda,
+} from "./totales-rubros-tipos";
 
 /* ==========================================================================
  * TOTAL POR MONEDA + IVA
@@ -159,4 +168,105 @@ export function calcularTotalesPorMoneda({
   }
 
   return acumulado;
+}
+/* ==========================================================================
+ * ELEMENTOS AGRUPADOS PARA MOSTRAR
+ * ========================================================================== */
+
+export function construirElementosAgrupados({
+  listaElementos,
+  gruposIngresadosSegunRubro,
+  tipoPagoSeleccionado,
+  letraTipoPagoDefault,
+}: {
+  listaElementos: RubroTotal[];
+
+  gruposIngresadosSegunRubro: GruposPorRubro;
+
+  tipoPagoSeleccionado: TipoPagoPorRubro;
+
+  letraTipoPagoDefault: "P" | "C";
+}): ElementoAgrupado[] {
+  const salida: ElementoAgrupado[] = [];
+
+  const gruposMap = new Map<string, ElementoAgrupado>();
+
+  for (const item of listaElementos) {
+    const rubroId = String(item.value ?? "");
+
+    const metodo = getMetodo(item);
+
+    const codMoneda = metodo?.cod_moneda_venta ?? "SIN_MONEDA";
+
+    const venta = Number(metodo?.venta ?? 0);
+
+    const idDeGrupo = gruposIngresadosSegunRubro[rubroId]?.idDeGrupo;
+
+    /*
+     * Sin grupo:
+     * permanece como rubro normal.
+     */
+    if (!idDeGrupo) {
+      salida.push({
+        ...item,
+        __tipo: "ITEM",
+      });
+
+      continue;
+    }
+
+    const tipoPago = tipoPagoSeleccionado[rubroId] ?? item.letra_tipo_pago ?? letraTipoPagoDefault;
+
+    /*
+     * No mezclar:
+     *
+     * grupo + moneda + P/C
+     */
+    const key = `${idDeGrupo}__${codMoneda}__${tipoPago}`;
+
+    const existente = gruposMap.get(key);
+
+    if (!existente) {
+      gruposMap.set(key, {
+        value: `GRUPO_${key}`,
+
+        __tipo: "GRUPO",
+
+        __idDeGrupo: idDeGrupo,
+
+        __codMoneda: codMoneda,
+
+        letra_tipo_pago: tipoPago,
+
+        metodo: {
+          ...(metodo ?? {}),
+
+          cod_moneda_venta: codMoneda,
+
+          venta,
+
+          detalles: [...(metodo?.detalles ?? [])],
+        },
+      });
+
+      continue;
+    }
+
+    const metodoGrupo = getMetodo(existente);
+
+    if (!metodoGrupo) {
+      continue;
+    }
+
+    metodoGrupo.venta = Number(metodoGrupo.venta ?? 0) + venta;
+
+    metodoGrupo.detalles = [...(metodoGrupo.detalles ?? []), ...(metodo?.detalles ?? [])];
+  }
+
+  /*
+   * Igual al legado:
+   * grupos primero,
+   * rubros sueltos después.
+   */
+  return [...Array.from(gruposMap.values()), ...salida];
 }
