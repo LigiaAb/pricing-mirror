@@ -146,9 +146,9 @@ src/features/pricing/carga-masiva-fletes/components/carga-masiva-fletes.tsx: err
 src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion-entidades.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion-entidades.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion-entidades.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
