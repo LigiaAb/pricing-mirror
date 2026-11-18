@@ -57,6 +57,7 @@ Las rutas de abajo sin carpeta son relativas a `general/`.
 | Tab genérica (todas las del flujo)    | `components/pasos/paso-actividades.tsx`                              |
 | Tabs con contenido propio             | `pasos/paso-informacion.tsx`, `pasos/paso-archivos.tsx`              |
 | Archivos del embarque (maqueta)       | `ArchivoEmbarque` en `shared/lib/tipos.ts`; `ARCHIVOS_MAQUETA`       |
+| Bitácora del embarque (maqueta)       | `RegistroBitacora` en `shared/lib/tipos.ts`; `bitacoraMaqueta`       |
 
 ## Tracking general (Exportación Aérea)
 
@@ -109,6 +110,7 @@ tracking (`1 · Reserva`, `2 · Documentación`…); la tab muestra check si su 
 | 5    | Complementaria        | CBX 12.2, 13.1, 13.2                           |
 | 6    | Arribo y cierre       | CBX 14.1; OPS 15, 16, 17                       |
 | —    | Archivos (extra)      | —                                              |
+| —    | Bitácora (extra)      | —                                              |
 | —    | Cancelación (extra)   | OPS 4.4                                        |
 
 ### Tipos de interacción (`shared/lib/interacciones.ts`)
@@ -184,6 +186,10 @@ Cada actor define las suyas: `GESTION_OPERACIONES` (31, OPS), `GESTION_BODEGAS` 
 botón), `compara` (referencia del control del Excel: muestra la referencia, "Actual" y "Diferencia"), `requiere`
 (actividades previas, se muestran como "Antes: <actividad>") y `pendiente` (parte aún sin maquetar, p. ej. la tabla de rubros de OPS 9.2).
 
+Campo con `key` (`"<sección>.<key>"` de `InformacionEmbarque`, ej. `"cargas.pesoTotal"`, `"fechas.fecha_salida"`): es el
+mismo dato que en Información (`shared/lib/campos-embarque.ts`). Sirve para consultarlo si ya se ingresó (#129).
+Toda `key` debe existir en los `CAMPOS_*` de su sección.
+
 ### Tarjeta (`shared/components/tarjeta-actividad.tsx`) y tab genérica (`pasos/paso-actividades.tsx`)
 
 Tarjeta: encabezado (icono, código, actividad, responsable, tipo del Excel, estado), cuerpo (entrada,
@@ -203,6 +209,9 @@ conteo; las que no tienen actividades quedan bloqueadas; abre la primera con act
 - Cambiar cómo se captura una actividad: su entrada en `<actor>/lib/gestion-actividades.ts`.
 - Un formulario propio de un actor (fuera de la tarjeta común): en `<actor>/components/`, usado desde
   `actividad-<actor>.tsx`.
+  Ej.: OPS 2.1 (`operaciones/components/solicitud-reserva.tsx`) elige el formato de reserva de la aerolínea
+  (`operaciones/lib/formatos-reserva.ts`: Iberia, LATAM, Delta; o General) y pasa sus campos a la tarjeta común; el
+  selector va en `antesDeCampos` de `TarjetaActividad`.
 - Un campo nuevo para todo un tipo: `base` del tipo en `INTERACCIONES`.
 
 ## Perfiles: Operaciones, Bodegas, Combex
@@ -235,12 +244,20 @@ Las pantallas de cada actor montan `VistaGeneral` con su perfil.
 2. **El tracking interactivo** (`TrackingDetalle`, Sheet de tracking): tiene su propia subida. **En pausa**: no se
    modifica desde v2 hasta que se retome.
 
+Mientras se revisa si el tracking ya cubre la subida y la selección de archivos para la notificación (#128), las
+actividades editables con campos `archivo` muestran en el pie un botón **Tracking** (copia del de la franja) que abre
+el Sheet del tracking. `VistaGeneral` lo da con `AbrirTrackingContext` (`shared/components/tarjeta-actividad.tsx`).
+
 La tab **Archivos** (`pasos/paso-archivos.tsx`, grupo `extra`, `paraTodos`) es solo la **lista** de los archivos
 del embarque para consulta y descarga: archivo, tipo, dónde se subió (actividad o Tracking), paso, usuario y
 fecha; botones Ver y Descargar (deshabilitados en la maqueta). Usa una **tabla propia** (no `DataTable`), con el
 mismo formato que `VersionesTable` de Cotizaciones: encabezado con título, conteo y búsqueda (con x para limpiar,
 `BotonLimpiar` de `shared/components/campos.tsx`) y `Table` simple sin paginación. No tiene botón ni zona de subida. Datos de
 `ARCHIVOS_MAQUETA` (por `id` del embarque) hasta que exista la API.
+
+**Bitácora** (`pasos/paso-bitacora.tsx`, grupo `extra`, `paraTodos`): historial de solo consulta (fecha, usuario,
+acción, detalle y paso), con la misma tabla y búsqueda que Archivos. **Mock** (`bitacoraMaqueta`: creación, archivos y
+pasos completados) mientras se busca la API (#124).
 
 **Facturación** (solo visualización): en pausa. Cuando se retome, sería otra entrada `grupo: "extra"` en
 `PASOS_EMBARQUE`, de solo lectura.

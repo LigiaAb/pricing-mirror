@@ -1,0 +1,335 @@
+diff --git a/src/features/embarques/v2/general/ARQUITECTURA.md b/src/features/embarques/v2/general/ARQUITECTURA.md
+index 517f4e1..a816bff 100644
+--- a/src/features/embarques/v2/general/ARQUITECTURA.md
++++ b/src/features/embarques/v2/general/ARQUITECTURA.md
+@@ -209,6 +209,9 @@ conteo; las que no tienen actividades quedan bloqueadas; abre la primera con act
+ - Cambiar cómo se captura una actividad: su entrada en `<actor>/lib/gestion-actividades.ts`.
+ - Un formulario propio de un actor (fuera de la tarjeta común): en `<actor>/components/`, usado desde
+   `actividad-<actor>.tsx`.
++  Ej.: OPS 2.1 (`operaciones/components/solicitud-reserva.tsx`) elige el formato de reserva de la aerolínea
++  (`operaciones/lib/formatos-reserva.ts`: Iberia, LATAM, Delta; o General) y pasa sus campos a la tarjeta común; el
++  selector va en `antesDeCampos` de `TarjetaActividad`.
+ - Un campo nuevo para todo un tipo: `base` del tipo en `INTERACCIONES`.
+ 
+ ## Perfiles: Operaciones, Bodegas, Combex
+diff --git a/src/features/embarques/v2/operaciones/components/actividad-operaciones.tsx b/src/features/embarques/v2/operaciones/components/actividad-operaciones.tsx
+index 281ea9f..f85ca7d 100644
+--- a/src/features/embarques/v2/operaciones/components/actividad-operaciones.tsx
++++ b/src/features/embarques/v2/operaciones/components/actividad-operaciones.tsx
+@@ -3,12 +3,19 @@
+ import { type PropsActividad, TarjetaActividad } from "../../shared/components/tarjeta-actividad";
+ import { gestionDe } from "../../shared/lib/gestion-actividades";
+ import { GESTION_OPERACIONES } from "../lib/gestion-actividades";
++import { SolicitudReserva } from "./solicitud-reserva";
+ 
+ /**
+  * Formulario de una actividad de OPS (tarjeta común con las definiciones de
+- * `lib/gestion-actividades.ts` de esta carpeta).
++ * `lib/gestion-actividades.ts` de esta carpeta). OPS 2.1 usa su formulario
++ * propio (formato de reserva según la aerolínea).
+  */
+ export function ActividadOperaciones(props: PropsActividad) {
++  if (props.actividad.id === "OPS 2.1") {
++    return (
++      <SolicitudReserva {...props} gestion={gestionDe(GESTION_OPERACIONES, props.actividad.id)} />
++    );
++  }
+   return (
+     <TarjetaActividad {...props} gestion={gestionDe(GESTION_OPERACIONES, props.actividad.id)} />
+   );
+diff --git a/src/features/embarques/v2/operaciones/components/solicitud-reserva.tsx b/src/features/embarques/v2/operaciones/components/solicitud-reserva.tsx
+new file mode 100644
+index 0000000..b7702cc
+--- /dev/null
++++ b/src/features/embarques/v2/operaciones/components/solicitud-reserva.tsx
+@@ -0,0 +1,66 @@
++"use client";
++
++import * as React from "react";
++import { Field, FieldLabel } from "@/shared/components/ui/field";
++import {
++  Select,
++  SelectContent,
++  SelectItem,
++  SelectTrigger,
++  SelectValue,
++} from "@/shared/components/ui/select";
++import { type PropsActividad, TarjetaActividad } from "../../shared/components/tarjeta-actividad";
++import type { GestionActividad } from "../../shared/lib/gestion-actividades";
++import { FORMATOS_RESERVA } from "../lib/formatos-reserva";
++
++/** Valor del Select para el formulario general (sin formato de aerolínea). */
++const GENERAL = "general";
++
++/**
++ * OPS 2.1 "Preparar solicitud de reserva": se elige el formato de la
++ * aerolínea (`lib/formatos-reserva.ts`) y la tarjeta muestra sus campos.
++ * "General" = campos de OPS 2.1 en `lib/gestion-actividades.ts`.
++ * Cuando se conecte el catálogo, el formato saldrá de la aerolínea elegida
++ * (búsqueda por nombre, `proveedor`).
++ */
++export function SolicitudReserva({
++  gestion,
++  ...props
++}: PropsActividad & { gestion: GestionActividad }) {
++  const [formato, setFormato] = React.useState(GENERAL);
++  const elegido = FORMATOS_RESERVA.find((item) => item.nombre === formato);
++  const id = `${props.actividad.id.replace(/\s+/g, "-").toLowerCase()}-formato`;
++
++  return (
++    <TarjetaActividad
++      {...props}
++      gestion={
++        elegido
++          ? {
++              ...gestion,
++              campos: elegido.campos,
++              pendiente: `Documento de ${elegido.nombre}: ${elegido.documento}. Falta definir el formato del archivo (Excel, PDF, Word…).`,
++            }
++          : gestion
++      }
++      antesDeCampos={
++        <Field className="max-w-sm">
++          <FieldLabel htmlFor={id}>Formato de reserva (aerolínea)</FieldLabel>
++          <Select value={formato} onValueChange={setFormato}>
++            <SelectTrigger id={id} className="w-full">
++              <SelectValue />
++            </SelectTrigger>
++            <SelectContent>
++              <SelectItem value={GENERAL}>General</SelectItem>
++              {FORMATOS_RESERVA.map((item) => (
++                <SelectItem key={item.nombre} value={item.nombre}>
++                  {item.nombre}
++                </SelectItem>
++              ))}
++            </SelectContent>
++          </Select>
++        </Field>
++      }
++    />
++  );
++}
+diff --git a/src/features/embarques/v2/operaciones/lib/formatos-reserva.ts b/src/features/embarques/v2/operaciones/lib/formatos-reserva.ts
+new file mode 100644
+index 0000000..44c22b1
+--- /dev/null
++++ b/src/features/embarques/v2/operaciones/lib/formatos-reserva.ts
+@@ -0,0 +1,183 @@
++/* ==========================================================================
++ * FORMATOS DE SOLICITUD DE RESERVA POR PROVEEDOR (SOLO MAQUETA)
++ *
++ * OPS 2.1 "Preparar solicitud de reserva": cada aerolínea pide su propio
++ * formato. Fuente: "FLUJO_AEREO_17092026_version_1.xlsx", hojas "Reserva
++ * Iberia", "Reserva LAN" y "Reserva Delta" (mismos datos y orden).
++ *
++ * `proveedor` = nombre con el que se busca la aerolínea en su catálogo (por
++ * nombre, no por código). Sin formato para la aerolínea: formulario general
++ * de OPS 2.1 (`gestion-actividades.ts`).
++ *
++ * `key` = mismo dato que en Información (se consulta si ya se ingresó).
++ * Pendiente: formato del documento que se genera (Excel, PDF, Word…) (#127).
++ * ========================================================================== */
++
++import type { CampoGestion } from "../../shared/lib/interacciones";
++
++export type FormatoReserva = {
++  /** Nombre del formato en pantalla. */
++  nombre: string;
++  /** Nombre de la aerolínea en su catálogo (búsqueda por nombre). */
++  proveedor: string;
++  /** Cómo es el documento del Excel (referencia para generarlo). */
++  documento: string;
++  campos: readonly CampoGestion[];
++};
++
++const PP_CC: CampoGestion = {
++  label: "PP / CC",
++  tipo: "seleccion",
++  requerido: true,
++  opciones: ["PP", "CC"],
++};
++
++export const FORMATOS_RESERVA: readonly FormatoReserva[] = [
++  {
++    nombre: "Iberia",
++    proveedor: "IBERIA",
++    documento: "Formulario de dos columnas (dato · valor)",
++    campos: [
++      { label: "Fecha de entrega en aeropuerto", tipo: "fecha", requerido: true },
++      {
++        key: "fechas.fecha_salida",
++        label: "Fecha de salida deseada",
++        tipo: "fecha",
++        requerido: true,
++      },
++      { label: "Número de AWB", requerido: true },
++      {
++        key: "rutas.puertoIdDestino",
++        label: "Aeropuerto Destino",
++        tipo: "catalogo",
++        requerido: true,
++      },
++      { key: "cargas.pesoTotal", label: "Peso total (kg)", tipo: "numero", requerido: true },
++      { label: "Peso por pieza (kg)", tipo: "numero" },
++      { key: "cargas.cantidad", label: "Cantidad (bultos)", tipo: "numero", requerido: true },
++      { key: "cargas.largo", label: "Largo", tipo: "numero" },
++      { key: "cargas.ancho", label: "Ancho", tipo: "numero" },
++      { key: "cargas.alto", label: "Alto", tipo: "numero" },
++      { label: "Unidad de medidas", tipo: "seleccion", opciones: ["CMS", "PULGADAS"] },
++      {
++        key: "cargas.descripcion",
++        label: "Naturaleza de la carga",
++        tipo: "area",
++        requerido: true,
++      },
++      { key: "cargas.partidaArancelaria", label: "Partida arancelaria", requerido: true },
++      { label: "Tarifa neta / spot autorizada", tipo: "numero" },
++      { label: "Temperatura (perecedera)" },
++      PP_CC,
++      { label: "Número UN (peligrosa)" },
++      { label: "Clase (peligrosa)" },
++      { label: "Packing instructions (peligrosa)" },
++      { label: "Agencia de carga (No. IATA)" },
++      { key: "shipper.entidad_id", label: "Exportador", tipo: "catalogo", requerido: true },
++      {
++        key: "consignatario.entidad_id",
++        label: "Consignatario",
++        tipo: "catalogo",
++        requerido: true,
++      },
++      { label: "EORI / registro tributario del consignatario", requerido: true },
++      { label: "Requerimiento especial de manejo", tipo: "area" },
++    ],
++  },
++  {
++    nombre: "LATAM (LAN)",
++    proveedor: "LATAM",
++    documento: "Una fila por guía (MAWB + HAWB), columnas en inglés",
++    campos: [
++      { label: "Agencia" },
++      { label: "Shipper MAWB", tipo: "catalogo", requerido: true },
++      { label: "Dirección shipper MAWB", tipo: "area" },
++      { label: "Consignee MAWB", tipo: "catalogo", requerido: true },
++      { label: "Dirección consignee MAWB", tipo: "area" },
++      { label: "Prefijo", requerido: true },
++      { label: "No. MAWB", requerido: true },
++      { label: "No. HAWB", requerido: true },
++      { key: "shipper.entidad_id", label: "Shipper HAWB", tipo: "catalogo", requerido: true },
++      { key: "shipper.entidad_contacto_telefono", label: "Teléfono shipper" },
++      { key: "shipper.direccion_recoleccion", label: "Dirección shipper", tipo: "area" },
++      { key: "shipper.direccion_recoleccion_ciudad", label: "Ciudad shipper", tipo: "catalogo" },
++      { key: "shipper.direccion_recoleccion_pais", label: "País shipper", tipo: "catalogo" },
++      { key: "shipper.direccion_recoleccion_depto", label: "Estado shipper", tipo: "catalogo" },
++      { label: "ZIP shipper" },
++      {
++        key: "consignatario.entidad_id",
++        label: "Consignee HAWB",
++        tipo: "catalogo",
++        requerido: true,
++      },
++      { key: "consignatario.entidad_contacto_telefono", label: "Teléfono consignee" },
++      { key: "consignatario.direccion_recoleccion", label: "Dirección consignee", tipo: "area" },
++      {
++        key: "consignatario.direccion_recoleccion_ciudad",
++        label: "Ciudad consignee",
++        tipo: "catalogo",
++      },
++      {
++        key: "consignatario.direccion_recoleccion_pais",
++        label: "País consignee",
++        tipo: "catalogo",
++      },
++      {
++        key: "consignatario.direccion_recoleccion_depto",
++        label: "Estado consignee",
++        tipo: "catalogo",
++      },
++      { label: "ZIP consignee" },
++      { label: "FB" },
++      { label: "Piezas reservadas", tipo: "numero", requerido: true },
++      { key: "cargas.cantidad", label: "Cantidad (bultos)", tipo: "numero", requerido: true },
++      { label: "Dimensiones (ej. 1= 25*21*25)", requerido: true },
++      { key: "cargas.pesoTotal", label: "Peso total (kg)", tipo: "numero", requerido: true },
++      { label: "Código" },
++      { key: "cargas.descripcion", label: "Descripción", tipo: "area", requerido: true },
++      { key: "fechas.fecha_salida", label: "Fecha de salida", tipo: "fecha", requerido: true },
++      {
++        key: "rutas.puertoIdOrigen",
++        label: "Aeropuerto Origen",
++        tipo: "catalogo",
++        requerido: true,
++      },
++      {
++        key: "rutas.puertoIdDestino",
++        label: "Aeropuerto Destino",
++        tipo: "catalogo",
++        requerido: true,
++      },
++      { label: "Naturaleza y cantidades (corte de la guía)", tipo: "area" },
++    ],
++  },
++  {
++    nombre: "Delta Cargo",
++    proveedor: "DELTA",
++    documento: "Formulario de dos columnas (dato · valor)",
++    campos: [
++      { label: "No. AWB", requerido: true },
++      {
++        key: "rutas.puertoIdDestino",
++        label: "Aeropuerto Destino",
++        tipo: "catalogo",
++        requerido: true,
++      },
++      { key: "cargas.cantidad", label: "Cantidad (bultos)", tipo: "numero", requerido: true },
++      { key: "cargas.pesoTotal", label: "Peso total (kg)", tipo: "numero", requerido: true },
++      { key: "cargas.descripcion", label: "Commodity", tipo: "area", requerido: true },
++      { key: "cargas.partidaArancelaria", label: "Partida arancelaria" },
++      { label: "Medidas (ej. 02=37*24*30)", requerido: true },
++      { key: "shipper.entidad_id", label: "Shipper", tipo: "catalogo", requerido: true },
++      {
++        key: "consignatario.entidad_id",
++        label: "Consignatario",
++        tipo: "catalogo",
++        requerido: true,
++      },
++      { label: "EORI (carga para Europa)" },
++      PP_CC,
++      { key: "fechas.fecha_salida", label: "Fecha de salida", tipo: "fecha", requerido: true },
++    ],
++  },
++];
+diff --git a/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx b/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
+index 4d2e1fb..77949fa 100644
+--- a/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
++++ b/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
+@@ -15,7 +15,7 @@ import {
+   ShoppingCart,
+   TriangleAlert,
+ } from "lucide-react";
+-import { createContext, use } from "react";
++import { createContext, type ReactNode, use } from "react";
+ import {
+   Accordion,
+   AccordionContent,
+@@ -130,9 +130,12 @@ export function TarjetaActividad({
+   pasoActual,
+   editable,
+   gestion,
++  antesDeCampos,
+ }: PropsActividad & {
+   /** Cómo se trabaja la actividad (definiciones del actor). */
+   gestion: GestionActividad;
++  /** Control propio del actor antes de los campos (ej. formato de reserva de OPS 2.1). */
++  antesDeCampos?: ReactNode;
+ }) {
+   const Icono = ICONO_INTERACCION[gestion.interaccion];
+   const estado = ESTADO[estadoActividad(actividad, pasoActual)];
+@@ -228,6 +231,8 @@ export function TarjetaActividad({
+               </div>
+             ) : null}
+ 
++            {editable ? antesDeCampos : null}
++
+             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+               {camposDe(gestion).map((campo) =>
+                 editable ? (

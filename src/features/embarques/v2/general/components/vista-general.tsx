@@ -2,6 +2,7 @@
 
 import { MousePointerClick } from "lucide-react";
 import * as React from "react";
+import { AbrirTrackingContext } from "../../shared/components/tarjeta-actividad";
 import type { EmbarqueMaqueta, PerfilEmbarque } from "../../shared/lib/tipos";
 import { EMBARQUES_MAQUETA } from "../lib/datos-maqueta";
 import type { ValorPasoEmbarque } from "../lib/pasos";
@@ -45,6 +46,8 @@ export const VistaGeneral = ({
   const [trackingOpen, setTrackingOpen] = React.useState(false);
   const [actividadesOpen, setActividadesOpen] = React.useState(false);
 
+  const abrirTracking = React.useCallback(() => setTrackingOpen(true), []);
+
   const seccionRef = React.useRef<HTMLDivElement | null>(null);
 
   const seleccionar = React.useCallback((embarque: EmbarqueMaqueta) => {
@@ -82,12 +85,14 @@ export const VistaGeneral = ({
           />
 
           <section className="rounded-lg border bg-card p-2 shadow-sm">
-            <TabsEmbarque
-              embarque={seleccionado}
-              perfil={perfil}
-              value={tab}
-              onValueChange={setTab}
-            />
+            <AbrirTrackingContext value={abrirTracking}>
+              <TabsEmbarque
+                embarque={seleccionado}
+                perfil={perfil}
+                value={tab}
+                onValueChange={setTab}
+              />
+            </AbrirTrackingContext>
           </section>
         </div>
       ) : (

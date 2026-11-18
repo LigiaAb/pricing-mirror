@@ -9,11 +9,13 @@ import {
   Link2,
   type LucideIcon,
   Mail,
+  Route,
   Scale,
   ShieldCheck,
   ShoppingCart,
   TriangleAlert,
 } from "lucide-react";
+import { createContext, type ReactNode, use } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -64,6 +66,13 @@ export const ICONO_INTERACCION: Record<TipoInteraccion, LucideIcon> = {
   seguimiento: Activity,
   incidencia: TriangleAlert,
 };
+
+/**
+ * Abre el Sheet del tracking interactivo (lo da `VistaGeneral`). Las actividades
+ * con archivos muestran un botón "Tracking" (copia del de la franja del
+ * embarque) para subirlos ahí (#128). Sin provider, no hay botón.
+ */
+export const AbrirTrackingContext = createContext<(() => void) | null>(null);
 
 export type EstadoActividad = "hecha" | "en-curso" | "pendiente" | "si-ocurre";
 
@@ -121,14 +130,19 @@ export function TarjetaActividad({
   pasoActual,
   editable,
   gestion,
+  antesDeCampos,
 }: PropsActividad & {
   /** Cómo se trabaja la actividad (definiciones del actor). */
   gestion: GestionActividad;
+  /** Control propio del actor antes de los campos (ej. formato de reserva de OPS 2.1). */
+  antesDeCampos?: ReactNode;
 }) {
   const Icono = ICONO_INTERACCION[gestion.interaccion];
   const estado = ESTADO[estadoActividad(actividad, pasoActual)];
   const requiere = actividadesPorId(gestion.requiere ?? []);
   const excepcion = gestion.interaccion === "incidencia";
+  const abrirTracking = use(AbrirTrackingContext);
+  const conArchivos = camposDe(gestion).some((campo) => campo.tipo === "archivo");
   const abierta =
     editable &&
     estadoActividad(actividad, pasoActual) === "en-curso" &&
@@ -217,6 +231,8 @@ export function TarjetaActividad({
               </div>
             ) : null}
 
+            {editable ? antesDeCampos : null}
+
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {camposDe(gestion).map((campo) =>
                 editable ? (
@@ -240,10 +256,23 @@ export function TarjetaActividad({
               <p>Resultado: {actividad.resultado}</p>
             </div>
             {editable ? (
-              <Button type="button" size="sm" variant={excepcion ? "outline" : "default"} disabled>
-                <Icono className="size-4" aria-hidden="true" />
-                {accionDe(gestion)}
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                {abrirTracking && conArchivos ? (
+                  <Button type="button" size="sm" variant="outline" onClick={abrirTracking}>
+                    <Route className="size-4" aria-hidden="true" />
+                    Tracking
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={excepcion ? "outline" : "default"}
+                  disabled
+                >
+                  <Icono className="size-4" aria-hidden="true" />
+                  {accionDe(gestion)}
+                </Button>
+              </div>
             ) : null}
           </footer>
         </AccordionContent>

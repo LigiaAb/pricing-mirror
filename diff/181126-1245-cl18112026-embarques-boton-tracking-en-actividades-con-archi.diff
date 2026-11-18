@@ -1,0 +1,126 @@
+diff --git a/src/features/embarques/v2/general/ARQUITECTURA.md b/src/features/embarques/v2/general/ARQUITECTURA.md
+index 1fb7cb9..5567d04 100644
+--- a/src/features/embarques/v2/general/ARQUITECTURA.md
++++ b/src/features/embarques/v2/general/ARQUITECTURA.md
+@@ -239,6 +239,10 @@ Las pantallas de cada actor montan `VistaGeneral` con su perfil.
+ 2. **El tracking interactivo** (`TrackingDetalle`, Sheet de tracking): tiene su propia subida. **En pausa**: no se
+    modifica desde v2 hasta que se retome.
+ 
++Mientras se revisa si el tracking ya cubre la subida y la selección de archivos para la notificación (#128), las
++actividades editables con campos `archivo` muestran en el pie un botón **Tracking** (copia del de la franja) que abre
++el Sheet del tracking. `VistaGeneral` lo da con `AbrirTrackingContext` (`shared/components/tarjeta-actividad.tsx`).
++
+ La tab **Archivos** (`pasos/paso-archivos.tsx`, grupo `extra`, `paraTodos`) es solo la **lista** de los archivos
+ del embarque para consulta y descarga: archivo, tipo, dónde se subió (actividad o Tracking), paso, usuario y
+ fecha; botones Ver y Descargar (deshabilitados en la maqueta). Usa una **tabla propia** (no `DataTable`), con el
+diff --git a/src/features/embarques/v2/general/components/vista-general.tsx b/src/features/embarques/v2/general/components/vista-general.tsx
+index bc2ccd3..c78a527 100644
+--- a/src/features/embarques/v2/general/components/vista-general.tsx
++++ b/src/features/embarques/v2/general/components/vista-general.tsx
+@@ -2,6 +2,7 @@
+ 
+ import { MousePointerClick } from "lucide-react";
+ import * as React from "react";
++import { AbrirTrackingContext } from "../../shared/components/tarjeta-actividad";
+ import type { EmbarqueMaqueta, PerfilEmbarque } from "../../shared/lib/tipos";
+ import { EMBARQUES_MAQUETA } from "../lib/datos-maqueta";
+ import type { ValorPasoEmbarque } from "../lib/pasos";
+@@ -45,6 +46,8 @@ export const VistaGeneral = ({
+   const [trackingOpen, setTrackingOpen] = React.useState(false);
+   const [actividadesOpen, setActividadesOpen] = React.useState(false);
+ 
++  const abrirTracking = React.useCallback(() => setTrackingOpen(true), []);
++
+   const seccionRef = React.useRef<HTMLDivElement | null>(null);
+ 
+   const seleccionar = React.useCallback((embarque: EmbarqueMaqueta) => {
+@@ -82,12 +85,14 @@ export const VistaGeneral = ({
+           />
+ 
+           <section className="rounded-lg border bg-card p-2 shadow-sm">
+-            <TabsEmbarque
+-              embarque={seleccionado}
+-              perfil={perfil}
+-              value={tab}
+-              onValueChange={setTab}
+-            />
++            <AbrirTrackingContext value={abrirTracking}>
++              <TabsEmbarque
++                embarque={seleccionado}
++                perfil={perfil}
++                value={tab}
++                onValueChange={setTab}
++              />
++            </AbrirTrackingContext>
+           </section>
+         </div>
+       ) : (
+diff --git a/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx b/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
+index 814e196..4d2e1fb 100644
+--- a/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
++++ b/src/features/embarques/v2/shared/components/tarjeta-actividad.tsx
+@@ -9,11 +9,13 @@ import {
+   Link2,
+   type LucideIcon,
+   Mail,
++  Route,
+   Scale,
+   ShieldCheck,
+   ShoppingCart,
+   TriangleAlert,
+ } from "lucide-react";
++import { createContext, use } from "react";
+ import {
+   Accordion,
+   AccordionContent,
+@@ -65,6 +67,13 @@ export const ICONO_INTERACCION: Record<TipoInteraccion, LucideIcon> = {
+   incidencia: TriangleAlert,
+ };
+ 
++/**
++ * Abre el Sheet del tracking interactivo (lo da `VistaGeneral`). Las actividades
++ * con archivos muestran un botón "Tracking" (copia del de la franja del
++ * embarque) para subirlos ahí (#128). Sin provider, no hay botón.
++ */
++export const AbrirTrackingContext = createContext<(() => void) | null>(null);
++
+ export type EstadoActividad = "hecha" | "en-curso" | "pendiente" | "si-ocurre";
+ 
+ const ESTADO: Record<EstadoActividad, { label: string; clase: string }> = {
+@@ -129,6 +138,8 @@ export function TarjetaActividad({
+   const estado = ESTADO[estadoActividad(actividad, pasoActual)];
+   const requiere = actividadesPorId(gestion.requiere ?? []);
+   const excepcion = gestion.interaccion === "incidencia";
++  const abrirTracking = use(AbrirTrackingContext);
++  const conArchivos = camposDe(gestion).some((campo) => campo.tipo === "archivo");
+   const abierta =
+     editable &&
+     estadoActividad(actividad, pasoActual) === "en-curso" &&
+@@ -240,10 +251,23 @@ export function TarjetaActividad({
+               <p>Resultado: {actividad.resultado}</p>
+             </div>
+             {editable ? (
+-              <Button type="button" size="sm" variant={excepcion ? "outline" : "default"} disabled>
+-                <Icono className="size-4" aria-hidden="true" />
+-                {accionDe(gestion)}
+-              </Button>
++              <div className="flex flex-wrap items-center gap-2">
++                {abrirTracking && conArchivos ? (
++                  <Button type="button" size="sm" variant="outline" onClick={abrirTracking}>
++                    <Route className="size-4" aria-hidden="true" />
++                    Tracking
++                  </Button>
++                ) : null}
++                <Button
++                  type="button"
++                  size="sm"
++                  variant={excepcion ? "outline" : "default"}
++                  disabled
++                >
++                  <Icono className="size-4" aria-hidden="true" />
++                  {accionDe(gestion)}
++                </Button>
++              </div>
+             ) : null}
+           </footer>
+         </AccordionContent>
