@@ -15,13 +15,16 @@ cotizacion/calculo/
 │  ├─ catalogos.ts      ← normalización de catálogos a { value, label }
 │  ├─ cabecera.ts       ← CAMPOS DE LA CABECERA (definición única)
 │  ├─ detalle-flete.ts  ← TEXTO DEL DETALLE DE FLETE por tipo de transporte
-│  ├─ totales-rubros.ts ← TOTALES Y PAYLOAD DE RUBROS: solo reexporta por nombre (consumidores importan de aquí)
-│  │  ├─ totales-rubros-tipos.ts   ← IVA_DEFAULT, Id y todos los tipos (RubroTotal, TotalesPorMoneda, ElementoAgrupado...)
-│  │  ├─ totales-rubros-helpers.ts ← getMetodo, letra P/C ↔ cod_tipo_pago, esTipoPagoPrepaid, construirDetalleMetodo
-│  │  ├─ totales-rubros-estado.ts  ← separarRubrosParaTotales, agrupación guardada, lista normalizada,
-│  │  │                              estado inicial y sugerencias de nombre de grupo
-│  │  ├─ totales-rubros-calculo.ts ← calcularTotalesPorMoneda, construirElementosAgrupados
-│  │  └─ totales-rubros-payload.ts ← construirPayloadRubrosAgrupados (payload final, con IVA)
+│  ├─ totales-rubros/   ← TOTALES Y PAYLOAD DE RUBROS (se importa por su index.ts: "../lib/totales-rubros")
+│  │  ├─ tipos.ts             ← tipos (RubroTotal, MetodoTotal, TotalesPorMoneda, RubroAgrupadoPayload, ElementoAgrupado...)
+│  │  ├─ metodo-tipo-pago.ts  ← IVA_DEFAULT, getMetodo, letra P/C ↔ cod_tipo_pago, esTipoPagoPrepaid, construirDetalleMetodo
+│  │  ├─ separar-rubros.ts    ← separarRubrosParaTotales (IVA aparte; con SPOT solo queda el flete SPOT)
+│  │  ├─ agrupacion.ts        ← lista normalizada, estado inicial (automática + guardada), sugerencias de nombre,
+│  │  │                         elementos agrupados para mostrar
+│  │  ├─ totales-moneda.ts    ← calcularTotalesPorMoneda (total + IVA por moneda)
+│  │  ├─ payload-rubros.ts    ← construirPayloadRubrosAgrupados (totales por grupo, nombre de grupo, fila por rubro)
+│  │  ├─ payload-iva.ts       ← filas de IVA del payload (IVA del back / IVA generado aquí); solo para payload-rubros
+│  │  └─ index.ts             ← reexporta por nombre lo público
 │  └─ *.ts              ← lógica pura de cada sección (due-agent, scalling, agrupacion-rubros, ...)
 ├─ hooks/
 │  ├─ use-catalogos-cotizacion.tsx  ← TODOS LOS CATÁLOGOS (provider + hook)
@@ -165,7 +168,7 @@ el cálculo y muestra un aviso si faltan estados. Dentro del cálculo se usa `us
 | 7   | Due Carrier/Spot  | `use-rubros-due-carrier`         | `due-carrier.ts`                                 | `due-carrier`, `dialogo-spot` |
 | 8   | Scalling          | `use-rubros-scalling`            | `scalling.ts`                                    | `scalling`                    |
 | 8b  | Método Porcentaje | `use-porcentajes-rubros`         | `porcentajes-rubros.ts`                          | (Due Carrier / Due Agent)     |
-| 9   | Totales           | `use-totales-rubros`             | `totales-rubros*.ts`, `agrupacion-rubros.ts`     | `totales-rubros`              |
+| 9   | Totales           | `use-totales-rubros`             | `totales-rubros/`, `agrupacion-rubros.ts`        | `totales-rubros`              |
 | 10  | Guardar           | `use-guardar-version-cotizacion` | `guardar-version.ts`                             | `spot-documento-dialog`       |
 
 ## Pendientes conocidos
@@ -175,5 +178,5 @@ el cálculo y muestra un aviso si faltan estados. Dentro del cálculo se usa `us
 - Las reglas especiales del formulario que dependen de otros valores (por ejemplo: ciudad obligatoria solo si es
   TERRESTRE, países filtrados para terrestre) siguen en `hooks/use-formulario-cotizacion.ts`
   (`verificarSiEsRequerido`, `obtenerCatalogoById`).
-- `lib/totales-rubros-calculo.ts` busca la moneda con comparación estricta (`cod_moneda === codMoneda`); si el backend
+- `lib/totales-rubros/totales-moneda.ts` busca la moneda con comparación estricta (`cod_moneda === codMoneda`); si el backend
   manda el código como texto y el catálogo como número, el rubro no suma. Revisar si debe usar `buscarMoneda`.

@@ -1,6 +1,8 @@
-import type { Id, MonedaCatalogo } from "./tipos";
+/* ==========================================================================
+ * TOTALES DE RUBROS — TIPOS
+ * ========================================================================== */
 
-export const IVA_DEFAULT = 0.12;
+import type { Id, MonedaCatalogo } from "../tipos";
 
 export type { Id };
 
