@@ -13,8 +13,8 @@ import {
 } from "lucide-react";
 import React from "react";
 import { type EmpleadoUsuario, empleadosUsuarios, type Tipo, tipos } from "@/features/catalogos";
+import { Panel, SectionHeader } from "@/features/pricing/shared";
 import { useContextoOperativoStore } from "@/features/shell";
-import { Panel, SectionHeader } from "@/features/wms-hn/components/reportes/panel-dashboard";
 import {
   Accordion,
   AccordionContent,

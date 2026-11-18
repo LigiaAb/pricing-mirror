@@ -6,14 +6,15 @@
  *
  *   api/         consultas de catálogos (métodos, proveedores, clientes) y
  *                lectura de rangos de tarifa.
- *   components/  FichaResumen (resumen de un servicio/método de tarifa) y
- *                ComboboxOpcion (select buscable en memoria con valor objeto).
+ *   components/  FichaResumen (resumen de un servicio/método de tarifa),
+ *                ComboboxOpcion (select buscable en memoria con valor objeto) y
+ *                Panel / SectionHeader / MensajeVacio (panel con encabezado).
  *   hooks/       usePermisosPricing (permisos por opción de cada pantalla).
  *   calculadora-embarque/  CalculadoraMedidas + cálculos de volumen, peso y
  *                CW por transporte (corporativos, sin datos de cotización).
  *
- * Regla: aquí solo entra código que usan AMBOS módulos y que no depende de
- * ninguno de ellos.
+ * Regla: aquí entra código que usan AMBOS módulos, o componentes de pantalla
+ * reutilizables en pricing; en los dos casos sin depender de ningún submódulo.
  * ========================================================================== */
 
 export {
@@ -94,6 +95,7 @@ export {
   FichaResumen,
   type ItemFichaResumen,
 } from "./components/ficha-resumen";
+export { MensajeVacio, Panel, SectionHeader } from "./components/panel-dashboard";
 export { ResumenItem } from "./components/resumen-item";
 export {
   type CatalogosPricing,
