@@ -14,11 +14,15 @@ import {
   TableRow,
 } from "@/shared/components/ui/table";
 import { BotonLimpiar } from "../../../shared/components/campos";
+import { useOperacion } from "../../../shared/components/operacion-context";
 import { EncabezadoPaso } from "../../../shared/components/utils";
-import { ACTIVIDADES_TRACKING } from "../../../shared/lib/actividades-tracking";
+import {
+  type DefinicionOperacion,
+  type PasoEmbarque,
+  pasoTrackingDe,
+} from "../../../shared/lib/operacion";
 import type { ArchivoEmbarque, EmbarqueMaqueta } from "../../../shared/lib/tipos";
 import { ARCHIVOS_MAQUETA } from "../../lib/datos-maqueta";
-import { type PasoEmbarque, TRACKING_PASOS } from "../../lib/pasos";
 
 /** Fila de la tabla: el archivo + textos para mostrar y buscar. */
 type FilaArchivo = ArchivoEmbarque & {
@@ -31,12 +35,12 @@ type FilaArchivo = ArchivoEmbarque & {
 /** Columnas de la tabla (encabezados + celda vacía de "sin archivos"). */
 const TOTAL_COLUMNAS = 7;
 
-function aFila(archivo: ArchivoEmbarque): FilaArchivo {
+function aFila(operacion: DefinicionOperacion, archivo: ArchivoEmbarque): FilaArchivo {
   const actividad =
     archivo.origen === "actividad"
-      ? ACTIVIDADES_TRACKING.find((item) => item.id === archivo.actividad)
+      ? operacion.actividades.find((item) => item.id === archivo.actividad)
       : undefined;
-  const corto = TRACKING_PASOS.find((paso) => paso.id === archivo.paso)?.corto ?? "";
+  const corto = pasoTrackingDe(operacion, archivo.paso)?.corto ?? "";
   return {
     ...archivo,
     origenTexto:
@@ -70,10 +74,11 @@ export function PasoArchivos({
   paso: PasoEmbarque;
   embarque: EmbarqueMaqueta;
 }) {
+  const operacion = useOperacion();
   const [busqueda, setBusqueda] = React.useState("");
   const filas = React.useMemo(
-    () => (ARCHIVOS_MAQUETA[embarque.id] ?? []).map(aFila),
-    [embarque.id],
+    () => (ARCHIVOS_MAQUETA[embarque.id] ?? []).map((archivo) => aFila(operacion, archivo)),
+    [operacion, embarque.id],
   );
   const texto = busqueda.trim().toLowerCase();
   const visibles = texto ? filas.filter((fila) => coincide(fila, texto)) : filas;

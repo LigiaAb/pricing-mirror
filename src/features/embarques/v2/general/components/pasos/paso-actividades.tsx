@@ -1,22 +1,21 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
-import type * as React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
-import { ActividadBodegas } from "../../../bodegas/components/actividad-bodegas";
-import { ActividadCombex } from "../../../combex/components/actividad-combex";
-import { ActividadOperaciones } from "../../../operaciones/components/actividad-operaciones";
-import type { PropsActividad } from "../../../shared/components/tarjeta-actividad";
+import { useOperacion } from "../../../shared/components/operacion-context";
+import {
+  type PropsActividad,
+  TarjetaActividad,
+} from "../../../shared/components/tarjeta-actividad";
 import { EncabezadoPaso } from "../../../shared/components/utils";
 import type { ActividadTracking, TipoActividad } from "../../../shared/lib/actividades-tracking";
-import type { PerfilEmbarque, ResponsableTracking } from "../../../shared/lib/tipos";
 import {
-  actividadesDelPerfil,
+  gestionDeActividad,
   type PasoEmbarque,
-  pasoDeTab,
-  puedeEditar,
-  TRACKING_PASOS,
-} from "../../lib/pasos";
+  pasoTrackingDe,
+} from "../../../shared/lib/operacion";
+import type { PerfilEmbarque } from "../../../shared/lib/tipos";
+import { actividadesDelPerfil, pasoDeTab, puedeEditar } from "../../lib/pasos";
 
 /* ==========================================================================
  * TAB GENÉRICA DE ACTIVIDADES (SOLO MAQUETA)
@@ -32,23 +31,16 @@ import {
  * Según el perfil: Operaciones ve todas las actividades (edita solo las de
  * OPS); Bodegas y Combex ven solo las de su área.
  *
- * Los formularios no viven aquí: cada actividad usa el de su actor
- * (`operaciones/`, `bodegas/`, `combex/`), según su responsable.
+ * Los formularios no viven aquí: cada actividad usa la tarjeta común con la
+ * gestión de su responsable en la operación, o su formulario propio
+ * (`formularios` de la operación, en la carpeta del actor).
  * ========================================================================== */
 
-/** Formulario de cada actor (carpeta del actor). */
-const FORMULARIO_DE_RESPONSABLE: Record<
-  ResponsableTracking,
-  (props: PropsActividad) => React.ReactNode
-> = {
-  OPS: ActividadOperaciones,
-  Bodega: ActividadBodegas,
-  CBX: ActividadCombex,
-};
-
 function FormularioActividad(props: PropsActividad) {
-  const Formulario = FORMULARIO_DE_RESPONSABLE[props.actividad.responsable];
-  return <Formulario {...props} />;
+  const operacion = useOperacion();
+  const Formulario = operacion.formularios?.[props.actividad.id] ?? TarjetaActividad;
+  const gestion = gestionDeActividad(operacion, props.actividad) ?? { interaccion: "formulario" };
+  return <Formulario {...props} gestion={gestion} />;
 }
 
 /** Orden de las tabs por tipo (siempre todas; abre la primera con actividades). */
@@ -82,14 +74,15 @@ export function PasoActividades({
   servicio: string;
   perfil: PerfilEmbarque;
 }) {
-  const actividades = actividadesDelPerfil(paso, perfil);
+  const operacion = useOperacion();
+  const actividades = actividadesDelPerfil(operacion, paso, perfil);
   const porTipo = ORDEN_TIPOS.map((tipo) => ({
     tipo,
     actividades: actividades.filter((actividad) => actividad.tipo === tipo),
   }));
   const tipoInicial = porTipo.find((grupo) => grupo.actividades.length > 0)?.tipo;
-  const pasoTracking = pasoDeTab(paso) ?? actividades[0]?.paso;
-  const nombrePaso = TRACKING_PASOS.find((item) => item.id === pasoTracking)?.titulo;
+  const pasoTracking = pasoDeTab(operacion, paso) ?? actividades[0]?.paso;
+  const nombrePaso = pasoTrackingDe(operacion, pasoTracking)?.titulo;
 
   return (
     <div className="space-y-4">
@@ -144,7 +137,7 @@ export function PasoActividades({
                       actividad={actividad}
                       pasoActual={pasoActual}
                       servicio={servicio}
-                      editable={puedeEditar(actividad, perfil)}
+                      editable={puedeEditar(operacion, actividad, perfil)}
                     />
                   ))}
                 </section>

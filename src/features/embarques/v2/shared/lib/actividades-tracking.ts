@@ -7,6 +7,8 @@
  *
  * `id` = responsable + código (los códigos se repiten entre áreas: OPS 0.1,
  * Bodega 0.1, CBX E1...). Las tabs se relacionan con estas actividades por id.
+ * El id es único dentro de la operación (`general/lib/operaciones/aereo-expo.ts`); otra
+ * operación tiene su propia lista y sus propios ids.
  * ========================================================================== */
 
 import type { ResponsableTracking } from "./tipos";
@@ -856,12 +858,3 @@ export const ACTIVIDADES_TRACKING: readonly ActividadTracking[] = [
     control: "Registrar fecha y hora",
   },
 ];
-
-export function actividadesDelPaso(paso: number): ActividadTracking[] {
-  return ACTIVIDADES_TRACKING.filter((actividad) => actividad.paso === paso);
-}
-
-/** Actividades de esos ids, en el orden de `ids` (los que no existen se omiten). */
-export function actividadesPorId(ids: readonly string[]): ActividadTracking[] {
-  return ids.flatMap((id) => ACTIVIDADES_TRACKING.find((actividad) => actividad.id === id) ?? []);
-}

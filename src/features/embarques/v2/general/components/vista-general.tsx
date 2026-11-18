@@ -1,11 +1,12 @@
 "use client";
 
-import { MousePointerClick } from "lucide-react";
+import { MousePointerClick, TriangleAlert } from "lucide-react";
 import * as React from "react";
+import { OperacionContext } from "../../shared/components/operacion-context";
 import { AbrirTrackingContext } from "../../shared/components/tarjeta-actividad";
 import type { EmbarqueMaqueta, PerfilEmbarque } from "../../shared/lib/tipos";
 import { EMBARQUES_MAQUETA } from "../lib/datos-maqueta";
-import type { ValorPasoEmbarque } from "../lib/pasos";
+import { operacionDeEmbarque } from "../lib/registro-operaciones";
 import { DetalleActividadesSheet } from "./detalle-actividades-sheet";
 import { EmbarquesTable } from "./embarques-table";
 import { ResumenEmbarque } from "./resumen-embarque";
@@ -16,11 +17,13 @@ import { type ActualizarEstadoTracking, TrackingSheet } from "./tracking-sheet";
  * VISTA GENERAL DE EMBARQUES (SOLO MAQUETA)
  *
  * 1. Tabla de embarques.
- * 2. Resumen del seleccionado + tracking general de 6 pasos (solo visual).
+ * 2. Resumen del seleccionado + tracking general (solo visual).
  * 3. Tabs con los pasos de gestión (según el perfil de la pantalla).
  * 4. Sheet lateral con el tracking interactivo existente (`TrackingDetalle`).
  * 5. Sheet lateral con el detalle de actividades del Excel (aparte).
  *
+ * Pasos, tabs y actividades salen de la operación del embarque seleccionado
+ * (`lib/registro-operaciones.ts`), que se entrega con `OperacionContext`.
  * `perfil` permite reutilizar la vista en Operaciones, Bodegas y Combex.
  * Sin API todavía: usa datos de `lib/datos-maqueta.ts`.
  * ========================================================================== */
@@ -42,11 +45,12 @@ export const VistaGeneral = ({
   onActualizarEstadoTracking,
 }: VistaGeneralProps) => {
   const [seleccionado, setSeleccionado] = React.useState<EmbarqueMaqueta | null>(null);
-  const [tab, setTab] = React.useState<ValorPasoEmbarque>("informacion");
+  const [tab, setTab] = React.useState("informacion");
   const [trackingOpen, setTrackingOpen] = React.useState(false);
   const [actividadesOpen, setActividadesOpen] = React.useState(false);
 
   const abrirTracking = React.useCallback(() => setTrackingOpen(true), []);
+  const operacion = seleccionado ? operacionDeEmbarque(seleccionado) : null;
 
   const seccionRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -61,61 +65,72 @@ export const VistaGeneral = ({
   }, [seleccionado]);
 
   return (
-    <div className="space-y-4 w-full">
-      {/* ================================================================
+    <OperacionContext value={operacion}>
+      <div className="space-y-4 w-full">
+        {/* ================================================================
           LISTADO
       ================================================================= */}
-      <section className="rounded-lg border bg-card p-4 shadow-sm">
-        <EmbarquesTable
-          data={EMBARQUES_MAQUETA}
-          seleccionado={seleccionado}
-          onSeleccionar={seleccionar}
-        />
-      </section>
+        <section className="rounded-lg border bg-card p-4 shadow-sm">
+          <EmbarquesTable
+            data={EMBARQUES_MAQUETA}
+            seleccionado={seleccionado}
+            onSeleccionar={seleccionar}
+          />
+        </section>
 
-      {/* ================================================================
+        {/* ================================================================
           EMBARQUE SELECCIONADO
       ================================================================= */}
-      {seleccionado ? (
-        <div ref={seccionRef} className="space-y-4">
-          <ResumenEmbarque
-            embarque={seleccionado}
-            onVerTracking={() => setTrackingOpen(true)}
-            onVerActividades={() => setActividadesOpen(true)}
-          />
+        {seleccionado && operacion ? (
+          <div ref={seccionRef} className="space-y-4">
+            <ResumenEmbarque
+              embarque={seleccionado}
+              onVerTracking={() => setTrackingOpen(true)}
+              onVerActividades={() => setActividadesOpen(true)}
+            />
 
-          <section className="rounded-lg border bg-card p-2 shadow-sm">
-            <AbrirTrackingContext value={abrirTracking}>
-              <TabsEmbarque
-                embarque={seleccionado}
-                perfil={perfil}
-                value={tab}
-                onValueChange={setTab}
-              />
-            </AbrirTrackingContext>
-          </section>
-        </div>
-      ) : (
-        <div className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted bg-card p-6 text-sm text-muted-foreground">
-          <MousePointerClick className="size-5" aria-hidden="true" />
-          Seleccione un embarque de la tabla para ver su información.
-        </div>
-      )}
+            <section className="rounded-lg border bg-card p-2 shadow-sm">
+              <AbrirTrackingContext value={abrirTracking}>
+                <TabsEmbarque
+                  embarque={seleccionado}
+                  perfil={perfil}
+                  value={tab}
+                  onValueChange={setTab}
+                />
+              </AbrirTrackingContext>
+            </section>
+          </div>
+        ) : seleccionado ? (
+          <div
+            ref={seccionRef}
+            className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted bg-card p-6 text-center text-sm text-muted-foreground"
+          >
+            <TriangleAlert className="size-5" aria-hidden="true" />
+            La operación de este embarque ({seleccionado.tipoTransporte}) aún no tiene pasos ni
+            actividades definidos.
+          </div>
+        ) : (
+          <div className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted bg-card p-6 text-sm text-muted-foreground">
+            <MousePointerClick className="size-5" aria-hidden="true" />
+            Seleccione un embarque de la tabla para ver su información.
+          </div>
+        )}
 
-      <TrackingSheet
-        open={trackingOpen}
-        onOpenChange={setTrackingOpen}
-        embarque={seleccionado}
-        codTipo={codTipoTracking}
-        onActualizarEstado={onActualizarEstadoTracking}
-      />
+        <TrackingSheet
+          open={trackingOpen}
+          onOpenChange={setTrackingOpen}
+          embarque={seleccionado}
+          codTipo={codTipoTracking}
+          onActualizarEstado={onActualizarEstadoTracking}
+        />
 
-      <DetalleActividadesSheet
-        open={actividadesOpen}
-        onOpenChange={setActividadesOpen}
-        embarque={seleccionado}
-        perfil={perfil}
-      />
-    </div>
+        <DetalleActividadesSheet
+          open={actividadesOpen}
+          onOpenChange={setActividadesOpen}
+          embarque={seleccionado}
+          perfil={perfil}
+        />
+      </div>
+    </OperacionContext>
   );
 };

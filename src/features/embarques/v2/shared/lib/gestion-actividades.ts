@@ -2,7 +2,8 @@
  * GESTIÓN DE ACTIVIDADES: MOTOR COMÚN (SOLO MAQUETA)
  *
  * Tipo y helpers para definir cómo se trabaja una actividad del tracking.
- * Las definiciones viven en la carpeta de cada actor:
+ * Las definiciones viven en la carpeta de cada actor y cada operación las
+ * asigna a su responsable (`responsables` de la operación). Exportación Aérea:
  *
  *   OPS    → operaciones/lib/gestion-actividades.ts (GESTION_OPERACIONES)
  *   Bodega → bodegas/lib/gestion-actividades.ts     (GESTION_BODEGAS)
@@ -29,16 +30,6 @@ export type GestionActividad = {
 
 /** Definiciones de un actor: id de la actividad (`"OPS 2.1"`) → cómo se trabaja. */
 export type DefinicionesGestion = Record<string, GestionActividad>;
-
-const GESTION_DEFAULT: GestionActividad = { interaccion: "formulario" };
-
-/** Definición de la actividad (sin entrada: formulario genérico). */
-export function gestionDe(
-  definiciones: DefinicionesGestion,
-  idActividad: string,
-): GestionActividad {
-  return definiciones[idActividad] ?? GESTION_DEFAULT;
-}
 
 /** Campos de la actividad: los propios y después los base de su tipo. */
 export function camposDe(gestion: GestionActividad): CampoGestion[] {

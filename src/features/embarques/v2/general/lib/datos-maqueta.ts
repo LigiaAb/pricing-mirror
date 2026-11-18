@@ -9,9 +9,9 @@ import type {
   ArchivoEmbarque,
   EmbarqueMaqueta,
   InformacionEmbarque,
+  PasoTracking,
   RegistroBitacora,
 } from "../../shared/lib/tipos";
-import { TRACKING_PASOS } from "./pasos";
 
 export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
   {
@@ -221,7 +221,10 @@ function fechaOrdenable(fecha: string): string {
  * archivos de `ARCHIVOS_MAQUETA` y pasos completados según `pasoActual`.
  * Del más reciente al más antiguo.
  */
-export function bitacoraMaqueta(embarque: EmbarqueMaqueta): RegistroBitacora[] {
+export function bitacoraMaqueta(
+  embarque: EmbarqueMaqueta,
+  pasos: readonly PasoTracking[],
+): RegistroBitacora[] {
   const registros: Omit<RegistroBitacora, "id">[] = [
     {
       fecha: "20-10-2026 08:30",
@@ -245,7 +248,7 @@ export function bitacoraMaqueta(embarque: EmbarqueMaqueta): RegistroBitacora[] {
       paso: archivo.paso,
     });
   }
-  for (const paso of TRACKING_PASOS.filter((item) => item.id < embarque.pasoActual)) {
+  for (const paso of pasos.filter((item) => item.id < embarque.pasoActual)) {
     registros.push({
       fecha: `${20 + paso.id}-10-2026 17:00`,
       usuario: "jlopez",
