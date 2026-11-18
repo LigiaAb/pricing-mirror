@@ -57,6 +57,7 @@ Las rutas de abajo sin carpeta son relativas a `general/`.
 | Tab genérica (todas las del flujo)    | `components/pasos/paso-actividades.tsx`                              |
 | Tabs con contenido propio             | `pasos/paso-informacion.tsx`, `pasos/paso-archivos.tsx`              |
 | Archivos del embarque (maqueta)       | `ArchivoEmbarque` en `shared/lib/tipos.ts`; `ARCHIVOS_MAQUETA`       |
+| Bitácora del embarque (maqueta)       | `RegistroBitacora` en `shared/lib/tipos.ts`; `bitacoraMaqueta`       |
 
 ## Tracking general (Exportación Aérea)
 
@@ -109,6 +110,7 @@ tracking (`1 · Reserva`, `2 · Documentación`…); la tab muestra check si su 
 | 5    | Complementaria        | CBX 12.2, 13.1, 13.2                           |
 | 6    | Arribo y cierre       | CBX 14.1; OPS 15, 16, 17                       |
 | —    | Archivos (extra)      | —                                              |
+| —    | Bitácora (extra)      | —                                              |
 | —    | Cancelación (extra)   | OPS 4.4                                        |
 
 ### Tipos de interacción (`shared/lib/interacciones.ts`)
@@ -249,6 +251,10 @@ fecha; botones Ver y Descargar (deshabilitados en la maqueta). Usa una **tabla p
 mismo formato que `VersionesTable` de Cotizaciones: encabezado con título, conteo y búsqueda (con x para limpiar,
 `BotonLimpiar` de `shared/components/campos.tsx`) y `Table` simple sin paginación. No tiene botón ni zona de subida. Datos de
 `ARCHIVOS_MAQUETA` (por `id` del embarque) hasta que exista la API.
+
+**Bitácora** (`pasos/paso-bitacora.tsx`, grupo `extra`, `paraTodos`): historial de solo consulta (fecha, usuario,
+acción, detalle y paso), con la misma tabla y búsqueda que Archivos. **Mock** (`bitacoraMaqueta`: creación, archivos y
+pasos completados) mientras se busca la API (#124).
 
 **Facturación** (solo visualización): en pausa. Cuando se retome, sería otra entrada `grupo: "extra"` en
 `PASOS_EMBARQUE`, de solo lectura.

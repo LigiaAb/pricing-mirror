@@ -5,7 +5,13 @@
  * Se eliminan cuando exista la API de embarques (`v2/embarques/api`).
  * ========================================================================== */
 
-import type { ArchivoEmbarque, EmbarqueMaqueta, InformacionEmbarque } from "../../shared/lib/tipos";
+import type {
+  ArchivoEmbarque,
+  EmbarqueMaqueta,
+  InformacionEmbarque,
+  RegistroBitacora,
+} from "../../shared/lib/tipos";
+import { TRACKING_PASOS } from "./pasos";
 
 export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
   {
@@ -201,6 +207,54 @@ function diaAnterior(fecha: string): string | undefined {
  * pago, carga, incoterm, servicio, clasificación, unidad de medida, embalaje,
  * régimen y aeropuertos) quedan vacíos ("—") hasta conectar la API.
  */
+/** "dd-MM-yyyy HH:mm" → "yyyy-MM-dd HH:mm" (para ordenar). */
+function fechaOrdenable(fecha: string): string {
+  return fecha.replace(/^(\d{2})-(\d{2})-(\d{4})/, "$3-$2-$1");
+}
+
+/**
+ * Bitácora de ejemplo (tab Bitácora) mientras se busca la API: creación,
+ * archivos de `ARCHIVOS_MAQUETA` y pasos completados según `pasoActual`.
+ * Del más reciente al más antiguo.
+ */
+export function bitacoraMaqueta(embarque: EmbarqueMaqueta): RegistroBitacora[] {
+  const registros: Omit<RegistroBitacora, "id">[] = [
+    {
+      fecha: "20-10-2026 08:30",
+      usuario: "jlopez",
+      accion: "Creación",
+      detalle: `Embarque ${embarque.codFile} creado desde la coordinación.`,
+    },
+    {
+      fecha: "20-10-2026 09:05",
+      usuario: "jlopez",
+      accion: "Información",
+      detalle: "Datos del shipper, consignatario y carga actualizados.",
+    },
+  ];
+  for (const archivo of ARCHIVOS_MAQUETA[embarque.id] ?? []) {
+    registros.push({
+      fecha: archivo.fecha,
+      usuario: archivo.usuario,
+      accion: "Archivo",
+      detalle: `${archivo.tipo}: ${archivo.nombre}`,
+      paso: archivo.paso,
+    });
+  }
+  for (const paso of TRACKING_PASOS.filter((item) => item.id < embarque.pasoActual)) {
+    registros.push({
+      fecha: `${20 + paso.id}-10-2026 17:00`,
+      usuario: "jlopez",
+      accion: "Paso completado",
+      detalle: paso.titulo,
+      paso: paso.id,
+    });
+  }
+  return registros
+    .sort((a, b) => fechaOrdenable(b.fecha).localeCompare(fechaOrdenable(a.fecha)))
+    .map((registro, indice) => ({ ...registro, id: indice + 1 }));
+}
+
 export function informacionMaqueta(embarque: EmbarqueMaqueta): InformacionEmbarque {
   const destino = DESTINOS_MAQUETA[embarque.destino];
   return {

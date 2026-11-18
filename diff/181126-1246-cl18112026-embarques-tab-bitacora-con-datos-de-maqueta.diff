@@ -1,0 +1,330 @@
+diff --git a/src/features/embarques/v2/general/ARQUITECTURA.md b/src/features/embarques/v2/general/ARQUITECTURA.md
+index 5567d04..517f4e1 100644
+--- a/src/features/embarques/v2/general/ARQUITECTURA.md
++++ b/src/features/embarques/v2/general/ARQUITECTURA.md
+@@ -57,6 +57,7 @@ Las rutas de abajo sin carpeta son relativas a `general/`.
+ | Tab genérica (todas las del flujo)    | `components/pasos/paso-actividades.tsx`                              |
+ | Tabs con contenido propio             | `pasos/paso-informacion.tsx`, `pasos/paso-archivos.tsx`              |
+ | Archivos del embarque (maqueta)       | `ArchivoEmbarque` en `shared/lib/tipos.ts`; `ARCHIVOS_MAQUETA`       |
++| Bitácora del embarque (maqueta)       | `RegistroBitacora` en `shared/lib/tipos.ts`; `bitacoraMaqueta`       |
+ 
+ ## Tracking general (Exportación Aérea)
+ 
+@@ -109,6 +110,7 @@ tracking (`1 · Reserva`, `2 · Documentación`…); la tab muestra check si su
+ | 5    | Complementaria        | CBX 12.2, 13.1, 13.2                           |
+ | 6    | Arribo y cierre       | CBX 14.1; OPS 15, 16, 17                       |
+ | —    | Archivos (extra)      | —                                              |
++| —    | Bitácora (extra)      | —                                              |
+ | —    | Cancelación (extra)   | OPS 4.4                                        |
+ 
+ ### Tipos de interacción (`shared/lib/interacciones.ts`)
+@@ -250,5 +252,9 @@ mismo formato que `VersionesTable` de Cotizaciones: encabezado con título, cont
+ `BotonLimpiar` de `shared/components/campos.tsx`) y `Table` simple sin paginación. No tiene botón ni zona de subida. Datos de
+ `ARCHIVOS_MAQUETA` (por `id` del embarque) hasta que exista la API.
+ 
++**Bitácora** (`pasos/paso-bitacora.tsx`, grupo `extra`, `paraTodos`): historial de solo consulta (fecha, usuario,
++acción, detalle y paso), con la misma tabla y búsqueda que Archivos. **Mock** (`bitacoraMaqueta`: creación, archivos y
++pasos completados) mientras se busca la API (#124).
++
+ **Facturación** (solo visualización): en pausa. Cuando se retome, sería otra entrada `grupo: "extra"` en
+ `PASOS_EMBARQUE`, de solo lectura.
+diff --git a/src/features/embarques/v2/general/components/pasos/paso-bitacora.tsx b/src/features/embarques/v2/general/components/pasos/paso-bitacora.tsx
+new file mode 100644
+index 0000000..b8bdc2c
+--- /dev/null
++++ b/src/features/embarques/v2/general/components/pasos/paso-bitacora.tsx
+@@ -0,0 +1,134 @@
++"use client";
++
++import { Search } from "lucide-react";
++import type { ChangeEvent } from "react";
++import * as React from "react";
++import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/components/ui/input-group";
++import {
++  Table,
++  TableBody,
++  TableCell,
++  TableHead,
++  TableHeader,
++  TableRow,
++} from "@/shared/components/ui/table";
++import { BotonLimpiar } from "../../../shared/components/campos";
++import { EncabezadoPaso } from "../../../shared/components/utils";
++import type { EmbarqueMaqueta, RegistroBitacora } from "../../../shared/lib/tipos";
++import { bitacoraMaqueta } from "../../lib/datos-maqueta";
++import { type PasoEmbarque, TRACKING_PASOS } from "../../lib/pasos";
++
++/** Fila de la tabla: el registro + el paso como texto ("3 · Bodega"). */
++type FilaBitacora = RegistroBitacora & { pasoTexto: string };
++
++/** Columnas de la tabla (encabezados + celda vacía de "sin registros"). */
++const TOTAL_COLUMNAS = 5;
++
++function aFila(registro: RegistroBitacora): FilaBitacora {
++  const corto = TRACKING_PASOS.find((paso) => paso.id === registro.paso)?.corto;
++  return { ...registro, pasoTexto: corto ? `${registro.paso} · ${corto}` : "—" };
++}
++
++/** Busca en fecha, usuario, acción, detalle y paso (sin distinguir mayúsculas). */
++function coincide(fila: FilaBitacora, busqueda: string) {
++  return [fila.fecha, fila.usuario, fila.accion, fila.detalle, fila.pasoTexto].some((texto) =>
++    texto.toLowerCase().includes(busqueda),
++  );
++}
++
++/**
++ * Bitácora del embarque: historial de solo consulta (quién, qué y cuándo).
++ * MAQUETA: datos de `bitacoraMaqueta` hasta que exista la API (#124).
++ * Mismo formato que la tab Archivos: encabezado con título, conteo y búsqueda,
++ * y `Table` simple sin paginación.
++ */
++export function PasoBitacora({
++  paso,
++  embarque,
++}: {
++  paso: PasoEmbarque;
++  embarque: EmbarqueMaqueta;
++}) {
++  const [busqueda, setBusqueda] = React.useState("");
++  const filas = React.useMemo(() => bitacoraMaqueta(embarque).map(aFila), [embarque]);
++  const texto = busqueda.trim().toLowerCase();
++  const visibles = texto ? filas.filter((fila) => coincide(fila, texto)) : filas;
++
++  return (
++    <div className="space-y-4">
++      <EncabezadoPaso titulo={paso.label} descripcion={paso.descripcion} />
++
++      <section className="overflow-hidden rounded-lg border">
++        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
++          <div>
++            <h3 className="font-semibold">Bitácora del embarque</h3>
++            <p className="text-xs text-muted-foreground">
++              {texto
++                ? `${visibles.length} de ${filas.length} registros`
++                : `${filas.length} ${filas.length === 1 ? "registro" : "registros"}`}{" "}
++              · del más reciente al más antiguo
++            </p>
++          </div>
++
++          {filas.length ? (
++            <InputGroup className="w-full sm:w-72">
++              <InputGroupAddon>
++                <Search className="size-4" aria-hidden="true" />
++              </InputGroupAddon>
++              <InputGroupInput
++                value={busqueda}
++                onChange={(e: ChangeEvent<HTMLInputElement>) => setBusqueda(e.target.value)}
++                placeholder="Buscar en la bitácora…"
++                aria-label="Buscar en la bitácora"
++              />
++              {busqueda ? (
++                <InputGroupAddon align="inline-end">
++                  <BotonLimpiar onClick={() => setBusqueda("")} />
++                </InputGroupAddon>
++              ) : null}
++            </InputGroup>
++          ) : null}
++        </div>
++
++        <div className="overflow-x-auto">
++          <Table>
++            <TableHeader>
++              <TableRow>
++                <TableHead>Fecha</TableHead>
++                <TableHead>Usuario</TableHead>
++                <TableHead>Acción</TableHead>
++                <TableHead>Detalle</TableHead>
++                <TableHead>Paso</TableHead>
++              </TableRow>
++            </TableHeader>
++
++            <TableBody>
++              {!visibles.length ? (
++                <TableRow>
++                  <TableCell
++                    colSpan={TOTAL_COLUMNAS}
++                    className="h-20 text-center text-muted-foreground"
++                  >
++                    {filas.length
++                      ? "Ningún registro coincide con la búsqueda."
++                      : "Este embarque aún no tiene registros."}
++                  </TableCell>
++                </TableRow>
++              ) : (
++                visibles.map((fila) => (
++                  <TableRow key={fila.id} className="hover:bg-muted">
++                    <TableCell className="text-nowrap">{fila.fecha}</TableCell>
++                    <TableCell>{fila.usuario}</TableCell>
++                    <TableCell className="font-medium">{fila.accion}</TableCell>
++                    <TableCell>{fila.detalle}</TableCell>
++                    <TableCell className="text-nowrap">{fila.pasoTexto}</TableCell>
++                  </TableRow>
++                ))
++              )}
++            </TableBody>
++          </Table>
++        </div>
++      </section>
++    </div>
++  );
++}
+diff --git a/src/features/embarques/v2/general/components/tabs-embarque.tsx b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+index 5290f6d..704a78f 100644
+--- a/src/features/embarques/v2/general/components/tabs-embarque.tsx
++++ b/src/features/embarques/v2/general/components/tabs-embarque.tsx
+@@ -7,6 +7,7 @@ import {
+   FileStack,
+   FileText,
+   FolderOpen,
++  History,
+   Landmark,
+   type LucideIcon,
+   PackageCheck,
+@@ -34,6 +35,7 @@ import {
+ } from "../lib/pasos";
+ import { PasoActividades } from "./pasos/paso-actividades";
+ import { PasoArchivos } from "./pasos/paso-archivos";
++import { PasoBitacora } from "./pasos/paso-bitacora";
+ import { PasoInformacion } from "./pasos/paso-informacion";
+ 
+ const ICONOS: Record<ValorPasoEmbarque, LucideIcon> = {
+@@ -53,6 +55,7 @@ const ICONOS: Record<ValorPasoEmbarque, LucideIcon> = {
+   complementaria: FileText,
+   cierre: PlaneLanding,
+   archivos: FolderOpen,
++  bitacora: History,
+   cancelacion: Ban,
+ };
+ 
+@@ -71,6 +74,8 @@ function contenidoPaso(
+       return <PasoInformacion embarque={embarque} editable={puedeEditarInformacion(perfil)} />;
+     case "archivos":
+       return <PasoArchivos paso={paso} embarque={embarque} />;
++    case "bitacora":
++      return <PasoBitacora paso={paso} embarque={embarque} />;
+     default:
+       return <PasoActividades paso={paso} pasoActual={embarque.pasoActual} perfil={perfil} />;
+   }
+diff --git a/src/features/embarques/v2/general/lib/datos-maqueta.ts b/src/features/embarques/v2/general/lib/datos-maqueta.ts
+index ecd7c34..5a16a5f 100644
+--- a/src/features/embarques/v2/general/lib/datos-maqueta.ts
++++ b/src/features/embarques/v2/general/lib/datos-maqueta.ts
+@@ -5,7 +5,13 @@
+  * Se eliminan cuando exista la API de embarques (`v2/embarques/api`).
+  * ========================================================================== */
+ 
+-import type { ArchivoEmbarque, EmbarqueMaqueta, InformacionEmbarque } from "../../shared/lib/tipos";
++import type {
++  ArchivoEmbarque,
++  EmbarqueMaqueta,
++  InformacionEmbarque,
++  RegistroBitacora,
++} from "../../shared/lib/tipos";
++import { TRACKING_PASOS } from "./pasos";
+ 
+ export const EMBARQUES_MAQUETA: EmbarqueMaqueta[] = [
+   {
+@@ -201,6 +207,54 @@ function diaAnterior(fecha: string): string | undefined {
+  * pago, carga, incoterm, servicio, clasificación, unidad de medida, embalaje,
+  * régimen y aeropuertos) quedan vacíos ("—") hasta conectar la API.
+  */
++/** "dd-MM-yyyy HH:mm" → "yyyy-MM-dd HH:mm" (para ordenar). */
++function fechaOrdenable(fecha: string): string {
++  return fecha.replace(/^(\d{2})-(\d{2})-(\d{4})/, "$3-$2-$1");
++}
++
++/**
++ * Bitácora de ejemplo (tab Bitácora) mientras se busca la API: creación,
++ * archivos de `ARCHIVOS_MAQUETA` y pasos completados según `pasoActual`.
++ * Del más reciente al más antiguo.
++ */
++export function bitacoraMaqueta(embarque: EmbarqueMaqueta): RegistroBitacora[] {
++  const registros: Omit<RegistroBitacora, "id">[] = [
++    {
++      fecha: "20-10-2026 08:30",
++      usuario: "jlopez",
++      accion: "Creación",
++      detalle: `Embarque ${embarque.codFile} creado desde la coordinación.`,
++    },
++    {
++      fecha: "20-10-2026 09:05",
++      usuario: "jlopez",
++      accion: "Información",
++      detalle: "Datos del shipper, consignatario y carga actualizados.",
++    },
++  ];
++  for (const archivo of ARCHIVOS_MAQUETA[embarque.id] ?? []) {
++    registros.push({
++      fecha: archivo.fecha,
++      usuario: archivo.usuario,
++      accion: "Archivo",
++      detalle: `${archivo.tipo}: ${archivo.nombre}`,
++      paso: archivo.paso,
++    });
++  }
++  for (const paso of TRACKING_PASOS.filter((item) => item.id < embarque.pasoActual)) {
++    registros.push({
++      fecha: `${20 + paso.id}-10-2026 17:00`,
++      usuario: "jlopez",
++      accion: "Paso completado",
++      detalle: paso.titulo,
++      paso: paso.id,
++    });
++  }
++  return registros
++    .sort((a, b) => fechaOrdenable(b.fecha).localeCompare(fechaOrdenable(a.fecha)))
++    .map((registro, indice) => ({ ...registro, id: indice + 1 }));
++}
++
+ export function informacionMaqueta(embarque: EmbarqueMaqueta): InformacionEmbarque {
+   const destino = DESTINOS_MAQUETA[embarque.destino];
+   return {
+diff --git a/src/features/embarques/v2/general/lib/pasos.ts b/src/features/embarques/v2/general/lib/pasos.ts
+index dc13c81..c3242a6 100644
+--- a/src/features/embarques/v2/general/lib/pasos.ts
++++ b/src/features/embarques/v2/general/lib/pasos.ts
+@@ -97,6 +97,7 @@ export type ValorPasoEmbarque =
+   | "complementaria"
+   | "cierre"
+   | "archivos"
++  | "bitacora"
+   | "cancelacion";
+ 
+ export type PasoEmbarque = {
+@@ -289,6 +290,15 @@ export const PASOS_EMBARQUE: readonly PasoEmbarque[] = [
+     grupo: "extra",
+     paraTodos: true,
+   },
++  {
++    value: "bitacora",
++    label: "Bitácora",
++    detalle: "Historial del embarque",
++    descripcion: "Historial de lo que se hizo en el embarque: quién, qué y cuándo.",
++    actividades: [],
++    grupo: "extra",
++    paraTodos: true,
++  },
+   {
+     value: "cancelacion",
+     label: "Cancelación",
+diff --git a/src/features/embarques/v2/shared/lib/tipos.ts b/src/features/embarques/v2/shared/lib/tipos.ts
+index 7f07ffb..64a7107 100644
+--- a/src/features/embarques/v2/shared/lib/tipos.ts
++++ b/src/features/embarques/v2/shared/lib/tipos.ts
+@@ -97,3 +97,16 @@ export type ArchivoEmbarque = {
+   usuario: string;
+   fecha: string;
+ };
++
++/** Registro de la bitácora del embarque (tab Bitácora, solo consulta). */
++export type RegistroBitacora = {
++  id: number;
++  /** "dd-MM-yyyy HH:mm". */
++  fecha: string;
++  usuario: string;
++  /** Qué pasó (ej. "Creación", "Archivo", "Paso completado"). */
++  accion: string;
++  detalle: string;
++  /** Paso del tracking (1..6) si el registro es de un paso. */
++  paso?: number | undefined;
++};
