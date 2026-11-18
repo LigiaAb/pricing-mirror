@@ -1,0 +1,51 @@
+diff --git a/src/features/pricing/cotizacion/calculo/lib/formulario-cotizacion-helpers.ts b/src/features/pricing/cotizacion/calculo/lib/formulario-cotizacion-helpers.ts
+index 410a383..944db2f 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/formulario-cotizacion-helpers.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/formulario-cotizacion-helpers.ts
+@@ -3,10 +3,10 @@ import { esRegistro, mismoId } from "./utils";
+ 
+ export const PAISES_TERRESTRES = new Set(["GT", "SV", "HN", "NI", "CR", "PA", "BZ", "MX", "US"]);
+ 
++/** Tipo de punto de enlace de la cabecera. Terrestre no lleva: usa ciudades (queda en null). */
+ export const TIPO_PUNTO_POR_TRANSPORTE: Record<string, string> = {
+   AEREO: "AEROPUERTO",
+   MARITIMO: "PUERTO",
+-  TERRESTRE: "ADUANA",
+ };
+ 
+ export function getValue(value: unknown) {
+diff --git a/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts b/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
+index 58e2984..5d73deb 100644
+--- a/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
++++ b/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
+@@ -529,30 +529,6 @@ export function useFormulario({
+         const next = { ...prev };
+         const regla = fieldRules[id];
+ 
+-        if (id === "tipoTransporte") {
+-          const tipoTransporteSeleccionado = val as { label?: string } | null;
+-
+-          const tipoOrigenVsTipoTransporte: Record<string, string> = {
+-            AEREO: "AEROPUERTO",
+-            MARITIMO: "PUERTO",
+-            TERRESTRE: "ADUANA",
+-          };
+-
+-          const tipoPuntoEnlace =
+-            tipoOrigenVsTipoTransporte?.[tipoTransporteSeleccionado?.label ?? ""];
+-
+-          const tipoPuntoEnlaceEncontrado =
+-            (
+-              (catalogosProcesados?.tiposPuntoEnlace || []) as Array<{
+-                label?: string;
+-                value?: unknown;
+-              }>
+-            ).find((item) => item.label === tipoPuntoEnlace) ?? null;
+-
+-          next.tipoPuntoEnlaceOrigen = tipoPuntoEnlaceEncontrado;
+-          next.tipoPuntoEnlaceDestino = tipoPuntoEnlaceEncontrado;
+-        }
+-
+         if (id === "rubro") {
+           const rubroSeleccionado = val as { value?: number; label?: string } | null;
+ 

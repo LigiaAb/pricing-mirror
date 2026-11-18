@@ -529,30 +529,6 @@ export function useFormulario({
         const next = { ...prev };
         const regla = fieldRules[id];
 
-        if (id === "tipoTransporte") {
-          const tipoTransporteSeleccionado = val as { label?: string } | null;
-
-          const tipoOrigenVsTipoTransporte: Record<string, string> = {
-            AEREO: "AEROPUERTO",
-            MARITIMO: "PUERTO",
-            TERRESTRE: "ADUANA",
-          };
-
-          const tipoPuntoEnlace =
-            tipoOrigenVsTipoTransporte?.[tipoTransporteSeleccionado?.label ?? ""];
-
-          const tipoPuntoEnlaceEncontrado =
-            (
-              (catalogosProcesados?.tiposPuntoEnlace || []) as Array<{
-                label?: string;
-                value?: unknown;
-              }>
-            ).find((item) => item.label === tipoPuntoEnlace) ?? null;
-
-          next.tipoPuntoEnlaceOrigen = tipoPuntoEnlaceEncontrado;
-          next.tipoPuntoEnlaceDestino = tipoPuntoEnlaceEncontrado;
-        }
-
         if (id === "rubro") {
           const rubroSeleccionado = val as { value?: number; label?: string } | null;
 
