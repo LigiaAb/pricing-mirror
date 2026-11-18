@@ -1,5 +1,6 @@
+import { esNombre } from "@/features/pricing/shared";
 import { construirAgrupacionAutomatica } from "./agrupacion-rubros";
-import { TIPO_PAGO } from "./constantes";
+import { NOMBRE_RUBRO, TIPO_PAGO } from "./constantes";
 import type { Id } from "./tipos";
 import { getLetraTipoPago, getMetodo } from "./totales-rubros-helpers";
 import type {
@@ -14,12 +15,9 @@ import type {
  * ========================================================================== */
 
 function esRubroIva(item: RubroTotal, codRubroIVA?: Id | null) {
-  const nombre = String(item.nombre ?? item.gruporubro_nombre ?? "")
-    .trim()
-    .toUpperCase();
-
   return (
-    (codRubroIVA != null && String(item.cod_rubro) === String(codRubroIVA)) || nombre === "IVA"
+    (codRubroIVA != null && String(item.cod_rubro) === String(codRubroIVA)) ||
+    esNombre(item.nombre ?? item.gruporubro_nombre, NOMBRE_RUBRO.IVA)
   );
 }
 

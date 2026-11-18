@@ -4,7 +4,7 @@ import { Check, ChevronsUpDown, Loader2, Plus, X } from "lucide-react";
 import * as React from "react";
 
 import { NuevoContactoEntidad } from "@/features/entidades";
-import { ComboboxOpcion } from "@/features/pricing/shared";
+import { ComboboxOpcion, esNombre } from "@/features/pricing/shared";
 import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -34,6 +34,7 @@ import {
   useFormularioCotizacion,
 } from "../hooks/use-formulario-cotizacion";
 import { etiquetaCampo } from "../lib/cabecera";
+import { NOMBRE_TRANSPORTE } from "../lib/constantes";
 import type { Id } from "../lib/tipos";
 import { Grupo } from "./utils";
 
@@ -407,7 +408,10 @@ export function CotizacionForm({
 
   const [contactoDialogOpen, setContactoDialogOpen] = React.useState(false);
 
-  const tipoTransporte = obtenerOpcion(values.tipoTransporte);
+  const esTerrestre = esNombre(
+    obtenerOpcion(values.tipoTransporte)?.nomTipo,
+    NOMBRE_TRANSPORTE.TERRESTRE,
+  );
 
   const formId = React.useId();
 
@@ -677,29 +681,25 @@ export function CotizacionForm({
           <Grupo id="origen" titulo="Origen" visible={verificarSiGrupoEsVisible("origen")}>
             {renderSelect("paisOrigen")}
 
-            {tipoTransporte?.nomTipo !== "TERRESTRE" && renderSelect("tipoPuntoEnlaceOrigen")}
+            {!esTerrestre && renderSelect("tipoPuntoEnlaceOrigen")}
 
-            {tipoTransporte?.nomTipo !== "TERRESTRE" &&
-              renderSelect("puntoEnlaceOrigen", "md:col-span-2")}
+            {!esTerrestre && renderSelect("puntoEnlaceOrigen", "md:col-span-2")}
 
-            {tipoTransporte?.nomTipo === "TERRESTRE" && renderSelect("ciudadOrigen")}
+            {esTerrestre && renderSelect("ciudadOrigen")}
 
-            {tipoTransporte?.nomTipo === "TERRESTRE" &&
-              renderText("direccion_origen", "md:col-span-2")}
+            {esTerrestre && renderText("direccion_origen", "md:col-span-2")}
           </Grupo>
 
           <Grupo id="destino" titulo="Destino" visible={verificarSiGrupoEsVisible("destino")}>
             {renderSelect("paisDestino")}
 
-            {tipoTransporte?.nomTipo !== "TERRESTRE" && renderSelect("tipoPuntoEnlaceDestino")}
+            {!esTerrestre && renderSelect("tipoPuntoEnlaceDestino")}
 
-            {tipoTransporte?.nomTipo !== "TERRESTRE" &&
-              renderSelect("puntoEnlaceDestino", "md:col-span-2")}
+            {!esTerrestre && renderSelect("puntoEnlaceDestino", "md:col-span-2")}
 
-            {tipoTransporte?.nomTipo === "TERRESTRE" && renderSelect("ciudadDestino")}
+            {esTerrestre && renderSelect("ciudadDestino")}
 
-            {tipoTransporte?.nomTipo === "TERRESTRE" &&
-              renderText("direccion_destino", "md:col-span-2")}
+            {esTerrestre && renderText("direccion_destino", "md:col-span-2")}
           </Grupo>
         </div>
 

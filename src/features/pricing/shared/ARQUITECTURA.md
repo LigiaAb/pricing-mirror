@@ -16,6 +16,7 @@ shared/
 │  └─ use-permisos-pricing.ts  ← PERMISOS: usePermisosPricing(OPCION_PERMISOS.<pantalla>) (ver abajo)
 ├─ lib/
 │  ├─ formatos.ts        ← conAmbosFormatos
+│  ├─ nombres.ts         ← normalizarNombre / esNombre: decisiones por nombre de catálogo (NOMBRE_TRANSPORTE...)
 │  └─ vigencia-metodo.ts ← getEstadoMetodo (vencida / próxima a vencer)
 └─ components/
    ├─ combobox-opcion.tsx ← ComboboxOpcion: Combobox (@/shared, en memoria) con valor objeto ↔ string, "x" para
