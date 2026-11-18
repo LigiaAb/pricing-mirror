@@ -3,10 +3,10 @@ import { esRegistro, mismoId } from "./utils";
 
 export const PAISES_TERRESTRES = new Set(["GT", "SV", "HN", "NI", "CR", "PA", "BZ", "MX", "US"]);
 
+/** Tipo de punto de enlace de la cabecera. Terrestre no lleva: usa ciudades (queda en null). */
 export const TIPO_PUNTO_POR_TRANSPORTE: Record<string, string> = {
   AEREO: "AEROPUERTO",
   MARITIMO: "PUERTO",
-  TERRESTRE: "ADUANA",
 };
 
 export function getValue(value: unknown) {
