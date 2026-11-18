@@ -1,14 +1,10 @@
 "use client";
 
 import type React from "react";
-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
+import { ComboboxOpcion } from "@/features/pricing/shared";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/components/ui/input-group";
-import {
-  type MonedaOpcion,
-  type RubroOpcion,
-  useFiltroOpciones,
-} from "../../hooks/use-opciones-tarifa";
+import type { MonedaOpcion, RubroOpcion } from "../../hooks/use-opciones-tarifa";
 import type { DefCampo } from "../../lib/campos-metodo";
 
 /* ==========================================================================
@@ -65,9 +61,6 @@ export function CampoMetodo<C extends Record<string, DefCampo>, F extends object
   const def = metodo.campos[campo] as DefCampo;
   const valores = fila as Record<string, unknown>;
 
-  const fetchMonedas = useFiltroOpciones(monedas);
-  const fetchRubros = useFiltroOpciones(rubros);
-
   const cambiar = (clave: string, valor: unknown) => onChange({ [clave]: valor } as Partial<F>);
 
   const mensajes = errores?.[campo]?.map((mensaje, i) => (
@@ -83,20 +76,14 @@ export function CampoMetodo<C extends Record<string, DefCampo>, F extends object
     const opciones: Opcion[] = esMoneda ? monedas : rubros;
 
     const combo = (
-      <AsyncComboboxInput<Opcion>
+      <ComboboxOpcion<Opcion>
         {...(comboEnvuelto ? {} : { label: def.label })}
         value={(valores[en] as Opcion | null | undefined) ?? null}
         onChange={(opcion: Opcion | null) => cambiar(en, opcion)}
-        fetchOptions={esMoneda ? fetchMonedas : fetchRubros}
-        initialOptions={opciones}
-        getOptionValue={(option: Opcion) => option.value}
-        getOptionLabel={(option: Opcion) => option.label}
+        options={opciones}
         placeholder="Seleccione..."
         searchPlaceholder={esMoneda ? "Buscar moneda..." : "Buscar rubro..."}
-        minSearchLength={0}
-        fetchOnEmpty
-        clearable
-        readOnly={readonly}
+        disabled={readonly}
       />
     );
 

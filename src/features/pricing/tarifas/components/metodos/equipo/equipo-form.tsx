@@ -2,11 +2,10 @@
 
 import React from "react";
 
-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
+import { ComboboxOpcion } from "@/features/pricing/shared";
 import { Button } from "@/shared/components/ui/button";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
-import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
 import {
   type EquipoOption,
   type FilaEquipo,
@@ -40,10 +39,6 @@ export function EquipoForm({
     setValues(value);
   }, [value]);
 
-  const fetchEquipos = useFiltroOpciones(equipos);
-
-  const fetchMonedas = useFiltroOpciones(monedas);
-
   // Requeridos (equipo, monedas, costo, venta) y venta >= costo: ver lib/metodos/equipo.ts.
   const { valido: puedeGuardar, errores } = METODO_EQUIPO.validar(values);
 
@@ -61,7 +56,7 @@ export function EquipoForm({
 
           <InputGroup>
             <div className="w-full">
-              <AsyncComboboxInput<EquipoOption>
+              <ComboboxOpcion<EquipoOption>
                 value={values.cod_equipo ?? null}
                 onChange={(cod_equipo) =>
                   setValues((prev) => ({
@@ -69,16 +64,10 @@ export function EquipoForm({
                     cod_equipo,
                   }))
                 }
-                fetchOptions={fetchEquipos}
-                initialOptions={equipos}
-                getOptionValue={(option) => option.value}
-                getOptionLabel={(option) => option.label}
+                options={equipos}
                 placeholder="Seleccione un equipo..."
                 searchPlaceholder="Buscar equipo..."
-                minSearchLength={0}
-                fetchOnEmpty
-                clearable
-                readOnly={readonly}
+                disabled={readonly}
               />
             </div>
           </InputGroup>
@@ -93,7 +82,7 @@ export function EquipoForm({
 
           <InputGroup>
             <div className="w-full">
-              <AsyncComboboxInput<MonedaEquipoOption>
+              <ComboboxOpcion<MonedaEquipoOption>
                 value={values.cod_moneda_costo ?? null}
                 onChange={(cod_moneda_costo) =>
                   setValues((prev) => ({
@@ -101,16 +90,10 @@ export function EquipoForm({
                     cod_moneda_costo,
                   }))
                 }
-                fetchOptions={fetchMonedas}
-                initialOptions={monedas}
-                getOptionValue={(option) => option.value}
-                getOptionLabel={(option) => option.label}
+                options={monedas}
                 placeholder="Seleccione moneda..."
                 searchPlaceholder="Buscar moneda..."
-                minSearchLength={0}
-                fetchOnEmpty
-                clearable
-                readOnly={readonly}
+                disabled={readonly}
               />
             </div>
           </InputGroup>
@@ -148,7 +131,7 @@ export function EquipoForm({
 
           <InputGroup>
             <div className="w-full">
-              <AsyncComboboxInput<MonedaEquipoOption>
+              <ComboboxOpcion<MonedaEquipoOption>
                 value={values.cod_moneda_venta ?? null}
                 onChange={(cod_moneda_venta) =>
                   setValues((prev) => ({
@@ -156,16 +139,10 @@ export function EquipoForm({
                     cod_moneda_venta,
                   }))
                 }
-                fetchOptions={fetchMonedas}
-                initialOptions={monedas}
-                getOptionValue={(option) => option.value}
-                getOptionLabel={(option) => option.label}
+                options={monedas}
                 placeholder="Seleccione moneda..."
                 searchPlaceholder="Buscar moneda..."
-                minSearchLength={0}
-                fetchOnEmpty
-                clearable
-                readOnly={readonly}
+                disabled={readonly}
               />
             </div>
           </InputGroup>

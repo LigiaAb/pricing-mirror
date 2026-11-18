@@ -1,0 +1,1179 @@
+diff --git a/src/features/embarques/v2/general/ARQUITECTURA.md b/src/features/embarques/v2/general/ARQUITECTURA.md
+index 9fa5c77..5c24e12 100644
+--- a/src/features/embarques/v2/general/ARQUITECTURA.md
++++ b/src/features/embarques/v2/general/ARQUITECTURA.md
+@@ -147,7 +147,7 @@ Un componente por tipo de dato, con los mismos componentes que ya usa el proyect
+ Regla: lista corta y fija (Sí/No, PP/CC, estado…) → `seleccion` con `opciones`; proveedores, líneas aéreas,
+ agentes, monedas, clientes… → `catalogo`. Fotografías → `acepta: "image/*"`. `soloLectura` deshabilita el control.
+ Con valor y editable, cada campo muestra una **x** al final para limpiarlo (`BotonLimpiar`, mismo estilo que
+-`AsyncComboboxInput`): selección, fecha, hora, texto, número y área; el `Combobox` usa `clearable`.
++`ComboboxOpcion` de pricing): selección, fecha, hora, texto, número y área; el `Combobox` usa `clearable`.
+ 
+ ### Campos de Información (`shared/lib/campos-embarque.ts`)
+ 
+diff --git a/src/features/embarques/v2/shared/components/campos.tsx b/src/features/embarques/v2/shared/components/campos.tsx
+index 1c8df6d..c76b69c 100644
+--- a/src/features/embarques/v2/shared/components/campos.tsx
++++ b/src/features/embarques/v2/shared/components/campos.tsx
+@@ -39,7 +39,7 @@ import type { CampoGestion } from "../lib/interacciones";
+  * Sin lógica de guardado: cada campo guarda su valor solo en estado local.
+  * `soloLectura` deshabilita el control (ej. Información fuera de edición).
+  * Con valor y editable, cada campo muestra una "x" al final para limpiarlo
+- * (`BotonLimpiar`, mismo estilo que `AsyncComboboxInput`; el `Combobox` usa `clearable`).
++ * (`BotonLimpiar`, mismo estilo que `ComboboxOpcion` de pricing; el `Combobox` usa `clearable`).
+  * ========================================================================== */
+ 
+ type BaseCampo = {
+@@ -63,7 +63,7 @@ function Etiqueta({ id, label, requerido }: Pick<BaseCampo, "id" | "label" | "re
+ }
+ 
+ /**
+- * "x" para limpiar el valor del campo. Mismo estilo que la de `AsyncComboboxInput`.
++ * "x" para limpiar el valor del campo. Mismo estilo que la de `ComboboxOpcion` (pricing).
+  * Fuera del tab (`tabIndex={-1}`): el teclado sigue de un campo al siguiente.
+  */
+ export function BotonLimpiar({
+diff --git a/src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx b/src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx
+index 1923bbc..154e850 100644
+--- a/src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx
+@@ -4,9 +4,9 @@ import { Check, ChevronsUpDown, Loader2, Plus, X } from "lucide-react";
+ import * as React from "react";
+ 
+ import { NuevoContactoEntidad } from "@/features/entidades";
++import { ComboboxOpcion } from "@/features/pricing/shared";
+ import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
+ import { Button } from "@/shared/components/ui/button";
+-import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
+ import {
+   Command,
+   CommandEmpty,
+@@ -122,7 +122,7 @@ function obtenerOpcion(value: unknown): OpcionFormularioCotizacion | null {
+   return value as OpcionFormularioCotizacion;
+ }
+ 
+-function AsyncSelectCatalogo({
++function SelectCatalogo({
+   id,
+   label,
+   value,
+@@ -150,22 +150,16 @@ function AsyncSelectCatalogo({
+         {requerido ? " *" : ""}
+       </FieldLabel>
+ 
+-      <AsyncComboboxInput<OpcionFormularioCotizacion>
++      <ComboboxOpcion<OpcionFormularioCotizacion>
+         id={id}
+         label={label}
+-        contentClassName="z-[9999]"
+-        initialOptions={options}
++        popoverClassName="z-[9999]"
++        options={options}
+         value={value}
+         onChange={onChange}
+-        fetchOptions={() => Promise.resolve(options)}
+-        getOptionValue={(option) => option.value}
+-        getOptionLabel={(option) => String(option.label ?? "")}
+         placeholder="Seleccione..."
+         searchPlaceholder="Buscar..."
+-        minSearchLength={1}
+-        fetchOnEmpty={false}
+-        clearable
+-        readOnly={readOnly}
++        disabled={readOnly}
+       />
+     </Field>
+   );
+@@ -440,11 +434,6 @@ export function CotizacionForm({
+     const esLectura = verificarSiEsLectura(id);
+     const visible = verificarSiEsVisible(id);
+     const value = (values[id] as T | null | undefined) ?? null;
+-    const valorSeleccionado = value?.value == null ? "__NULL_OPTION__" : String(value.value);
+-    const opcionesCombobox: ComboboxOption[] = opciones.map((option) => ({
+-      value: option.value == null ? "__NULL_OPTION__" : String(option.value),
+-      label: String(option.label ?? ""),
+-    }));
+ 
+     return (
+       <Field className={cn("flex flex-col", className, !visible && "hidden")}>
+@@ -453,43 +442,17 @@ export function CotizacionForm({
+           {esObligatorio ? " *" : ""}
+         </FieldLabel>
+ 
+-        <div className="relative">
+-          <Combobox
+-            value={value == null ? "" : valorSeleccionado}
+-            onChange={(nextValue) => {
+-              const nextOption =
+-                opciones.find(
+-                  (option) =>
+-                    (option.value == null ? "__NULL_OPTION__" : String(option.value)) === nextValue,
+-                ) ?? null;
+-
+-              onInput({ id, val: nextOption });
+-            }}
+-            options={opcionesCombobox}
+-            ariaLabel={label}
+-            placeholder="Seleccione..."
+-            searchPlaceholder="Buscar..."
+-            disabled={esLectura}
+-            className={value != null && !esLectura ? "pr-16" : ""}
+-            popoverClassName="z-[9999]"
+-          />
+-
+-          {value != null && !esLectura ? (
+-            <button
+-              type="button"
+-              aria-label={`Limpiar ${label}`}
+-              title="Limpiar"
+-              className="absolute right-8 top-1/2 z-10 -translate-y-1/2 rounded-sm text-muted-foreground hover:text-destructive"
+-              onClick={(event) => {
+-                event.preventDefault();
+-                event.stopPropagation();
+-                onInput({ id, val: null });
+-              }}
+-            >
+-              <X className="size-4" aria-hidden="true" />
+-            </button>
+-          ) : null}
+-        </div>
++        <ComboboxOpcion
++          id={idGenerado}
++          label={label}
++          value={value}
++          onChange={(opcion) => onInput({ id, val: opcion })}
++          options={opciones}
++          placeholder="Seleccione..."
++          searchPlaceholder="Buscar..."
++          disabled={esLectura}
++          popoverClassName="z-[9999]"
++        />
+       </Field>
+     );
+   }
+@@ -639,7 +602,7 @@ export function CotizacionForm({
+               />
+             </Field>
+ 
+-            <AsyncSelectCatalogo
++            <SelectCatalogo
+               id={generarId("contacto")}
+               label={etiquetaCampo("contacto")}
+               value={obtenerOpcion(values.contacto)}
+diff --git a/src/features/pricing/shared/ARQUITECTURA.md b/src/features/pricing/shared/ARQUITECTURA.md
+index 2c66287..945afd3 100644
+--- a/src/features/pricing/shared/ARQUITECTURA.md
++++ b/src/features/pricing/shared/ARQUITECTURA.md
+@@ -17,6 +17,9 @@ shared/
+ │  ├─ formatos.ts        ← conAmbosFormatos
+ │  └─ vigencia-metodo.ts ← getEstadoMetodo (vencida / próxima a vencer)
+ └─ components/
++   ├─ combobox-opcion.tsx ← ComboboxOpcion: Combobox (@/shared, en memoria) con valor objeto ↔ string, "x" para
++   │                        limpiar; selects de Tarifas y de la cabecera de Cotizaciones. Búsqueda en servidor:
++   │                        AsyncComboboxInput
+    ├─ ficha-resumen.tsx  ← FichaResumen (lee sus propios catálogos; funciona dentro o fuera de cualquier provider)
+    └─ resumen-item.tsx
+ └─ calculadora-embarque/  ← CALCULADORA DE EMBARQUES (corporativa, ver abajo)
+diff --git a/src/features/pricing/shared/components/combobox-opcion.tsx b/src/features/pricing/shared/components/combobox-opcion.tsx
+new file mode 100644
+index 0000000..3e72a04
+--- /dev/null
++++ b/src/features/pricing/shared/components/combobox-opcion.tsx
+@@ -0,0 +1,145 @@
++"use client";
++
++import { X } from "lucide-react";
++import * as React from "react";
++import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
++import { cn } from "@/shared/lib/utils";
++
++/* ==========================================================================
++ * COMBOBOX CON VALOR OBJETO (opciones en memoria)
++ *
++ * `Combobox` (@/shared/components/ui/combobox) es el select buscable para
++ * datos en memoria, pero su valor es un `string`. Los formularios de Tarifas y
++ * Cotizaciones guardan la opción completa ({ value, label, cod_moneda, ... })
++ * y de ella sacan el payload. Este adaptador convierte en ambos sentidos para
++ * que el estado y los payloads no cambien.
++ *
++ *   <ComboboxOpcion value={fila.moneda} onChange={(moneda) => ...} options={monedas} />
++ *
++ * - Cuadro de búsqueda: lo trae `Combobox` (filtra por label y value, sin tildes).
++ * - Limpiar: "x" al final y, como en `AsyncComboboxInput`, elegir de nuevo la
++ *   opción seleccionada (`clearable`, por defecto true).
++ * - `value` numérico (ej. monedas de equipo): se compara como texto y se
++ *   devuelve la opción original, con su `value` numérico.
++ * - Si el valor guardado no está en las opciones, se agrega a la lista para
++ *   que se vea su nombre (antes `AsyncComboboxInput` mostraba su label).
++ *
++ * Búsqueda en el servidor (clientes, entidades): seguir con `AsyncComboboxInput`.
++ * ========================================================================== */
++
++type Id = string | number;
++
++/** Lo mínimo que necesita una opción; el resto de campos se conserva. */
++export type OpcionComboboxBase = {
++  value?: Id | null | undefined;
++  label?: string | number | null | undefined;
++};
++
++/** Clave de texto de una opción; las de `value` nulo comparten una clave propia. */
++const VALOR_NULO = "__NULL_OPTION__";
++
++const claveDe = (value: Id | null | undefined) => (value == null ? VALOR_NULO : String(value));
++
++const aOpcionCombobox = (opcion: OpcionComboboxBase): ComboboxOption => ({
++  value: claveDe(opcion.value),
++  label: String(opcion.label ?? ""),
++});
++
++export type ComboboxOpcionProps<T extends OpcionComboboxBase> = {
++  id?: string | undefined;
++  /** Nombre accesible del campo (y del botón "Limpiar ..."). */
++  label?: string | undefined;
++  value: T | null | undefined;
++  onChange: (opcion: T | null) => void;
++  options: readonly T[];
++  placeholder?: string | undefined;
++  searchPlaceholder?: string | undefined;
++  emptyMessage?: string | undefined;
++  disabled?: boolean | undefined;
++  clearable?: boolean | undefined;
++  className?: string | undefined;
++  popoverClassName?: string | undefined;
++  /** `false` dentro de un diálogo modal (ver `Combobox`). */
++  portalled?: boolean | undefined;
++};
++
++export function ComboboxOpcion<T extends OpcionComboboxBase>({
++  id,
++  label,
++  value,
++  onChange,
++  options,
++  placeholder = "Seleccione...",
++  searchPlaceholder = "Buscar...",
++  emptyMessage,
++  disabled = false,
++  clearable = true,
++  className,
++  popoverClassName,
++  portalled,
++}: ComboboxOpcionProps<T>) {
++  const seleccion = value == null ? "" : claveDe(value.value);
++
++  const opciones = React.useMemo(() => {
++    const lista = options.map(aOpcionCombobox);
++
++    if (value == null || options.some((opcion) => claveDe(opcion.value) === seleccion)) {
++      return lista;
++    }
++
++    return [aOpcionCombobox(value), ...lista];
++  }, [options, value, seleccion]);
++
++  const puedeLimpiar = clearable && value != null && !disabled;
++
++  const cambiar = (clave: string) => {
++    if (clave === "") {
++      onChange(null);
++      return;
++    }
++
++    if (value != null && clave === seleccion) {
++      onChange(value);
++      return;
++    }
++
++    onChange(options.find((opcion) => claveDe(opcion.value) === clave) ?? null);
++  };
++
++  return (
++    <div className={cn("relative w-full", className)}>
++      <Combobox
++        id={id}
++        value={seleccion}
++        onChange={cambiar}
++        options={opciones}
++        ariaLabel={label}
++        placeholder={placeholder}
++        searchPlaceholder={searchPlaceholder}
++        emptyMessage={emptyMessage}
++        disabled={disabled}
++        clearable={clearable}
++        className={puedeLimpiar ? "pr-16" : undefined}
++        popoverClassName={popoverClassName}
++        portalled={portalled}
++      />
++
++      {puedeLimpiar ? (
++        <button
++          type="button"
++          aria-label={label ? `Limpiar ${label}` : "Limpiar selección"}
++          title="Limpiar"
++          tabIndex={-1}
++          className="absolute right-8 top-1/2 z-10 -translate-y-1/2 rounded-sm text-muted-foreground hover:text-destructive"
++          onClick={(event) => {
++            event.preventDefault();
++            event.stopPropagation();
++            onChange(null);
++          }}
++        >
++          <X className="size-4" aria-hidden="true" />
++        </button>
++      ) : null}
++    </div>
++  );
++}
+diff --git a/src/features/pricing/shared/index.ts b/src/features/pricing/shared/index.ts
+index f49e49d..9a5496a 100644
+--- a/src/features/pricing/shared/index.ts
++++ b/src/features/pricing/shared/index.ts
+@@ -6,7 +6,8 @@
+  *
+  *   api/         consultas de catálogos (métodos, proveedores, clientes) y
+  *                lectura de rangos de tarifa.
+- *   components/  FichaResumen (resumen de un servicio/método de tarifa).
++ *   components/  FichaResumen (resumen de un servicio/método de tarifa) y
++ *                ComboboxOpcion (select buscable en memoria con valor objeto).
+  *   hooks/       usePermisosPricing (permisos por opción de cada pantalla).
+  *   calculadora-embarque/  CalculadoraMedidas + cálculos de volumen, peso y
+  *                CW por transporte (corporativos, sin datos de cotización).
+@@ -84,6 +85,11 @@ export {
+   normalizarUnidades,
+   type TipoMedida,
+ } from "./calculadora-embarque/lib/unidades";
++export {
++  ComboboxOpcion,
++  type ComboboxOpcionProps,
++  type OpcionComboboxBase,
++} from "./components/combobox-opcion";
+ export {
+   FichaResumen,
+   type ItemFichaResumen,
+diff --git a/src/features/pricing/tarifas/ARQUITECTURA.md b/src/features/pricing/tarifas/ARQUITECTURA.md
+index 0965ebc..2f8649b 100644
+--- a/src/features/pricing/tarifas/ARQUITECTURA.md
++++ b/src/features/pricing/tarifas/ARQUITECTURA.md
+@@ -73,7 +73,11 @@ refrescan la lista al terminar (`onSettled`) y los toasts se controlan con `meta
+ 
+ - Consulta: `useMonedasOperativas()` (los nombres viejos `useMonedasPorcentaje`, `useMonedasEquipo`, ... siguen funcionando).
+ - Opciones para un select: `useOpcionesMonedas(query.data)` y `useOpcionesRubros(rubros.data)`.
+-- Búsqueda local en un `AsyncComboboxInput`: `const fetchX = useFiltroOpciones(opciones);`
++- Selects con opciones en memoria: `<ComboboxOpcion value={fila.x} onChange={...} options={opciones} />`
++  (`@/features/pricing/shared`). Usa el `Combobox` de `@/shared` (cuadro de búsqueda incluido) y convierte la opción
++  (objeto) ↔ `string`, así que la fila sigue guardando la opción completa y los payloads no cambian.
++  `disabled` en lugar de `readOnly`. Ya no hay `useFiltroOpciones` (se quitó al dejar `AsyncComboboxInput`).
++- `AsyncComboboxInput` solo para búsqueda en el servidor: **Entidad** (`metodo-entidad/`, `buscarClientesTarifa`).
+ 
+ Excepción: **equipo** convierte monedas con `value` numérico porque ese valor se envía tal cual al backend.
+ 
+diff --git a/src/features/pricing/tarifas/components/formulario-tarifa.tsx b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
+index 98702d3..47dc66d 100644
+--- a/src/features/pricing/tarifas/components/formulario-tarifa.tsx
++++ b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
+@@ -4,10 +4,10 @@ import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
+ import React from "react";
+ 
+ import { useFetchEntidades } from "@/features/entidades";
++import { ComboboxOpcion } from "@/features/pricing/shared";
+ import { DynamicIcon } from "@/shared/components/dynamic-icon";
+ import { Button } from "@/shared/components/ui/button";
+ import { Checkbox } from "@/shared/components/ui/checkbox";
+-import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
+ import {
+   Command,
+   CommandEmpty,
+@@ -430,11 +430,6 @@ export const FormularioTarifa = ({
+     const esLectura = verificarSiEsLectura(id);
+     const visible = verificarSiEsVisible(id);
+     const value = (values[id] as T | null | undefined) ?? null;
+-    const valorSeleccionado = value?.value == null ? "__NULL_OPTION__" : String(value.value);
+-    const opcionesCombobox: ComboboxOption[] = opciones.map((option) => ({
+-      value: option.value == null ? "__NULL_OPTION__" : String(option.value),
+-      label: String(option.label ?? ""),
+-    }));
+ 
+     return (
+       <Field className={cn("flex flex-col", className, !visible && "hidden")}>
+@@ -443,41 +438,16 @@ export const FormularioTarifa = ({
+           {esObligatorio ? " *" : ""}
+         </FieldLabel>
+ 
+-        <div className="relative">
+-          <Combobox
+-            value={value == null ? "" : valorSeleccionado}
+-            onChange={(nextValue) => {
+-              const nextOption =
+-                opciones.find(
+-                  (option) =>
+-                    (option.value == null ? "__NULL_OPTION__" : String(option.value)) === nextValue,
+-                ) ?? null;
+-
+-              onInput({ id, val: nextOption });
+-            }}
+-            options={opcionesCombobox}
+-            placeholder="Seleccione..."
+-            disabled={esLectura}
+-            className={value != null && !esLectura ? "pr-16" : ""}
+-            popoverClassName="z-[9999]"
+-          />
+-
+-          {value != null && !esLectura ? (
+-            <button
+-              type="button"
+-              aria-label={`Limpiar ${label}`}
+-              title="Limpiar"
+-              className="absolute right-8 top-1/2 z-10 -translate-y-1/2 rounded-sm text-muted-foreground hover:text-destructive"
+-              onClick={(event) => {
+-                event.preventDefault();
+-                event.stopPropagation();
+-                onInput({ id, val: null });
+-              }}
+-            >
+-              <X className="size-4" aria-hidden="true" />
+-            </button>
+-          ) : null}
+-        </div>
++        <ComboboxOpcion
++          id={idGenerado}
++          label={label}
++          value={value}
++          onChange={(opcion) => onInput({ id, val: opcion })}
++          options={opciones}
++          placeholder="Seleccione..."
++          disabled={esLectura}
++          popoverClassName="z-[9999]"
++        />
+       </Field>
+     );
+   }
+diff --git a/src/features/pricing/tarifas/components/metodo-commodities/commodities-form.tsx b/src/features/pricing/tarifas/components/metodo-commodities/commodities-form.tsx
+index 8d6a0e2..f73b68f 100644
+--- a/src/features/pricing/tarifas/components/metodo-commodities/commodities-form.tsx
++++ b/src/features/pricing/tarifas/components/metodo-commodities/commodities-form.tsx
+@@ -2,11 +2,10 @@
+ 
+ import { Plus, Save, X } from "lucide-react";
+ import React from "react";
+-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
++import { ComboboxOpcion } from "@/features/pricing/shared";
+ import { Button } from "@/shared/components/ui/button";
+ import { Field, FieldLabel } from "@/shared/components/ui/field";
+ import { InputGroup } from "@/shared/components/ui/input-group";
+-import { useFiltroOpciones } from "../../hooks/use-opciones-tarifa";
+ import type {
+   CommodityOption,
+   EstadoCommodityOption,
+@@ -52,10 +51,6 @@ export function CommoditiesForm({
+     });
+   }, [value, estadoActivo]);
+ 
+-  const fetchCommodities = useFiltroOpciones(commodities);
+-
+-  const fetchEstados = useFiltroOpciones(estados);
+-
+   const esEdicion = Boolean(row.cod_metodocommodity);
+ 
+   const guardar = () => {
+@@ -78,7 +73,7 @@ export function CommoditiesForm({
+         <FieldLabel>Commodity</FieldLabel>
+ 
+         <InputGroup>
+-          <AsyncComboboxInput<CommodityOption>
++          <ComboboxOpcion<CommodityOption>
+             label="Commodity"
+             value={row.commodity ?? null}
+             onChange={(commodity) =>
+@@ -87,15 +82,9 @@ export function CommoditiesForm({
+                 commodity,
+               }))
+             }
+-            fetchOptions={fetchCommodities}
+-            initialOptions={commodities}
+-            getOptionValue={(option) => option.value}
+-            getOptionLabel={(option) => option.label}
++            options={commodities}
+             placeholder="Seleccione..."
+             searchPlaceholder="Buscar commodity..."
+-            minSearchLength={0}
+-            fetchOnEmpty
+-            clearable
+           />
+         </InputGroup>
+       </Field>
+@@ -104,7 +93,7 @@ export function CommoditiesForm({
+         <FieldLabel>Estado</FieldLabel>
+ 
+         <InputGroup>
+-          <AsyncComboboxInput<EstadoCommodityOption>
++          <ComboboxOpcion<EstadoCommodityOption>
+             label="Estado"
+             value={row.estado ?? null}
+             onChange={(estado) =>
+@@ -113,14 +102,9 @@ export function CommoditiesForm({
+                 estado,
+               }))
+             }
+-            fetchOptions={fetchEstados}
+-            initialOptions={estados}
+-            getOptionValue={(option) => option.value}
+-            getOptionLabel={(option) => option.label}
++            options={estados}
+             placeholder="Estado"
+             searchPlaceholder="Buscar estado..."
+-            minSearchLength={0}
+-            fetchOnEmpty
+             clearable={false}
+             // Igual que el viejo:
+             // Estado visible pero no editable.
+diff --git a/src/features/pricing/tarifas/components/metodo-detalle/detalle-form.tsx b/src/features/pricing/tarifas/components/metodo-detalle/detalle-form.tsx
+index 475b593..744341d 100644
+--- a/src/features/pricing/tarifas/components/metodo-detalle/detalle-form.tsx
++++ b/src/features/pricing/tarifas/components/metodo-detalle/detalle-form.tsx
+@@ -2,11 +2,10 @@
+ 
+ import { Plus, Save, X } from "lucide-react";
+ import React from "react";
+-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
++import { ComboboxOpcion } from "@/features/pricing/shared";
+ import { Button } from "@/shared/components/ui/button";
+ import { Field, FieldLabel } from "@/shared/components/ui/field";
+ import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
+-import { useFiltroOpciones } from "../../hooks/use-opciones-tarifa";
+ import type { DetalleTipoOption, FilaMetodoDetalle } from "./detalle-columns";
+ 
+ type Props = {
+@@ -26,8 +25,6 @@ export function DetalleForm({ value, tipos, onGuardar, onCancelar, isPending = f
+     setRow(value ?? {});
+   }, [value]);
+ 
+-  const fetchTipos = useFiltroOpciones(tipos);
+-
+   const guardar = () => {
+     // comportamiento ACTUAL del componente viejo:
+     // solamente tipo es obligatorio.
+@@ -48,7 +45,7 @@ export function DetalleForm({ value, tipos, onGuardar, onCancelar, isPending = f
+         <FieldLabel>Tipo de Detalle</FieldLabel>
+ 
+         <InputGroup>
+-          <AsyncComboboxInput<DetalleTipoOption>
++          <ComboboxOpcion<DetalleTipoOption>
+             label="Tipo de Detalle"
+             value={row.tipo ?? null}
+             onChange={(tipo) =>
+@@ -57,15 +54,9 @@ export function DetalleForm({ value, tipos, onGuardar, onCancelar, isPending = f
+                 tipo,
+               }))
+             }
+-            fetchOptions={fetchTipos}
+-            initialOptions={tipos}
+-            getOptionValue={(option) => option.value}
+-            getOptionLabel={(option) => option.label}
++            options={tipos}
+             placeholder="Seleccione..."
+             searchPlaceholder="Buscar tipo..."
+-            minSearchLength={0}
+-            fetchOnEmpty
+-            clearable
+           />
+         </InputGroup>
+       </Field>
+diff --git a/src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx b/src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx
+index a3984b6..60ab333 100644
+--- a/src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx
++++ b/src/features/pricing/tarifas/components/metodo-pais/pais-form.tsx
+@@ -2,11 +2,10 @@
+ 
+ import { Plus, Save, X } from "lucide-react";
+ import React from "react";
+-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
++import { ComboboxOpcion } from "@/features/pricing/shared";
+ import { Button } from "@/shared/components/ui/button";
+ import { Field, FieldLabel } from "@/shared/components/ui/field";
+ import { InputGroup } from "@/shared/components/ui/input-group";
+-import { useFiltroOpciones } from "../../hooks/use-opciones-tarifa";
+ import type { FilaMetodoPais, RutaOption } from "./pais-columns";
+ 
+ type Props = {
+@@ -68,13 +67,6 @@ export function PaisForm({
+     );
+   }, [puntosEnlace, row.pais, row.tipo_puntoenlace]);
+ 
+-  const fetchTiposRuta = useFiltroOpciones(tiposRuta);
+-  const fetchContinentes = useFiltroOpciones(continentes);
+-  const fetchPaises = useFiltroOpciones(paisesFiltrados);
+-  const fetchTiposPuntoEnlace = useFiltroOpciones(tiposPuntoEnlace);
+-  const fetchPuntosEnlace = useFiltroOpciones(puntosFiltrados);
+-  const fetchCiudades = useFiltroOpciones(ciudadesFiltradas);
+-
+   const guardar = () => {
+     if (!row.tipo) return;
+     if (!row.continente) return;
+@@ -90,7 +82,7 @@ export function PaisForm({
+         <FieldLabel>Tipo de Ruta</FieldLabel>
+ 
+         <InputGroup>
+-          <AsyncComboboxInput<RutaOption>
++          <ComboboxOpcion<RutaOption>
+             label="Tipo de Ruta"
+             value={row.tipo ?? null}
+             onChange={(tipo) =>
+@@ -99,15 +91,9 @@ export function PaisForm({
+                 tipo,
+               }))
+             }
+-            fetchOptions={fetchTiposRuta}
+-            initialOptions={tiposRuta}
+-            getOptionValue={(option) => option.value}
+-            getOptionLabel={(option) => option.label}
++            options={tiposRuta}
+             placeholder="Seleccione..."
+             searchPlaceholder="Buscar tipo de ruta..."
+-            minSearchLength={0}
+-            fetchOnEmpty
+-            clearable
+           />
+         </InputGroup>
+       </Field>
+@@ -116,7 +102,7 @@ export function PaisForm({
+         <FieldLabel>Continente</FieldLabel>
+ 
+         <InputGroup>
+-          <AsyncComboboxInput<RutaOption>
++          <ComboboxOpcion<RutaOption>
+             label="Continente"
+             value={row.continente ?? null}
+             onChange={(continente) =>
+@@ -129,15 +115,9 @@ export function PaisForm({
+                 punto_enlace: null,
+               }))
+             }
+-            fetchOptions={fetchContinentes}
+-            initialOptions={continentes}
+-            getOptionValue={(option) => option.value}
+-            getOptionLabel={(option) => option.label}
++            options={continentes}
+             placeholder="Seleccione..."
+             searchPlaceholder="Buscar continente..."
+-            minSearchLength={0}
+-            fetchOnEmpty
+-            clearable
+           />
+         </InputGroup>
+       </Field>
+@@ -146,7 +126,7 @@ export function PaisForm({
+         <FieldLabel>País</FieldLabel>
+ 
+         <InputGroup>
+-          <AsyncComboboxInput<RutaOption>
++          <ComboboxOpcion<RutaOption>
+             label="País"
+             value={row.pais ?? null}
+             onChange={(pais) =>
+@@ -157,15 +137,9 @@ export function PaisForm({
+                 punto_enlace: null,
+               }))
+             }
+-            fetchOptions={fetchPaises}
+-            initialOptions={paisesFiltrados}
+-            getOptionValue={(option) => option.value}
+-            getOptionLabel={(option) => option.label}
++            options={paisesFiltrados}
+             placeholder="Seleccione..."
+             searchPlaceholder="Buscar país..."
+-            minSearchLength={0}
+-            fetchOnEmpty
+-            clearable
+             disabled={!row.continente}
+           />
+         </InputGroup>
+@@ -176,7 +150,7 @@ export function PaisForm({
+           <FieldLabel>Ciudad</FieldLabel>
+ 
+           <InputGroup>
+-            <AsyncComboboxInput<RutaOption>
++            <ComboboxOpcion<RutaOption>
+               label="Ciudad"
+               value={row.ciudad ?? null}
+               onChange={(ciudad) =>
+@@ -187,15 +161,9 @@ export function PaisForm({
+                   punto_enlace: null,
+                 }))
+               }
+-              fetchOptions={fetchCiudades}
+-              initialOptions={ciudadesFiltradas}
+-              getOptionValue={(option) => option.value}
+-              getOptionLabel={(option) => option.label}
++              options={ciudadesFiltradas}
+               placeholder="Seleccione..."
+               searchPlaceholder="Buscar ciudad..."
+-              minSearchLength={0}
+-              fetchOnEmpty
+-              clearable
+               disabled={!row.pais}
+             />
+           </InputGroup>
+@@ -206,7 +174,7 @@ export function PaisForm({
+             <FieldLabel>Tipo</FieldLabel>
+ 
+             <InputGroup>
+-              <AsyncComboboxInput<RutaOption>
++              <ComboboxOpcion<RutaOption>
+                 label="Tipo"
+                 value={row.tipo_puntoenlace ?? null}
+                 onChange={(tipo_puntoenlace) =>
+@@ -217,15 +185,9 @@ export function PaisForm({
+                     ciudad: null,
+                   }))
+                 }
+-                fetchOptions={fetchTiposPuntoEnlace}
+-                initialOptions={tiposPuntoEnlace}
+-                getOptionValue={(option) => option.value}
+-                getOptionLabel={(option) => option.label}
++                options={tiposPuntoEnlace}
+                 placeholder="Seleccione..."
+                 searchPlaceholder="Buscar tipo..."
+-                minSearchLength={0}
+-                fetchOnEmpty
+-                clearable
+                 disabled={!row.pais}
+               />
+             </InputGroup>
+@@ -235,7 +197,7 @@ export function PaisForm({
+             <FieldLabel>Aduana/Puerto/Aeropuerto</FieldLabel>
+ 
+             <InputGroup>
+-              <AsyncComboboxInput<RutaOption>
++              <ComboboxOpcion<RutaOption>
+                 label="Aduana/Puerto/Aeropuerto"
+                 value={row.punto_enlace ?? null}
+                 onChange={(punto_enlace) =>
+@@ -245,15 +207,9 @@ export function PaisForm({
+                     ciudad: null,
+                   }))
+                 }
+-                fetchOptions={fetchPuntosEnlace}
+-                initialOptions={puntosFiltrados}
+-                getOptionValue={(option) => option.value}
+-                getOptionLabel={(option) => option.label}
++                options={puntosFiltrados}
+                 placeholder="Seleccione..."
+                 searchPlaceholder="Buscar punto de enlace..."
+-                minSearchLength={0}
+-                fetchOnEmpty
+-                clearable
+                 disabled={!row.pais || !row.tipo_puntoenlace}
+               />
+             </InputGroup>
+diff --git a/src/features/pricing/tarifas/components/metodos/campo-metodo.tsx b/src/features/pricing/tarifas/components/metodos/campo-metodo.tsx
+index 727c1ae..1a27505 100644
+--- a/src/features/pricing/tarifas/components/metodos/campo-metodo.tsx
++++ b/src/features/pricing/tarifas/components/metodos/campo-metodo.tsx
+@@ -1,14 +1,10 @@
+ "use client";
+ 
+ import type React from "react";
+-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
++import { ComboboxOpcion } from "@/features/pricing/shared";
+ import { Field, FieldLabel } from "@/shared/components/ui/field";
+ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/components/ui/input-group";
+-import {
+-  type MonedaOpcion,
+-  type RubroOpcion,
+-  useFiltroOpciones,
+-} from "../../hooks/use-opciones-tarifa";
++import type { MonedaOpcion, RubroOpcion } from "../../hooks/use-opciones-tarifa";
+ import type { DefCampo } from "../../lib/campos-metodo";
+ 
+ /* ==========================================================================
+@@ -65,9 +61,6 @@ export function CampoMetodo<C extends Record<string, DefCampo>, F extends object
+   const def = metodo.campos[campo] as DefCampo;
+   const valores = fila as Record<string, unknown>;
+ 
+-  const fetchMonedas = useFiltroOpciones(monedas);
+-  const fetchRubros = useFiltroOpciones(rubros);
+-
+   const cambiar = (clave: string, valor: unknown) => onChange({ [clave]: valor } as Partial<F>);
+ 
+   const mensajes = errores?.[campo]?.map((mensaje, i) => (
+@@ -83,20 +76,14 @@ export function CampoMetodo<C extends Record<string, DefCampo>, F extends object
+     const opciones: Opcion[] = esMoneda ? monedas : rubros;
+ 
+     const combo = (
+-      <AsyncComboboxInput<Opcion>
++      <ComboboxOpcion<Opcion>
+         {...(comboEnvuelto ? {} : { label: def.label })}
+         value={(valores[en] as Opcion | null | undefined) ?? null}
+         onChange={(opcion: Opcion | null) => cambiar(en, opcion)}
+-        fetchOptions={esMoneda ? fetchMonedas : fetchRubros}
+-        initialOptions={opciones}
+-        getOptionValue={(option: Opcion) => option.value}
+-        getOptionLabel={(option: Opcion) => option.label}
++        options={opciones}
+         placeholder="Seleccione..."
+         searchPlaceholder={esMoneda ? "Buscar moneda..." : "Buscar rubro..."}
+-        minSearchLength={0}
+-        fetchOnEmpty
+-        clearable
+-        readOnly={readonly}
++        disabled={readonly}
+       />
+     );
+ 
+diff --git a/src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx b/src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx
+index 7bd3ba5..46a760f 100644
+--- a/src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx
++++ b/src/features/pricing/tarifas/components/metodos/equipo/equipo-form.tsx
+@@ -2,11 +2,10 @@
+ 
+ import React from "react";
+ 
+-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
++import { ComboboxOpcion } from "@/features/pricing/shared";
+ import { Button } from "@/shared/components/ui/button";
+ import { Field, FieldLabel } from "@/shared/components/ui/field";
+ import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
+-import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
+ import {
+   type EquipoOption,
+   type FilaEquipo,
+@@ -40,10 +39,6 @@ export function EquipoForm({
+     setValues(value);
+   }, [value]);
+ 
+-  const fetchEquipos = useFiltroOpciones(equipos);
+-
+-  const fetchMonedas = useFiltroOpciones(monedas);
+-
+   // Requeridos (equipo, monedas, costo, venta) y venta >= costo: ver lib/metodos/equipo.ts.
+   const { valido: puedeGuardar, errores } = METODO_EQUIPO.validar(values);
+ 
+@@ -61,7 +56,7 @@ export function EquipoForm({
+ 
+           <InputGroup>
+             <div className="w-full">
+-              <AsyncComboboxInput<EquipoOption>
++              <ComboboxOpcion<EquipoOption>
+                 value={values.cod_equipo ?? null}
+                 onChange={(cod_equipo) =>
+                   setValues((prev) => ({
+@@ -69,16 +64,10 @@ export function EquipoForm({
+                     cod_equipo,
+                   }))
+                 }
+-                fetchOptions={fetchEquipos}
+-                initialOptions={equipos}
+-                getOptionValue={(option) => option.value}
+-                getOptionLabel={(option) => option.label}
++                options={equipos}
+                 placeholder="Seleccione un equipo..."
+                 searchPlaceholder="Buscar equipo..."
+-                minSearchLength={0}
+-                fetchOnEmpty
+-                clearable
+-                readOnly={readonly}
++                disabled={readonly}
+               />
+             </div>
+           </InputGroup>
+@@ -93,7 +82,7 @@ export function EquipoForm({
+ 
+           <InputGroup>
+             <div className="w-full">
+-              <AsyncComboboxInput<MonedaEquipoOption>
++              <ComboboxOpcion<MonedaEquipoOption>
+                 value={values.cod_moneda_costo ?? null}
+                 onChange={(cod_moneda_costo) =>
+                   setValues((prev) => ({
+@@ -101,16 +90,10 @@ export function EquipoForm({
+                     cod_moneda_costo,
+                   }))
+                 }
+-                fetchOptions={fetchMonedas}
+-                initialOptions={monedas}
+-                getOptionValue={(option) => option.value}
+-                getOptionLabel={(option) => option.label}
++                options={monedas}
+                 placeholder="Seleccione moneda..."
+                 searchPlaceholder="Buscar moneda..."
+-                minSearchLength={0}
+-                fetchOnEmpty
+-                clearable
+-                readOnly={readonly}
++                disabled={readonly}
+               />
+             </div>
+           </InputGroup>
+@@ -148,7 +131,7 @@ export function EquipoForm({
+ 
+           <InputGroup>
+             <div className="w-full">
+-              <AsyncComboboxInput<MonedaEquipoOption>
++              <ComboboxOpcion<MonedaEquipoOption>
+                 value={values.cod_moneda_venta ?? null}
+                 onChange={(cod_moneda_venta) =>
+                   setValues((prev) => ({
+@@ -156,16 +139,10 @@ export function EquipoForm({
+                     cod_moneda_venta,
+                   }))
+                 }
+-                fetchOptions={fetchMonedas}
+-                initialOptions={monedas}
+-                getOptionValue={(option) => option.value}
+-                getOptionLabel={(option) => option.label}
++                options={monedas}
+                 placeholder="Seleccione moneda..."
+                 searchPlaceholder="Buscar moneda..."
+-                minSearchLength={0}
+-                fetchOnEmpty
+-                clearable
+-                readOnly={readonly}
++                disabled={readonly}
+               />
+             </div>
+           </InputGroup>
+diff --git a/src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx b/src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx
+index 5ee57f8..565ce6b 100644
+--- a/src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx
++++ b/src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx
+@@ -2,13 +2,11 @@
+ 
+ import { Plus, Save, X } from "lucide-react";
+ import React from "react";
+-import { METODO_RANGO } from "@/features/pricing/shared";
+-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
++import { ComboboxOpcion, METODO_RANGO } from "@/features/pricing/shared";
+ import { Button } from "@/shared/components/ui/button";
+ import { Field, FieldLabel } from "@/shared/components/ui/field";
+ import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
+ import { crearIdLocal } from "@/shared/lib/id";
+-import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
+ import type { FilaMetodoRango, MonedaRangoOption } from "./rango-columns";
+ 
+ type Props = {
+@@ -28,8 +26,6 @@ export function RangoForm({ value, monedas, onGuardar, onCancelar, readonly = fa
+     setRow(value ?? null);
+   }, [value]);
+ 
+-  const fetchMonedas = useFiltroOpciones(monedas);
+-
+   const iniciarNuevo = () => {
+     // Montos en "" y monedas en null (`inicial` en pricing/shared/lib/metodos/rango.ts).
+     setRow({ localId: crearIdLocal(), ...METODO_RANGO.filaNueva() });
+@@ -117,7 +113,7 @@ export function RangoForm({ value, monedas, onGuardar, onCancelar, readonly = fa
+         <Field>
+           <FieldLabel>Moneda costo</FieldLabel>
+           <InputGroup>
+-            <AsyncComboboxInput<MonedaRangoOption>
++            <ComboboxOpcion<MonedaRangoOption>
+               label="Moneda costo"
+               value={row.moneda_costo ?? null}
+               onChange={(moneda_costo) =>
+@@ -130,13 +126,7 @@ export function RangoForm({ value, monedas, onGuardar, onCancelar, readonly = fa
+                     : prev,
+                 )
+               }
+-              fetchOptions={fetchMonedas}
+-              initialOptions={monedas}
+-              getOptionValue={(option) => option.value}
+-              getOptionLabel={(option) => option.label}
+-              minSearchLength={0}
+-              fetchOnEmpty
+-              clearable
++              options={monedas}
+             />
+           </InputGroup>
+         </Field>
+@@ -155,7 +145,7 @@ export function RangoForm({ value, monedas, onGuardar, onCancelar, readonly = fa
+         <Field>
+           <FieldLabel>Moneda venta</FieldLabel>
+           <InputGroup>
+-            <AsyncComboboxInput<MonedaRangoOption>
++            <ComboboxOpcion<MonedaRangoOption>
+               label="Moneda venta"
+               value={row.moneda_venta ?? null}
+               onChange={(moneda_venta) =>
+@@ -168,13 +158,7 @@ export function RangoForm({ value, monedas, onGuardar, onCancelar, readonly = fa
+                     : prev,
+                 )
+               }
+-              fetchOptions={fetchMonedas}
+-              initialOptions={monedas}
+-              getOptionValue={(option) => option.value}
+-              getOptionLabel={(option) => option.label}
+-              minSearchLength={0}
+-              fetchOnEmpty
+-              clearable
++              options={monedas}
+             />
+           </InputGroup>
+         </Field>
+diff --git a/src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx b/src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx
+index 166cacc..a35f5df 100644
+--- a/src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx
++++ b/src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx
+@@ -3,14 +3,13 @@
+ import { Plus, Save, X } from "lucide-react";
+ import React from "react";
+ 
+-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
++import { ComboboxOpcion } from "@/features/pricing/shared";
+ 
+ import { Button } from "@/shared/components/ui/button";
+ 
+ import { Field, FieldLabel } from "@/shared/components/ui/field";
+ 
+ import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
+-import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
+ import {
+   type FilaMetodoScalling,
+   METODO_SCALLING,
+@@ -75,12 +74,6 @@ export function ScallingForm({
+     );
+   }, [puntosEnlace, row.tipo_puntoenlace]);
+ 
+-  const fetchTipos = useFiltroOpciones(tiposPuntoEnlace);
+-
+-  const fetchPuntos = useFiltroOpciones(puntosFiltrados);
+-
+-  const fetchMonedas = useFiltroOpciones(monedas);
+-
+   const esEdicion = value?.cod_tarifa_scalling != null && Number(value.cod_tarifa_scalling) !== 0;
+ 
+   // Punto y moneda requeridos (ver la definición); el tipo, por la cascada.
+@@ -103,7 +96,7 @@ export function ScallingForm({
+ 
+         <InputGroup>
+           <div className="w-full">
+-            <AsyncComboboxInput<TipoPuntoEnlaceScallingOption>
++            <ComboboxOpcion<TipoPuntoEnlaceScallingOption>
+               value={row.tipo_puntoenlace ?? null}
+               onChange={(tipo_puntoenlace) =>
+                 setRow((prev) => ({
+@@ -117,15 +110,9 @@ export function ScallingForm({
+                   tipo_puntoenlace,
+                 }))
+               }
+-              fetchOptions={fetchTipos}
+-              initialOptions={tiposPuntoEnlace}
+-              getOptionValue={(option) => option.value}
+-              getOptionLabel={(option) => option.label}
++              options={tiposPuntoEnlace}
+               placeholder="Seleccione..."
+               searchPlaceholder="Buscar tipo..."
+-              minSearchLength={0}
+-              fetchOnEmpty
+-              clearable
+             />
+           </div>
+         </InputGroup>
+@@ -136,7 +123,7 @@ export function ScallingForm({
+ 
+         <InputGroup>
+           <div className="w-full">
+-            <AsyncComboboxInput<PuntoEnlaceScallingOption>
++            <ComboboxOpcion<PuntoEnlaceScallingOption>
+               value={row.punto_enlace ?? null}
+               onChange={(punto_enlace) =>
+                 setRow((prev) => ({
+@@ -161,15 +148,9 @@ export function ScallingForm({
+                   punto_enlace: punto_enlace ?? null,
+                 }))
+               }
+-              fetchOptions={fetchPuntos}
+-              initialOptions={puntosFiltrados}
+-              getOptionValue={(option) => option.value}
+-              getOptionLabel={(option) => option.label}
++              options={puntosFiltrados}
+               placeholder="Seleccione..."
+               searchPlaceholder="Buscar punto..."
+-              minSearchLength={0}
+-              fetchOnEmpty
+-              clearable
+               disabled={!row.tipo_puntoenlace}
+             />
+           </div>
+@@ -181,7 +162,7 @@ export function ScallingForm({
+ 
+         <InputGroup>
+           <div className="w-full">
+-            <AsyncComboboxInput<MonedaScallingOption>
++            <ComboboxOpcion<MonedaScallingOption>
+               value={row.moneda ?? null}
+               onChange={(moneda) =>
+                 setRow((prev) => ({
+@@ -189,15 +170,9 @@ export function ScallingForm({
+                   moneda,
+                 }))
+               }
+-              fetchOptions={fetchMonedas}
+-              initialOptions={monedas}
+-              getOptionValue={(option) => option.value}
+-              getOptionLabel={(option) => option.label}
++              options={monedas}
+               placeholder="Seleccione..."
+               searchPlaceholder="Buscar moneda..."
+-              minSearchLength={0}
+-              fetchOnEmpty
+-              clearable
+             />
+           </div>
+         </InputGroup>
+diff --git a/src/features/pricing/tarifas/hooks/use-opciones-tarifa.ts b/src/features/pricing/tarifas/hooks/use-opciones-tarifa.ts
+index 76736e3..c3f0267 100644
+--- a/src/features/pricing/tarifas/hooks/use-opciones-tarifa.ts
++++ b/src/features/pricing/tarifas/hooks/use-opciones-tarifa.ts
+@@ -8,8 +8,9 @@ export type { MonedaOpcion, RubroOpcion };
+  * OPCIONES DE SELECT COMPARTIDAS POR LOS MÉTODOS DE TARIFA
+  *
+  * Antes cada tabla de método convertía monedas y rubros a { value, label }
+- * con su propia copia del mismo código, y cada formulario tenía su propia
+- * función de búsqueda local. Todo eso vive aquí.
++ * con su propia copia del mismo código. Todo eso vive aquí. Los selects las
++ * dibujan con `ComboboxOpcion` (@/features/pricing/shared), que ya trae la
++ * búsqueda local.
+  * ========================================================================== */
+ 
+ type Id = string | number;
+@@ -81,24 +82,3 @@ export function useOpcionesRubros(rubros: unknown[] | undefined) {
+     [rubros],
+   );
+ }
+-
+-/* ==========================================================================
+- * BÚSQUEDA LOCAL EN UN SELECT
+- * ========================================================================== */
+-
+-/** Filtra opciones cuyo label contiene el texto (sin importar mayúsculas). */
+-export function filtrarOpciones<T extends { label: string }>(opciones: T[], search: string): T[] {
+-  const busqueda = search.trim().toLowerCase();
+-
+-  if (!busqueda) return opciones;
+-
+-  return opciones.filter((opcion) => opcion.label.toLowerCase().includes(busqueda));
+-}
+-
+-/** `fetchOptions` para AsyncComboboxInput que busca dentro de opciones ya cargadas. */
+-export function useFiltroOpciones<T extends { label: string }>(opciones: T[]) {
+-  return React.useCallback(
+-    async (search: string): Promise<T[]> => filtrarOpciones(opciones, search),
+-    [opciones],
+-  );
+-}
+diff --git a/src/features/pricing/tarifas/index.ts b/src/features/pricing/tarifas/index.ts
+index e73a37a..6928375 100644
+--- a/src/features/pricing/tarifas/index.ts
++++ b/src/features/pricing/tarifas/index.ts
+@@ -269,11 +269,9 @@ export { TarifasTable } from "./components/tarifas-table";
+ export { keysToLowerCase, useCatalogosTarifas } from "./hooks/use-catalogos-tarifas";
+ export { useFormulario } from "./hooks/use-formulario-tarifas";
+ export {
+-  filtrarOpciones,
+   type MonedaOpcion,
+   monedaAOpcion,
+   type RubroOpcion,
+-  useFiltroOpciones,
+   useOpcionesMonedas,
+   useOpcionesRubros,
+ } from "./hooks/use-opciones-tarifa";

@@ -19,9 +19,13 @@ al proyecto completo. Responder siempre en **español**.
   idéntico al proyecto (para tipar `onOpenChange` hay stub en `src/shared/components/ui/popover.tsx`). Es la única
   ruta de `src/shared` que **sí** sale en los `diff/` (`RUTAS_CODIGO` de `scripts/guardar-diff.mjs`).
   Consulta solo con el listado abierto. Caché de 30 s, pero al abrir vuelve a pedir las opciones si `fetchOptions`
-  cambió desde la última consulta: con opciones locales que cambian, pasar `fetchOptions` memoizado sobre la lista
-  (`useFiltroOpciones` en Tarifas); las búsquedas en servidor memoizadas no consultan de nuevo al reabrir. Dibuja
+  cambió desde la última consulta; las búsquedas en servidor memoizadas no consultan de nuevo al reabrir. Dibuja
   máximo `maxOptions` (100) opciones.
+- **Selects buscables** (`docs/FORMULARIOS.md`: "no envuelvas datos en memoria con `AsyncComboboxInput`"):
+  - Opciones en memoria → `Combobox` (`@/shared/components/ui/combobox`, código real, valor `string`, con cuadro de
+    búsqueda; virtualiza más de 1000 opciones). En pricing, si el formulario guarda la opción completa (objeto),
+    `ComboboxOpcion` de `@/features/pricing/shared` (adapta objeto ↔ `string`, "x" para limpiar, `value` numérico).
+  - Búsqueda en el servidor → `AsyncComboboxInput` (en pricing: Entidad en Tarifas y Cliente en Cotización).
 - Si un cambio necesita un tipo de `@/shared` que no está en los stubs, se agrega al stub (solo tipos) y se avisa.
 - Nunca cambiar lógica dentro de los stubs para "hacer pasar" algo.
 - **Embarques: se trabaja únicamente en `src/features/embarques/v2/`.** Lo demás de `src/features/embarques/`
@@ -167,7 +171,8 @@ Resumen:
   - Campos de los métodos: definición única en `lib/metodos/<metodo>.ts` (`definirMetodo`; rango en
     `pricing/shared/lib/metodos/rango.ts`). Agregar un campo = 1 línea en `campos` + `<CampoMetodo>` en su
     `-form.tsx` si se ve (+ su código en `columnasMetodo` si va en tabla). Ver `tarifas/ARQUITECTURA.md`.
-  - Monedas: `useMonedasOperativas()`; opciones de select y búsqueda local en `hooks/use-opciones-tarifa.ts`.
+  - Monedas: `useMonedasOperativas()`; opciones de select en `hooks/use-opciones-tarifa.ts`, dibujadas con
+    `ComboboxOpcion` (`@/features/pricing/shared`).
   - Helpers en `lib/tarifa-helpers.ts`.
 
 ## Trampas conocidas

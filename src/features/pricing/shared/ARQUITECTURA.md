@@ -17,6 +17,9 @@ shared/
 │  ├─ formatos.ts        ← conAmbosFormatos
 │  └─ vigencia-metodo.ts ← getEstadoMetodo (vencida / próxima a vencer)
 └─ components/
+   ├─ combobox-opcion.tsx ← ComboboxOpcion: Combobox (@/shared, en memoria) con valor objeto ↔ string, "x" para
+   │                        limpiar; selects de Tarifas y de la cabecera de Cotizaciones. Búsqueda en servidor:
+   │                        AsyncComboboxInput
    ├─ ficha-resumen.tsx  ← FichaResumen (lee sus propios catálogos; funciona dentro o fuera de cualquier provider)
    └─ resumen-item.tsx
 └─ calculadora-embarque/  ← CALCULADORA DE EMBARQUES (corporativa, ver abajo)

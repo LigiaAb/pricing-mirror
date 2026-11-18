@@ -4,10 +4,10 @@ import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import React from "react";
 
 import { useFetchEntidades } from "@/features/entidades";
+import { ComboboxOpcion } from "@/features/pricing/shared";
 import { DynamicIcon } from "@/shared/components/dynamic-icon";
 import { Button } from "@/shared/components/ui/button";
 import { Checkbox } from "@/shared/components/ui/checkbox";
-import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
 import {
   Command,
   CommandEmpty,
@@ -430,11 +430,6 @@ export const FormularioTarifa = ({
     const esLectura = verificarSiEsLectura(id);
     const visible = verificarSiEsVisible(id);
     const value = (values[id] as T | null | undefined) ?? null;
-    const valorSeleccionado = value?.value == null ? "__NULL_OPTION__" : String(value.value);
-    const opcionesCombobox: ComboboxOption[] = opciones.map((option) => ({
-      value: option.value == null ? "__NULL_OPTION__" : String(option.value),
-      label: String(option.label ?? ""),
-    }));
 
     return (
       <Field className={cn("flex flex-col", className, !visible && "hidden")}>
@@ -443,41 +438,16 @@ export const FormularioTarifa = ({
           {esObligatorio ? " *" : ""}
         </FieldLabel>
 
-        <div className="relative">
-          <Combobox
-            value={value == null ? "" : valorSeleccionado}
-            onChange={(nextValue) => {
-              const nextOption =
-                opciones.find(
-                  (option) =>
-                    (option.value == null ? "__NULL_OPTION__" : String(option.value)) === nextValue,
-                ) ?? null;
-
-              onInput({ id, val: nextOption });
-            }}
-            options={opcionesCombobox}
-            placeholder="Seleccione..."
-            disabled={esLectura}
-            className={value != null && !esLectura ? "pr-16" : ""}
-            popoverClassName="z-[9999]"
-          />
-
-          {value != null && !esLectura ? (
-            <button
-              type="button"
-              aria-label={`Limpiar ${label}`}
-              title="Limpiar"
-              className="absolute right-8 top-1/2 z-10 -translate-y-1/2 rounded-sm text-muted-foreground hover:text-destructive"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                onInput({ id, val: null });
-              }}
-            >
-              <X className="size-4" aria-hidden="true" />
-            </button>
-          ) : null}
-        </div>
+        <ComboboxOpcion
+          id={idGenerado}
+          label={label}
+          value={value}
+          onChange={(opcion) => onInput({ id, val: opcion })}
+          options={opciones}
+          placeholder="Seleccione..."
+          disabled={esLectura}
+          popoverClassName="z-[9999]"
+        />
       </Field>
     );
   }

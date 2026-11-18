@@ -3,14 +3,13 @@
 import { Plus, Save, X } from "lucide-react";
 import React from "react";
 
-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
+import { ComboboxOpcion } from "@/features/pricing/shared";
 
 import { Button } from "@/shared/components/ui/button";
 
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 
 import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
-import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
 import {
   type FilaMetodoScalling,
   METODO_SCALLING,
@@ -75,12 +74,6 @@ export function ScallingForm({
     );
   }, [puntosEnlace, row.tipo_puntoenlace]);
 
-  const fetchTipos = useFiltroOpciones(tiposPuntoEnlace);
-
-  const fetchPuntos = useFiltroOpciones(puntosFiltrados);
-
-  const fetchMonedas = useFiltroOpciones(monedas);
-
   const esEdicion = value?.cod_tarifa_scalling != null && Number(value.cod_tarifa_scalling) !== 0;
 
   // Punto y moneda requeridos (ver la definición); el tipo, por la cascada.
@@ -103,7 +96,7 @@ export function ScallingForm({
 
         <InputGroup>
           <div className="w-full">
-            <AsyncComboboxInput<TipoPuntoEnlaceScallingOption>
+            <ComboboxOpcion<TipoPuntoEnlaceScallingOption>
               value={row.tipo_puntoenlace ?? null}
               onChange={(tipo_puntoenlace) =>
                 setRow((prev) => ({
@@ -117,15 +110,9 @@ export function ScallingForm({
                   tipo_puntoenlace,
                 }))
               }
-              fetchOptions={fetchTipos}
-              initialOptions={tiposPuntoEnlace}
-              getOptionValue={(option) => option.value}
-              getOptionLabel={(option) => option.label}
+              options={tiposPuntoEnlace}
               placeholder="Seleccione..."
               searchPlaceholder="Buscar tipo..."
-              minSearchLength={0}
-              fetchOnEmpty
-              clearable
             />
           </div>
         </InputGroup>
@@ -136,7 +123,7 @@ export function ScallingForm({
 
         <InputGroup>
           <div className="w-full">
-            <AsyncComboboxInput<PuntoEnlaceScallingOption>
+            <ComboboxOpcion<PuntoEnlaceScallingOption>
               value={row.punto_enlace ?? null}
               onChange={(punto_enlace) =>
                 setRow((prev) => ({
@@ -161,15 +148,9 @@ export function ScallingForm({
                   punto_enlace: punto_enlace ?? null,
                 }))
               }
-              fetchOptions={fetchPuntos}
-              initialOptions={puntosFiltrados}
-              getOptionValue={(option) => option.value}
-              getOptionLabel={(option) => option.label}
+              options={puntosFiltrados}
               placeholder="Seleccione..."
               searchPlaceholder="Buscar punto..."
-              minSearchLength={0}
-              fetchOnEmpty
-              clearable
               disabled={!row.tipo_puntoenlace}
             />
           </div>
@@ -181,7 +162,7 @@ export function ScallingForm({
 
         <InputGroup>
           <div className="w-full">
-            <AsyncComboboxInput<MonedaScallingOption>
+            <ComboboxOpcion<MonedaScallingOption>
               value={row.moneda ?? null}
               onChange={(moneda) =>
                 setRow((prev) => ({
@@ -189,15 +170,9 @@ export function ScallingForm({
                   moneda,
                 }))
               }
-              fetchOptions={fetchMonedas}
-              initialOptions={monedas}
-              getOptionValue={(option) => option.value}
-              getOptionLabel={(option) => option.label}
+              options={monedas}
               placeholder="Seleccione..."
               searchPlaceholder="Buscar moneda..."
-              minSearchLength={0}
-              fetchOnEmpty
-              clearable
             />
           </div>
         </InputGroup>
