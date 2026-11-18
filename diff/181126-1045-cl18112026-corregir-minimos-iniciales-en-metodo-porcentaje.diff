@@ -1,0 +1,45 @@
+diff --git a/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-form.tsx b/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-form.tsx
+index 1170dd1..e4fd667 100644
+--- a/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-form.tsx
++++ b/src/features/pricing/tarifas/components/metodos/porcentaje/porcentaje-form.tsx
+@@ -26,14 +26,9 @@ type Props = {
+   onGuardar: (row: FilaPorcentaje) => void;
+ };
+ 
+-/*
+- * Nuevo: porcentajes en 0 (`inicial` en lib/metodos/porcentaje.ts).
+- * `minimo: 0` se conserva del código viejo (no corresponde a ningún campo:
+- * los mínimos son minimo_costo / minimo_venta; pendiente aparte).
+- */
++// Nuevo: porcentajes y mínimos en 0 (`inicial` en lib/metodos/porcentaje.ts).
+ const filaNueva = (): FilaPorcentaje => ({
+   ...METODO_PORCENTAJE.filaNueva(),
+-  minimo: 0,
+   rubro: null,
+   moneda_costo: null,
+   moneda_venta: null,
+diff --git a/src/features/pricing/tarifas/lib/metodos/porcentaje.ts b/src/features/pricing/tarifas/lib/metodos/porcentaje.ts
+index 067dd1a..282fbeb 100644
+--- a/src/features/pricing/tarifas/lib/metodos/porcentaje.ts
++++ b/src/features/pricing/tarifas/lib/metodos/porcentaje.ts
+@@ -25,7 +25,7 @@ const PORCENTAJE = { min: 0, max: 100, step: "0.01", sufijo: "%" } as const;
+ 
+ const FUERA_DE_RANGO = "El porcentaje debe estar entre 0 y 100.";
+ 
+-/** Los mínimos vacíos se envían como 0. */
++/** Los mínimos empiezan en 0 en un registro nuevo; si se vacían, se envían como 0. */
+ const numeroOCero = (valores: Record<string, unknown>, cod: string) => Number(valores[cod] ?? 0);
+ 
+ export const METODO_PORCENTAJE = definirMetodo({
+@@ -36,9 +36,9 @@ export const METODO_PORCENTAJE = definirMetodo({
+ 
+     porcentaje_venta: monto({ label: "Porcentaje venta", inicial: 0, formulario: PORCENTAJE }),
+ 
+-    minimo_costo: monto({ label: "Mínimo Costo", aPayload: numeroOCero }),
++    minimo_costo: monto({ label: "Mínimo Costo", inicial: 0, aPayload: numeroOCero }),
+ 
+-    minimo_venta: monto({ label: "Mínimo Venta", aPayload: numeroOCero }),
++    minimo_venta: monto({ label: "Mínimo Venta", inicial: 0, aPayload: numeroOCero }),
+ 
+     cod_rubro: rubro({ label: "Rubro", en: "rubro" }),
+ 

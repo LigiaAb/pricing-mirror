@@ -26,14 +26,9 @@ type Props = {
   onGuardar: (row: FilaPorcentaje) => void;
 };
 
-/*
- * Nuevo: porcentajes en 0 (`inicial` en lib/metodos/porcentaje.ts).
- * `minimo: 0` se conserva del código viejo (no corresponde a ningún campo:
- * los mínimos son minimo_costo / minimo_venta; pendiente aparte).
- */
+// Nuevo: porcentajes y mínimos en 0 (`inicial` en lib/metodos/porcentaje.ts).
 const filaNueva = (): FilaPorcentaje => ({
   ...METODO_PORCENTAJE.filaNueva(),
-  minimo: 0,
   rubro: null,
   moneda_costo: null,
   moneda_venta: null,
