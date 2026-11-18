@@ -1,6 +1,5 @@
 src/features/embarques/components/asignacion-cts/asignacion-cts-form.tsx: error TS7006: Parameter 'cliente' implicitly has an 'any' type.
 src/features/embarques/components/cca/utils.ts: error TS2307: Cannot find module '@/features/gastos' or its corresponding type declarations.
-src/features/embarques/components/cts-detalle/use-catalogos-carta-privada.ts: error TS7006: Parameter 'i' implicitly has an 'any' type.
 src/features/embarques/components/cts-detalle/use-datos-carta-privada.ts: error TS2307: Cannot find module '@/features/carta-instrucciones' or its corresponding type declarations.
 src/features/embarques/components/cts-detalle/use-datos-carta-privada.ts: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
 src/features/embarques/components/cts-detalle/use-datos-carta-privada.ts: error TS2307: Cannot find module '@/features/gastos' or its corresponding type declarations.
@@ -38,35 +37,10 @@ src/features/embarques/components/pages/cts-columns.tsx: error TS2307: Cannot fi
 src/features/embarques/components/public/carta-publica-data.ts: error TS2307: Cannot find module '@/features/carta-instrucciones' or its corresponding type declarations.
 src/features/embarques/components/public/entidad-resolvers.ts: error TS2307: Cannot find module '@/features/carta-instrucciones' or its corresponding type declarations.
 src/features/embarques/components/public/guardar-seccion-publica-payload.ts: error TS2307: Cannot find module '@/features/carta-instrucciones' or its corresponding type declarations.
-src/features/embarques/components/public/secciones/cargas-publicas.tsx: error TS2305: Module '"@/features/catalogos"' has no exported member 'paisesPublico'.
-src/features/embarques/components/public/secciones/cargas-publicas.tsx: error TS2305: Module '"@/features/catalogos"' has no exported member 'relacionTipoPublico'.
-src/features/embarques/components/public/secciones/cargas-publicas.tsx: error TS2305: Module '"@/features/catalogos"' has no exported member 'tiposPublico'.
 src/features/embarques/components/public/secciones/documento-requerido-card.tsx: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
 src/features/embarques/components/public/secciones/documentos-publicas.tsx: error TS2307: Cannot find module '@/features/archivos' or its corresponding type declarations.
 src/features/embarques/components/public/secciones/documentos-publicas.tsx: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
 src/features/embarques/components/public/secciones/entidad-public-form/cambios-cliente.ts: error TS2307: Cannot find module '@/features/carta-instrucciones' or its corresponding type declarations.
-src/features/embarques/components/public/secciones/entidad-public-form/nueva-entidad-captura.tsx: error TS2305: Module '"@/features/catalogos"' has no exported member 'ciudadesPublico'.
-src/features/embarques/components/public/secciones/entidad-public-form/nueva-entidad-captura.tsx: error TS2305: Module '"@/features/catalogos"' has no exported member 'industrias'.
-src/features/embarques/components/public/secciones/entidad-public-form/nueva-entidad-captura.tsx: error TS2305: Module '"@/features/catalogos"' has no exported member 'industriasPublico'.
-src/features/embarques/components/public/secciones/entidad-public-form/nueva-entidad-captura.tsx: error TS2305: Module '"@/features/catalogos"' has no exported member 'paisesPublico'.
-src/features/embarques/components/public/secciones/entidad-public-form/nueva-entidad-captura.tsx: error TS7006: Parameter 'c' implicitly has an 'any' type.
-src/features/embarques/components/public/secciones/entidad-public-form/nueva-entidad-captura.tsx: error TS7006: Parameter 'c' implicitly has an 'any' type.
-src/features/embarques/components/public/secciones/entidad-public-form/nueva-entidad-captura.tsx: error TS7006: Parameter 'i' implicitly has an 'any' type.
-src/features/embarques/components/public/secciones/entidad-public-form/nueva-entidad-captura.tsx: error TS7006: Parameter 'opt' implicitly has an 'any' type.
-src/features/embarques/components/public/secciones/entidad-public-form/nueva-entidad-captura.tsx: error TS7006: Parameter 'p' implicitly has an 'any' type.
-src/features/embarques/components/public/secciones/entidad-public-form/use-entidad-public-catalogos.ts: error TS2305: Module '"@/features/catalogos"' has no exported member 'ciudadesPublico'.
-src/features/embarques/components/public/secciones/entidad-public-form/use-entidad-public-catalogos.ts: error TS2305: Module '"@/features/catalogos"' has no exported member 'departamentos'.
-src/features/embarques/components/public/secciones/entidad-public-form/use-entidad-public-catalogos.ts: error TS2305: Module '"@/features/catalogos"' has no exported member 'departamentosPublico'.
-src/features/embarques/components/public/secciones/entidad-public-form/use-entidad-public-catalogos.ts: error TS2305: Module '"@/features/catalogos"' has no exported member 'industrias'.
-src/features/embarques/components/public/secciones/entidad-public-form/use-entidad-public-catalogos.ts: error TS2305: Module '"@/features/catalogos"' has no exported member 'industriasPublico'.
-src/features/embarques/components/public/secciones/entidad-public-form/use-entidad-public-catalogos.ts: error TS2305: Module '"@/features/catalogos"' has no exported member 'municipios'.
-src/features/embarques/components/public/secciones/entidad-public-form/use-entidad-public-catalogos.ts: error TS2305: Module '"@/features/catalogos"' has no exported member 'municipiosPublico'.
-src/features/embarques/components/public/secciones/entidad-public-form/use-entidad-public-catalogos.ts: error TS2305: Module '"@/features/catalogos"' has no exported member 'paisesPublico'.
-src/features/embarques/components/public/secciones/entidad-public-form/use-entidad-public-catalogos.ts: error TS2305: Module '"@/features/catalogos"' has no exported member 'tiposPublico'.
-src/features/embarques/components/public/secciones/entidad-public-form/use-entidad-public-catalogos.ts: error TS7006: Parameter 'c' implicitly has an 'any' type.
-src/features/embarques/components/public/secciones/entidad-public-form/use-entidad-public-catalogos.ts: error TS7006: Parameter 'c' implicitly has an 'any' type.
-src/features/embarques/components/public/secciones/entidad-public-form/use-entidad-public-catalogos.ts: error TS7006: Parameter 'i' implicitly has an 'any' type.
-src/features/embarques/components/public/secciones/entidad-public-form/use-entidad-public-catalogos.ts: error TS7006: Parameter 'p' implicitly has an 'any' type.
 src/features/embarques/components/public/secciones/entidad-public-form/use-entidad-public-form.ts: error TS2307: Cannot find module '@/features/carta-instrucciones' or its corresponding type declarations.
 src/features/embarques/components/public/secciones/entidad-public-form/use-entidad-public-form.ts: error TS7006: Parameter 'e' implicitly has an 'any' type.
 src/features/embarques/components/public/secciones/entidad-public-form/use-entidad-public-form.ts: error TS7006: Parameter 'e' implicitly has an 'any' type.
@@ -75,16 +49,9 @@ src/features/embarques/components/public/secciones/facturacion-publica.tsx: erro
 src/features/embarques/components/public/subir-instructivo-modal.tsx: error TS2307: Cannot find module '@/features/archivos' or its corresponding type declarations.
 src/features/embarques/components/public/subir-instructivo-modal.tsx: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
 src/features/embarques/components/public/use-carta-publica-pdf-payload.ts: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
-src/features/embarques/components/public/use-catalogos-carta-publica.ts: error TS2305: Module '"@/features/catalogos"' has no exported member 'incotermsPublico'.
-src/features/embarques/components/public/use-catalogos-carta-publica.ts: error TS2305: Module '"@/features/catalogos"' has no exported member 'relacionTipoPublico'.
-src/features/embarques/components/public/use-catalogos-carta-publica.ts: error TS2305: Module '"@/features/catalogos"' has no exported member 'tiposPublico'.
-src/features/embarques/components/public/use-catalogos-pdf-cargas.ts: error TS2305: Module '"@/features/catalogos"' has no exported member 'relacionTipoPublico'.
-src/features/embarques/components/public/use-catalogos-pdf-cargas.ts: error TS2305: Module '"@/features/catalogos"' has no exported member 'tiposPublico'.
-src/features/embarques/components/public/use-datos-carta-publica.ts: error TS2305: Module '"@/features/catalogos"' has no exported member 'paisesPublico'.
 src/features/embarques/components/public/use-datos-carta-publica.ts: error TS2307: Cannot find module '@/features/carta-instrucciones' or its corresponding type declarations.
 src/features/embarques/components/public/use-datos-carta-publica.ts: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
 src/features/embarques/components/public/use-datos-carta-publica.ts: error TS7006: Parameter 'e' implicitly has an 'any' type.
-src/features/embarques/components/public/use-datos-carta-publica.ts: error TS7006: Parameter 'p' implicitly has an 'any' type.
 src/features/embarques/components/public/use-flags-carta-publica.ts: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
 src/features/embarques/components/public/use-flags-carta-publica.ts: error TS7006: Parameter 'g' implicitly has an 'any' type.
 src/features/embarques/components/public/use-flags-carta-publica.ts: error TS7006: Parameter 'g' implicitly has an 'any' type.
@@ -120,17 +87,12 @@ src/features/embarques/components/secciones/rutas.tsx: error TS7006: Parameter '
 src/features/embarques/components/secciones/rutas.tsx: error TS7006: Parameter 'leg' implicitly has an 'any' type.
 src/features/embarques/components/secciones/rutas.tsx: error TS7006: Parameter 'leg' implicitly has an 'any' type.
 src/features/embarques/components/secciones/rutas.tsx: error TS7006: Parameter 'leg' implicitly has an 'any' type.
-src/features/embarques/components/secciones/rutas.tsx: error TS7006: Parameter 'p' implicitly has an 'any' type.
-src/features/embarques/components/secciones/rutas.tsx: error TS7006: Parameter 'p' implicitly has an 'any' type.
-src/features/embarques/components/secciones/rutas.tsx: error TS7006: Parameter 'p' implicitly has an 'any' type.
-src/features/embarques/components/secciones/rutas.tsx: error TS7006: Parameter 'p' implicitly has an 'any' type.
 src/features/embarques/components/secciones/seguimiento.tsx: error TS2307: Cannot find module '@/features/actividades' or its corresponding type declarations.
 src/features/embarques/components/secciones/seguimiento.tsx: error TS7006: Parameter 'a' implicitly has an 'any' type.
 src/features/embarques/components/secciones/shipper.tsx: error TS2307: Cannot find module '@/features/carta-instrucciones' or its corresponding type declarations.
 src/features/embarques/components/secciones/shipper.tsx: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
 src/features/embarques/components/tablas/tabla-actividades-cts.tsx: error TS2307: Cannot find module '@/features/actividades' or its corresponding type declarations.
 src/features/embarques/components/tablas/tabla-actividades-cts.tsx: error TS7006: Parameter 'actividad' implicitly has an 'any' type.
-src/features/embarques/components/tablas/tabla-gastos-coordinacion.tsx: error TS7006: Parameter 'option' implicitly has an 'any' type.
 src/features/embarques/components/tablas/tabla-gastos-criterio.tsx: error TS2307: Cannot find module '@/features/gastos' or its corresponding type declarations.
 src/features/embarques/components/tablas/tabla-gastos-criterio.tsx: error TS7006: Parameter 'c' implicitly has an 'any' type.
 src/features/embarques/components/tracking/tracking-embarques-table.tsx: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
@@ -143,17 +105,11 @@ src/features/embarques/components/tracking/tracking-vista.tsx: error TS2307: Can
 src/features/embarques/components/tracking/tracking-vista.tsx: error TS2307: Cannot find module '@/features/gestion-aduanal/api/tracking/mutations' or its corresponding type declarations.
 src/features/embarques/components/tracking/tracking-vista.tsx: error TS2307: Cannot find module '@/features/tracking-embarques/api/mutations' or its corresponding type declarations.
 src/features/embarques/components/tracking/tracking-vista.tsx: error TS7006: Parameter 'error' implicitly has an 'any' type.
-src/features/embarques/components/tracking/tracking-vista.tsx: error TS7006: Parameter 'i' implicitly has an 'any' type.
-src/features/embarques/components/tracking/tracking-vista.tsx: error TS7006: Parameter 'i' implicitly has an 'any' type.
 src/features/embarques/components/tracking/tracking-vista.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/embarques/components/tracking/tracking-vista.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/embarques/components/tracking/tracking-vista.tsx: error TS7031: Binding element 'data' implicitly has an 'any' type.
 src/features/embarques/hooks/use-cargas-coordinacion.ts: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
 src/features/embarques/hooks/use-cargas-coordinacion.ts: error TS2307: Cannot find module '@/features/gastos' or its corresponding type declarations.
-src/features/embarques/hooks/use-cargas-coordinacion.ts: error TS7006: Parameter 'e' implicitly has an 'any' type.
-src/features/embarques/hooks/use-cargas-coordinacion.ts: error TS7006: Parameter 'o' implicitly has an 'any' type.
-src/features/embarques/hooks/use-cargas-coordinacion.ts: error TS7006: Parameter 'r' implicitly has an 'any' type.
-src/features/embarques/hooks/use-cargas-coordinacion.ts: error TS7006: Parameter 'u' implicitly has an 'any' type.
 src/features/embarques/hooks/use-commit-pending-changes.ts: error TS2307: Cannot find module '@/features/carta-instrucciones' or its corresponding type declarations.
 src/features/embarques/hooks/use-detalle-embarque.ts: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
 src/features/embarques/hooks/use-detalle-embarque.ts: error TS2307: Cannot find module '@/features/correlativos' or its corresponding type declarations.
@@ -167,20 +123,7 @@ src/features/embarques/hooks/use-documentos-coordinacion.ts: error TS7006: Param
 src/features/embarques/hooks/use-gastos-coordinacion.ts: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
 src/features/embarques/hooks/use-gastos-coordinacion.ts: error TS2307: Cannot find module '@/features/gastos' or its corresponding type declarations.
 src/features/embarques/hooks/use-gastos-coordinacion.ts: error TS7006: Parameter 'e' implicitly has an 'any' type.
-src/features/embarques/hooks/use-gastos-coordinacion.ts: error TS7006: Parameter 'm' implicitly has an 'any' type.
-src/features/embarques/hooks/use-gastos-coordinacion.ts: error TS7006: Parameter 'o' implicitly has an 'any' type.
-src/features/embarques/hooks/use-gastos-coordinacion.ts: error TS7006: Parameter 's' implicitly has an 'any' type.
-src/features/embarques/hooks/use-gastos-coordinacion.ts: error TS7006: Parameter 't' implicitly has an 'any' type.
-src/features/embarques/hooks/use-gastos-coordinacion.ts: error TS7006: Parameter 't' implicitly has an 'any' type.
-src/features/embarques/hooks/use-gastos-coordinacion.ts: error TS7006: Parameter 'tipo' implicitly has an 'any' type.
 src/features/embarques/hooks/use-generar-etiquetas-pdf.ts: error TS2307: Cannot find module '@/features/archivos' or its corresponding type declarations.
-src/features/embarques/hooks/use-opciones-asignacion-cts.ts: error TS7006: Parameter 'c' implicitly has an 'any' type.
-src/features/embarques/hooks/use-opciones-asignacion-cts.ts: error TS7006: Parameter 'c' implicitly has an 'any' type.
-src/features/embarques/hooks/use-opciones-asignacion-cts.ts: error TS7006: Parameter 'e' implicitly has an 'any' type.
-src/features/embarques/hooks/use-opciones-asignacion-cts.ts: error TS7006: Parameter 'e' implicitly has an 'any' type.
-src/features/embarques/hooks/use-opciones-asignacion-cts.ts: error TS7006: Parameter 'e' implicitly has an 'any' type.
-src/features/embarques/hooks/use-opciones-asignacion-cts.ts: error TS7006: Parameter 't' implicitly has an 'any' type.
-src/features/embarques/hooks/use-opciones-asignacion-cts.ts: error TS7006: Parameter 't' implicitly has an 'any' type.
 src/features/embarques/hooks/use-pdf-embarque.ts: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
 src/features/embarques/hooks/use-pdf-embarque.ts: error TS2307: Cannot find module '@/features/correlativos' or its corresponding type declarations.
 src/features/embarques/hooks/use-pdf-embarque.ts: error TS2307: Cannot find module '@/features/gastos' or its corresponding type declarations.
@@ -188,9 +131,6 @@ src/features/embarques/hooks/use-pdf-embarque.ts: error TS7006: Parameter 'd' im
 src/features/embarques/hooks/use-pdf-embarque.ts: error TS7006: Parameter 'd' implicitly has an 'any' type.
 src/features/embarques/hooks/use-pdf-embarque.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/embarques/hooks/use-pdf-embarque.ts: error TS7006: Parameter 'r' implicitly has an 'any' type.
-src/features/embarques/hooks/use-pdf-embarque.ts: error TS7006: Parameter 't' implicitly has an 'any' type.
-src/features/embarques/hooks/use-pdf-embarque.ts: error TS7006: Parameter 't' implicitly has an 'any' type.
-src/features/embarques/hooks/use-pdf-embarque.ts: error TS7006: Parameter 't' implicitly has an 'any' type.
 src/features/embarques/lib/cargas-calculos.ts: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
 src/features/embarques/lib/carta-privada.ts: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
 src/features/embarques/lib/gastos-due.ts: error TS2307: Cannot find module '@/features/gastos' or its corresponding type declarations.
@@ -209,69 +149,16 @@ src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx: error
 src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS2322: Type 'RubroCatalog[]' is not assignable to type 'Rubro[]'.
 src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'codEstado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'cod_estado' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipoTabla' does not exist on type '{ value: string | number; label: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipo_padre_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipo_padre_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2339: Property 'tipo_tabla' does not exist on type '{ cod_estado?: number; tipo_padre_desc: string; value: string | number; label: string; codEstado?: number; tipoPadreDesc: string; }'.
 src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2709: Cannot use namespace 'Entidad' as a type.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS7006: Parameter 'i' implicitly has an 'any' type.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS7006: Parameter 'i' implicitly has an 'any' type.
-src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS7006: Parameter 'r' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/creacion-tarifa.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/creacion-tarifa.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/creacion-tarifa.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/creacion-tarifa.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/creacion-tarifa.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/formulario-tarifa.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-detalle/detalle-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodo-detalle/detalle-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-entidad/entidad-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx: error TS7006: Parameter 'tipo' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/tab-tarifas.tsx: error TS7006: Parameter 'i' implicitly has an 'any' type.
-src/features/pricing/tarifas/hooks/use-catalogos-tarifas.ts: error TS2375: Type '{ cod_metodo?: string | number; cod_tipo?: string | number | null | undefined; cod_tipo_tarifa?: string | number | undefined; todos_los_paises?: boolean | null | undefined; todos_los_clientes?: boolean | ... 1 more ... | undefined; ... 76 more ...; ultimoUsuario: any; }' is not assignable to type 'FilaServicioMetodo' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
 src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts: error TS7006: Parameter 'state' implicitly has an 'any' type.
