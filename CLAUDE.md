@@ -187,15 +187,31 @@ Resumen:
 
 ## Pendientes (optimización, no urgentes)
 
-- Archivos grandes por dividir: `cotizacion/calculo/lib/totales-rubros.ts`, `hooks/use-formulario-cotizacion.ts`,
-  `components/calculo-cotizacion.tsx`.
-- Tipo `Rubro` claro para Due Agent / Due Carrier / Totales (hoy `Record<string, unknown>` y casts).
-- Decisiones por texto (`=== "TERRESTRE"`, `"IVA"`, `includes("FLETE")`) → códigos en `constantes.ts`.
-- Tarifas: los formularios de equipo, rango y scalling (y el input de venta de costo-porcentaje) siguen a mano;
-  podrían pasar a `<CampoMetodo>` si se acepta unificar su markup (placeholders, asteriscos, "" vs null).
-- `tarifas/api/crear-api-metodo.ts` no se usa.
-- `tarifas/.../porcentaje-form.tsx` inicializa `minimo: 0` en vez de `minimo_costo` / `minimo_venta`.
-- `tarifas/api/monedas.ts` podría reutilizar el catálogo `monedas` de `@/features/catalogos`.
+Viven como **issues con la etiqueta `backlog`** (ver *Issues y etiquetas*); no se listan aquí para no duplicar:
+#95 dividir archivos grandes del cálculo · #96 tipo `Rubro` · #97 decisiones por texto → constantes ·
+#98 formularios de equipo/rango/scalling a `<CampoMetodo>` · #99 `crear-api-metodo.ts` sin uso ·
+#100 `porcentaje-form.tsx` con `minimo: 0` · #101 `tarifas/api/monedas.ts` → catálogo `monedas`.
+
+## Issues y etiquetas (control de pedidos)
+
+Cada pedido del usuario se lleva en un **issue** de GitHub (`LigiaAb/pricing-mirror`).
+
+1. **Al recibir un pedido**: buscar si ya hay un issue (abierto o cerrado); si no, crearlo con título
+   `Submódulo: qué`, descripción (qué, por qué, criterios, decisiones pendientes) y etiquetas. Al empezar, `en-progreso`.
+2. **Commits**: título `CLDDMMYYYY ACCION` igual que siempre y, en el cuerpo, `Closes #N` (o `Refs #N` si el
+   issue sigue abierto después). GitHub lo cierra al aceptar el PR: **issue cerrado = en `main` = aplicado**.
+3. **Al terminar la iteración**: comentar en el issue la rama, los diffs en orden de aplicación y el resultado de
+   `check:nuevos`; cambiar `en-progreso` → `listo-para-pr`. La entrada de `CAMBIOS.md` lleva `(#N)`.
+4. **Si un diff no aplica**: reabrir el issue (o uno nuevo que lo enlace) con lo que reportó el usuario.
+5. Al iniciar sesión, revisar los issues abiertos junto con `CAMBIOS.md`.
+
+Etiquetas (una de cada grupo; GitHub las crea al asignarlas, colores en *Issues → Labels*):
+
+| Grupo  | Etiquetas |
+| ------ | --------- |
+| Módulo | `pricing:cotizacion`, `pricing:tarifas`, `pricing:autorizacion-spot`, `pricing:plantillas`, `pricing:reportes`, `pricing:carga-masiva`, `pricing:shared`, `embarques:general`, `embarques:operaciones`, `embarques:bodegas`, `embarques:combex`, `reglas` (espejo, scripts, `CLAUDE.md`) |
+| Tipo   | `mejora`, `bug`, `refactor` (sin cambio de lógica), `sync` (validar un SYNC), `calidad` (Biome, `tsc`, finales de línea) |
+| Estado | `en-progreso`, `listo-para-pr`, `bloqueado` (falta algo del usuario), `backlog` (no urgente, sin empezar) |
 
 usar la rama con formato claude/[fecha con formato DDMMYYYY]-work-[modulo]-[submodulo]
 
