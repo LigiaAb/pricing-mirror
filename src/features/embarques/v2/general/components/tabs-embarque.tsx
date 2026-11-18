@@ -77,7 +77,14 @@ function contenidoPaso(
     case "bitacora":
       return <PasoBitacora paso={paso} embarque={embarque} />;
     default:
-      return <PasoActividades paso={paso} pasoActual={embarque.pasoActual} perfil={perfil} />;
+      return (
+        <PasoActividades
+          paso={paso}
+          pasoActual={embarque.pasoActual}
+          servicio={embarque.servicio}
+          perfil={perfil}
+        />
+      );
   }
 }
 
