@@ -22,9 +22,17 @@ cotizacion/calculo/
 │  │  │                              estado inicial y sugerencias de nombre de grupo
 │  │  ├─ totales-rubros-calculo.ts ← calcularTotalesPorMoneda, construirElementosAgrupados
 │  │  └─ totales-rubros-payload.ts ← construirPayloadRubrosAgrupados (payload final, con IVA)
+│  ├─ formulario-cotizacion-tipos.ts   ← tipos del formulario de cabecera (TipoFormularioCotizacion,
+│  │                                    OpcionFormularioCotizacion, CatalogosFormularioCotizacion, ValoresFormulario)
+│  ├─ formulario-cotizacion-helpers.ts ← getValue/getLabel, buscarPorValue/Label, entidad/contacto → opción,
+│  │                                    PAISES_TERRESTRES, TIPO_PUNTO_POR_TRANSPORTE
 │  └─ *.ts              ← lógica pura de cada sección (due-agent, scalling, agrupacion-rubros, ...)
 ├─ hooks/
 │  ├─ use-catalogos-cotizacion.tsx  ← TODOS LOS CATÁLOGOS (provider + hook)
+│  ├─ use-formulario-cotizacion.ts  ← FORMULARIO DE CABECERA: defaults, estado, onInput, payload, validez
+│  │  │                                (reexporta los tipos; consumidores importan de aquí)
+│  │  ├─ use-formulario-cotizacion-entidades.ts ← cliente, contactos y estación (búsquedas y valores guardados)
+│  │  └─ use-formulario-cotizacion-reglas.ts    ← catálogos filtrados, visibilidad, solo lectura y obligatorios
 │  └─ use-*.ts          ← estado de cada sección
 ├─ components/          ← lo visual
 │  └─ utils.tsx         ← COMPONENTES reutilizables (tooltip, Detalles, ValorMoneda, Grupo...)
@@ -173,7 +181,7 @@ el cálculo y muestra un aviso si faltan estados. Dentro del cálculo se usa `us
 - `criterios` (opciones de equipo/commodity...) y `calculo.criterios` llegan vacíos, igual que antes: falta conectar sus fuentes reales
   (marcado con `TODO` en `use-catalogos-cotizacion.tsx`).
 - Las reglas especiales del formulario que dependen de otros valores (por ejemplo: ciudad obligatoria solo si es
-  TERRESTRE, países filtrados para terrestre) siguen en `hooks/use-formulario-cotizacion.ts`
+  TERRESTRE, países filtrados para terrestre) siguen en `hooks/use-formulario-cotizacion-reglas.ts`
   (`verificarSiEsRequerido`, `obtenerCatalogoById`).
 - `lib/totales-rubros-calculo.ts` busca la moneda con comparación estricta (`cod_moneda === codMoneda`); si el backend
   manda el código como texto y el catálogo como número, el rubro no suma. Revisar si debe usar `buscarMoneda`.
