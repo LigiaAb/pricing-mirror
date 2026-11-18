@@ -11,13 +11,12 @@ import {
   useInsertarTarifaDetalle,
   useTarifaDetalles,
 } from "../../api/tarifa-detalles";
-
+import { usePermisosTarifas } from "../../hooks/use-permisos-tarifas";
 import {
   crearDetalleColumns,
   type DetalleTipoOption,
   type FilaMetodoDetalle,
 } from "./detalle-columns";
-
 import { DetalleForm } from "./detalle-form";
 
 type Props = {
@@ -32,9 +31,15 @@ export function DetalleTable({ codMetodo }: Props) {
 
   const tiposFetch = useFetchTipos.useLista();
 
-  const insertarDetalle = useInsertarTarifaDetalle();
-  const actualizarDetalle = useActualizarTarifaDetalle();
-  const eliminarDetalle = useEliminarTarifaDetalle();
+  const insertarDetalle = useInsertarTarifaDetalle({
+    meta: { successMessage: "Detalle agregado" },
+  });
+  const actualizarDetalle = useActualizarTarifaDetalle({
+    meta: { successMessage: "Detalle actualizado" },
+  });
+  const eliminarDetalle = useEliminarTarifaDetalle({
+    meta: { successMessage: "Detalle eliminado" },
+  });
 
   const [filaEditando, setFilaEditando] = React.useState<FilaMetodoDetalle | null>(null);
 
@@ -117,24 +122,28 @@ export function DetalleTable({ codMetodo }: Props) {
     [eliminarDetalle, formatearFilaApi],
   );
 
+  const { puedeAgregar, puedeEditar, puedeEliminar } = usePermisosTarifas();
+
   const columns = React.useMemo(
     () =>
       crearDetalleColumns({
-        onEditar: setFilaEditando,
-        onEliminar: handleEliminar,
+        onEditar: puedeEditar ? setFilaEditando : undefined,
+        onEliminar: puedeEliminar ? handleEliminar : undefined,
       }),
-    [handleEliminar],
+    [handleEliminar, puedeEditar, puedeEliminar],
   );
 
   return (
     <div className="space-y-4">
-      <DetalleForm
-        value={filaEditando}
-        tipos={tipos}
-        onGuardar={handleGuardar}
-        onCancelar={() => setFilaEditando(null)}
-        isPending={insertarDetalle.isPending || actualizarDetalle.isPending}
-      />
+      {(filaEditando ? puedeEditar : puedeAgregar) ? (
+        <DetalleForm
+          value={filaEditando}
+          tipos={tipos}
+          onGuardar={handleGuardar}
+          onCancelar={() => setFilaEditando(null)}
+          isPending={insertarDetalle.isPending || actualizarDetalle.isPending}
+        />
+      ) : null}
 
       <DataTable
         columns={columns}

@@ -16,6 +16,7 @@ import {
   useTarifaScalling,
 } from "../../../api/tarifa-scalling";
 import { useOpcionesMonedas } from "../../../hooks/use-opciones-tarifa";
+import { usePermisosTarifas } from "../../../hooks/use-permisos-tarifas";
 import {
   type FilaMetodoScalling,
   METODO_SCALLING,
@@ -56,11 +57,17 @@ export function ScallingTable({ codMetodo, codTipoTransporte }: Props) {
 
   const monedasFetch = fetchMonedas.useLista({ cod_estado: 1 });
 
-  const insertarScalling = useInsertarTarifaScalling();
+  const insertarScalling = useInsertarTarifaScalling({
+    meta: { successMessage: "Scalling agregado" },
+  });
 
-  const actualizarScalling = useActualizarTarifaScalling();
+  const actualizarScalling = useActualizarTarifaScalling({
+    meta: { successMessage: "Scalling actualizado" },
+  });
 
-  const eliminarScalling = useEliminarTarifaScalling();
+  const eliminarScalling = useEliminarTarifaScalling({
+    meta: { successMessage: "Scalling eliminado" },
+  });
 
   /*
    * =========================================================
@@ -252,13 +259,15 @@ export function ScallingTable({ codMetodo, codTipoTransporte }: Props) {
    * =========================================================
    */
 
+  const { puedeAgregar, puedeEditar, puedeEliminar } = usePermisosTarifas();
+
   const columns = React.useMemo(
     () =>
       crearScallingColumns({
-        onEditar: setFilaEditando,
-        onEliminar: handleEliminar,
+        onEditar: puedeEditar ? setFilaEditando : undefined,
+        onEliminar: puedeEliminar ? handleEliminar : undefined,
       }),
-    [handleEliminar],
+    [handleEliminar, puedeEditar, puedeEliminar],
   );
 
   /*
@@ -269,16 +278,18 @@ export function ScallingTable({ codMetodo, codTipoTransporte }: Props) {
 
   return (
     <div className="space-y-4">
-      <ScallingForm
-        value={filaEditando}
-        tiposPuntoEnlace={tiposPuntoEnlace}
-        puntosEnlace={puntosEnlace}
-        monedas={monedas}
-        tipoPuntoEnlaceDefault={tipoPuntoEnlaceDefault}
-        onGuardar={handleGuardar}
-        onCancelar={() => setFilaEditando(null)}
-        isPending={insertarScalling.isPending || actualizarScalling.isPending}
-      />
+      {(filaEditando ? puedeEditar : puedeAgregar) ? (
+        <ScallingForm
+          value={filaEditando}
+          tiposPuntoEnlace={tiposPuntoEnlace}
+          puntosEnlace={puntosEnlace}
+          monedas={monedas}
+          tipoPuntoEnlaceDefault={tipoPuntoEnlaceDefault}
+          onGuardar={handleGuardar}
+          onCancelar={() => setFilaEditando(null)}
+          isPending={insertarScalling.isPending || actualizarScalling.isPending}
+        />
+      ) : null}
 
       <DataTable
         columns={columns}

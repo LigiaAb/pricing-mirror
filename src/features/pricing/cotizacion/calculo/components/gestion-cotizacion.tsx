@@ -3,6 +3,7 @@
 import { AlertTriangle, Loader2, SearchIcon } from "lucide-react";
 import * as React from "react";
 
+import { OPCION_PERMISOS, usePermisosPricing } from "@/features/pricing/shared";
 import { useContextoOperativoStore } from "@/features/shell";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -400,6 +401,12 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
    * FORMULARIO SELECCIONADO
    * ========================================================================== */
 
+  /*
+   * Permisos de la opción "Información" de Cotizaciones. Autorizar (confirmar /
+   * rechazar) queda pendiente: falta confirmar su propiedad en usePermisosCategoria.
+   */
+  const { puedeAgregar, puedeEditar } = usePermisosPricing(OPCION_PERMISOS.cotizaciones);
+
   const tipoFormularioInformacion = React.useMemo(() => {
     if (!cotizacionSeleccionada) {
       return "lectura" as const;
@@ -412,8 +419,12 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
       return "lectura" as const;
     }
 
-    return isNewCotizacion ? ("ingreso" as const) : ("edicion" as const);
-  }, [cotizacionSeleccionada, isNewCotizacion]);
+    if (isNewCotizacion) {
+      return puedeAgregar ? ("ingreso" as const) : ("lectura" as const);
+    }
+
+    return puedeEditar ? ("edicion" as const) : ("lectura" as const);
+  }, [cotizacionSeleccionada, isNewCotizacion, puedeAgregar, puedeEditar]);
 
   const inputsReadOnlyInformacion = React.useMemo(() => {
     if (isNewCotizacion) {
@@ -457,7 +468,7 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
         throw new Error("La cotización abierta no coincide con la versión guardada.");
       }
 
-      await actualizarCotizacion({ cod_cotizacion_cabecera, cod_estado });
+      await actualizarCotizacion({ cod_cotizacion_cabecera, cod_estado }, { silencioso: true });
     },
     [cotizacionPersistida, actualizarCotizacion],
   );
@@ -479,6 +490,7 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
     alternarVencidas,
     seleccionarCotizacion,
     nuevaCotizacion,
+    puedeAgregar,
     limpiarCotizacion,
     rechazarCotizacion,
     confirmarCotizacion,
@@ -671,6 +683,8 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
                   rubro.cod_servicio == null ? [] : [rubro.cod_servicio],
                 )}
                 filtrosCalculo={filtrosCalculo}
+                puedeAgregar={puedeAgregar}
+                puedeEditar={puedeEditar}
               />
 
               {!esFormularioValido ? (

@@ -8,7 +8,7 @@ export type FilaMetodoEntidad = TarifaEntidad & {
 };
 
 type Props = {
-  onEliminar: (row: FilaMetodoEntidad) => void;
+  onEliminar?: ((row: FilaMetodoEntidad) => void) | undefined;
 };
 
 export function crearEntidadColumns({ onEliminar }: Props): ColumnDef<FilaMetodoEntidad>[] {
@@ -29,17 +29,18 @@ export function crearEntidadColumns({ onEliminar }: Props): ColumnDef<FilaMetodo
     {
       id: "acciones",
       header: "",
-      cell: ({ row }) => (
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          aria-label="Eliminar entidad"
-          onClick={() => onEliminar(row.original)}
-        >
-          <Trash2 className="size-4" />
-        </Button>
-      ),
+      cell: ({ row }) =>
+        onEliminar ? (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            aria-label="Eliminar entidad"
+            onClick={() => onEliminar(row.original)}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        ) : null,
     },
   ];
 }

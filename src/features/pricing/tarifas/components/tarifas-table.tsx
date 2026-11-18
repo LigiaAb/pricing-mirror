@@ -24,6 +24,7 @@ import {
 import { cn } from "@/shared/lib/utils";
 import type { FilaServicioMetodo } from "../api/types-api";
 import { useCatalogosTarifas } from "../hooks/use-catalogos-tarifas";
+import { usePermisosTarifas } from "../hooks/use-permisos-tarifas";
 import { useReferenciaEstable } from "../hooks/use-referencia-estable";
 import { FormularioTarifa, type TarifaSubmitPayload } from "./formulario-tarifa";
 import { crearTarifasColumns } from "./tarifas-columns";
@@ -199,15 +200,18 @@ export function TarifasTable({
     refetchMetodos();
   }, [refetchServicios, refetchMetodos]);
 
+  const { puedeAgregar, puedeEliminar } = usePermisosTarifas();
+
   const notasColumns = React.useMemo(
     () =>
       crearTarifasColumns({
         onVerDetalle: setTarifaSeleccionada,
         mostrarVencidos,
         setAccion,
-        onAnular,
+        // Anular = acción Eliminar de la opción "Servicios".
+        onAnular: puedeEliminar ? onAnular : undefined,
       }),
-    [setTarifaSeleccionada, mostrarVencidos, setAccion, onAnular],
+    [setTarifaSeleccionada, mostrarVencidos, setAccion, onAnular, puedeEliminar],
   );
 
   // Memoizado para que la tabla no reciba un arreglo nuevo en cada render.
@@ -227,16 +231,18 @@ export function TarifasTable({
         searchPlaceholder="Buscar resultado…"
         extraActions={
           <>
-            <Button
-              size="sm"
-              onClick={() => {
-                setTarifaSeleccionada({ cod_servicio: 0, cod_metodo: 0 } as FilaServicioMetodo);
-                setAccion("ingreso");
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              Agregar
-            </Button>
+            {puedeAgregar ? (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setTarifaSeleccionada({ cod_servicio: 0, cod_metodo: 0 } as FilaServicioMetodo);
+                  setAccion("ingreso");
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                Agregar
+              </Button>
+            ) : null}
             <Button
               size="sm"
               variant="default"

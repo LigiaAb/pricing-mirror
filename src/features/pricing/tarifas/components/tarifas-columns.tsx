@@ -11,7 +11,8 @@ type props = {
   onVerDetalle: (tarifa: FilaServicioMetodo) => void;
   mostrarVencidos?: boolean;
   setAccion: React.Dispatch<React.SetStateAction<"ingreso" | "edicion" | "lectura" | "filtro">>;
-  onAnular: (row: FilaServicioMetodo) => void;
+  /** Sin función (sin permiso de Eliminar) no se muestra el botón de anular. */
+  onAnular?: ((row: FilaServicioMetodo) => void) | undefined;
 };
 
 const LocalTooltip = ({
@@ -71,18 +72,20 @@ export function crearTarifasColumns(
           >
             <Eye aria-hidden="true" />
           </Button>
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            aria-label={`Ver tarifa ${row.original.cod_servicio}`}
-            className="text-destructive"
-            onClick={() => {
-              onAnular(row.original);
-            }}
-          >
-            <Trash aria-hidden="true" />
-          </Button>
+          {onAnular ? (
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label={`Anular tarifa ${row.original.cod_servicio}`}
+              className="text-destructive"
+              onClick={() => {
+                onAnular(row.original);
+              }}
+            >
+              <Trash aria-hidden="true" />
+            </Button>
+          ) : null}
         </>
       ),
     },

@@ -27,8 +27,8 @@ export type FilaMetodoPais = TarifaRuta & {
 
 type Props = {
   esTerrestre: boolean;
-  onEditar: (row: FilaMetodoPais) => void;
-  onEliminar: (row: FilaMetodoPais) => void;
+  onEditar?: ((row: FilaMetodoPais) => void) | undefined;
+  onEliminar?: ((row: FilaMetodoPais) => void) | undefined;
 };
 
 export function crearPaisColumns({
@@ -75,25 +75,29 @@ export function crearPaisColumns({
     header: "",
     cell: ({ row }) => (
       <div className="flex justify-end gap-1">
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          aria-label="Editar ruta"
-          onClick={() => onEditar(row.original)}
-        >
-          <Pencil className="size-4" />
-        </Button>
+        {onEditar ? (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            aria-label="Editar ruta"
+            onClick={() => onEditar(row.original)}
+          >
+            <Pencil className="size-4" />
+          </Button>
+        ) : null}
 
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          aria-label="Eliminar ruta"
-          onClick={() => onEliminar(row.original)}
-        >
-          <Trash2 className="size-4" />
-        </Button>
+        {onEliminar ? (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            aria-label="Eliminar ruta"
+            onClick={() => onEliminar(row.original)}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        ) : null}
       </div>
     ),
   });

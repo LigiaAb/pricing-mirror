@@ -8,9 +8,19 @@ import {
   CotizacionForm,
   type OpcionFormularioCotizacion,
 } from "@/features/pricing/cotizacion/calculo";
+import { OPCION_PERMISOS, usePermisosPricing } from "@/features/pricing/shared";
 import { useCatalogosTarifas } from "@/features/pricing/tarifas";
 import { useContextoOperativoStore } from "@/features/shell";
 import { DataTable, DataTableColumnHeader } from "@/shared/components/data-table/data-table";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
 import { Button } from "@/shared/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import type { ColumnDef } from "@/shared/lib/tanstack-table";
@@ -116,8 +126,13 @@ export function GestionPlantillasClientes() {
   const insertar = useInsertarPlantillaCliente();
   const actualizar = useActualizarPlantillaCliente();
   const eliminar = useEliminarPlantillaCliente();
+  const { puedeAgregar, puedeEditar, puedeEliminar } = usePermisosPricing(
+    OPCION_PERMISOS.plantillasClientes,
+  );
   const [seleccionada, setSeleccionada] = React.useState<PlantillaCliente | null>(null);
   const [nueva, setNueva] = React.useState(false);
+  /** Plantilla que espera confirmación para eliminarse (abre el diálogo). */
+  const [porEliminar, setPorEliminar] = React.useState<Fila | null>(null);
 
   const data = React.useMemo<Fila[]>(
     () =>
@@ -194,25 +209,31 @@ export function GestionPlantillasClientes() {
             >
               <Eye className="size-4" />
             </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              aria-label="Eliminar plantilla"
-              onClick={() =>
-                void eliminar
-                  .mutateAsync({ ...row.original, cod_estado: 2 })
-                  .then(() => setSeleccionada(null))
-              }
-            >
-              <Trash2 className="size-4" />
-            </Button>
+            {puedeEliminar ? (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                aria-label="Eliminar plantilla"
+                onClick={() => setPorEliminar(row.original)}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            ) : null}
           </div>
         ),
       },
     ],
-    [eliminar],
+    [puedeEliminar],
   );
+
+  const confirmarEliminar = () => {
+    if (!porEliminar) return;
+    void eliminar
+      .mutateAsync({ ...porEliminar, cod_estado: 2 })
+      .then(() => setSeleccionada(null))
+      .finally(() => setPorEliminar(null));
+  };
 
   if (cargandoCatalogos)
     return <p className="p-4 text-sm text-muted-foreground">Cargando catálogos…</p>;
@@ -283,22 +304,24 @@ export function GestionPlantillasClientes() {
               <ListRestart className="size-4" />
               Limpiar
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => {
-                setNueva(true);
-                setSeleccionada({
-                  cod_tarifaplantilla: 0,
-                  cod_empresa: codEmpresa,
-                  cod_cc: codCc,
-                  cod_estado: 1,
-                } as PlantillaCliente);
-              }}
-            >
-              <Plus className="size-4" />
-              Nueva
-            </Button>
+            {puedeAgregar ? (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  setNueva(true);
+                  setSeleccionada({
+                    cod_tarifaplantilla: 0,
+                    cod_empresa: codEmpresa,
+                    cod_cc: codCc,
+                    cod_estado: 1,
+                  } as PlantillaCliente);
+                }}
+              >
+                <Plus className="size-4" />
+                Nueva
+              </Button>
+            ) : null}
           </>
         }
       />
@@ -312,7 +335,7 @@ export function GestionPlantillasClientes() {
           </TabsList>
           <TabsContent value="informacion">
             <CotizacionForm
-              tipoFormulario={nueva ? "ingreso" : "edicion"}
+              tipoFormulario={nueva ? "ingreso" : puedeEditar ? "edicion" : "lectura"}
               defaultValues={seleccionada as CotizacionCabeceraPayload}
               catalogos={catalogosFormulario}
               resetKey={`${nueva ? "nueva" : seleccionada.cod_tarifaplantilla}`}
@@ -332,11 +355,40 @@ export function GestionPlantillasClientes() {
                 codTarifaPlantilla={seleccionada.cod_tarifaplantilla}
                 servicios={catalogos.servicios}
                 rubros={catalogos.rubros}
+                soloLectura={!puedeEditar}
               />
             )}
           </TabsContent>
         </Tabs>
       ) : null}
+      <AlertDialog
+        open={porEliminar != null}
+        onOpenChange={(abierto: boolean) => {
+          if (!abierto && !eliminar.isPending) setPorEliminar(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar plantilla</AlertDialogTitle>
+            <AlertDialogDescription>
+              {`Se eliminará la plantilla #${String(porEliminar?.cod_tarifaplantilla ?? "")}`}
+              {porEliminar?.descripcion ? ` (${String(porEliminar.descripcion)})` : ""}. ¿Desea
+              continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={eliminar.isPending}>Cancelar</AlertDialogCancel>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={eliminar.isPending}
+              onClick={confirmarEliminar}
+            >
+              Eliminar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

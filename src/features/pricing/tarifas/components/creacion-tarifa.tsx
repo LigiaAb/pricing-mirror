@@ -7,6 +7,7 @@ import { Loader } from "@/shared/components/ui/loader";
 import { useActualizarServicio, useInsertarServicio, useReplicarServicio } from "../api/servicios";
 import type { FilaServicioMetodo } from "../api/types-api";
 import { useCatalogosTarifas } from "../hooks/use-catalogos-tarifas";
+import { PermisosTarifasProvider } from "../hooks/use-permisos-tarifas";
 import type { TarifaSubmitPayload } from "./formulario-tarifa";
 import { TarifasTabs } from "./tab-tarifas";
 import { TarifasTable } from "./tarifas-table";
@@ -28,10 +29,12 @@ export function CreacionTarifa() {
 
   const insertarServicio = useInsertarServicio();
   const actualizarServicio = useActualizarServicio();
+  const anularServicio = useActualizarServicio({ meta: { successMessage: "Tarifa anulada" } });
   const replicarServicio = useReplicarServicio();
 
-  const insertarMetodo = useInsertarMetodo();
-  const actualizarMetodo = useActualizarMetodo();
+  // Crear y editar tarifa = servicio + método: el mensaje lo pone el método (un solo toast).
+  const insertarMetodo = useInsertarMetodo({ meta: { successMessage: "Tarifa creada" } });
+  const actualizarMetodo = useActualizarMetodo({ meta: { successMessage: "Tarifa actualizada" } });
 
   const { refetchServicios, refetchMetodos } = useCatalogosTarifas();
 
@@ -63,7 +66,7 @@ export function CreacionTarifa() {
        * servicio cambia a anulado.
        */
       if (anular) {
-        await Promise.all([actualizarServicio.mutateAsync({ ...servicio, cod_estado: 4 })]);
+        await Promise.all([anularServicio.mutateAsync({ ...servicio, cod_estado: 4 })]);
 
         await Promise.all([refetchServicios()]);
 
@@ -149,6 +152,7 @@ export function CreacionTarifa() {
       insertarServicio,
       insertarMetodo,
       actualizarServicio,
+      anularServicio,
       actualizarMetodo,
       refetchServicios,
       refetchMetodos,
@@ -198,12 +202,14 @@ export function CreacionTarifa() {
       insertarServicio.isPending ||
       insertarMetodo.isPending ||
       actualizarServicio.isPending ||
+      anularServicio.isPending ||
       actualizarMetodo.isPending ||
       replicarServicio.isPending,
     [
       insertarServicio.isPending,
       insertarMetodo.isPending,
       actualizarServicio.isPending,
+      anularServicio.isPending,
       actualizarMetodo.isPending,
       replicarServicio.isPending,
     ],
@@ -223,60 +229,62 @@ export function CreacionTarifa() {
   }, [tarifaSeleccionada]);
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-lg border bg-card p-4 shadow-sm">
-        <TarifasTable
-          setAccion={setAccion}
-          setTarifaSeleccionada={setTarifaSeleccionada}
-          setFiltros={setFiltros}
-          filtros={filtros}
-          filtrosIniciales={filtrosIniciales}
-          editarRegistro={handleGuardarTarifa}
-        />
-      </div>
-
-      {tarifaSeleccionada && (
-        <div className="grid grid-cols-2 gap-2 border border-accent p-2 rounded-md mt-5 shadow-xl bg-card">
-          <p>
-            <span className="font-bold text-xl">
-              [{" "}
-              <span className="font-normal text-base">
-                {tarifaSeleccionada.cod_servicio ?? "0"}
-              </span>{" "}
-              ]
-            </span>
-            &nbsp;&nbsp;
-            <span className="font-arial">SERVICIO</span>{" "}
-            {accion === "ingreso" ? "Nuevo" : (tarifaSeleccionada.nombre ?? "")}
-          </p>
-
-          <div className="gap-2 justify-end items-center">
-            <p className="text-right text-sm text-primary">Modo {accion}</p>
-            <p className="text-right text-sm">
-              <span className="text-primary">Última modificación por: </span>
-              {tarifaSeleccionada.ultimoUsuario ?? ""}
-            </p>
-          </div>
-        </div>
-      )}
-      {/* <pre>{JSON.stringify(tarifaSeleccionada, null, 2)}</pre> */}
-
-      {tarifaSeleccionada && (
-        <div
-          className="rounded-lg border bg-card p-4 shadow-sm"
-          key={`${tarifaSeleccionada.cod_servicio ?? 0}-${tarifaSeleccionada.cod_metodo ?? 0}-${accion}`}
-          ref={ref}
-        >
-          <TarifasTabs
-            defaultValues={tarifaSeleccionada}
-            tipoFormulario={accion}
-            onGuardarTarifa={handleGuardarTarifa}
-            onCopiarTarifa={handleCopiarTarifa}
-            guardando={guardando}
+    <PermisosTarifasProvider>
+      <div className="space-y-4">
+        <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <TarifasTable
+            setAccion={setAccion}
+            setTarifaSeleccionada={setTarifaSeleccionada}
+            setFiltros={setFiltros}
+            filtros={filtros}
+            filtrosIniciales={filtrosIniciales}
+            editarRegistro={handleGuardarTarifa}
           />
         </div>
-      )}
-      {copiando && <Loader texto="Copiando la Tarifa" />}
-    </div>
+
+        {tarifaSeleccionada && (
+          <div className="grid grid-cols-2 gap-2 border border-accent p-2 rounded-md mt-5 shadow-xl bg-card">
+            <p>
+              <span className="font-bold text-xl">
+                [{" "}
+                <span className="font-normal text-base">
+                  {tarifaSeleccionada.cod_servicio ?? "0"}
+                </span>{" "}
+                ]
+              </span>
+              &nbsp;&nbsp;
+              <span className="font-arial">SERVICIO</span>{" "}
+              {accion === "ingreso" ? "Nuevo" : (tarifaSeleccionada.nombre ?? "")}
+            </p>
+
+            <div className="gap-2 justify-end items-center">
+              <p className="text-right text-sm text-primary">Modo {accion}</p>
+              <p className="text-right text-sm">
+                <span className="text-primary">Última modificación por: </span>
+                {tarifaSeleccionada.ultimoUsuario ?? ""}
+              </p>
+            </div>
+          </div>
+        )}
+        {/* <pre>{JSON.stringify(tarifaSeleccionada, null, 2)}</pre> */}
+
+        {tarifaSeleccionada && (
+          <div
+            className="rounded-lg border bg-card p-4 shadow-sm"
+            key={`${tarifaSeleccionada.cod_servicio ?? 0}-${tarifaSeleccionada.cod_metodo ?? 0}-${accion}`}
+            ref={ref}
+          >
+            <TarifasTabs
+              defaultValues={tarifaSeleccionada}
+              tipoFormulario={accion}
+              onGuardarTarifa={handleGuardarTarifa}
+              onCopiarTarifa={handleCopiarTarifa}
+              guardando={guardando}
+            />
+          </div>
+        )}
+        {copiando && <Loader texto="Copiando la Tarifa" />}
+      </div>
+    </PermisosTarifasProvider>
   );
 }

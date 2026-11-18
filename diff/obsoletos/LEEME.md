@@ -19,3 +19,8 @@ También es obsoleto 171126-1032-cl17112026-sync-restaurar-el-espejo-al-contenid
 (se marcó "NO APLICAR"): en el proyecto no aplica completo porque incluye borrar
 `cotizacion/calculo/lib/costo-porcentaje.ts`, que el proyecto ya no tiene. Usar en su lugar
 171126-1036-cl17112026-sync-poner-al-dia-el-proyecto.diff (mismo contenido sin ese archivo).
+
+También son obsoletos 181126-0815-cl18112026-pricing-toasts-de-exito-con-meta-en-las-mutacione.diff y
+181126-0818-cl18112026-pricing-mutaciones-usan-exigirexitodemutacion-rea.diff (nunca se aplicaron en el
+proyecto, ver SYNC `23d2551`). Su contenido, junto con los permisos de botones (181126-0902), está en el
+diff único 181126-0911-cl18112026-sync-diff-unico-con-toasts-y-permisos-pendientes.diff.

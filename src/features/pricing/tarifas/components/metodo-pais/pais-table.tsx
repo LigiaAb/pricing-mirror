@@ -10,6 +10,7 @@ import {
   useTarifaRutas,
 } from "../../api/tarifa-rutas";
 import { useCatalogosTarifas } from "../../hooks/use-catalogos-tarifas";
+import { usePermisosTarifas } from "../../hooks/use-permisos-tarifas";
 import { crearPaisColumns, type FilaMetodoPais, type RutaOption } from "./pais-columns";
 import { PaisForm } from "./pais-form";
 
@@ -90,9 +91,9 @@ export function PaisTable({ codMetodo, codTipoTransporte }: Props) {
   //   ciudades: (ciudadesFetch.data ?? []) as RutaOption[],
   // };
 
-  const insertarRuta = useInsertarTarifaRuta();
-  const actualizarRuta = useActualizarTarifaRuta();
-  const eliminarRuta = useEliminarTarifaRuta();
+  const insertarRuta = useInsertarTarifaRuta({ meta: { successMessage: "Ruta agregada" } });
+  const actualizarRuta = useActualizarTarifaRuta({ meta: { successMessage: "Ruta actualizada" } });
+  const eliminarRuta = useEliminarTarifaRuta({ meta: { successMessage: "Ruta eliminada" } });
 
   const [filaEditando, setFilaEditando] = React.useState<FilaMetodoPais | null>(null);
 
@@ -202,31 +203,35 @@ export function PaisTable({ codMetodo, codTipoTransporte }: Props) {
     [eliminarRuta, formatearFilaApi],
   );
 
+  const { puedeAgregar, puedeEditar, puedeEliminar } = usePermisosTarifas();
+
   const columns = React.useMemo(
     () =>
       crearPaisColumns({
         esTerrestre,
-        onEditar: setFilaEditando,
-        onEliminar: handleEliminar,
+        onEditar: puedeEditar ? setFilaEditando : undefined,
+        onEliminar: puedeEliminar ? handleEliminar : undefined,
       }),
-    [esTerrestre, handleEliminar],
+    [esTerrestre, handleEliminar, puedeEditar, puedeEliminar],
   );
 
   return (
     <div className="space-y-4">
-      <PaisForm
-        value={filaEditando}
-        esTerrestre={esTerrestre}
-        tiposRuta={catalogosRuta.tiposRuta}
-        continentes={catalogosRuta.continentes}
-        paises={catalogosRuta.paises}
-        tiposPuntoEnlace={catalogosRuta.tiposPuntoEnlace}
-        puntosEnlace={catalogosRuta.puntosEnlace}
-        ciudades={catalogosRuta.ciudades}
-        onGuardar={handleGuardar}
-        onCancelar={() => setFilaEditando(null)}
-        isPending={insertarRuta.isPending || actualizarRuta.isPending}
-      />
+      {(filaEditando ? puedeEditar : puedeAgregar) ? (
+        <PaisForm
+          value={filaEditando}
+          esTerrestre={esTerrestre}
+          tiposRuta={catalogosRuta.tiposRuta}
+          continentes={catalogosRuta.continentes}
+          paises={catalogosRuta.paises}
+          tiposPuntoEnlace={catalogosRuta.tiposPuntoEnlace}
+          puntosEnlace={catalogosRuta.puntosEnlace}
+          ciudades={catalogosRuta.ciudades}
+          onGuardar={handleGuardar}
+          onCancelar={() => setFilaEditando(null)}
+          isPending={insertarRuta.isPending || actualizarRuta.isPending}
+        />
+      ) : null}
 
       <DataTable
         columns={columns}
