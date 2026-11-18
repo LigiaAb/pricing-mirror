@@ -17,6 +17,22 @@ export type Id = string | number;
 /** Objeto genérico con llaves desconocidas. */
 export type Registro = Record<string, unknown>;
 
+/**
+ * Detalle del método de un rubro ("CW: 120 / $2.50 Por KILO"): `tipo_desc` es
+ * el texto antes de los dos puntos. `custom` = armado en pantalla.
+ */
+export type DetalleTarifa = {
+  tipo_desc?: string | null;
+
+  tarifadetalle_descripcion?: string | number | null;
+
+  tarifadetalle_valor?: string | number | null;
+
+  custom?: boolean;
+
+  [key: string]: unknown;
+};
+
 /* ==========================================================================
  * OPCIONES DE SELECT
  * ========================================================================== */

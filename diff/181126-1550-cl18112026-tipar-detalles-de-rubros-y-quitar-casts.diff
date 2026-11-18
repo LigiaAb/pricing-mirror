@@ -1,0 +1,259 @@
+diff --git a/src/features/pricing/cotizacion/calculo/components/totales-rubros.tsx b/src/features/pricing/cotizacion/calculo/components/totales-rubros.tsx
+index 15baf24..aad6c7c 100644
+--- a/src/features/pricing/cotizacion/calculo/components/totales-rubros.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/totales-rubros.tsx
+@@ -169,9 +169,9 @@ export function TotalesRubros({ controller, lectura = false }: Props) {
+               {listaElementos.map((item) => {
+                 const id = String(item.value ?? "");
+ 
+-                const metodo = getMetodo(item as RubroTotal);
++                const metodo = getMetodo(item);
+ 
+-                const simbolo = getSimboloMoneda(item as RubroTotal);
++                const simbolo = getSimboloMoneda(item);
+ 
+                 return (
+                   <tr key={id} className="border-b last:border-b-0">
+diff --git a/src/features/pricing/cotizacion/calculo/components/utils.tsx b/src/features/pricing/cotizacion/calculo/components/utils.tsx
+index 1cb8fc8..bd60772 100644
+--- a/src/features/pricing/cotizacion/calculo/components/utils.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/utils.tsx
+@@ -17,6 +17,7 @@ import { Loader } from "@/shared/components/ui/loader";
+ import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
+ import { cn } from "@/shared/lib/utils";
+ 
++import type { DetalleTarifa } from "../lib/tipos";
+ import { formatNumero } from "../lib/utils";
+ 
+ /* ==========================================================================
+@@ -88,7 +89,7 @@ export function ValorMoneda({
+  * ========================================================================== */
+ 
+ /** Lista de detalles de un método ("CW: 120 / $2.50 Por KILO"). Muestra "—" si no hay. */
+-export function Detalles({ detalles }: { detalles?: Array<Record<string, unknown>> }) {
++export function Detalles({ detalles }: { detalles?: DetalleTarifa[] | undefined }) {
+   if (!detalles?.length) {
+     return <span className="text-muted-foreground">—</span>;
+   }
+diff --git a/src/features/pricing/cotizacion/calculo/lib/carrier-flete.ts b/src/features/pricing/cotizacion/calculo/lib/carrier-flete.ts
+index d0bc78f..7a17b38 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/carrier-flete.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/carrier-flete.ts
+@@ -1,5 +1,5 @@
+ import { construirDetalleFlete } from "./detalle-flete";
+-import type { CatalogoTipo, Id, MonedaCatalogo } from "./tipos";
++import type { CatalogoTipo, DetalleTarifa, Id, MonedaCatalogo } from "./tipos";
+ import { buscarMoneda } from "./utils";
+ 
+ export type MetodoFlete = {
+@@ -23,7 +23,7 @@ export type MetodoFlete = {
+   original_venta?: string | number | null;
+   original_costo?: string | number | null;
+ 
+-  detalles?: Array<Record<string, unknown>>;
++  detalles?: DetalleTarifa[];
+ 
+   [key: string]: unknown;
+ };
+@@ -66,12 +66,12 @@ export type RubroFlete = {
+   es_flete?: boolean | null;
+   es_tarifa_spot?: boolean | null;
+ 
+-  cod_tipo_pago?: Id | null;
++  cod_tipo_pago?: Id | null | undefined;
+ 
+   entidad_id?: Id | null;
+   entidad_nombre?: string | null;
+ 
+-  cod_servicio?: Id | null;
++  cod_servicio?: Id | null | undefined;
+ 
+   venta?: string | number | null;
+   costo?: string | number | null;
+@@ -402,7 +402,7 @@ export function crearTarifaSpotDueCarrier({
+ 
+   /** Define el texto del detalle de flete (ver lib/detalle-flete.ts). */
+   codTipoTransporte?: Id | null | undefined;
+-}) {
++}): RubroFlete | null {
+   const valor = Number(valorSpot);
+ 
+   if (!rubroBase) {
+@@ -542,5 +542,5 @@ export function crearTarifaSpotDueCarrier({
+     entidad_id: entidadId,
+ 
+     entidad_nombre: entidadNombre,
+-  } as RubroFlete;
++  };
+ }
+diff --git a/src/features/pricing/cotizacion/calculo/lib/due-agent.ts b/src/features/pricing/cotizacion/calculo/lib/due-agent.ts
+index d62c92c..4586648 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/due-agent.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/due-agent.ts
+@@ -9,7 +9,7 @@ import {
+   getCodMonedaVenta,
+   primeraMonedaDefinida,
+ } from "./rubros-manuales";
+-import type { Id } from "./tipos";
++import type { DetalleTarifa, Id } from "./tipos";
+ import { buscarMoneda, normalizarBoolean, simboloDeMoneda } from "./utils";
+ 
+ export type RubroDueAgent = {
+@@ -60,7 +60,7 @@ export type RubroDueAgent = {
+ 
+       minimo_venta?: string | number | null;
+ 
+-      detalles?: Array<Record<string, unknown>>;
++      detalles?: DetalleTarifa[];
+ 
+       [key: string]: unknown;
+     } | null;
+@@ -78,7 +78,7 @@ export type RubroDueAgent = {
+     cod_moneda_venta?: Id | null;
+     cod_moneda_costo?: Id | null;
+ 
+-    detalles?: Array<Record<string, unknown>>;
++    detalles?: DetalleTarifa[];
+ 
+     [key: string]: unknown;
+   } | null;
+diff --git a/src/features/pricing/cotizacion/calculo/lib/due-carrier.ts b/src/features/pricing/cotizacion/calculo/lib/due-carrier.ts
+index 2d68c2a..b57014a 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/due-carrier.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/due-carrier.ts
+@@ -9,7 +9,7 @@ import {
+   getCodMonedaVenta,
+   primeraMonedaDefinida,
+ } from "./rubros-manuales";
+-import type { Id } from "./tipos";
++import type { DetalleTarifa, Id } from "./tipos";
+ import { buscarMoneda, numero, simboloDeMoneda } from "./utils";
+ 
+ export type RubroDueCarrier = {
+@@ -44,7 +44,7 @@ export type RubroDueCarrier = {
+ 
+     cod_tipo_calculo?: Id | null;
+ 
+-    detalles?: Array<Record<string, unknown>>;
++    detalles?: DetalleTarifa[];
+ 
+     [key: string]: unknown;
+   } | null;
+@@ -69,7 +69,7 @@ export type RubroDueCarrier = {
+ 
+       cod_tipo_calculo?: Id | null;
+ 
+-      detalles?: Array<Record<string, unknown>>;
++      detalles?: DetalleTarifa[];
+ 
+       [key: string]: unknown;
+     } | null;
+diff --git a/src/features/pricing/cotizacion/calculo/lib/rubros-guardados.ts b/src/features/pricing/cotizacion/calculo/lib/rubros-guardados.ts
+index 352afaa..366bfd6 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/rubros-guardados.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/rubros-guardados.ts
+@@ -1,6 +1,13 @@
+ import { esRubroDueAgent, esRubroDueCarrier } from "./clasificacion-rubros";
+ import { RUBRO } from "./constantes";
+-import type { EntidadCatalogo, Id, MonedaCatalogo, RubroCatalogo, ServicioCatalogo } from "./tipos";
++import type {
++  DetalleTarifa,
++  EntidadCatalogo,
++  Id,
++  MonedaCatalogo,
++  RubroCatalogo,
++  ServicioCatalogo,
++} from "./tipos";
+ 
+ export type RubroGuardado = {
+   cod_detallerubro?: Id | null;
+@@ -101,7 +108,7 @@ export type RubroGuardadoProcesado = {
+ 
+     moneda_costo?: string | null;
+ 
+-    detalles: Array<Record<string, unknown>>;
++    detalles: DetalleTarifa[];
+   };
+ 
+   servicio: {
+@@ -139,7 +146,7 @@ export type RubroGuardadoProcesado = {
+ 
+       moneda_costo?: string | null;
+ 
+-      detalles: Array<Record<string, unknown>>;
++      detalles: DetalleTarifa[];
+     };
+   };
+ };
+@@ -184,7 +191,7 @@ function parseTextoDetalle(texto: unknown) {
+     });
+ }
+ 
+-function normalizarDetalle(item: unknown): Array<Record<string, unknown>> {
++function normalizarDetalle(item: unknown): DetalleTarifa[] {
+   if (item == null) {
+     return [];
+   }
+@@ -197,7 +204,7 @@ function normalizarDetalle(item: unknown): Array<Record<string, unknown>> {
+     return [];
+   }
+ 
+-  const detalle = item as Record<string, unknown>;
++  const detalle = item as DetalleTarifa;
+ 
+   if (detalle.tipo_desc || detalle.tarifadetalle_descripcion || detalle.tarifadetalle_valor) {
+     return [detalle];
+diff --git a/src/features/pricing/cotizacion/calculo/lib/tipos.ts b/src/features/pricing/cotizacion/calculo/lib/tipos.ts
+index 7adbb6a..1fb0ca1 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/tipos.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/tipos.ts
+@@ -17,6 +17,22 @@ export type Id = string | number;
+ /** Objeto genérico con llaves desconocidas. */
+ export type Registro = Record<string, unknown>;
+ 
++/**
++ * Detalle del método de un rubro ("CW: 120 / $2.50 Por KILO"): `tipo_desc` es
++ * el texto antes de los dos puntos. `custom` = armado en pantalla.
++ */
++export type DetalleTarifa = {
++  tipo_desc?: string | null;
++
++  tarifadetalle_descripcion?: string | number | null;
++
++  tarifadetalle_valor?: string | number | null;
++
++  custom?: boolean;
++
++  [key: string]: unknown;
++};
++
+ /* ==========================================================================
+  * OPCIONES DE SELECT
+  * ========================================================================== */
+diff --git a/src/features/pricing/cotizacion/calculo/lib/totales-rubros-tipos.ts b/src/features/pricing/cotizacion/calculo/lib/totales-rubros-tipos.ts
+index 8391d6a..ed877e9 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/totales-rubros-tipos.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/totales-rubros-tipos.ts
+@@ -1,4 +1,4 @@
+-import type { Id, MonedaCatalogo } from "./tipos";
++import type { DetalleTarifa, Id, MonedaCatalogo } from "./tipos";
+ 
+ export const IVA_DEFAULT = 0.12;
+ 
+@@ -23,15 +23,7 @@ export type MetodoTotal = {
+   original_rate_costo?: string | number | null;
+   original_rate_venta?: string | number | null;
+ 
+-  detalles?: Array<{
+-    tipo_desc?: string | null;
+-
+-    tarifadetalle_descripcion?: string | number | null;
+-
+-    tarifadetalle_valor?: string | number | null;
+-
+-    [key: string]: unknown;
+-  }>;
++  detalles?: DetalleTarifa[];
+ 
+   [key: string]: unknown;
+ };

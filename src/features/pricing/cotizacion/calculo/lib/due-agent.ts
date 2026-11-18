@@ -9,7 +9,7 @@ import {
   getCodMonedaVenta,
   primeraMonedaDefinida,
 } from "./rubros-manuales";
-import type { Id } from "./tipos";
+import type { DetalleTarifa, Id } from "./tipos";
 import { buscarMoneda, normalizarBoolean, simboloDeMoneda } from "./utils";
 
 export type RubroDueAgent = {
@@ -60,7 +60,7 @@ export type RubroDueAgent = {
 
       minimo_venta?: string | number | null;
 
-      detalles?: Array<Record<string, unknown>>;
+      detalles?: DetalleTarifa[];
 
       [key: string]: unknown;
     } | null;
@@ -78,7 +78,7 @@ export type RubroDueAgent = {
     cod_moneda_venta?: Id | null;
     cod_moneda_costo?: Id | null;
 
-    detalles?: Array<Record<string, unknown>>;
+    detalles?: DetalleTarifa[];
 
     [key: string]: unknown;
   } | null;

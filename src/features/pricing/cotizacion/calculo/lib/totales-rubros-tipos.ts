@@ -1,4 +1,4 @@
-import type { Id, MonedaCatalogo } from "./tipos";
+import type { DetalleTarifa, Id, MonedaCatalogo } from "./tipos";
 
 export const IVA_DEFAULT = 0.12;
 
@@ -23,15 +23,7 @@ export type MetodoTotal = {
   original_rate_costo?: string | number | null;
   original_rate_venta?: string | number | null;
 
-  detalles?: Array<{
-    tipo_desc?: string | null;
-
-    tarifadetalle_descripcion?: string | number | null;
-
-    tarifadetalle_valor?: string | number | null;
-
-    [key: string]: unknown;
-  }>;
+  detalles?: DetalleTarifa[];
 
   [key: string]: unknown;
 };

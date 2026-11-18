@@ -9,7 +9,7 @@ import {
   getCodMonedaVenta,
   primeraMonedaDefinida,
 } from "./rubros-manuales";
-import type { Id } from "./tipos";
+import type { DetalleTarifa, Id } from "./tipos";
 import { buscarMoneda, numero, simboloDeMoneda } from "./utils";
 
 export type RubroDueCarrier = {
@@ -44,7 +44,7 @@ export type RubroDueCarrier = {
 
     cod_tipo_calculo?: Id | null;
 
-    detalles?: Array<Record<string, unknown>>;
+    detalles?: DetalleTarifa[];
 
     [key: string]: unknown;
   } | null;
@@ -69,7 +69,7 @@ export type RubroDueCarrier = {
 
       cod_tipo_calculo?: Id | null;
 
-      detalles?: Array<Record<string, unknown>>;
+      detalles?: DetalleTarifa[];
 
       [key: string]: unknown;
     } | null;

@@ -169,9 +169,9 @@ export function TotalesRubros({ controller, lectura = false }: Props) {
               {listaElementos.map((item) => {
                 const id = String(item.value ?? "");
 
-                const metodo = getMetodo(item as RubroTotal);
+                const metodo = getMetodo(item);
 
-                const simbolo = getSimboloMoneda(item as RubroTotal);
+                const simbolo = getSimboloMoneda(item);
 
                 return (
                   <tr key={id} className="border-b last:border-b-0">

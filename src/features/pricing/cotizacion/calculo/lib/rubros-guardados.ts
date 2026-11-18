@@ -1,6 +1,13 @@
 import { esRubroDueAgent, esRubroDueCarrier } from "./clasificacion-rubros";
 import { RUBRO } from "./constantes";
-import type { EntidadCatalogo, Id, MonedaCatalogo, RubroCatalogo, ServicioCatalogo } from "./tipos";
+import type {
+  DetalleTarifa,
+  EntidadCatalogo,
+  Id,
+  MonedaCatalogo,
+  RubroCatalogo,
+  ServicioCatalogo,
+} from "./tipos";
 
 export type RubroGuardado = {
   cod_detallerubro?: Id | null;
@@ -101,7 +108,7 @@ export type RubroGuardadoProcesado = {
 
     moneda_costo?: string | null;
 
-    detalles: Array<Record<string, unknown>>;
+    detalles: DetalleTarifa[];
   };
 
   servicio: {
@@ -139,7 +146,7 @@ export type RubroGuardadoProcesado = {
 
       moneda_costo?: string | null;
 
-      detalles: Array<Record<string, unknown>>;
+      detalles: DetalleTarifa[];
     };
   };
 };
@@ -184,7 +191,7 @@ function parseTextoDetalle(texto: unknown) {
     });
 }
 
-function normalizarDetalle(item: unknown): Array<Record<string, unknown>> {
+function normalizarDetalle(item: unknown): DetalleTarifa[] {
   if (item == null) {
     return [];
   }
@@ -197,7 +204,7 @@ function normalizarDetalle(item: unknown): Array<Record<string, unknown>> {
     return [];
   }
 
-  const detalle = item as Record<string, unknown>;
+  const detalle = item as DetalleTarifa;
 
   if (detalle.tipo_desc || detalle.tarifadetalle_descripcion || detalle.tarifadetalle_valor) {
     return [detalle];
