@@ -1,0 +1,207 @@
+diff --git a/src/features/embarques/v2/combex/lib/gestion-actividades.ts b/src/features/embarques/v2/combex/lib/gestion-actividades.ts
+index 4cac539..dcc7098 100644
+--- a/src/features/embarques/v2/combex/lib/gestion-actividades.ts
++++ b/src/features/embarques/v2/combex/lib/gestion-actividades.ts
+@@ -84,7 +84,12 @@ export const GESTION_COMBEX: DefinicionesGestion = {
+     compara: "Reserva confirmada",
+     campos: [
+       { label: "Vuelo real", requerido: true },
+-      { label: "Fecha y hora de salida real", tipo: "fecha-hora", requerido: true },
++      {
++        key: "fechas.fecha_salida_real",
++        label: "Fecha y hora de salida real",
++        tipo: "fecha-hora",
++        requerido: true,
++      },
+     ],
+   },
+   "CBX 12.2": {
+@@ -112,7 +117,7 @@ export const GESTION_COMBEX: DefinicionesGestion = {
+   "CBX E2": {
+     interaccion: "incidencia",
+     accion: "Informar no salida",
+-    campos: [{ label: "Nueva fecha", tipo: "fecha" }],
++    campos: [{ key: "fechas.fecha_nueva_salida", label: "Nueva fecha", tipo: "fecha" }],
+   },
+   "CBX E3": {
+     interaccion: "incidencia",
+@@ -136,6 +141,13 @@ export const GESTION_COMBEX: DefinicionesGestion = {
+   "CBX 14.1": {
+     interaccion: "confirmacion",
+     accion: "Confirmar arribo",
+-    campos: [{ label: "Fecha y hora de llegada", tipo: "fecha-hora", requerido: true }],
++    campos: [
++      {
++        key: "fechas.fecha_llegada_real",
++        label: "Fecha y hora de llegada",
++        tipo: "fecha-hora",
++        requerido: true,
++      },
++    ],
+   },
+ };
+diff --git a/src/features/embarques/v2/general/ARQUITECTURA.md b/src/features/embarques/v2/general/ARQUITECTURA.md
+index 5c24e12..1fb7cb9 100644
+--- a/src/features/embarques/v2/general/ARQUITECTURA.md
++++ b/src/features/embarques/v2/general/ARQUITECTURA.md
+@@ -184,6 +184,10 @@ Cada actor define las suyas: `GESTION_OPERACIONES` (31, OPS), `GESTION_BODEGAS`
+ botón), `compara` (referencia del control del Excel: muestra la referencia, "Actual" y "Diferencia"), `requiere`
+ (actividades previas, se muestran como "Antes: <actividad>") y `pendiente` (parte aún sin maquetar, p. ej. la tabla de rubros de OPS 9.2).
+ 
++Campo con `key` (`"<sección>.<key>"` de `InformacionEmbarque`, ej. `"cargas.pesoTotal"`, `"fechas.fecha_salida"`): es el
++mismo dato que en Información (`shared/lib/campos-embarque.ts`). Sirve para consultarlo si ya se ingresó (#129).
++Toda `key` debe existir en los `CAMPOS_*` de su sección.
++
+ ### Tarjeta (`shared/components/tarjeta-actividad.tsx`) y tab genérica (`pasos/paso-actividades.tsx`)
+ 
+ Tarjeta: encabezado (icono, código, actividad, responsable, tipo del Excel, estado), cuerpo (entrada,
+diff --git a/src/features/embarques/v2/operaciones/lib/gestion-actividades.ts b/src/features/embarques/v2/operaciones/lib/gestion-actividades.ts
+index 0b9d2dc..0d109b1 100644
+--- a/src/features/embarques/v2/operaciones/lib/gestion-actividades.ts
++++ b/src/features/embarques/v2/operaciones/lib/gestion-actividades.ts
+@@ -19,9 +19,19 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
+     interaccion: "formulario",
+     accion: "Programar recolección",
+     campos: [
+-      { label: "Dirección de Recolección", tipo: "area", requerido: true },
+-      { label: "Nombre Contacto" },
+-      { label: "Fecha de Recolección", tipo: "fecha-hora", requerido: true },
++      {
++        key: "shipper.direccion_recoleccion",
++        label: "Dirección de Recolección",
++        tipo: "area",
++        requerido: true,
++      },
++      { key: "shipper.entidad_contacto_nombre", label: "Nombre Contacto" },
++      {
++        key: "fechas.fecha_recoleccion",
++        label: "Fecha de Recolección",
++        tipo: "fecha-hora",
++        requerido: true,
++      },
+       { label: "Proveedor de transporte", tipo: "catalogo" },
+       { label: "Unidad / placa" },
+       { label: "Piloto" },
+@@ -61,7 +71,7 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
+     accion: "Registrar MAWB",
+     campos: [
+       { label: "No. MAWB", requerido: true },
+-      { label: "Aerolínea", tipo: "catalogo", requerido: true },
++      { key: "rutas.codEntidadProv", label: "Aerolínea", tipo: "catalogo", requerido: true },
+       { label: "Booking" },
+     ],
+   },
+@@ -76,14 +86,19 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
+     interaccion: "formulario",
+     accion: "Preparar solicitud",
+     campos: [
+-      { label: "Aerolínea", tipo: "catalogo", requerido: true },
+-      { label: "Aeropuerto Destino", tipo: "catalogo", requerido: true },
++      { key: "rutas.codEntidadProv", label: "Aerolínea", tipo: "catalogo", requerido: true },
++      {
++        key: "rutas.puertoIdDestino",
++        label: "Aeropuerto Destino",
++        tipo: "catalogo",
++        requerido: true,
++      },
+       { label: "Fecha de vuelo", tipo: "fecha", requerido: true },
+-      { label: "Cantidad (bultos)", tipo: "numero", requerido: true },
+-      { label: "Peso total (kg)", tipo: "numero", requerido: true },
+-      { label: "Largo", tipo: "numero" },
+-      { label: "Alto", tipo: "numero" },
+-      { label: "Ancho", tipo: "numero" },
++      { key: "cargas.cantidad", label: "Cantidad (bultos)", tipo: "numero", requerido: true },
++      { key: "cargas.pesoTotal", label: "Peso total (kg)", tipo: "numero", requerido: true },
++      { key: "cargas.largo", label: "Largo", tipo: "numero" },
++      { key: "cargas.alto", label: "Alto", tipo: "numero" },
++      { key: "cargas.ancho", label: "Ancho", tipo: "numero" },
+     ],
+   },
+   "OPS 2.2": {
+@@ -94,8 +109,8 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
+       { label: "Tarifa", tipo: "numero" },
+       { label: "PP / CC", tipo: "seleccion", requerido: true, opciones: ["PP", "CC"] },
+       { label: "EORI" },
+-      { label: "Partida arancelaria" },
+-      { label: "Descripción", tipo: "area" },
++      { key: "cargas.partidaArancelaria", label: "Partida arancelaria" },
++      { key: "cargas.descripcion", label: "Descripción", tipo: "area" },
+     ],
+   },
+   "OPS 3.1": {
+@@ -104,8 +119,8 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
+     compara: "Solicitud de reserva",
+     requiere: ["OPS 2.2"],
+     campos: [
+-      { label: "Nro. Vuelo", requerido: true },
+-      { label: "Fecha de vuelo", tipo: "fecha", requerido: true },
++      { key: "rutas.flightNumber", label: "Nro. Vuelo", requerido: true },
++      { key: "fechas.fecha_salida", label: "Fecha de vuelo", tipo: "fecha", requerido: true },
+       { label: "No. de booking" },
+       { label: "Condiciones", tipo: "area" },
+     ],
+@@ -121,11 +136,11 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
+     interaccion: "documento",
+     accion: "Generar draft",
+     campos: [
+-      { label: "Shipper", tipo: "catalogo" },
+-      { label: "Consignatario", tipo: "catalogo" },
+-      { label: "Cantidad (bultos)", tipo: "numero" },
+-      { label: "Peso total (kg)", tipo: "numero" },
+-      { label: "Aeropuerto Destino", tipo: "catalogo" },
++      { key: "shipper.entidad_id", label: "Shipper", tipo: "catalogo" },
++      { key: "consignatario.entidad_id", label: "Consignatario", tipo: "catalogo" },
++      { key: "cargas.cantidad", label: "Cantidad (bultos)", tipo: "numero" },
++      { key: "cargas.pesoTotal", label: "Peso total (kg)", tipo: "numero" },
++      { key: "rutas.puertoIdDestino", label: "Aeropuerto Destino", tipo: "catalogo" },
+     ],
+     pendiente: "Vista previa del draft.",
+   },
+@@ -192,7 +207,7 @@ export const GESTION_OPERACIONES: DefinicionesGestion = {
+     campos: [
+       { label: "Peso oficial (kg)", tipo: "numero", requerido: true },
+       { label: "Peso cobrable (kg)", tipo: "numero" },
+-      { label: "Cantidad (bultos)", tipo: "numero" },
++      { key: "cargas.cantidad", label: "Cantidad (bultos)", tipo: "numero" },
+     ],
+   },
+   "OPS 9.2": {
+diff --git a/src/features/embarques/v2/shared/lib/campos-embarque.ts b/src/features/embarques/v2/shared/lib/campos-embarque.ts
+index 6439c5c..5b21c64 100644
+--- a/src/features/embarques/v2/shared/lib/campos-embarque.ts
++++ b/src/features/embarques/v2/shared/lib/campos-embarque.ts
+@@ -23,7 +23,7 @@
+ 
+ import type { CampoGestion } from "./interacciones";
+ 
+-export type CampoEmbarque = CampoGestion & {
++export type CampoEmbarque = Omit<CampoGestion, "key"> & {
+   /** Clave del dato en el módulo actual. */
+   key: string;
+   /** Solo consulta también al editar (en el módulo actual viene del maestro). */
+diff --git a/src/features/embarques/v2/shared/lib/interacciones.ts b/src/features/embarques/v2/shared/lib/interacciones.ts
+index aff1cb4..e1d96f2 100644
+--- a/src/features/embarques/v2/shared/lib/interacciones.ts
++++ b/src/features/embarques/v2/shared/lib/interacciones.ts
+@@ -12,6 +12,8 @@
+  * antes (ver `gestion-actividades.ts`).
+  * ========================================================================== */
+ 
++import type { InformacionEmbarque } from "./tipos";
++
+ export type TipoInteraccion =
+   | "formulario"
+   | "dato-especial"
+@@ -48,6 +50,12 @@ export type CampoGestion = {
+   opciones?: readonly string[];
+   /** `archivo`: tipos aceptados (`accept`), ej. `"image/*"`. */
+   acepta?: string;
++  /**
++   * Dato del embarque que registra o usa, como `"<sección>.<key>"` de
++   * `InformacionEmbarque` y `campos-embarque.ts` (ej. `"cargas.pesoTotal"`).
++   * Es el mismo dato que en Información: se consulta si ya se ingresó.
++   */
++  key?: `${keyof InformacionEmbarque}.${string}`;
+ };
+ 
+ export type DefinicionInteraccion = {

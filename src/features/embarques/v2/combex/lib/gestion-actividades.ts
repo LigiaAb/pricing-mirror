@@ -84,7 +84,12 @@ export const GESTION_COMBEX: DefinicionesGestion = {
     compara: "Reserva confirmada",
     campos: [
       { label: "Vuelo real", requerido: true },
-      { label: "Fecha y hora de salida real", tipo: "fecha-hora", requerido: true },
+      {
+        key: "fechas.fecha_salida_real",
+        label: "Fecha y hora de salida real",
+        tipo: "fecha-hora",
+        requerido: true,
+      },
     ],
   },
   "CBX 12.2": {
@@ -112,7 +117,7 @@ export const GESTION_COMBEX: DefinicionesGestion = {
   "CBX E2": {
     interaccion: "incidencia",
     accion: "Informar no salida",
-    campos: [{ label: "Nueva fecha", tipo: "fecha" }],
+    campos: [{ key: "fechas.fecha_nueva_salida", label: "Nueva fecha", tipo: "fecha" }],
   },
   "CBX E3": {
     interaccion: "incidencia",
@@ -136,6 +141,13 @@ export const GESTION_COMBEX: DefinicionesGestion = {
   "CBX 14.1": {
     interaccion: "confirmacion",
     accion: "Confirmar arribo",
-    campos: [{ label: "Fecha y hora de llegada", tipo: "fecha-hora", requerido: true }],
+    campos: [
+      {
+        key: "fechas.fecha_llegada_real",
+        label: "Fecha y hora de llegada",
+        tipo: "fecha-hora",
+        requerido: true,
+      },
+    ],
   },
 };

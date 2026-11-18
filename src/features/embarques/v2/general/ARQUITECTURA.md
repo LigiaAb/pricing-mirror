@@ -184,6 +184,10 @@ Cada actor define las suyas: `GESTION_OPERACIONES` (31, OPS), `GESTION_BODEGAS` 
 botón), `compara` (referencia del control del Excel: muestra la referencia, "Actual" y "Diferencia"), `requiere`
 (actividades previas, se muestran como "Antes: <actividad>") y `pendiente` (parte aún sin maquetar, p. ej. la tabla de rubros de OPS 9.2).
 
+Campo con `key` (`"<sección>.<key>"` de `InformacionEmbarque`, ej. `"cargas.pesoTotal"`, `"fechas.fecha_salida"`): es el
+mismo dato que en Información (`shared/lib/campos-embarque.ts`). Sirve para consultarlo si ya se ingresó (#129).
+Toda `key` debe existir en los `CAMPOS_*` de su sección.
+
 ### Tarjeta (`shared/components/tarjeta-actividad.tsx`) y tab genérica (`pasos/paso-actividades.tsx`)
 
 Tarjeta: encabezado (icono, código, actividad, responsable, tipo del Excel, estado), cuerpo (entrada,
