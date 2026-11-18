@@ -26,6 +26,7 @@ cotizacion/calculo/
 │  │                                    OpcionFormularioCotizacion, CatalogosFormularioCotizacion, ValoresFormulario)
 │  ├─ formulario-cotizacion-helpers.ts ← getValue/getLabel, buscarPorValue/Label, entidad/contacto → opción,
 │  │                                    PAISES_TERRESTRES, TIPO_PUNTO_POR_TRANSPORTE
+│  ├─ calculo-cotizacion-tipos.ts      ← CalculoCotizacionProps (props de CalculoCotizacion, usadas por sus hooks)
 │  └─ *.ts              ← lógica pura de cada sección (due-agent, scalling, agrupacion-rubros, ...)
 ├─ hooks/
 │  ├─ use-catalogos-cotizacion.tsx  ← TODOS LOS CATÁLOGOS (provider + hook)
@@ -33,8 +34,13 @@ cotizacion/calculo/
 │  │  │                                (reexporta los tipos; consumidores importan de aquí)
 │  │  ├─ use-formulario-cotizacion-entidades.ts ← cliente, contactos y estación (búsquedas y valores guardados)
 │  │  └─ use-formulario-cotizacion-reglas.ts    ← catálogos filtrados, visibilidad, solo lectura y obligatorios
+│  ├─ use-detalle-calculo-secciones.ts ← lógica de DetalleCalculoCotizacion: criterios → carrier → rubros →
+│  │                                     Due Agent / Due Carrier → Scalling → porcentajes → totales
+│  ├─ use-detalle-calculo-guardado.ts  ← lógica de DetalleCalculoCotizacion: spot, guardado, reset entre
+│  │                                     versiones y acciones (Calcular / Guardar)
 │  └─ use-*.ts          ← estado de cada sección
 ├─ components/          ← lo visual
+│  ├─ calculo-cotizacion.tsx ← CÁLCULO: versiones + DetalleCalculoCotizacion (JSX; lógica en use-detalle-calculo-*)
 │  └─ utils.tsx         ← COMPONENTES reutilizables (tooltip, Detalles, ValorMoneda, Grupo...)
 └─ api/                 ← llamadas al backend
 ```
@@ -161,6 +167,9 @@ el cálculo y muestra un aviso si faltan estados. Dentro del cálculo se usa `us
 `estados` no nulo.
 
 ## Flujo del cálculo (`calculo-cotizacion.tsx`)
+
+Las secciones 2 a 9 se conectan en `hooks/use-detalle-calculo-secciones.ts` y la 10 en
+`hooks/use-detalle-calculo-guardado.ts`; `calculo-cotizacion.tsx` solo las llama y dibuja.
 
 | #   | Sección           | Hook                             | Lógica (`lib/`)                                  | Componente                    |
 | --- | ----------------- | -------------------------------- | ------------------------------------------------ | ----------------------------- |
