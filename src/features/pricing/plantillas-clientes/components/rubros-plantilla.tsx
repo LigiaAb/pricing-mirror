@@ -29,10 +29,13 @@ export function RubrosPlantilla({
   codTarifaPlantilla,
   servicios,
   rubros,
+  soloLectura = false,
 }: {
   codTarifaPlantilla: Id;
   servicios: Servicio[];
   rubros: Rubro[];
+  /** Sin permiso de Editar: los rubros se ven pero no se cambian ni se guardan. */
+  soloLectura?: boolean | undefined;
 }) {
   const consulta = usePlantillasRubros();
   const guardar = useGuardarPlantillaRubros();
@@ -127,7 +130,7 @@ export function RubrosPlantilla({
                   <Checkbox
                     id={checkboxId}
                     checked={seleccion.has(key)}
-                    disabled={obligatorio}
+                    disabled={obligatorio || soloLectura}
                     onCheckedChange={(value) => cambiar(servicio, value === true)}
                   />
                   <span>
@@ -140,10 +143,12 @@ export function RubrosPlantilla({
           </div>
         </section>
       ))}
-      <Button type="button" disabled={guardar.isPending} onClick={() => void handleGuardar()}>
-        <Save className="size-4" />
-        Guardar rubros
-      </Button>
+      {soloLectura ? null : (
+        <Button type="button" disabled={guardar.isPending} onClick={() => void handleGuardar()}>
+          <Save className="size-4" />
+          Guardar rubros
+        </Button>
+      )}
     </div>
   );
 }

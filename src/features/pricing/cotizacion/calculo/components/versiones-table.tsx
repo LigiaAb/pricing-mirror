@@ -58,9 +58,11 @@ type Props = {
 
   onView: (version: Version) => void | Promise<void>;
 
-  onActivate: (codCotizacionDetalle: Id) => void | Promise<void>;
+  /** Sin función (sin permiso de Editar) no se muestra "Activar versión". */
+  onActivate?: ((codCotizacionDetalle: Id) => void | Promise<void>) | undefined;
 
-  onNew: () => void | Promise<void>;
+  /** Sin función (sin permiso de Agregar) no se muestra "Nuevo cálculo". */
+  onNew?: (() => void | Promise<void>) | undefined;
 
   /*
    * Opcionales porque PDF
@@ -229,7 +231,7 @@ export function VersionesTable({
           <p className="text-xs text-muted-foreground">Historial de cálculos de la cotización</p>
         </div>
 
-        {puedeCrearNueva ? (
+        {puedeCrearNueva && onNew ? (
           <Button type="button" size="sm" disabled={loading} onClick={() => void onNew()}>
             <Plus className="size-4" />
             Nuevo cálculo
@@ -349,7 +351,7 @@ export function VersionesTable({
                           </Button>
                         ) : null}
 
-                        {estado.activar ? (
+                        {estado.activar && onActivate ? (
                           <Button
                             type="button"
                             variant="ghost"

@@ -16,8 +16,8 @@ export type FilaMetodoDetalle = Partial<TarifaDetalle> & {
 };
 
 type CrearDetalleColumnsProps = {
-  onEditar: (row: FilaMetodoDetalle) => void;
-  onEliminar: (row: FilaMetodoDetalle) => void;
+  onEditar?: ((row: FilaMetodoDetalle) => void) | undefined;
+  onEliminar?: ((row: FilaMetodoDetalle) => void) | undefined;
 };
 
 export function crearDetalleColumns({
@@ -45,25 +45,29 @@ export function crearDetalleColumns({
       header: "",
       cell: ({ row }) => (
         <div className="flex justify-end gap-1">
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            aria-label="Editar detalle"
-            onClick={() => onEditar(row.original)}
-          >
-            <Pencil className="size-4" />
-          </Button>
+          {onEditar ? (
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label="Editar detalle"
+              onClick={() => onEditar(row.original)}
+            >
+              <Pencil className="size-4" />
+            </Button>
+          ) : null}
 
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            aria-label="Eliminar detalle"
-            onClick={() => onEliminar(row.original)}
-          >
-            <Trash2 className="size-4" />
-          </Button>
+          {onEliminar ? (
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label="Eliminar detalle"
+              onClick={() => onEliminar(row.original)}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          ) : null}
         </div>
       ),
     },

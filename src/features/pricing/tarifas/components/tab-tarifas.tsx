@@ -18,6 +18,7 @@ import { useTarifaEquipo } from "../api/tarifa-equipo";
 import { useTarifaPorcentaje } from "../api/tarifa-porcentaje";
 import { useTarifaRangos } from "../api/tarifa-rangos";
 import type { FilaServicioMetodo } from "../api/types-api";
+import { usePermisosTarifas } from "../hooks/use-permisos-tarifas";
 import { aplicaATodosLosClientes, formatDateForInput } from "../lib/tarifa-helpers";
 import { FormularioTarifa, type TarifaSubmitPayload } from "./formulario-tarifa";
 import { CommoditiesTable } from "./metodo-commodities/commodities-table";
@@ -334,13 +335,17 @@ export function TarifasTabs({
     costoPorcentajeQuery.data,
   ]);
 
+  const { puedeAgregar } = usePermisosTarifas();
+
   const renderizarMetodoCalculo = React.useCallback(() => {
     let componente = <></>;
 
     const props = {
       codMetodo: values.cod_metodo ?? 0,
       codTipoTransporte: values.cod_tipo_transporte ?? null,
-      readonly: metodoExiste,
+      // El método solo se captura una vez (alta): sin permiso de Agregar queda de lectura.
+      // Scalling guarda fila por fila y revisa sus permisos en su propia tabla.
+      readonly: metodoExiste || !puedeAgregar,
     };
 
     switch (values.cod_tipo) {
@@ -381,7 +386,7 @@ export function TarifasTabs({
         {componente}
       </TabsContent>
     );
-  }, [values.cod_tipo, values.cod_metodo, values.cod_tipo_transporte, metodoExiste]);
+  }, [values.cod_tipo, values.cod_metodo, values.cod_tipo_transporte, metodoExiste, puedeAgregar]);
 
   React.useEffect(() => {
     if (!tabs.find((tab) => tab.value === tabsValue)) {

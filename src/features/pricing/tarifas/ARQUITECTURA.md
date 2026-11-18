@@ -12,6 +12,7 @@ tarifas/
 ├─ hooks/
 │  ├─ use-catalogos-tarifas.ts   ← catálogos base de pricing/shared + opción "TODOS" + mapWithCatalogo
 │  ├─ use-opciones-tarifa.ts     ← monedas / rubros como opciones { value, label } y búsqueda local
+│  ├─ use-permisos-tarifas.tsx   ← PermisosTarifasProvider (en CreacionTarifa) + usePermisosTarifas()
 │  └─ use-formulario-tarifas.ts  ← formulario principal de tarifa
 ├─ lib/
 │  ├─ campos-metodo.ts      ← reexporta el motor de definición única (vive en pricing/shared/lib/campos-metodo.ts)

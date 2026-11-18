@@ -15,6 +15,7 @@ import {
 import * as React from "react";
 
 import { centrosCosto, empresas } from "@/features/catalogos";
+import { OPCION_PERMISOS, usePermisosPricing } from "@/features/pricing/shared";
 import { useContextoOperativoStore } from "@/features/shell";
 import { Alert } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
@@ -273,6 +274,8 @@ export function CargaMasivaFletes() {
   const empresasQuery = empresas.useLista({ cod_estado: 1 });
   const centrosCostoQuery = centrosCosto.useLista({ cod_estado: 1 });
   const cargarMutation = useCargarFletesMasivos();
+  // Enviar la carga = acción Agregar de la opción "Información".
+  const { puedeAgregar } = usePermisosPricing(OPCION_PERMISOS.cargaMasivaFletes);
 
   const empresaInicial = obtenerId(empresaContexto, ["cod_empresa", "empresaId"]);
   const centroCostoInicial = obtenerId(centroCostoContexto, ["cod_cc", "centroCostoId"]);
@@ -501,18 +504,20 @@ export function CargaMasivaFletes() {
                     Limpiar resultado
                   </Button>
                 ) : null}
-                <Button
-                  type="button"
-                  disabled={!puedeEnviar || cargarMutation.isPending}
-                  onClick={() => void handleSubmit()}
-                >
-                  {cargarMutation.isPending ? (
-                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <Send className="size-4" aria-hidden="true" />
-                  )}
-                  Enviar
-                </Button>
+                {puedeAgregar ? (
+                  <Button
+                    type="button"
+                    disabled={!puedeEnviar || cargarMutation.isPending}
+                    onClick={() => void handleSubmit()}
+                  >
+                    {cargarMutation.isPending ? (
+                      <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Send className="size-4" aria-hidden="true" />
+                    )}
+                    Enviar
+                  </Button>
+                ) : null}
               </div>
             </section>
           </TabsContent>

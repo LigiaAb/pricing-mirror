@@ -35,6 +35,8 @@ export type CotizacionesTableProps = {
   alternarVencidas: () => void;
   seleccionarCotizacion: (cotizacion: CotizacionCabecera) => void;
   nuevaCotizacion: () => void;
+  /** Permiso de Agregar: sin él no se muestra "Nuevo". Por defecto `true`. */
+  puedeAgregar?: boolean | undefined;
   limpiarCotizacion: () => void;
   rechazarCotizacion: (codCotizacionCabecera: Id) => Promise<boolean>;
   confirmarCotizacion: (codCotizacionCabecera: Id) => Promise<boolean>;
@@ -230,6 +232,7 @@ export function CotizacionesTable({
   alternarVencidas,
   seleccionarCotizacion,
   nuevaCotizacion,
+  puedeAgregar = true,
   limpiarCotizacion,
   rechazarCotizacion,
   confirmarCotizacion,
@@ -370,10 +373,12 @@ export function CotizacionesTable({
 
           {filtro}
 
-          <Button type="button" size="sm" onClick={nuevaCotizacion}>
-            <Plus className="size-4" aria-hidden="true" />
-            Nuevo
-          </Button>
+          {puedeAgregar ? (
+            <Button type="button" size="sm" onClick={nuevaCotizacion}>
+              <Plus className="size-4" aria-hidden="true" />
+              Nuevo
+            </Button>
+          ) : null}
         </>
       }
     />

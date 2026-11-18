@@ -28,6 +28,7 @@ import { cn } from "@/shared/lib/utils";
 import type { FilaServicioMetodo, OptionEntidad } from "../api/types-api";
 import { useCatalogosTarifas } from "../hooks/use-catalogos-tarifas";
 import { useFormulario } from "../hooks/use-formulario-tarifas";
+import { usePermisosTarifas } from "../hooks/use-permisos-tarifas";
 import { formatDateForInput } from "../lib/tarifa-helpers";
 
 const TIPO_ENTIDAD_PROVEEDOR = "PROVEEDOR"; // "CARRIER";
@@ -360,6 +361,14 @@ export const FormularioTarifa = ({
     return fechaFinDate < new Date();
   }, [defaultValues?.fechaFin]);
 
+  const permisos = usePermisosTarifas();
+  /** Sin permiso de editar, la edición se muestra como lectura (campos y botones). */
+  const sinPermisoEditar = tipoFormulario === "edicion" && !permisos.puedeEditar;
+  /** Guardar: alta pide Agregar; edición, Editar; el filtro no pide permiso. */
+  const puedeGuardar =
+    tipoFormulario === "filtro" ||
+    (tipoFormulario === "ingreso" ? permisos.puedeAgregar : permisos.puedeEditar);
+
   const {
     values,
     valoresSoloCodigos,
@@ -370,7 +379,7 @@ export const FormularioTarifa = ({
     verificarSiEsObligatorio,
     obtenerCatalogoById,
   } = useFormulario({
-    tipoFormulario: vencido ? "lectura" : tipoFormulario,
+    tipoFormulario: vencido || sinPermisoEditar ? "lectura" : tipoFormulario,
 
     ...(defaultValues === undefined ? {} : { defaultValues }),
 
@@ -807,6 +816,7 @@ export const FormularioTarifa = ({
         </FieldGroup>
       </div>
       {["lectura", "edicion"].includes(tipoFormulario) &&
+        permisos.puedeEditar &&
         !defaultValues?.fecha_final &&
         !!values?.fechaFin && (
           <div className="flex flex-row space-x-3 justify-end">
@@ -824,7 +834,7 @@ export const FormularioTarifa = ({
         )}
       {(tipoFormulario !== "lectura" || defaultValues?.fecha_final) && (
         <div className="flex flex-row space-x-3 justify-end">
-          {tipoFormulario !== "lectura" && (
+          {tipoFormulario !== "lectura" && puedeGuardar && (
             <Button
               type="button"
               disabled={guardando}
@@ -861,7 +871,7 @@ export const FormularioTarifa = ({
               Limpiar
             </Button>
           )}
-          {(defaultValues?.fecha_final ?? null) && (
+          {(defaultValues?.fecha_final ?? null) && permisos.puedeAgregar && (
             <Button
               type="button"
               variant="secondary"

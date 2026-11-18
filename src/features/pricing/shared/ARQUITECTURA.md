@@ -11,7 +11,8 @@ shared/
 │  ├─ clientes.ts        ← clientes
 │  └─ tarifa-rangos.ts   ← SOLO lectura de rangos (las mutaciones están en tarifas/api/tarifa-rangos.ts)
 ├─ hooks/
-│  └─ use-catalogos-pricing.ts ← carga y normaliza los catálogos generales ({ value, label } + camel/snake)
+│  ├─ use-catalogos-pricing.ts ← carga y normaliza los catálogos generales ({ value, label } + camel/snake)
+│  └─ use-permisos-pricing.ts  ← PERMISOS: usePermisosPricing(OPCION_PERMISOS.<pantalla>) (ver abajo)
 ├─ lib/
 │  ├─ formatos.ts        ← conAmbosFormatos
 │  └─ vigencia-metodo.ts ← getEstadoMetodo (vencida / próxima a vencer)
@@ -29,6 +30,24 @@ shared/
 
 **Regla:** aquí solo entra lo que usan ambos módulos y que no depende de ninguno de ellos. Si algo lo usa uno
 solo, va en ese módulo. `shared` nunca importa de `tarifas/` ni de `cotizacion/`.
+
+## Permisos de botones
+
+Permisos = menú → categoría → opción → acción. La categoría es la pantalla (sale de la ruta) y
+`usePermisosCategoria` (`@/features/shell`) recibe el nombre de la **opción**. `usePermisosPricing` lo envuelve:
+`OPCION_PERMISOS` tiene el nombre de opción de cada pantalla y devuelve `puedeVer / puedeAgregar / puedeEditar /
+puedeEliminar` como booleanos. Solo es interfaz: el backend valida cada request.
+
+| Pantalla          | Categoría             | Opción      | Qué pide cada botón                                                                                                  |
+| ----------------- | --------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------- |
+| Tarifas           | Tarifas               | Servicios   | Agregar: nueva, copiar, alta de método y filas · Editar: actualizar, editar filas · Eliminar: anular, eliminar filas |
+| Cotizaciones      | Cotizaciones          | Información | Agregar: nuevo, nuevo cálculo, guardar versión · Editar: cabecera, activar versión · Autorizar: pendiente (#104)     |
+| Autorización SPOT | Manejo de Tarifa SPOT | Información | Editar: autorizar y rechazar (la categoría no tiene acción Autorizar)                                                |
+| Plantillas        | Tarifario de clientes | Lista       | Agregar: nueva · Editar: guardar, rubros · Eliminar: eliminar                                                        |
+| Carga masiva      | Carga Masiva de Flete | Información | Agregar: enviar                                                                                                      |
+
+Los componentes que se usan en otras pantallas no leen permisos solos: la pantalla los lee y los pasa por props
+(con `true` por defecto) o, en Tarifas, por `PermisosTarifasProvider` (sin provider se permite todo).
 
 ## Calculadora de embarques
 
