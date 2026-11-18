@@ -1,0 +1,405 @@
+diff --git a/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md b/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md
+index 18f5e43..0d09bce 100644
+--- a/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md
++++ b/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md
+@@ -6,7 +6,7 @@
+ cotizacion/calculo/
+ ├─ lib/
+ │  ├─ tipos.ts          ← TIPOS compartidos (Id, MonedaCatalogo, RubroCatalogo, ...)
+-│  ├─ constantes.ts     ← CÓDIGOS de negocio (TIPO_PAGO.COLLECT = 127, RUBRO.SCALLING = 134, ...)
++│  ├─ constantes.ts     ← CÓDIGOS de negocio (TIPO_PAGO.COLLECT = 127, RUBRO.SCALLING = 134, ...) y NOMBRES (NOMBRE_RUBRO, NOMBRE_TRANSPORTE; comparar con esNombre)
+ │  ├─ utils.ts          ← FUNCIONES pequeñas compartidas (mismoId, numero, normalizarBoolean, limpiarNumero, buscarMoneda, ...)
+ │  ├─ rubros-manuales.ts← rubros con valor manual (ABIERTO / COBERTURA / COSTO_PORCENTAJE): qué rubro es manual,
+ │  │                      fórmula de cobertura y detalle "Sobre valor de factura". Compartido por Due Agent y Due
+diff --git a/src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx b/src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx
+index 154e850..b657511 100644
+--- a/src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx
+@@ -4,7 +4,7 @@ import { Check, ChevronsUpDown, Loader2, Plus, X } from "lucide-react";
+ import * as React from "react";
+ 
+ import { NuevoContactoEntidad } from "@/features/entidades";
+-import { ComboboxOpcion } from "@/features/pricing/shared";
++import { ComboboxOpcion, esNombre } from "@/features/pricing/shared";
+ import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
+ import { Button } from "@/shared/components/ui/button";
+ import {
+@@ -34,6 +34,7 @@ import {
+   useFormularioCotizacion,
+ } from "../hooks/use-formulario-cotizacion";
+ import { etiquetaCampo } from "../lib/cabecera";
++import { NOMBRE_TRANSPORTE } from "../lib/constantes";
+ import type { Id } from "../lib/tipos";
+ import { Grupo } from "./utils";
+ 
+@@ -407,7 +408,10 @@ export function CotizacionForm({
+ 
+   const [contactoDialogOpen, setContactoDialogOpen] = React.useState(false);
+ 
+-  const tipoTransporte = obtenerOpcion(values.tipoTransporte);
++  const esTerrestre = esNombre(
++    obtenerOpcion(values.tipoTransporte)?.nomTipo,
++    NOMBRE_TRANSPORTE.TERRESTRE,
++  );
+ 
+   const formId = React.useId();
+ 
+@@ -677,29 +681,25 @@ export function CotizacionForm({
+           <Grupo id="origen" titulo="Origen" visible={verificarSiGrupoEsVisible("origen")}>
+             {renderSelect("paisOrigen")}
+ 
+-            {tipoTransporte?.nomTipo !== "TERRESTRE" && renderSelect("tipoPuntoEnlaceOrigen")}
++            {!esTerrestre && renderSelect("tipoPuntoEnlaceOrigen")}
+ 
+-            {tipoTransporte?.nomTipo !== "TERRESTRE" &&
+-              renderSelect("puntoEnlaceOrigen", "md:col-span-2")}
++            {!esTerrestre && renderSelect("puntoEnlaceOrigen", "md:col-span-2")}
+ 
+-            {tipoTransporte?.nomTipo === "TERRESTRE" && renderSelect("ciudadOrigen")}
++            {esTerrestre && renderSelect("ciudadOrigen")}
+ 
+-            {tipoTransporte?.nomTipo === "TERRESTRE" &&
+-              renderText("direccion_origen", "md:col-span-2")}
++            {esTerrestre && renderText("direccion_origen", "md:col-span-2")}
+           </Grupo>
+ 
+           <Grupo id="destino" titulo="Destino" visible={verificarSiGrupoEsVisible("destino")}>
+             {renderSelect("paisDestino")}
+ 
+-            {tipoTransporte?.nomTipo !== "TERRESTRE" && renderSelect("tipoPuntoEnlaceDestino")}
++            {!esTerrestre && renderSelect("tipoPuntoEnlaceDestino")}
+ 
+-            {tipoTransporte?.nomTipo !== "TERRESTRE" &&
+-              renderSelect("puntoEnlaceDestino", "md:col-span-2")}
++            {!esTerrestre && renderSelect("puntoEnlaceDestino", "md:col-span-2")}
+ 
+-            {tipoTransporte?.nomTipo === "TERRESTRE" && renderSelect("ciudadDestino")}
++            {esTerrestre && renderSelect("ciudadDestino")}
+ 
+-            {tipoTransporte?.nomTipo === "TERRESTRE" &&
+-              renderText("direccion_destino", "md:col-span-2")}
++            {esTerrestre && renderText("direccion_destino", "md:col-span-2")}
+           </Grupo>
+         </div>
+ 
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-catalogos-cotizacion.tsx b/src/features/pricing/cotizacion/calculo/hooks/use-catalogos-cotizacion.tsx
+index 5bfa0da..3bdf1ac 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-catalogos-cotizacion.tsx
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-catalogos-cotizacion.tsx
+@@ -24,11 +24,14 @@ import React from "react";
+ 
+ import {
+   type CatalogosPricing,
++  esNombre,
++  normalizarNombre,
+   normalizarUnidades,
+   useCatalogosPricing,
+ } from "@/features/pricing/shared";
+ 
+ import { filtrarPorTipoTabla, normalizarOpciones } from "../lib/catalogos";
++import { NOMBRE_RUBRO } from "../lib/constantes";
+ import type {
+   CatalogoTipo,
+   CriterioCatalogo,
+@@ -146,18 +149,15 @@ function construirCatalogosFormulario(base: CatalogosPricing): CatalogosFormular
+ 
+ function obtenerCodigosFletes(rubros: RubroCatalogo[]) {
+   return rubros.filter(
+-    (rubro) => rubro.es_flete === true || rubro?.nombre_rubro?.toUpperCase()?.includes("FLETE"),
++    (rubro) =>
++      rubro.es_flete === true || normalizarNombre(rubro.nombre_rubro).includes(NOMBRE_RUBRO.FLETE),
+   );
+ }
+ 
+ function obtenerCodRubroIVA(rubros: RubroCatalogo[]) {
+-  const rubroIVA = rubros.find((rubro) => {
+-    const nombre = String(rubro.nombre ?? rubro.nombre_rubro ?? rubro.label ?? "")
+-      .trim()
+-      .toUpperCase();
+-
+-    return nombre === "IVA";
+-  });
++  const rubroIVA = rubros.find((rubro) =>
++    esNombre(rubro.nombre ?? rubro.nombre_rubro ?? rubro.label, NOMBRE_RUBRO.IVA),
++  );
+ 
+   return rubroIVA?.cod_rubro ?? null;
+ }
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion-reglas.ts b/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion-reglas.ts
+index 6ba8a06..a2c8160 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion-reglas.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion-reglas.ts
+@@ -2,9 +2,10 @@
+ 
+ import * as React from "react";
+ import type { Empresa, Pais, Tipo } from "@/features/catalogos";
++import { esNombre } from "@/features/pricing/shared";
+ import type { CotizacionCabeceraPayload } from "../api/cotizacion-cabecera";
+ import { CAMPOS_REQUERIDOS, type ReglaCampoCabecera } from "../lib/cabecera";
+-import { COD_TIPO_SERVICIO_ESTACION, TIPO_PAGO } from "../lib/constantes";
++import { COD_TIPO_SERVICIO_ESTACION, NOMBRE_TRANSPORTE, TIPO_PAGO } from "../lib/constantes";
+ import { getLabel, getValue, PAISES_TERRESTRES } from "../lib/formulario-cotizacion-helpers";
+ import type {
+   CatalogosFormularioCotizacion,
+@@ -54,7 +55,7 @@ export function useFormularioCotizacionReglas({
+ 
+       if (
+         (id === "paisOrigen" || id === "paisDestino") &&
+-        getLabel(values_inter.tipoTransporte).trim().toUpperCase() === "TERRESTRE"
++        esNombre(getLabel(values_inter.tipoTransporte), NOMBRE_TRANSPORTE.TERRESTRE)
+       ) {
+         return ((catalogos?.[catalogoId] ?? []) as readonly OpcionFormularioCotizacion[]).filter(
+           (pais) =>
+@@ -267,7 +268,7 @@ export function useFormularioCotizacionReglas({
+       if (tipoFormulario === "lectura") return false;
+       if (inputsNoObligatorios.includes(id)) return false;
+ 
+-      const esTerrestre = getLabel(values.tipoTransporte).trim().toUpperCase() === "TERRESTRE";
++      const esTerrestre = esNombre(getLabel(values.tipoTransporte), NOMBRE_TRANSPORTE.TERRESTRE);
+ 
+       if (id === "estacion") {
+         const codTipoPago =
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts b/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts
+index f5b3992..cd63b81 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts
+@@ -1,10 +1,16 @@
+ "use client";
+ 
+ import * as React from "react";
++import { esNombre, normalizarNombre } from "@/features/pricing/shared";
+ import type { CotizacionCabeceraPayload } from "../api/cotizacion-cabecera";
+ 
+ import { construirReglasFormulario } from "../lib/cabecera";
+-import { COD_PAIS_GUATEMALA, COD_PUNTO_ENLACE_GUA, TIPO_PAGO } from "../lib/constantes";
++import {
++  COD_PAIS_GUATEMALA,
++  COD_PUNTO_ENLACE_GUA,
++  NOMBRE_TRANSPORTE,
++  TIPO_PAGO,
++} from "../lib/constantes";
+ import {
+   buscarPorLabel,
+   buscarPorValue,
+@@ -264,7 +270,7 @@ export function useFormularioCotizacion({
+         }
+ 
+         if (id === "tipoTransporte") {
+-          const nombreTransporte = getLabel(valorFinal).trim().toUpperCase();
++          const nombreTransporte = normalizarNombre(getLabel(valorFinal));
+ 
+           const nombreTipoPunto = TIPO_PUNTO_POR_TRANSPORTE[nombreTransporte];
+ 
+@@ -287,7 +293,7 @@ export function useFormularioCotizacion({
+             next.puntoEnlaceOrigen = gua;
+             next.cod_puntoenlace_origen = gua?.value ?? null;
+           }
+-          if (nombreTransporte === "TERRESTRE") {
++          if (esNombre(nombreTransporte, NOMBRE_TRANSPORTE.TERRESTRE)) {
+             const ciudadGtm =
+               (catalogos.ciudades ?? []).find((ciudad) => ciudad.siglas_ciudad === "GTM") ?? null;
+ 
+diff --git a/src/features/pricing/cotizacion/calculo/lib/constantes.ts b/src/features/pricing/cotizacion/calculo/lib/constantes.ts
+index dba11cf..1114f29 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/constantes.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/constantes.ts
+@@ -7,7 +7,7 @@
+  * ========================================================================== */
+ 
+ /** cod_tipo_transporte y unidades por defecto: corporativos, viven en pricing/shared. */
+-export { TIPO_TRANSPORTE, UNIDAD_DEFAULT } from "@/features/pricing/shared";
++export { NOMBRE_TRANSPORTE, TIPO_TRANSPORTE, UNIDAD_DEFAULT } from "@/features/pricing/shared";
+ 
+ /** cod_tipo_pago */
+ export const TIPO_PAGO = {
+@@ -40,6 +40,17 @@ export const RUBRO = {
+   SCALLING: 134,
+ } as const;
+ 
++/**
++ * Nombres de rubro con los que se toman decisiones (se comparan con `esNombre` /
++ * `normalizarNombre` de `@/features/pricing/shared`): el código de IVA se busca por nombre en
++ * el catálogo porque puede cambiar entre ambientes.
++ */
++export const NOMBRE_RUBRO = {
++  IVA: "IVA",
++  /** Rubro de flete: su nombre contiene este texto (además de `es_flete`). */
++  FLETE: "FLETE",
++} as const;
++
+ /** cod_tipo_servicio que maneja estación y PDFs prepaid/collect. */
+ export const COD_TIPO_SERVICIO_ESTACION = 81;
+ 
+diff --git a/src/features/pricing/cotizacion/calculo/lib/totales-rubros-estado.ts b/src/features/pricing/cotizacion/calculo/lib/totales-rubros-estado.ts
+index f5f9bfe..80d4ea7 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/totales-rubros-estado.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/totales-rubros-estado.ts
+@@ -1,5 +1,6 @@
++import { esNombre } from "@/features/pricing/shared";
+ import { construirAgrupacionAutomatica } from "./agrupacion-rubros";
+-import { TIPO_PAGO } from "./constantes";
++import { NOMBRE_RUBRO, TIPO_PAGO } from "./constantes";
+ import type { Id } from "./tipos";
+ import { getLetraTipoPago, getMetodo } from "./totales-rubros-helpers";
+ import type {
+@@ -14,12 +15,9 @@ import type {
+  * ========================================================================== */
+ 
+ function esRubroIva(item: RubroTotal, codRubroIVA?: Id | null) {
+-  const nombre = String(item.nombre ?? item.gruporubro_nombre ?? "")
+-    .trim()
+-    .toUpperCase();
+-
+   return (
+-    (codRubroIVA != null && String(item.cod_rubro) === String(codRubroIVA)) || nombre === "IVA"
++    (codRubroIVA != null && String(item.cod_rubro) === String(codRubroIVA)) ||
++    esNombre(item.nombre ?? item.gruporubro_nombre, NOMBRE_RUBRO.IVA)
+   );
+ }
+ 
+diff --git a/src/features/pricing/cotizacion/calculo/lib/totales-rubros-payload.ts b/src/features/pricing/cotizacion/calculo/lib/totales-rubros-payload.ts
+index 34fcab8..ec3ec67 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/totales-rubros-payload.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/totales-rubros-payload.ts
+@@ -1,5 +1,5 @@
+ import { getClasificacionServicio } from "./clasificacion-rubros";
+-import { TIPO_PAGO } from "./constantes";
++import { NOMBRE_RUBRO, TIPO_PAGO } from "./constantes";
+ import type { Id } from "./tipos";
+ import {
+   construirDetalleMetodo,
+@@ -269,7 +269,7 @@ export function construirPayloadRubrosAgrupados({
+ 
+           cod_rubro: item.cod_rubro ?? codRubroIVA ?? null,
+ 
+-          gruporubro_nombre: "IVA",
++          gruporubro_nombre: NOMBRE_RUBRO.IVA,
+ 
+           costo_rubro: costoIva,
+ 
+@@ -347,7 +347,7 @@ export function construirPayloadRubrosAgrupados({
+ 
+         cod_rubro: codRubroIVA,
+ 
+-        gruporubro_nombre: "IVA",
++        gruporubro_nombre: NOMBRE_RUBRO.IVA,
+ 
+         costo_rubro: iva,
+         costo_grupo: iva,
+diff --git a/src/features/pricing/reportes/components/hit-rate.tsx b/src/features/pricing/reportes/components/hit-rate.tsx
+index 8434d06..afccead 100644
+--- a/src/features/pricing/reportes/components/hit-rate.tsx
++++ b/src/features/pricing/reportes/components/hit-rate.tsx
+@@ -14,6 +14,7 @@ import {
+   XAxis,
+   YAxis,
+ } from "recharts";
++import { NOMBRE_TRANSPORTE, normalizarNombre } from "@/features/pricing/shared";
+ import { Loader } from "@/shared/components/ui/loader";
+ import {
+   Table,
+@@ -688,13 +689,15 @@ function HitRateVista({ filtros, tipo }: { filtros: Filtros; tipo: TipoVistaHitR
+   const { objetivo, isLoading: cargandoObjetivo } = useObjetivoHitRate();
+   const objetivoTabla = objetivo == null ? undefined : porcentajeObjetivo(objetivo);
+ 
+-  const tipoTransporte = filtros.cod_tipo_transporte?.label ?? "AEREO";
++  const tipoTransporte = normalizarNombre(
++    filtros.cod_tipo_transporte?.label ?? NOMBRE_TRANSPORTE.AEREO,
++  );
+   const transporte =
+-    tipoTransporte === "TERRESTRE"
++    tipoTransporte === NOMBRE_TRANSPORTE.TERRESTRE
+       ? { titulo: "HRse Terrestre", data: hrse_terrestre }
+-      : tipoTransporte === "AEREO"
++      : tipoTransporte === NOMBRE_TRANSPORTE.AEREO
+         ? { titulo: "HRse Aereo", data: hrse_aereo }
+-        : tipoTransporte === "MARITIMO"
++        : tipoTransporte === NOMBRE_TRANSPORTE.MARITIMO
+           ? { titulo: "HRse Maritimo", data: hrse_maritimo }
+           : null;
+ 
+diff --git a/src/features/pricing/shared/ARQUITECTURA.md b/src/features/pricing/shared/ARQUITECTURA.md
+index fd40aae..ce75be0 100644
+--- a/src/features/pricing/shared/ARQUITECTURA.md
++++ b/src/features/pricing/shared/ARQUITECTURA.md
+@@ -16,6 +16,7 @@ shared/
+ │  └─ use-permisos-pricing.ts  ← PERMISOS: usePermisosPricing(OPCION_PERMISOS.<pantalla>) (ver abajo)
+ ├─ lib/
+ │  ├─ formatos.ts        ← conAmbosFormatos
++│  ├─ nombres.ts         ← normalizarNombre / esNombre: decisiones por nombre de catálogo (NOMBRE_TRANSPORTE...)
+ │  └─ vigencia-metodo.ts ← getEstadoMetodo (vencida / próxima a vencer)
+ └─ components/
+    ├─ combobox-opcion.tsx ← ComboboxOpcion: Combobox (@/shared, en memoria) con valor objeto ↔ string, "x" para
+diff --git a/src/features/pricing/shared/calculadora-embarque/lib/constantes.ts b/src/features/pricing/shared/calculadora-embarque/lib/constantes.ts
+index 5a8b437..d936407 100644
+--- a/src/features/pricing/shared/calculadora-embarque/lib/constantes.ts
++++ b/src/features/pricing/shared/calculadora-embarque/lib/constantes.ts
+@@ -12,11 +12,21 @@ export const TIPO_TRANSPORTE = {
+   TERRESTRE: 51,
+ } as const;
+ 
++/**
++ * Nombre (nomTipo) de cada tipo de transporte. Las decisiones por transporte comparan este
++ * nombre con `esNombre` (los códigos pueden ser distintos entre ambientes).
++ */
++export const NOMBRE_TRANSPORTE = {
++  AEREO: "AEREO",
++  MARITIMO: "MARITIMO",
++  TERRESTRE: "TERRESTRE",
++} as const;
++
+ /** Nombre de cada tipo de transporte por su código. */
+ export const TIPOS_TRANSPORTE = {
+-  [TIPO_TRANSPORTE.AEREO]: "AEREO",
+-  [TIPO_TRANSPORTE.MARITIMO]: "MARITIMO",
+-  [TIPO_TRANSPORTE.TERRESTRE]: "TERRESTRE",
++  [TIPO_TRANSPORTE.AEREO]: NOMBRE_TRANSPORTE.AEREO,
++  [TIPO_TRANSPORTE.MARITIMO]: NOMBRE_TRANSPORTE.MARITIMO,
++  [TIPO_TRANSPORTE.TERRESTRE]: NOMBRE_TRANSPORTE.TERRESTRE,
+ } as const;
+ 
+ export type TipoTransporte = (typeof TIPOS_TRANSPORTE)[keyof typeof TIPOS_TRANSPORTE];
+diff --git a/src/features/pricing/shared/index.ts b/src/features/pricing/shared/index.ts
+index 3655992..f2ef73c 100644
+--- a/src/features/pricing/shared/index.ts
++++ b/src/features/pricing/shared/index.ts
+@@ -72,6 +72,7 @@ export {
+   type Unidad,
+ } from "./calculadora-embarque/lib/calculos";
+ export {
++  NOMBRE_TRANSPORTE,
+   TIPO_TRANSPORTE,
+   TIPOS_TRANSPORTE,
+   type TipoTransporte,
+@@ -160,4 +161,5 @@ export {
+   METODO_RANGO,
+   type TarifaRangoMutationPayload,
+ } from "./lib/metodos/rango";
++export { esNombre, normalizarNombre } from "./lib/nombres";
+ export { getEstadoMetodo } from "./lib/vigencia-metodo";
+diff --git a/src/features/pricing/shared/lib/nombres.ts b/src/features/pricing/shared/lib/nombres.ts
+new file mode 100644
+index 0000000..61e4c12
+--- /dev/null
++++ b/src/features/pricing/shared/lib/nombres.ts
+@@ -0,0 +1,20 @@
++/* ==========================================================================
++ * NOMBRES DE CATÁLOGO
++ *
++ * Algunas decisiones de negocio se toman por el nombre de un registro de
++ * catálogo (tipo de transporte, rubro IVA, rubros de flete) y no por su código,
++ * porque los códigos pueden ser distintos entre ambientes. Para que todas
++ * comparen igual, el nombre se normaliza siempre con esta función.
++ * ========================================================================== */
++
++/** Nombre listo para comparar: sin espacios a los lados y en mayúsculas. */
++export function normalizarNombre(valor: unknown): string {
++  return String(valor ?? "")
++    .trim()
++    .toUpperCase();
++}
++
++/** `true` si el nombre del registro es `nombre` (ver `normalizarNombre`). */
++export function esNombre(valor: unknown, nombre: string): boolean {
++  return normalizarNombre(valor) === normalizarNombre(nombre);
++}

@@ -24,11 +24,14 @@ import React from "react";
 
 import {
   type CatalogosPricing,
+  esNombre,
+  normalizarNombre,
   normalizarUnidades,
   useCatalogosPricing,
 } from "@/features/pricing/shared";
 
 import { filtrarPorTipoTabla, normalizarOpciones } from "../lib/catalogos";
+import { NOMBRE_RUBRO } from "../lib/constantes";
 import type {
   CatalogoTipo,
   CriterioCatalogo,
@@ -146,18 +149,15 @@ function construirCatalogosFormulario(base: CatalogosPricing): CatalogosFormular
 
 function obtenerCodigosFletes(rubros: RubroCatalogo[]) {
   return rubros.filter(
-    (rubro) => rubro.es_flete === true || rubro?.nombre_rubro?.toUpperCase()?.includes("FLETE"),
+    (rubro) =>
+      rubro.es_flete === true || normalizarNombre(rubro.nombre_rubro).includes(NOMBRE_RUBRO.FLETE),
   );
 }
 
 function obtenerCodRubroIVA(rubros: RubroCatalogo[]) {
-  const rubroIVA = rubros.find((rubro) => {
-    const nombre = String(rubro.nombre ?? rubro.nombre_rubro ?? rubro.label ?? "")
-      .trim()
-      .toUpperCase();
-
-    return nombre === "IVA";
-  });
+  const rubroIVA = rubros.find((rubro) =>
+    esNombre(rubro.nombre ?? rubro.nombre_rubro ?? rubro.label, NOMBRE_RUBRO.IVA),
+  );
 
   return rubroIVA?.cod_rubro ?? null;
 }

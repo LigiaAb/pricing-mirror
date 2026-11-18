@@ -14,6 +14,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { NOMBRE_TRANSPORTE, normalizarNombre } from "@/features/pricing/shared";
 import { Loader } from "@/shared/components/ui/loader";
 import {
   Table,
@@ -688,13 +689,15 @@ function HitRateVista({ filtros, tipo }: { filtros: Filtros; tipo: TipoVistaHitR
   const { objetivo, isLoading: cargandoObjetivo } = useObjetivoHitRate();
   const objetivoTabla = objetivo == null ? undefined : porcentajeObjetivo(objetivo);
 
-  const tipoTransporte = filtros.cod_tipo_transporte?.label ?? "AEREO";
+  const tipoTransporte = normalizarNombre(
+    filtros.cod_tipo_transporte?.label ?? NOMBRE_TRANSPORTE.AEREO,
+  );
   const transporte =
-    tipoTransporte === "TERRESTRE"
+    tipoTransporte === NOMBRE_TRANSPORTE.TERRESTRE
       ? { titulo: "HRse Terrestre", data: hrse_terrestre }
-      : tipoTransporte === "AEREO"
+      : tipoTransporte === NOMBRE_TRANSPORTE.AEREO
         ? { titulo: "HRse Aereo", data: hrse_aereo }
-        : tipoTransporte === "MARITIMO"
+        : tipoTransporte === NOMBRE_TRANSPORTE.MARITIMO
           ? { titulo: "HRse Maritimo", data: hrse_maritimo }
           : null;
 

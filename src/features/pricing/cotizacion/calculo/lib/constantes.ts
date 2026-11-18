@@ -7,7 +7,7 @@
  * ========================================================================== */
 
 /** cod_tipo_transporte y unidades por defecto: corporativos, viven en pricing/shared. */
-export { TIPO_TRANSPORTE, UNIDAD_DEFAULT } from "@/features/pricing/shared";
+export { NOMBRE_TRANSPORTE, TIPO_TRANSPORTE, UNIDAD_DEFAULT } from "@/features/pricing/shared";
 
 /** cod_tipo_pago */
 export const TIPO_PAGO = {
@@ -38,6 +38,17 @@ export const TIPO_METODO = {
 export const RUBRO = {
   IVA: 133,
   SCALLING: 134,
+} as const;
+
+/**
+ * Nombres de rubro con los que se toman decisiones (se comparan con `esNombre` /
+ * `normalizarNombre` de `@/features/pricing/shared`): el código de IVA se busca por nombre en
+ * el catálogo porque puede cambiar entre ambientes.
+ */
+export const NOMBRE_RUBRO = {
+  IVA: "IVA",
+  /** Rubro de flete: su nombre contiene este texto (además de `es_flete`). */
+  FLETE: "FLETE",
 } as const;
 
 /** cod_tipo_servicio que maneja estación y PDFs prepaid/collect. */

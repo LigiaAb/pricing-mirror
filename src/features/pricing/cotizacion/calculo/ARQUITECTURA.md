@@ -6,7 +6,7 @@
 cotizacion/calculo/
 ├─ lib/
 │  ├─ tipos.ts          ← TIPOS compartidos (Id, MonedaCatalogo, RubroCatalogo, ...)
-│  ├─ constantes.ts     ← CÓDIGOS de negocio (TIPO_PAGO.COLLECT = 127, RUBRO.SCALLING = 134, ...)
+│  ├─ constantes.ts     ← CÓDIGOS de negocio (TIPO_PAGO.COLLECT = 127, RUBRO.SCALLING = 134, ...) y NOMBRES (NOMBRE_RUBRO, NOMBRE_TRANSPORTE; comparar con esNombre)
 │  ├─ utils.ts          ← FUNCIONES pequeñas compartidas (mismoId, numero, normalizarBoolean, limpiarNumero, buscarMoneda, ...)
 │  ├─ rubros-manuales.ts← rubros con valor manual (ABIERTO / COBERTURA / COSTO_PORCENTAJE): qué rubro es manual,
 │  │                      fórmula de cobertura y detalle "Sobre valor de factura". Compartido por Due Agent y Due
