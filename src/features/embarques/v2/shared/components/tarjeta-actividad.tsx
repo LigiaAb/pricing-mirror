@@ -24,11 +24,13 @@ import {
 } from "@/shared/components/ui/accordion";
 import { Button } from "@/shared/components/ui/button";
 import { cn } from "@/shared/lib/utils";
-import { type ActividadTracking, actividadesPorId } from "../lib/actividades-tracking";
+import type { ActividadTracking } from "../lib/actividades-tracking";
 import { accionDe, camposDe, type GestionActividad } from "../lib/gestion-actividades";
 import type { CampoGestion, TipoInteraccion } from "../lib/interacciones";
+import { actividadesPorId } from "../lib/operacion";
 import { EtiquetaTipo } from "./actividades-tracking";
 import { CampoPorTipo } from "./campos";
+import { useOperacion } from "./operacion-context";
 import { Dato, Pendiente, SoloConsulta } from "./utils";
 
 /* ==========================================================================
@@ -51,8 +53,9 @@ import { Dato, Pendiente, SoloConsulta } from "./utils";
  * `editable = false` (actividad de otra área): mismos datos en solo consulta,
  * sin campos de captura ni botón.
  *
- * La tarjeta es común; cada actor la usa con sus definiciones desde su carpeta
- * (`operaciones/`, `bodegas/`, `combex/` → `components/actividad-<actor>.tsx`).
+ * La tarjeta es común: la tab la usa con la gestión del responsable en la
+ * operación del embarque (`<actor>/lib/gestion-actividades.ts`), salvo las
+ * actividades con formulario propio (`formularios` de la operación).
  * ========================================================================== */
 
 export const ICONO_INTERACCION: Record<TipoInteraccion, LucideIcon> = {
@@ -141,7 +144,8 @@ export function TarjetaActividad({
 }) {
   const Icono = ICONO_INTERACCION[gestion.interaccion];
   const estado = ESTADO[estadoActividad(actividad, pasoActual)];
-  const requiere = actividadesPorId(gestion.requiere ?? []);
+  const operacion = useOperacion();
+  const requiere = actividadesPorId(operacion, gestion.requiere ?? []);
   const excepcion = gestion.interaccion === "incidencia";
   const abrirTracking = use(AbrirTrackingContext);
   const conArchivos = camposDe(gestion).some((campo) => campo.tipo === "archivo");

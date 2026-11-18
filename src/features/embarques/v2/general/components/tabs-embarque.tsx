@@ -1,63 +1,17 @@
 "use client";
 
-import {
-  Ban,
-  Check,
-  ClipboardList,
-  FileStack,
-  FileText,
-  FolderOpen,
-  History,
-  Landmark,
-  type LucideIcon,
-  PackageCheck,
-  PlaneLanding,
-  PlaneTakeoff,
-  Receipt,
-  Scale,
-  Send,
-  Ship,
-  Tags,
-  Truck,
-  Warehouse,
-} from "lucide-react";
+import { Check } from "lucide-react";
 import type * as React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { cn } from "@/shared/lib/utils";
+import { useOperacion } from "../../shared/components/operacion-context";
+import type { DefinicionOperacion, PasoEmbarque } from "../../shared/lib/operacion";
 import type { EmbarqueMaqueta, PerfilEmbarque } from "../../shared/lib/tipos";
-import {
-  type PasoEmbarque,
-  pasoDeTab,
-  pasosDelPerfil,
-  puedeEditarInformacion,
-  TRACKING_PASOS,
-  type ValorPasoEmbarque,
-} from "../lib/pasos";
+import { pasoDeTab, pasosDelPerfil, puedeEditarInformacion } from "../lib/pasos";
 import { PasoActividades } from "./pasos/paso-actividades";
 import { PasoArchivos } from "./pasos/paso-archivos";
 import { PasoBitacora } from "./pasos/paso-bitacora";
 import { PasoInformacion } from "./pasos/paso-informacion";
-
-const ICONOS: Record<ValorPasoEmbarque, LucideIcon> = {
-  informacion: ClipboardList,
-  recoleccion: Truck,
-  guias: Tags,
-  reservas: Ship,
-  draft: FileText,
-  aduana: Landmark,
-  "recepcion-bodega": Warehouse,
-  "despacho-bodega": PackageCheck,
-  combex: Scale,
-  "guia-final": Send,
-  tarifas: Receipt,
-  "documentacion-final": FileStack,
-  salida: PlaneTakeoff,
-  complementaria: FileText,
-  cierre: PlaneLanding,
-  archivos: FolderOpen,
-  bitacora: History,
-  cancelacion: Ban,
-};
 
 /**
  * Contenido de la tab: Información y Archivos (lista del embarque, solo
@@ -89,15 +43,16 @@ function contenidoPaso(
 }
 
 function TriggerPaso({ paso, pasoActual }: { paso: PasoEmbarque; pasoActual: number }) {
-  const Icono = ICONOS[paso.value];
-  const pasoTracking = pasoDeTab(paso);
+  const Icono = paso.icono;
+  const operacion = useOperacion();
+  const pasoTracking = pasoDeTab(operacion, paso);
   const completado = pasoTracking != null && pasoTracking < pasoActual;
   const actual = pasoTracking != null && pasoTracking === pasoActual;
 
   return (
     <TabsTrigger
       value={paso.value}
-      className={cn("w-full gap-2", paso.value === "cancelacion" && "text-destructive")}
+      className={cn("w-full gap-2", paso.destructiva && "text-destructive")}
     >
       <Icono className="size-5 shrink-0" aria-hidden="true" />
 
@@ -121,12 +76,14 @@ function TriggerPaso({ paso, pasoActual }: { paso: PasoEmbarque; pasoActual: num
 }
 
 /** Tabs del flujo agrupadas por paso del tracking (las sin paso van primero). */
-function gruposPorPaso(pasos: readonly PasoEmbarque[]) {
-  const sinPaso = pasos.filter((paso) => pasoDeTab(paso) == null);
-  const grupos = TRACKING_PASOS.map((tracking) => ({
-    tracking,
-    pasos: pasos.filter((paso) => pasoDeTab(paso) === tracking.id),
-  })).filter((grupo) => grupo.pasos.length > 0);
+function gruposPorPaso(operacion: DefinicionOperacion, pasos: readonly PasoEmbarque[]) {
+  const sinPaso = pasos.filter((paso) => pasoDeTab(operacion, paso) == null);
+  const grupos = operacion.pasos
+    .map((tracking) => ({
+      tracking,
+      pasos: pasos.filter((paso) => pasoDeTab(operacion, paso) === tracking.id),
+    }))
+    .filter((grupo) => grupo.pasos.length > 0);
   return { sinPaso, grupos };
 }
 
@@ -142,19 +99,19 @@ export function TabsEmbarque({
 }: {
   embarque: EmbarqueMaqueta;
   perfil: PerfilEmbarque;
-  value: ValorPasoEmbarque;
-  onValueChange: (value: ValorPasoEmbarque) => void;
+  value: string;
+  onValueChange: (value: string) => void;
 }) {
-  const pasos = pasosDelPerfil(perfil);
-  const { sinPaso, grupos } = gruposPorPaso(pasos.filter((paso) => paso.grupo === "flujo"));
+  const operacion = useOperacion();
+  const pasos = pasosDelPerfil(operacion, perfil);
+  const { sinPaso, grupos } = gruposPorPaso(
+    operacion,
+    pasos.filter((paso) => paso.grupo === "flujo"),
+  );
   const extra = pasos.filter((paso) => paso.grupo === "extra");
 
   return (
-    <Tabs
-      className="flex flex-col gap-2 md:flex-row"
-      value={value}
-      onValueChange={(nuevo: string) => onValueChange(nuevo as ValorPasoEmbarque)}
-    >
+    <Tabs className="flex flex-col gap-2 md:flex-row" value={value} onValueChange={onValueChange}>
       <TabsList className="h-auto w-full flex-col justify-start md:w-60 md:shrink-0">
         {sinPaso.map((paso) => (
           <TriggerPaso key={paso.value} paso={paso} pasoActual={embarque.pasoActual} />

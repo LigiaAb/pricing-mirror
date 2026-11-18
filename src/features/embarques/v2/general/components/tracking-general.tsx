@@ -3,19 +3,22 @@
 import { Check } from "lucide-react";
 import * as React from "react";
 import { cn } from "@/shared/lib/utils";
-import { actividadesDelPaso } from "../../shared/lib/actividades-tracking";
-import { estadoPaso, TRACKING_PASOS } from "../lib/pasos";
+import { useOperacion } from "../../shared/components/operacion-context";
+import { actividadesDelPaso } from "../../shared/lib/operacion";
+import { estadoPaso } from "../lib/pasos";
 
 /**
- * Tracking general de 6 pasos. Solo visual: no es interactivo.
+ * Tracking general (pasos de la operación del embarque). Solo visual: no es interactivo.
  * El interactivo vive en el Sheet de `tracking-sheet.tsx`.
  */
 export function TrackingGeneral({ pasoActual }: { pasoActual: number }) {
+  const operacion = useOperacion();
+
   return (
     <ol className="flex w-full items-start overflow-x-auto px-2 py-4" aria-label="Tracking general">
-      {TRACKING_PASOS.map((paso, index) => {
+      {operacion.pasos.map((paso, index) => {
         const estado = estadoPaso(paso.id, pasoActual);
-        const esUltimo = index === TRACKING_PASOS.length - 1;
+        const esUltimo = index === operacion.pasos.length - 1;
 
         return (
           <React.Fragment key={paso.id}>
@@ -49,7 +52,7 @@ export function TrackingGeneral({ pasoActual }: { pasoActual: number }) {
               </span>
               <span className="text-[11px] leading-tight text-muted-foreground">{paso.titulo}</span>
               <span className="text-[10px] text-muted-foreground">
-                {actividadesDelPaso(paso.id).length} actividades
+                {actividadesDelPaso(operacion, paso.id).length} actividades
               </span>
               <span className="flex flex-wrap justify-center gap-1">
                 {paso.responsables.map((responsable) => (

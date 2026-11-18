@@ -10,20 +10,17 @@ import {
   Package,
   Pencil,
   Phone,
-  Plane,
   Receipt,
   UserRound,
 } from "lucide-react";
 import type * as React from "react";
 import { Button } from "@/shared/components/ui/button";
 import { cn } from "@/shared/lib/utils";
+import { useOperacion } from "../../../shared/components/operacion-context";
 import { EncabezadoPaso, SoloConsulta } from "../../../shared/components/utils";
 import {
   CAMPOS_DETALLES,
-  CAMPOS_FECHAS,
   CAMPOS_NOTIFICACION,
-  CAMPOS_PRODUCTO,
-  CAMPOS_RUTA,
   type CampoEmbarque,
 } from "../../../shared/lib/campos-embarque";
 import type { EmbarqueMaqueta, ValoresEmbarque } from "../../../shared/lib/tipos";
@@ -201,8 +198,9 @@ function CardDetalles({ valores }: { valores: ValoresEmbarque }) {
 
 /** Cada tramo: origen → destino, aerolínea y vuelo. */
 function CardRutas({ rutas }: { rutas: readonly ValoresEmbarque[] }) {
+  const { rutas: camposRuta, iconoRutas } = useOperacion().informacion;
   return (
-    <CardInfo titulo="Rutas" icono={Plane} meta={cantidad(rutas.length, "tramo", "tramos")}>
+    <CardInfo titulo="Rutas" icono={iconoRutas} meta={cantidad(rutas.length, "tramo", "tramos")}>
       {rutas.length === 0 ? (
         <SinDatos texto="Sin rutas registradas." />
       ) : (
@@ -221,7 +219,7 @@ function CardRutas({ rutas }: { rutas: readonly ValoresEmbarque[] }) {
                 texto={unir([
                   unir([texto(ruta, "codPaisOrigen"), texto(ruta, "codPaisDestino")], " → "),
                   texto(ruta, "codEntidadProv"),
-                  prefijo(etiqueta(CAMPOS_RUTA, "flightNumber"), texto(ruta, "flightNumber")),
+                  prefijo(etiqueta(camposRuta, "flightNumber"), texto(ruta, "flightNumber")),
                 ])}
               />
             </li>
@@ -232,18 +230,19 @@ function CardRutas({ rutas }: { rutas: readonly ValoresEmbarque[] }) {
   );
 }
 
-/** Fechas del embarque (`CAMPOS_FECHAS`) con valor, más las `mostrarSiempre` ("—" si no hay). */
+/** Fechas de la operación (`informacion.fechas`) con valor, más las `mostrarSiempre` ("—" si no hay). */
 function CardFechas({ valores }: { valores: ValoresEmbarque }) {
+  const camposFechas = useOperacion().informacion.fechas;
   return (
     <CardInfo titulo="Fechas" icono={CalendarDays}>
       <Datos>
-        {CAMPOS_FECHAS.filter((campo) => texto(valores, campo.key) || campo.mostrarSiempre).map(
-          (campo) => (
+        {camposFechas
+          .filter((campo) => texto(valores, campo.key) || campo.mostrarSiempre)
+          .map((campo) => (
             <Fila key={campo.key} label={campo.label}>
               {texto(valores, campo.key) ?? VACIO}
             </Fila>
-          ),
-        )}
+          ))}
       </Datos>
     </CardInfo>
   );
@@ -260,6 +259,7 @@ function CardProducto({
   cargas: readonly ValoresEmbarque[];
   className?: string | undefined;
 }) {
+  const camposProducto = useOperacion().informacion.producto;
   const bultos = sumar(cargas, "cantidad");
   const peso = sumar(cargas, "pesoTotal");
   const cw = sumar(cargas, "cw");
@@ -300,23 +300,23 @@ function CardProducto({
                 />
               </div>
               <div className="text-xs text-muted-foreground sm:text-right">
-                {/* Cada dato con su nombre en la CTS (`CAMPOS_PRODUCTO`). */}
+                {/* Cada dato con su nombre en la CTS (`informacion.producto` de la operación). */}
                 <p className="text-sm text-foreground">
                   <span className="text-xs text-muted-foreground">
-                    {etiqueta(CAMPOS_PRODUCTO, "valor")}{" "}
+                    {etiqueta(camposProducto, "valor")}{" "}
                   </span>
                   <span className="font-semibold">{texto(carga, "valor") ?? VACIO}</span>
                 </p>
                 {unir([
-                  prefijo(etiqueta(CAMPOS_PRODUCTO, "paisOrigenId"), texto(carga, "paisOrigenId")),
+                  prefijo(etiqueta(camposProducto, "paisOrigenId"), texto(carga, "paisOrigenId")),
                   prefijo(
-                    etiqueta(CAMPOS_PRODUCTO, "partidaArancelaria"),
+                    etiqueta(camposProducto, "partidaArancelaria"),
                     texto(carga, "partidaArancelaria"),
                   ),
                 ])}
                 <Secundario
                   texto={prefijo(
-                    etiqueta(CAMPOS_PRODUCTO, "regimenAduanal"),
+                    etiqueta(camposProducto, "regimenAduanal"),
                     texto(carga, "regimenAduanal"),
                   )}
                 />
