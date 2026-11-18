@@ -1,0 +1,52 @@
+diff --git a/src/features/pricing/cotizacion/calculo/lib/carrier-flete.ts b/src/features/pricing/cotizacion/calculo/lib/carrier-flete.ts
+index 6aa96a3..d0bc78f 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/carrier-flete.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/carrier-flete.ts
+@@ -483,13 +483,17 @@ export function crearTarifaSpotDueCarrier({
+ 
+     rate_venta: rate,
+ 
+-    original_rate_costo: rubroBase.metodo?.rate_costo ?? rate,
++    /*
++     * El valor original siempre sale del flete normal (método de la raíz o del
++     * servicio), nunca del monto SPOT ingresado.
++     */
++    original_rate_costo: rubroBase.metodo?.rate_costo ?? metodoBase.rate_costo ?? null,
+ 
+-    original_rate_venta: rubroBase.metodo?.rate_venta ?? rate,
++    original_rate_venta: rubroBase.metodo?.rate_venta ?? metodoBase.rate_venta ?? null,
+ 
+-    original_venta: rubroBase.metodo?.venta ?? valor,
++    original_venta: rubroBase.metodo?.venta ?? metodoBase.venta ?? null,
+ 
+-    original_costo: rubroBase.metodo?.costo ?? valor,
++    original_costo: rubroBase.metodo?.costo ?? metodoBase.costo ?? null,
+   };
+ 
+   const servicioSpot: ServicioFlete = {
+diff --git a/src/features/pricing/cotizacion/calculo/lib/totales-rubros-payload.ts b/src/features/pricing/cotizacion/calculo/lib/totales-rubros-payload.ts
+index 39fa8c0..34fcab8 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/totales-rubros-payload.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/totales-rubros-payload.ts
+@@ -198,7 +198,8 @@ export function construirPayloadRubrosAgrupados({
+ 
+       es_flete: item.es_flete ?? null,
+ 
+-      original_venta: metodo?.original_venta ?? null,
++      // Valor original: el del SPOT si lo trae; si no, el propio del rubro.
++      original_venta: metodo?.original_venta ?? metodo?.venta ?? null,
+ 
+       cod_moneda_costo: metodo?.cod_moneda_costo ?? metodo?.cod_moneda_venta ?? null,
+ 
+@@ -229,9 +230,9 @@ export function construirPayloadRubrosAgrupados({
+ 
+       rate_venta: metodo?.rate_venta ?? null,
+ 
+-      original_rate_costo: metodo?.original_rate_costo ?? null,
++      original_rate_costo: metodo?.original_rate_costo ?? metodo?.rate_costo ?? null,
+ 
+-      original_rate_venta: metodo?.original_rate_venta ?? null,
++      original_rate_venta: metodo?.original_rate_venta ?? metodo?.rate_venta ?? null,
+ 
+       detalle: construirDetalleMetodo(metodo),
+     };
