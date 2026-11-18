@@ -72,6 +72,15 @@ type Props = {
   serviciosAutoSeleccion?: Id[];
 
   filtrosCalculo: Record<string, unknown>;
+
+  /*
+   * Permisos de la pantalla (opción "Información" de Cotizaciones). Por defecto
+   * todo permitido: los lee GestionCotizacion y los pasa por aquí.
+   *   - puedeAgregar: "Nuevo cálculo" y guardar la versión nueva.
+   *   - puedeEditar: "Activar versión".
+   */
+  puedeAgregar?: boolean | undefined;
+  puedeEditar?: boolean | undefined;
 };
 
 function getEntidadId(entidad?: EntidadCatalogo | null) {
@@ -89,7 +98,7 @@ function getValorNumericoOTexto(value: unknown): string | number | null {
 }
 
 export function CalculoCotizacion(props: Props) {
-  const { cotizacion, codUsuario, filtrosCalculo } = props;
+  const { cotizacion, codUsuario, filtrosCalculo, puedeAgregar = true, puedeEditar = true } = props;
   const { estados } = useEstadosCalculo();
   /* ==========================================================================
    * VERSIONES
@@ -132,13 +141,17 @@ export function CalculoCotizacion(props: Props) {
         cotizacion={cotizacion}
         loading={versiones.isLoading}
         onView={versiones.abrirVersion}
-        onActivate={versiones.activarVersion}
-        onNew={async () => {
-          // Cada borrador empieza con un formulario nuevo aunque el ID siga siendo 0.
-          setBorrador((actual) => actual + 1);
-          pdf.setOpen(false);
-          await versiones.nuevaVersion();
-        }}
+        onActivate={puedeEditar ? versiones.activarVersion : undefined}
+        onNew={
+          puedeAgregar
+            ? async () => {
+                // Cada borrador empieza con un formulario nuevo aunque el ID siga siendo 0.
+                setBorrador((actual) => actual + 1);
+                pdf.setOpen(false);
+                await versiones.nuevaVersion();
+              }
+            : undefined
+        }
         onPdf={(version) => pdf.generar(version, 1)}
         onPdfStation={(version) => pdf.generar(version, 2)}
       />
@@ -170,6 +183,7 @@ function DetalleCalculoCotizacion({
   serviciosAutoSeleccion = [],
   filtrosCalculo,
   versiones,
+  puedeAgregar = true,
 }: Props & {
   versiones: ReturnType<typeof useVersionCotizacion>;
 }) {
@@ -178,7 +192,8 @@ function DetalleCalculoCotizacion({
   const versionActual = versiones.versionActual;
 
   const isReadOnly = React.useMemo(() => {
-    if (!versionActual) {
+    // Sin permiso de Agregar no se captura ni se guarda una versión nueva.
+    if (!versionActual || !puedeAgregar) {
       return true;
     }
 
@@ -186,7 +201,7 @@ function DetalleCalculoCotizacion({
       versionActual.isNew === true || Number(versionActual.cod_cotizaciondetalle) === 0;
 
     return !esNueva;
-  }, [versionActual]);
+  }, [versionActual, puedeAgregar]);
 
   const plantillaActiva = versiones.plantilla ?? plantillaSeleccionada ?? null;
 

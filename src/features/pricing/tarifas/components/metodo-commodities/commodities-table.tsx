@@ -11,14 +11,13 @@ import {
   useInsertarMetodoCommodity,
   useMetodoCommodities,
 } from "../../api/metodo-commodities";
-
+import { usePermisosTarifas } from "../../hooks/use-permisos-tarifas";
 import {
   type CommodityOption,
   crearCommoditiesColumns,
   type EstadoCommodityOption,
   type FilaMetodoCommodity,
 } from "./commodities-columns";
-
 import { CommoditiesForm } from "./commodities-form";
 
 const COD_ESTADO_ACTIVO = 1;
@@ -170,26 +169,30 @@ export function CommoditiesTable({ codMetodo }: Props) {
     [eliminarCommodity, formatearFilaApi],
   );
 
+  const { puedeAgregar, puedeEditar, puedeEliminar } = usePermisosTarifas();
+
   const columns = React.useMemo(
     () =>
       crearCommoditiesColumns({
-        onEditar: setFilaEditando,
-        onEliminar: handleEliminar,
+        onEditar: puedeEditar ? setFilaEditando : undefined,
+        onEliminar: puedeEliminar ? handleEliminar : undefined,
       }),
-    [handleEliminar],
+    [handleEliminar, puedeEditar, puedeEliminar],
   );
 
   return (
     <div className="space-y-4">
-      <CommoditiesForm
-        value={filaEditando}
-        commodities={commoditiesSeleccionables}
-        estados={estados}
-        estadoActivo={estadoActivo}
-        onGuardar={handleGuardar}
-        onCancelar={() => setFilaEditando(null)}
-        isPending={insertarCommodity.isPending || actualizarCommodity.isPending}
-      />
+      {(filaEditando ? puedeEditar : puedeAgregar) ? (
+        <CommoditiesForm
+          value={filaEditando}
+          commodities={commoditiesSeleccionables}
+          estados={estados}
+          estadoActivo={estadoActivo}
+          onGuardar={handleGuardar}
+          onCancelar={() => setFilaEditando(null)}
+          isPending={insertarCommodity.isPending || actualizarCommodity.isPending}
+        />
+      ) : null}
 
       <DataTable
         columns={columns}

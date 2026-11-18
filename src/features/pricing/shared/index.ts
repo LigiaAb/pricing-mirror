@@ -7,6 +7,7 @@
  *   api/         consultas de catálogos (métodos, proveedores, clientes) y
  *                lectura de rangos de tarifa.
  *   components/  FichaResumen (resumen de un servicio/método de tarifa).
+ *   hooks/       usePermisosPricing (permisos por opción de cada pantalla).
  *   calculadora-embarque/  CalculadoraMedidas + cálculos de volumen, peso y
  *                CW por transporte (corporativos, sin datos de cotización).
  *
@@ -106,6 +107,12 @@ export {
   type UsuariosCatalog,
   useCatalogosPricing,
 } from "./hooks/use-catalogos-pricing";
+export {
+  OPCION_PERMISOS,
+  type OpcionPermisosPricing,
+  type PermisosPricing,
+  usePermisosPricing,
+} from "./hooks/use-permisos-pricing";
 export {
   booleano,
   type CampoBooleano,

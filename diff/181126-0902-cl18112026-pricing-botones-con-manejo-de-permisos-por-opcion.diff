@@ -1,0 +1,1566 @@
+diff --git a/src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx b/src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx
+index 1a80a71..287b879 100644
+--- a/src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx
++++ b/src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx
+@@ -20,6 +20,7 @@ import {
+   normalizarOpciones,
+   type OpcionFormularioCotizacion,
+ } from "@/features/pricing/cotizacion/calculo";
++import { OPCION_PERMISOS, usePermisosPricing } from "@/features/pricing/shared";
+ import { useCatalogosTarifas, useReferenciaEstable } from "@/features/pricing/tarifas";
+ import { useContextoOperativoStore } from "@/features/shell";
+ import { Button } from "@/shared/components/ui/button";
+@@ -146,6 +147,8 @@ export function AutorizarTarifaSpot() {
+   const consulta = useAutorizacionSpot();
+   const actualizar = useActualizarTarifaSpot();
+   const autorizar = useAutorizarTarifaSpot();
++  // "Manejo de Tarifa SPOT" no tiene acción Autorizar: autorizar y rechazar piden Editar.
++  const { puedeEditar } = usePermisosPricing(OPCION_PERMISOS.autorizacionSpot);
+   const { catalogos, isLoading: cargandoCatalogos } = useCatalogosTarifas({});
+   const [mostrarAutorizados, setMostrarAutorizados] = React.useState(false);
+   const [seleccionada, setSeleccionada] = React.useState<Fila | null>(null);
+@@ -346,6 +349,7 @@ export function AutorizarTarifaSpot() {
+   const mutando = actualizar.isPending || autorizar.isPending;
+   const estadoSeleccionada = seleccionada ? estadoSpot(seleccionada) : null;
+   const puedeResolver =
++    puedeEditar &&
+     seleccionada != null &&
+     Boolean(seleccionada.url_documento) &&
+     mismoId(seleccionada.cod_estado, estados.activo);
+diff --git a/src/features/pricing/carga-masiva-fletes/components/carga-masiva-fletes.tsx b/src/features/pricing/carga-masiva-fletes/components/carga-masiva-fletes.tsx
+index 0cde507..bc0aef1 100644
+--- a/src/features/pricing/carga-masiva-fletes/components/carga-masiva-fletes.tsx
++++ b/src/features/pricing/carga-masiva-fletes/components/carga-masiva-fletes.tsx
+@@ -15,6 +15,7 @@ import {
+ import * as React from "react";
+ 
+ import { centrosCosto, empresas } from "@/features/catalogos";
++import { OPCION_PERMISOS, usePermisosPricing } from "@/features/pricing/shared";
+ import { useContextoOperativoStore } from "@/features/shell";
+ import { Alert } from "@/shared/components/ui/alert";
+ import { Button } from "@/shared/components/ui/button";
+@@ -273,6 +274,8 @@ export function CargaMasivaFletes() {
+   const empresasQuery = empresas.useLista({ cod_estado: 1 });
+   const centrosCostoQuery = centrosCosto.useLista({ cod_estado: 1 });
+   const cargarMutation = useCargarFletesMasivos();
++  // Enviar la carga = acción Agregar de la opción "Información".
++  const { puedeAgregar } = usePermisosPricing(OPCION_PERMISOS.cargaMasivaFletes);
+ 
+   const empresaInicial = obtenerId(empresaContexto, ["cod_empresa", "empresaId"]);
+   const centroCostoInicial = obtenerId(centroCostoContexto, ["cod_cc", "centroCostoId"]);
+@@ -501,18 +504,20 @@ export function CargaMasivaFletes() {
+                     Limpiar resultado
+                   </Button>
+                 ) : null}
+-                <Button
+-                  type="button"
+-                  disabled={!puedeEnviar || cargarMutation.isPending}
+-                  onClick={() => void handleSubmit()}
+-                >
+-                  {cargarMutation.isPending ? (
+-                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+-                  ) : (
+-                    <Send className="size-4" aria-hidden="true" />
+-                  )}
+-                  Enviar
+-                </Button>
++                {puedeAgregar ? (
++                  <Button
++                    type="button"
++                    disabled={!puedeEnviar || cargarMutation.isPending}
++                    onClick={() => void handleSubmit()}
++                  >
++                    {cargarMutation.isPending ? (
++                      <Loader2 className="size-4 animate-spin" aria-hidden="true" />
++                    ) : (
++                      <Send className="size-4" aria-hidden="true" />
++                    )}
++                    Enviar
++                  </Button>
++                ) : null}
+               </div>
+             </section>
+           </TabsContent>
+diff --git a/src/features/pricing/cotizacion/calculo/components/calculo-cotizacion.tsx b/src/features/pricing/cotizacion/calculo/components/calculo-cotizacion.tsx
+index 45d452b..d4f8ac2 100644
+--- a/src/features/pricing/cotizacion/calculo/components/calculo-cotizacion.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/calculo-cotizacion.tsx
+@@ -72,6 +72,15 @@ type Props = {
+   serviciosAutoSeleccion?: Id[];
+ 
+   filtrosCalculo: Record<string, unknown>;
++
++  /*
++   * Permisos de la pantalla (opción "Información" de Cotizaciones). Por defecto
++   * todo permitido: los lee GestionCotizacion y los pasa por aquí.
++   *   - puedeAgregar: "Nuevo cálculo" y guardar la versión nueva.
++   *   - puedeEditar: "Activar versión".
++   */
++  puedeAgregar?: boolean | undefined;
++  puedeEditar?: boolean | undefined;
+ };
+ 
+ function getEntidadId(entidad?: EntidadCatalogo | null) {
+@@ -89,7 +98,7 @@ function getValorNumericoOTexto(value: unknown): string | number | null {
+ }
+ 
+ export function CalculoCotizacion(props: Props) {
+-  const { cotizacion, codUsuario, filtrosCalculo } = props;
++  const { cotizacion, codUsuario, filtrosCalculo, puedeAgregar = true, puedeEditar = true } = props;
+   const { estados } = useEstadosCalculo();
+   /* ==========================================================================
+    * VERSIONES
+@@ -132,13 +141,17 @@ export function CalculoCotizacion(props: Props) {
+         cotizacion={cotizacion}
+         loading={versiones.isLoading}
+         onView={versiones.abrirVersion}
+-        onActivate={versiones.activarVersion}
+-        onNew={async () => {
+-          // Cada borrador empieza con un formulario nuevo aunque el ID siga siendo 0.
+-          setBorrador((actual) => actual + 1);
+-          pdf.setOpen(false);
+-          await versiones.nuevaVersion();
+-        }}
++        onActivate={puedeEditar ? versiones.activarVersion : undefined}
++        onNew={
++          puedeAgregar
++            ? async () => {
++                // Cada borrador empieza con un formulario nuevo aunque el ID siga siendo 0.
++                setBorrador((actual) => actual + 1);
++                pdf.setOpen(false);
++                await versiones.nuevaVersion();
++              }
++            : undefined
++        }
+         onPdf={(version) => pdf.generar(version, 1)}
+         onPdfStation={(version) => pdf.generar(version, 2)}
+       />
+@@ -170,6 +183,7 @@ function DetalleCalculoCotizacion({
+   serviciosAutoSeleccion = [],
+   filtrosCalculo,
+   versiones,
++  puedeAgregar = true,
+ }: Props & {
+   versiones: ReturnType<typeof useVersionCotizacion>;
+ }) {
+@@ -178,7 +192,8 @@ function DetalleCalculoCotizacion({
+   const versionActual = versiones.versionActual;
+ 
+   const isReadOnly = React.useMemo(() => {
+-    if (!versionActual) {
++    // Sin permiso de Agregar no se captura ni se guarda una versión nueva.
++    if (!versionActual || !puedeAgregar) {
+       return true;
+     }
+ 
+@@ -186,7 +201,7 @@ function DetalleCalculoCotizacion({
+       versionActual.isNew === true || Number(versionActual.cod_cotizaciondetalle) === 0;
+ 
+     return !esNueva;
+-  }, [versionActual]);
++  }, [versionActual, puedeAgregar]);
+ 
+   const plantillaActiva = versiones.plantilla ?? plantillaSeleccionada ?? null;
+ 
+diff --git a/src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx b/src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx
+index 46bb397..fbdbb9f 100644
+--- a/src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx
+@@ -35,6 +35,8 @@ export type CotizacionesTableProps = {
+   alternarVencidas: () => void;
+   seleccionarCotizacion: (cotizacion: CotizacionCabecera) => void;
+   nuevaCotizacion: () => void;
++  /** Permiso de Agregar: sin él no se muestra "Nuevo". Por defecto `true`. */
++  puedeAgregar?: boolean | undefined;
+   limpiarCotizacion: () => void;
+   rechazarCotizacion: (codCotizacionCabecera: Id) => Promise<boolean>;
+   confirmarCotizacion: (codCotizacionCabecera: Id) => Promise<boolean>;
+@@ -230,6 +232,7 @@ export function CotizacionesTable({
+   alternarVencidas,
+   seleccionarCotizacion,
+   nuevaCotizacion,
++  puedeAgregar = true,
+   limpiarCotizacion,
+   rechazarCotizacion,
+   confirmarCotizacion,
+@@ -370,10 +373,12 @@ export function CotizacionesTable({
+ 
+           {filtro}
+ 
+-          <Button type="button" size="sm" onClick={nuevaCotizacion}>
+-            <Plus className="size-4" aria-hidden="true" />
+-            Nuevo
+-          </Button>
++          {puedeAgregar ? (
++            <Button type="button" size="sm" onClick={nuevaCotizacion}>
++              <Plus className="size-4" aria-hidden="true" />
++              Nuevo
++            </Button>
++          ) : null}
+         </>
+       }
+     />
+diff --git a/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx b/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx
+index a06fc20..d569d46 100644
+--- a/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx
+@@ -3,6 +3,7 @@
+ import { AlertTriangle, Loader2, SearchIcon } from "lucide-react";
+ import * as React from "react";
+ 
++import { OPCION_PERMISOS, usePermisosPricing } from "@/features/pricing/shared";
+ import { useContextoOperativoStore } from "@/features/shell";
+ import { Button } from "@/shared/components/ui/button";
+ import {
+@@ -400,6 +401,12 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
+    * FORMULARIO SELECCIONADO
+    * ========================================================================== */
+ 
++  /*
++   * Permisos de la opción "Información" de Cotizaciones. Autorizar (confirmar /
++   * rechazar) queda pendiente: falta confirmar su propiedad en usePermisosCategoria.
++   */
++  const { puedeAgregar, puedeEditar } = usePermisosPricing(OPCION_PERMISOS.cotizaciones);
++
+   const tipoFormularioInformacion = React.useMemo(() => {
+     if (!cotizacionSeleccionada) {
+       return "lectura" as const;
+@@ -412,8 +419,12 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
+       return "lectura" as const;
+     }
+ 
+-    return isNewCotizacion ? ("ingreso" as const) : ("edicion" as const);
+-  }, [cotizacionSeleccionada, isNewCotizacion]);
++    if (isNewCotizacion) {
++      return puedeAgregar ? ("ingreso" as const) : ("lectura" as const);
++    }
++
++    return puedeEditar ? ("edicion" as const) : ("lectura" as const);
++  }, [cotizacionSeleccionada, isNewCotizacion, puedeAgregar, puedeEditar]);
+ 
+   const inputsReadOnlyInformacion = React.useMemo(() => {
+     if (isNewCotizacion) {
+@@ -479,6 +490,7 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
+     alternarVencidas,
+     seleccionarCotizacion,
+     nuevaCotizacion,
++    puedeAgregar,
+     limpiarCotizacion,
+     rechazarCotizacion,
+     confirmarCotizacion,
+@@ -671,6 +683,8 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
+                   rubro.cod_servicio == null ? [] : [rubro.cod_servicio],
+                 )}
+                 filtrosCalculo={filtrosCalculo}
++                puedeAgregar={puedeAgregar}
++                puedeEditar={puedeEditar}
+               />
+ 
+               {!esFormularioValido ? (
+diff --git a/src/features/pricing/cotizacion/calculo/components/versiones-table.tsx b/src/features/pricing/cotizacion/calculo/components/versiones-table.tsx
+index 4695ac2..a3a49f6 100644
+--- a/src/features/pricing/cotizacion/calculo/components/versiones-table.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/versiones-table.tsx
+@@ -58,9 +58,11 @@ type Props = {
+ 
+   onView: (version: Version) => void | Promise<void>;
+ 
+-  onActivate: (codCotizacionDetalle: Id) => void | Promise<void>;
++  /** Sin función (sin permiso de Editar) no se muestra "Activar versión". */
++  onActivate?: ((codCotizacionDetalle: Id) => void | Promise<void>) | undefined;
+ 
+-  onNew: () => void | Promise<void>;
++  /** Sin función (sin permiso de Agregar) no se muestra "Nuevo cálculo". */
++  onNew?: (() => void | Promise<void>) | undefined;
+ 
+   /*
+    * Opcionales porque PDF
+@@ -229,7 +231,7 @@ export function VersionesTable({
+           <p className="text-xs text-muted-foreground">Historial de cálculos de la cotización</p>
+         </div>
+ 
+-        {puedeCrearNueva ? (
++        {puedeCrearNueva && onNew ? (
+           <Button type="button" size="sm" disabled={loading} onClick={() => void onNew()}>
+             <Plus className="size-4" />
+             Nuevo cálculo
+@@ -349,7 +351,7 @@ export function VersionesTable({
+                           </Button>
+                         ) : null}
+ 
+-                        {estado.activar ? (
++                        {estado.activar && onActivate ? (
+                           <Button
+                             type="button"
+                             variant="ghost"
+diff --git a/src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx b/src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx
+index 65465e8..c213a00 100644
+--- a/src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx
++++ b/src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx
+@@ -8,6 +8,7 @@ import {
+   CotizacionForm,
+   type OpcionFormularioCotizacion,
+ } from "@/features/pricing/cotizacion/calculo";
++import { OPCION_PERMISOS, usePermisosPricing } from "@/features/pricing/shared";
+ import { useCatalogosTarifas } from "@/features/pricing/tarifas";
+ import { useContextoOperativoStore } from "@/features/shell";
+ import { DataTable, DataTableColumnHeader } from "@/shared/components/data-table/data-table";
+@@ -125,6 +126,9 @@ export function GestionPlantillasClientes() {
+   const insertar = useInsertarPlantillaCliente();
+   const actualizar = useActualizarPlantillaCliente();
+   const eliminar = useEliminarPlantillaCliente();
++  const { puedeAgregar, puedeEditar, puedeEliminar } = usePermisosPricing(
++    OPCION_PERMISOS.plantillasClientes,
++  );
+   const [seleccionada, setSeleccionada] = React.useState<PlantillaCliente | null>(null);
+   const [nueva, setNueva] = React.useState(false);
+   /** Plantilla que espera confirmación para eliminarse (abre el diálogo). */
+@@ -205,20 +209,22 @@ export function GestionPlantillasClientes() {
+             >
+               <Eye className="size-4" />
+             </Button>
+-            <Button
+-              type="button"
+-              size="icon"
+-              variant="ghost"
+-              aria-label="Eliminar plantilla"
+-              onClick={() => setPorEliminar(row.original)}
+-            >
+-              <Trash2 className="size-4" />
+-            </Button>
++            {puedeEliminar ? (
++              <Button
++                type="button"
++                size="icon"
++                variant="ghost"
++                aria-label="Eliminar plantilla"
++                onClick={() => setPorEliminar(row.original)}
++              >
++                <Trash2 className="size-4" />
++              </Button>
++            ) : null}
+           </div>
+         ),
+       },
+     ],
+-    [],
++    [puedeEliminar],
+   );
+ 
+   const confirmarEliminar = () => {
+@@ -298,22 +304,24 @@ export function GestionPlantillasClientes() {
+               <ListRestart className="size-4" />
+               Limpiar
+             </Button>
+-            <Button
+-              type="button"
+-              size="sm"
+-              onClick={() => {
+-                setNueva(true);
+-                setSeleccionada({
+-                  cod_tarifaplantilla: 0,
+-                  cod_empresa: codEmpresa,
+-                  cod_cc: codCc,
+-                  cod_estado: 1,
+-                } as PlantillaCliente);
+-              }}
+-            >
+-              <Plus className="size-4" />
+-              Nueva
+-            </Button>
++            {puedeAgregar ? (
++              <Button
++                type="button"
++                size="sm"
++                onClick={() => {
++                  setNueva(true);
++                  setSeleccionada({
++                    cod_tarifaplantilla: 0,
++                    cod_empresa: codEmpresa,
++                    cod_cc: codCc,
++                    cod_estado: 1,
++                  } as PlantillaCliente);
++                }}
++              >
++                <Plus className="size-4" />
++                Nueva
++              </Button>
++            ) : null}
+           </>
+         }
+       />
+@@ -327,7 +335,7 @@ export function GestionPlantillasClientes() {
+           </TabsList>
+           <TabsContent value="informacion">
+             <CotizacionForm
+-              tipoFormulario={nueva ? "ingreso" : "edicion"}
++              tipoFormulario={nueva ? "ingreso" : puedeEditar ? "edicion" : "lectura"}
+               defaultValues={seleccionada as CotizacionCabeceraPayload}
+               catalogos={catalogosFormulario}
+               resetKey={`${nueva ? "nueva" : seleccionada.cod_tarifaplantilla}`}
+@@ -347,6 +355,7 @@ export function GestionPlantillasClientes() {
+                 codTarifaPlantilla={seleccionada.cod_tarifaplantilla}
+                 servicios={catalogos.servicios}
+                 rubros={catalogos.rubros}
++                soloLectura={!puedeEditar}
+               />
+             )}
+           </TabsContent>
+diff --git a/src/features/pricing/plantillas-clientes/components/rubros-plantilla.tsx b/src/features/pricing/plantillas-clientes/components/rubros-plantilla.tsx
+index 7585dde..1def721 100644
+--- a/src/features/pricing/plantillas-clientes/components/rubros-plantilla.tsx
++++ b/src/features/pricing/plantillas-clientes/components/rubros-plantilla.tsx
+@@ -29,10 +29,13 @@ export function RubrosPlantilla({
+   codTarifaPlantilla,
+   servicios,
+   rubros,
++  soloLectura = false,
+ }: {
+   codTarifaPlantilla: Id;
+   servicios: Servicio[];
+   rubros: Rubro[];
++  /** Sin permiso de Editar: los rubros se ven pero no se cambian ni se guardan. */
++  soloLectura?: boolean | undefined;
+ }) {
+   const consulta = usePlantillasRubros();
+   const guardar = useGuardarPlantillaRubros();
+@@ -127,7 +130,7 @@ export function RubrosPlantilla({
+                   <Checkbox
+                     id={checkboxId}
+                     checked={seleccion.has(key)}
+-                    disabled={obligatorio}
++                    disabled={obligatorio || soloLectura}
+                     onCheckedChange={(value) => cambiar(servicio, value === true)}
+                   />
+                   <span>
+@@ -140,10 +143,12 @@ export function RubrosPlantilla({
+           </div>
+         </section>
+       ))}
+-      <Button type="button" disabled={guardar.isPending} onClick={() => void handleGuardar()}>
+-        <Save className="size-4" />
+-        Guardar rubros
+-      </Button>
++      {soloLectura ? null : (
++        <Button type="button" disabled={guardar.isPending} onClick={() => void handleGuardar()}>
++          <Save className="size-4" />
++          Guardar rubros
++        </Button>
++      )}
+     </div>
+   );
+ }
+diff --git a/src/features/pricing/shared/ARQUITECTURA.md b/src/features/pricing/shared/ARQUITECTURA.md
+index 13f5cdc..2c66287 100644
+--- a/src/features/pricing/shared/ARQUITECTURA.md
++++ b/src/features/pricing/shared/ARQUITECTURA.md
+@@ -11,7 +11,8 @@ shared/
+ │  ├─ clientes.ts        ← clientes
+ │  └─ tarifa-rangos.ts   ← SOLO lectura de rangos (las mutaciones están en tarifas/api/tarifa-rangos.ts)
+ ├─ hooks/
+-│  └─ use-catalogos-pricing.ts ← carga y normaliza los catálogos generales ({ value, label } + camel/snake)
++│  ├─ use-catalogos-pricing.ts ← carga y normaliza los catálogos generales ({ value, label } + camel/snake)
++│  └─ use-permisos-pricing.ts  ← PERMISOS: usePermisosPricing(OPCION_PERMISOS.<pantalla>) (ver abajo)
+ ├─ lib/
+ │  ├─ formatos.ts        ← conAmbosFormatos
+ │  └─ vigencia-metodo.ts ← getEstadoMetodo (vencida / próxima a vencer)
+@@ -30,6 +31,24 @@ shared/
+ **Regla:** aquí solo entra lo que usan ambos módulos y que no depende de ninguno de ellos. Si algo lo usa uno
+ solo, va en ese módulo. `shared` nunca importa de `tarifas/` ni de `cotizacion/`.
+ 
++## Permisos de botones
++
++Permisos = menú → categoría → opción → acción. La categoría es la pantalla (sale de la ruta) y
++`usePermisosCategoria` (`@/features/shell`) recibe el nombre de la **opción**. `usePermisosPricing` lo envuelve:
++`OPCION_PERMISOS` tiene el nombre de opción de cada pantalla y devuelve `puedeVer / puedeAgregar / puedeEditar /
++puedeEliminar` como booleanos. Solo es interfaz: el backend valida cada request.
++
++| Pantalla          | Categoría             | Opción      | Qué pide cada botón                                                                                                  |
++| ----------------- | --------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------- |
++| Tarifas           | Tarifas               | Servicios   | Agregar: nueva, copiar, alta de método y filas · Editar: actualizar, editar filas · Eliminar: anular, eliminar filas |
++| Cotizaciones      | Cotizaciones          | Información | Agregar: nuevo, nuevo cálculo, guardar versión · Editar: cabecera, activar versión · Autorizar: pendiente (#104)     |
++| Autorización SPOT | Manejo de Tarifa SPOT | Información | Editar: autorizar y rechazar (la categoría no tiene acción Autorizar)                                                |
++| Plantillas        | Tarifario de clientes | Lista       | Agregar: nueva · Editar: guardar, rubros · Eliminar: eliminar                                                        |
++| Carga masiva      | Carga Masiva de Flete | Información | Agregar: enviar                                                                                                      |
++
++Los componentes que se usan en otras pantallas no leen permisos solos: la pantalla los lee y los pasa por props
++(con `true` por defecto) o, en Tarifas, por `PermisosTarifasProvider` (sin provider se permite todo).
++
+ ## Calculadora de embarques
+ 
+ `CalculadoraMedidas` funciona en cualquier pantalla, dentro o fuera de cualquier provider: lee sus unidades con
+diff --git a/src/features/pricing/shared/hooks/use-permisos-pricing.ts b/src/features/pricing/shared/hooks/use-permisos-pricing.ts
+new file mode 100644
+index 0000000..9149bf2
+--- /dev/null
++++ b/src/features/pricing/shared/hooks/use-permisos-pricing.ts
+@@ -0,0 +1,55 @@
++"use client";
++
++import { usePermisosCategoria } from "@/features/shell";
++
++/* ==========================================================================
++ * PERMISOS DE PRICING
++ *
++ * Permisos = menú → categoría → opción → acción. La categoría es la pantalla
++ * (sale de la ruta) y `usePermisosCategoria` recibe el nombre de la OPCIÓN
++ * dentro de esa categoría (igual que embarques: "Lista", "Asignación Masiva").
++ *
++ * Nombres tomados de la configuración del módulo Pricing (getPermisosxRol,
++ * 18/11/2026). Si cambian en el menú, se cambian aquí.
++ *
++ * Solo es control de interfaz (ARQUITECTURA.md §"Modelo de autorización"):
++ * el backend sigue validando cada request.
++ * ========================================================================== */
++
++export const OPCION_PERMISOS = {
++  /** Categoría "Tarifas" (ruta tarifas). */
++  tarifas: "Servicios",
++  /** Categoría "Cotizaciones" (ruta solicitud-cotizacion). */
++  cotizaciones: "Información",
++  /** Categoría "Manejo de Tarifa SPOT" (ruta autoriza-spot). */
++  autorizacionSpot: "Información",
++  /** Categoría "Carga Masiva de Flete" (ruta carga-masiva-flete). */
++  cargaMasivaFletes: "Información",
++  /** Categoría "Tarifario de clientes" (ruta cotizacion). */
++  plantillasClientes: "Lista",
++} as const;
++
++export type OpcionPermisosPricing = (typeof OPCION_PERMISOS)[keyof typeof OPCION_PERMISOS];
++
++/** Acciones que usa pricing (las mismas que expone el hook en embarques). */
++export interface PermisosPricing {
++  puedeVer: boolean;
++  puedeAgregar: boolean;
++  puedeEditar: boolean;
++  puedeEliminar: boolean;
++}
++
++/**
++ * Permisos de una opción de la pantalla actual, como booleanos.
++ * Mientras cargan los permisos todo es `false` (no se muestran acciones).
++ */
++export function usePermisosPricing(opcion: OpcionPermisosPricing): PermisosPricing {
++  const permisos = usePermisosCategoria(opcion);
++
++  return {
++    puedeVer: permisos?.puedeVer === true,
++    puedeAgregar: permisos?.puedeAgregar === true,
++    puedeEditar: permisos?.puedeEditar === true,
++    puedeEliminar: permisos?.puedeEliminar === true,
++  };
++}
+diff --git a/src/features/pricing/shared/index.ts b/src/features/pricing/shared/index.ts
+index 616685a..f49e49d 100644
+--- a/src/features/pricing/shared/index.ts
++++ b/src/features/pricing/shared/index.ts
+@@ -7,6 +7,7 @@
+  *   api/         consultas de catálogos (métodos, proveedores, clientes) y
+  *                lectura de rangos de tarifa.
+  *   components/  FichaResumen (resumen de un servicio/método de tarifa).
++ *   hooks/       usePermisosPricing (permisos por opción de cada pantalla).
+  *   calculadora-embarque/  CalculadoraMedidas + cálculos de volumen, peso y
+  *                CW por transporte (corporativos, sin datos de cotización).
+  *
+@@ -106,6 +107,12 @@ export {
+   type UsuariosCatalog,
+   useCatalogosPricing,
+ } from "./hooks/use-catalogos-pricing";
++export {
++  OPCION_PERMISOS,
++  type OpcionPermisosPricing,
++  type PermisosPricing,
++  usePermisosPricing,
++} from "./hooks/use-permisos-pricing";
+ export {
+   booleano,
+   type CampoBooleano,
+diff --git a/src/features/pricing/tarifas/ARQUITECTURA.md b/src/features/pricing/tarifas/ARQUITECTURA.md
+index 5054912..0965ebc 100644
+--- a/src/features/pricing/tarifas/ARQUITECTURA.md
++++ b/src/features/pricing/tarifas/ARQUITECTURA.md
+@@ -12,6 +12,7 @@ tarifas/
+ ├─ hooks/
+ │  ├─ use-catalogos-tarifas.ts   ← catálogos base de pricing/shared + opción "TODOS" + mapWithCatalogo
+ │  ├─ use-opciones-tarifa.ts     ← monedas / rubros como opciones { value, label } y búsqueda local
++│  ├─ use-permisos-tarifas.tsx   ← PermisosTarifasProvider (en CreacionTarifa) + usePermisosTarifas()
+ │  └─ use-formulario-tarifas.ts  ← formulario principal de tarifa
+ ├─ lib/
+ │  ├─ campos-metodo.ts      ← reexporta el motor de definición única (vive en pricing/shared/lib/campos-metodo.ts)
+diff --git a/src/features/pricing/tarifas/components/creacion-tarifa.tsx b/src/features/pricing/tarifas/components/creacion-tarifa.tsx
+index be31a47..b1f1d9e 100644
+--- a/src/features/pricing/tarifas/components/creacion-tarifa.tsx
++++ b/src/features/pricing/tarifas/components/creacion-tarifa.tsx
+@@ -7,6 +7,7 @@ import { Loader } from "@/shared/components/ui/loader";
+ import { useActualizarServicio, useInsertarServicio, useReplicarServicio } from "../api/servicios";
+ import type { FilaServicioMetodo } from "../api/types-api";
+ import { useCatalogosTarifas } from "../hooks/use-catalogos-tarifas";
++import { PermisosTarifasProvider } from "../hooks/use-permisos-tarifas";
+ import type { TarifaSubmitPayload } from "./formulario-tarifa";
+ import { TarifasTabs } from "./tab-tarifas";
+ import { TarifasTable } from "./tarifas-table";
+@@ -228,60 +229,62 @@ export function CreacionTarifa() {
+   }, [tarifaSeleccionada]);
+ 
+   return (
+-    <div className="space-y-4">
+-      <div className="rounded-lg border bg-card p-4 shadow-sm">
+-        <TarifasTable
+-          setAccion={setAccion}
+-          setTarifaSeleccionada={setTarifaSeleccionada}
+-          setFiltros={setFiltros}
+-          filtros={filtros}
+-          filtrosIniciales={filtrosIniciales}
+-          editarRegistro={handleGuardarTarifa}
+-        />
+-      </div>
++    <PermisosTarifasProvider>
++      <div className="space-y-4">
++        <div className="rounded-lg border bg-card p-4 shadow-sm">
++          <TarifasTable
++            setAccion={setAccion}
++            setTarifaSeleccionada={setTarifaSeleccionada}
++            setFiltros={setFiltros}
++            filtros={filtros}
++            filtrosIniciales={filtrosIniciales}
++            editarRegistro={handleGuardarTarifa}
++          />
++        </div>
+ 
+-      {tarifaSeleccionada && (
+-        <div className="grid grid-cols-2 gap-2 border border-accent p-2 rounded-md mt-5 shadow-xl bg-card">
+-          <p>
+-            <span className="font-bold text-xl">
+-              [{" "}
+-              <span className="font-normal text-base">
+-                {tarifaSeleccionada.cod_servicio ?? "0"}
+-              </span>{" "}
+-              ]
+-            </span>
+-            &nbsp;&nbsp;
+-            <span className="font-arial">SERVICIO</span>{" "}
+-            {accion === "ingreso" ? "Nuevo" : (tarifaSeleccionada.nombre ?? "")}
+-          </p>
+-
+-          <div className="gap-2 justify-end items-center">
+-            <p className="text-right text-sm text-primary">Modo {accion}</p>
+-            <p className="text-right text-sm">
+-              <span className="text-primary">Última modificación por: </span>
+-              {tarifaSeleccionada.ultimoUsuario ?? ""}
++        {tarifaSeleccionada && (
++          <div className="grid grid-cols-2 gap-2 border border-accent p-2 rounded-md mt-5 shadow-xl bg-card">
++            <p>
++              <span className="font-bold text-xl">
++                [{" "}
++                <span className="font-normal text-base">
++                  {tarifaSeleccionada.cod_servicio ?? "0"}
++                </span>{" "}
++                ]
++              </span>
++              &nbsp;&nbsp;
++              <span className="font-arial">SERVICIO</span>{" "}
++              {accion === "ingreso" ? "Nuevo" : (tarifaSeleccionada.nombre ?? "")}
+             </p>
++
++            <div className="gap-2 justify-end items-center">
++              <p className="text-right text-sm text-primary">Modo {accion}</p>
++              <p className="text-right text-sm">
++                <span className="text-primary">Última modificación por: </span>
++                {tarifaSeleccionada.ultimoUsuario ?? ""}
++              </p>
++            </div>
+           </div>
+-        </div>
+-      )}
+-      {/* <pre>{JSON.stringify(tarifaSeleccionada, null, 2)}</pre> */}
+-
+-      {tarifaSeleccionada && (
+-        <div
+-          className="rounded-lg border bg-card p-4 shadow-sm"
+-          key={`${tarifaSeleccionada.cod_servicio ?? 0}-${tarifaSeleccionada.cod_metodo ?? 0}-${accion}`}
+-          ref={ref}
+-        >
+-          <TarifasTabs
+-            defaultValues={tarifaSeleccionada}
+-            tipoFormulario={accion}
+-            onGuardarTarifa={handleGuardarTarifa}
+-            onCopiarTarifa={handleCopiarTarifa}
+-            guardando={guardando}
+-          />
+-        </div>
+-      )}
+-      {copiando && <Loader texto="Copiando la Tarifa" />}
+-    </div>
++        )}
++        {/* <pre>{JSON.stringify(tarifaSeleccionada, null, 2)}</pre> */}
++
++        {tarifaSeleccionada && (
++          <div
++            className="rounded-lg border bg-card p-4 shadow-sm"
++            key={`${tarifaSeleccionada.cod_servicio ?? 0}-${tarifaSeleccionada.cod_metodo ?? 0}-${accion}`}
++            ref={ref}
++          >
++            <TarifasTabs
++              defaultValues={tarifaSeleccionada}
++              tipoFormulario={accion}
++              onGuardarTarifa={handleGuardarTarifa}
++              onCopiarTarifa={handleCopiarTarifa}
++              guardando={guardando}
++            />
++          </div>
++        )}
++        {copiando && <Loader texto="Copiando la Tarifa" />}
++      </div>
++    </PermisosTarifasProvider>
+   );
+ }
+diff --git a/src/features/pricing/tarifas/components/formulario-tarifa.tsx b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
+index dff4809..98702d3 100644
+--- a/src/features/pricing/tarifas/components/formulario-tarifa.tsx
++++ b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
+@@ -28,6 +28,7 @@ import { cn } from "@/shared/lib/utils";
+ import type { FilaServicioMetodo, OptionEntidad } from "../api/types-api";
+ import { useCatalogosTarifas } from "../hooks/use-catalogos-tarifas";
+ import { useFormulario } from "../hooks/use-formulario-tarifas";
++import { usePermisosTarifas } from "../hooks/use-permisos-tarifas";
+ import { formatDateForInput } from "../lib/tarifa-helpers";
+ 
+ const TIPO_ENTIDAD_PROVEEDOR = "PROVEEDOR"; // "CARRIER";
+@@ -360,6 +361,14 @@ export const FormularioTarifa = ({
+     return fechaFinDate < new Date();
+   }, [defaultValues?.fechaFin]);
+ 
++  const permisos = usePermisosTarifas();
++  /** Sin permiso de editar, la edición se muestra como lectura (campos y botones). */
++  const sinPermisoEditar = tipoFormulario === "edicion" && !permisos.puedeEditar;
++  /** Guardar: alta pide Agregar; edición, Editar; el filtro no pide permiso. */
++  const puedeGuardar =
++    tipoFormulario === "filtro" ||
++    (tipoFormulario === "ingreso" ? permisos.puedeAgregar : permisos.puedeEditar);
++
+   const {
+     values,
+     valoresSoloCodigos,
+@@ -370,7 +379,7 @@ export const FormularioTarifa = ({
+     verificarSiEsObligatorio,
+     obtenerCatalogoById,
+   } = useFormulario({
+-    tipoFormulario: vencido ? "lectura" : tipoFormulario,
++    tipoFormulario: vencido || sinPermisoEditar ? "lectura" : tipoFormulario,
+ 
+     ...(defaultValues === undefined ? {} : { defaultValues }),
+ 
+@@ -807,6 +816,7 @@ export const FormularioTarifa = ({
+         </FieldGroup>
+       </div>
+       {["lectura", "edicion"].includes(tipoFormulario) &&
++        permisos.puedeEditar &&
+         !defaultValues?.fecha_final &&
+         !!values?.fechaFin && (
+           <div className="flex flex-row space-x-3 justify-end">
+@@ -824,7 +834,7 @@ export const FormularioTarifa = ({
+         )}
+       {(tipoFormulario !== "lectura" || defaultValues?.fecha_final) && (
+         <div className="flex flex-row space-x-3 justify-end">
+-          {tipoFormulario !== "lectura" && (
++          {tipoFormulario !== "lectura" && puedeGuardar && (
+             <Button
+               type="button"
+               disabled={guardando}
+@@ -861,7 +871,7 @@ export const FormularioTarifa = ({
+               Limpiar
+             </Button>
+           )}
+-          {(defaultValues?.fecha_final ?? null) && (
++          {(defaultValues?.fecha_final ?? null) && permisos.puedeAgregar && (
+             <Button
+               type="button"
+               variant="secondary"
+diff --git a/src/features/pricing/tarifas/components/metodo-commodities/commodities-columns.tsx b/src/features/pricing/tarifas/components/metodo-commodities/commodities-columns.tsx
+index 41c86fc..6171cf9 100644
+--- a/src/features/pricing/tarifas/components/metodo-commodities/commodities-columns.tsx
++++ b/src/features/pricing/tarifas/components/metodo-commodities/commodities-columns.tsx
+@@ -29,8 +29,8 @@ export type FilaMetodoCommodity = Partial<MetodoCommodity> & {
+ };
+ 
+ type Props = {
+-  onEditar: (row: FilaMetodoCommodity) => void;
+-  onEliminar: (row: FilaMetodoCommodity) => void;
++  onEditar?: ((row: FilaMetodoCommodity) => void) | undefined;
++  onEliminar?: ((row: FilaMetodoCommodity) => void) | undefined;
+ };
+ 
+ export function crearCommoditiesColumns({
+@@ -53,25 +53,29 @@ export function crearCommoditiesColumns({
+       header: "",
+       cell: ({ row }) => (
+         <div className="flex justify-end gap-1">
+-          <Button
+-            type="button"
+-            size="icon"
+-            variant="ghost"
+-            aria-label="Editar commodity"
+-            onClick={() => onEditar(row.original)}
+-          >
+-            <Pencil className="size-4" />
+-          </Button>
++          {onEditar ? (
++            <Button
++              type="button"
++              size="icon"
++              variant="ghost"
++              aria-label="Editar commodity"
++              onClick={() => onEditar(row.original)}
++            >
++              <Pencil className="size-4" />
++            </Button>
++          ) : null}
+ 
+-          <Button
+-            type="button"
+-            size="icon"
+-            variant="ghost"
+-            aria-label="Eliminar commodity"
+-            onClick={() => onEliminar(row.original)}
+-          >
+-            <Trash2 className="size-4" />
+-          </Button>
++          {onEliminar ? (
++            <Button
++              type="button"
++              size="icon"
++              variant="ghost"
++              aria-label="Eliminar commodity"
++              onClick={() => onEliminar(row.original)}
++            >
++              <Trash2 className="size-4" />
++            </Button>
++          ) : null}
+         </div>
+       ),
+     },
+diff --git a/src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx b/src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx
+index fddbd80..7a25274 100644
+--- a/src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx
++++ b/src/features/pricing/tarifas/components/metodo-commodities/commodities-table.tsx
+@@ -11,14 +11,13 @@ import {
+   useInsertarMetodoCommodity,
+   useMetodoCommodities,
+ } from "../../api/metodo-commodities";
+-
++import { usePermisosTarifas } from "../../hooks/use-permisos-tarifas";
+ import {
+   type CommodityOption,
+   crearCommoditiesColumns,
+   type EstadoCommodityOption,
+   type FilaMetodoCommodity,
+ } from "./commodities-columns";
+-
+ import { CommoditiesForm } from "./commodities-form";
+ 
+ const COD_ESTADO_ACTIVO = 1;
+@@ -170,26 +169,30 @@ export function CommoditiesTable({ codMetodo }: Props) {
+     [eliminarCommodity, formatearFilaApi],
+   );
+ 
++  const { puedeAgregar, puedeEditar, puedeEliminar } = usePermisosTarifas();
++
+   const columns = React.useMemo(
+     () =>
+       crearCommoditiesColumns({
+-        onEditar: setFilaEditando,
+-        onEliminar: handleEliminar,
++        onEditar: puedeEditar ? setFilaEditando : undefined,
++        onEliminar: puedeEliminar ? handleEliminar : undefined,
+       }),
+-    [handleEliminar],
++    [handleEliminar, puedeEditar, puedeEliminar],
+   );
+ 
+   return (
+     <div className="space-y-4">
+-      <CommoditiesForm
+-        value={filaEditando}
+-        commodities={commoditiesSeleccionables}
+-        estados={estados}
+-        estadoActivo={estadoActivo}
+-        onGuardar={handleGuardar}
+-        onCancelar={() => setFilaEditando(null)}
+-        isPending={insertarCommodity.isPending || actualizarCommodity.isPending}
+-      />
++      {(filaEditando ? puedeEditar : puedeAgregar) ? (
++        <CommoditiesForm
++          value={filaEditando}
++          commodities={commoditiesSeleccionables}
++          estados={estados}
++          estadoActivo={estadoActivo}
++          onGuardar={handleGuardar}
++          onCancelar={() => setFilaEditando(null)}
++          isPending={insertarCommodity.isPending || actualizarCommodity.isPending}
++        />
++      ) : null}
+ 
+       <DataTable
+         columns={columns}
+diff --git a/src/features/pricing/tarifas/components/metodo-detalle/detalle-columns.tsx b/src/features/pricing/tarifas/components/metodo-detalle/detalle-columns.tsx
+index d06c255..b0df4f9 100644
+--- a/src/features/pricing/tarifas/components/metodo-detalle/detalle-columns.tsx
++++ b/src/features/pricing/tarifas/components/metodo-detalle/detalle-columns.tsx
+@@ -16,8 +16,8 @@ export type FilaMetodoDetalle = Partial<TarifaDetalle> & {
+ };
+ 
+ type CrearDetalleColumnsProps = {
+-  onEditar: (row: FilaMetodoDetalle) => void;
+-  onEliminar: (row: FilaMetodoDetalle) => void;
++  onEditar?: ((row: FilaMetodoDetalle) => void) | undefined;
++  onEliminar?: ((row: FilaMetodoDetalle) => void) | undefined;
+ };
+ 
+ export function crearDetalleColumns({
+@@ -45,25 +45,29 @@ export function crearDetalleColumns({
+       header: "",
+       cell: ({ row }) => (
+         <div className="flex justify-end gap-1">
+-          <Button
+-            type="button"
+-            size="icon"
+-            variant="ghost"
+-            aria-label="Editar detalle"
+-            onClick={() => onEditar(row.original)}
+-          >
+-            <Pencil className="size-4" />
+-          </Button>
++          {onEditar ? (
++            <Button
++              type="button"
++              size="icon"
++              variant="ghost"
++              aria-label="Editar detalle"
++              onClick={() => onEditar(row.original)}
++            >
++              <Pencil className="size-4" />
++            </Button>
++          ) : null}
+ 
+-          <Button
+-            type="button"
+-            size="icon"
+-            variant="ghost"
+-            aria-label="Eliminar detalle"
+-            onClick={() => onEliminar(row.original)}
+-          >
+-            <Trash2 className="size-4" />
+-          </Button>
++          {onEliminar ? (
++            <Button
++              type="button"
++              size="icon"
++              variant="ghost"
++              aria-label="Eliminar detalle"
++              onClick={() => onEliminar(row.original)}
++            >
++              <Trash2 className="size-4" />
++            </Button>
++          ) : null}
+         </div>
+       ),
+     },
+diff --git a/src/features/pricing/tarifas/components/metodo-detalle/detalle-table.tsx b/src/features/pricing/tarifas/components/metodo-detalle/detalle-table.tsx
+index 77f502b..8380b66 100644
+--- a/src/features/pricing/tarifas/components/metodo-detalle/detalle-table.tsx
++++ b/src/features/pricing/tarifas/components/metodo-detalle/detalle-table.tsx
+@@ -11,13 +11,12 @@ import {
+   useInsertarTarifaDetalle,
+   useTarifaDetalles,
+ } from "../../api/tarifa-detalles";
+-
++import { usePermisosTarifas } from "../../hooks/use-permisos-tarifas";
+ import {
+   crearDetalleColumns,
+   type DetalleTipoOption,
+   type FilaMetodoDetalle,
+ } from "./detalle-columns";
+-
+ import { DetalleForm } from "./detalle-form";
+ 
+ type Props = {
+@@ -123,24 +122,28 @@ export function DetalleTable({ codMetodo }: Props) {
+     [eliminarDetalle, formatearFilaApi],
+   );
+ 
++  const { puedeAgregar, puedeEditar, puedeEliminar } = usePermisosTarifas();
++
+   const columns = React.useMemo(
+     () =>
+       crearDetalleColumns({
+-        onEditar: setFilaEditando,
+-        onEliminar: handleEliminar,
++        onEditar: puedeEditar ? setFilaEditando : undefined,
++        onEliminar: puedeEliminar ? handleEliminar : undefined,
+       }),
+-    [handleEliminar],
++    [handleEliminar, puedeEditar, puedeEliminar],
+   );
+ 
+   return (
+     <div className="space-y-4">
+-      <DetalleForm
+-        value={filaEditando}
+-        tipos={tipos}
+-        onGuardar={handleGuardar}
+-        onCancelar={() => setFilaEditando(null)}
+-        isPending={insertarDetalle.isPending || actualizarDetalle.isPending}
+-      />
++      {(filaEditando ? puedeEditar : puedeAgregar) ? (
++        <DetalleForm
++          value={filaEditando}
++          tipos={tipos}
++          onGuardar={handleGuardar}
++          onCancelar={() => setFilaEditando(null)}
++          isPending={insertarDetalle.isPending || actualizarDetalle.isPending}
++        />
++      ) : null}
+ 
+       <DataTable
+         columns={columns}
+diff --git a/src/features/pricing/tarifas/components/metodo-entidad/entidad-columns.tsx b/src/features/pricing/tarifas/components/metodo-entidad/entidad-columns.tsx
+index 14d6171..893e4b6 100644
+--- a/src/features/pricing/tarifas/components/metodo-entidad/entidad-columns.tsx
++++ b/src/features/pricing/tarifas/components/metodo-entidad/entidad-columns.tsx
+@@ -8,7 +8,7 @@ export type FilaMetodoEntidad = TarifaEntidad & {
+ };
+ 
+ type Props = {
+-  onEliminar: (row: FilaMetodoEntidad) => void;
++  onEliminar?: ((row: FilaMetodoEntidad) => void) | undefined;
+ };
+ 
+ export function crearEntidadColumns({ onEliminar }: Props): ColumnDef<FilaMetodoEntidad>[] {
+@@ -29,17 +29,18 @@ export function crearEntidadColumns({ onEliminar }: Props): ColumnDef<FilaMetodo
+     {
+       id: "acciones",
+       header: "",
+-      cell: ({ row }) => (
+-        <Button
+-          type="button"
+-          size="icon"
+-          variant="ghost"
+-          aria-label="Eliminar entidad"
+-          onClick={() => onEliminar(row.original)}
+-        >
+-          <Trash2 className="size-4" />
+-        </Button>
+-      ),
++      cell: ({ row }) =>
++        onEliminar ? (
++          <Button
++            type="button"
++            size="icon"
++            variant="ghost"
++            aria-label="Eliminar entidad"
++            onClick={() => onEliminar(row.original)}
++          >
++            <Trash2 className="size-4" />
++          </Button>
++        ) : null,
+     },
+   ];
+ }
+diff --git a/src/features/pricing/tarifas/components/metodo-entidad/entidad-table.tsx b/src/features/pricing/tarifas/components/metodo-entidad/entidad-table.tsx
+index 390d08e..4d70b29 100644
+--- a/src/features/pricing/tarifas/components/metodo-entidad/entidad-table.tsx
++++ b/src/features/pricing/tarifas/components/metodo-entidad/entidad-table.tsx
+@@ -9,6 +9,7 @@ import {
+   useGuardarTarifaEntidad,
+   useTarifaEntidades,
+ } from "../../api/tarifa-entidades";
++import { usePermisosTarifas } from "../../hooks/use-permisos-tarifas";
+ import { eliminarDuplicadosById } from "../../lib/tarifa-helpers";
+ import { crearEntidadColumns, type FilaMetodoEntidad } from "./entidad-columns";
+ import { EntidadForm } from "./entidad-form";
+@@ -110,21 +111,25 @@ export function EntidadTable({ codMetodo }: Props) {
+     [codMetodo, eliminarEntidad],
+   );
+ 
++  const { puedeAgregar, puedeEliminar } = usePermisosTarifas();
++
+   const columns = React.useMemo(
+     () =>
+       crearEntidadColumns({
+-        onEliminar: handleEliminar,
++        onEliminar: puedeEliminar ? handleEliminar : undefined,
+       }),
+-    [handleEliminar],
++    [handleEliminar, puedeEliminar],
+   );
+ 
+   return (
+     <div className="space-y-4">
+-      <EntidadForm
+-        fetchOptions={fetchOptions}
+-        onAgregar={handleAgregar}
+-        isPending={guardarEntidad.isPending}
+-      />
++      {puedeAgregar ? (
++        <EntidadForm
++          fetchOptions={fetchOptions}
++          onAgregar={handleAgregar}
++          isPending={guardarEntidad.isPending}
++        />
++      ) : null}
+ 
+       <DataTable
+         columns={columns}
+diff --git a/src/features/pricing/tarifas/components/metodo-pais/pais-columns.tsx b/src/features/pricing/tarifas/components/metodo-pais/pais-columns.tsx
+index a372b98..f06dfc3 100644
+--- a/src/features/pricing/tarifas/components/metodo-pais/pais-columns.tsx
++++ b/src/features/pricing/tarifas/components/metodo-pais/pais-columns.tsx
+@@ -27,8 +27,8 @@ export type FilaMetodoPais = TarifaRuta & {
+ 
+ type Props = {
+   esTerrestre: boolean;
+-  onEditar: (row: FilaMetodoPais) => void;
+-  onEliminar: (row: FilaMetodoPais) => void;
++  onEditar?: ((row: FilaMetodoPais) => void) | undefined;
++  onEliminar?: ((row: FilaMetodoPais) => void) | undefined;
+ };
+ 
+ export function crearPaisColumns({
+@@ -75,25 +75,29 @@ export function crearPaisColumns({
+     header: "",
+     cell: ({ row }) => (
+       <div className="flex justify-end gap-1">
+-        <Button
+-          type="button"
+-          size="icon"
+-          variant="ghost"
+-          aria-label="Editar ruta"
+-          onClick={() => onEditar(row.original)}
+-        >
+-          <Pencil className="size-4" />
+-        </Button>
++        {onEditar ? (
++          <Button
++            type="button"
++            size="icon"
++            variant="ghost"
++            aria-label="Editar ruta"
++            onClick={() => onEditar(row.original)}
++          >
++            <Pencil className="size-4" />
++          </Button>
++        ) : null}
+ 
+-        <Button
+-          type="button"
+-          size="icon"
+-          variant="ghost"
+-          aria-label="Eliminar ruta"
+-          onClick={() => onEliminar(row.original)}
+-        >
+-          <Trash2 className="size-4" />
+-        </Button>
++        {onEliminar ? (
++          <Button
++            type="button"
++            size="icon"
++            variant="ghost"
++            aria-label="Eliminar ruta"
++            onClick={() => onEliminar(row.original)}
++          >
++            <Trash2 className="size-4" />
++          </Button>
++        ) : null}
+       </div>
+     ),
+   });
+diff --git a/src/features/pricing/tarifas/components/metodo-pais/pais-table.tsx b/src/features/pricing/tarifas/components/metodo-pais/pais-table.tsx
+index a6fc9e5..cb374cc 100644
+--- a/src/features/pricing/tarifas/components/metodo-pais/pais-table.tsx
++++ b/src/features/pricing/tarifas/components/metodo-pais/pais-table.tsx
+@@ -10,6 +10,7 @@ import {
+   useTarifaRutas,
+ } from "../../api/tarifa-rutas";
+ import { useCatalogosTarifas } from "../../hooks/use-catalogos-tarifas";
++import { usePermisosTarifas } from "../../hooks/use-permisos-tarifas";
+ import { crearPaisColumns, type FilaMetodoPais, type RutaOption } from "./pais-columns";
+ import { PaisForm } from "./pais-form";
+ 
+@@ -202,31 +203,35 @@ export function PaisTable({ codMetodo, codTipoTransporte }: Props) {
+     [eliminarRuta, formatearFilaApi],
+   );
+ 
++  const { puedeAgregar, puedeEditar, puedeEliminar } = usePermisosTarifas();
++
+   const columns = React.useMemo(
+     () =>
+       crearPaisColumns({
+         esTerrestre,
+-        onEditar: setFilaEditando,
+-        onEliminar: handleEliminar,
++        onEditar: puedeEditar ? setFilaEditando : undefined,
++        onEliminar: puedeEliminar ? handleEliminar : undefined,
+       }),
+-    [esTerrestre, handleEliminar],
++    [esTerrestre, handleEliminar, puedeEditar, puedeEliminar],
+   );
+ 
+   return (
+     <div className="space-y-4">
+-      <PaisForm
+-        value={filaEditando}
+-        esTerrestre={esTerrestre}
+-        tiposRuta={catalogosRuta.tiposRuta}
+-        continentes={catalogosRuta.continentes}
+-        paises={catalogosRuta.paises}
+-        tiposPuntoEnlace={catalogosRuta.tiposPuntoEnlace}
+-        puntosEnlace={catalogosRuta.puntosEnlace}
+-        ciudades={catalogosRuta.ciudades}
+-        onGuardar={handleGuardar}
+-        onCancelar={() => setFilaEditando(null)}
+-        isPending={insertarRuta.isPending || actualizarRuta.isPending}
+-      />
++      {(filaEditando ? puedeEditar : puedeAgregar) ? (
++        <PaisForm
++          value={filaEditando}
++          esTerrestre={esTerrestre}
++          tiposRuta={catalogosRuta.tiposRuta}
++          continentes={catalogosRuta.continentes}
++          paises={catalogosRuta.paises}
++          tiposPuntoEnlace={catalogosRuta.tiposPuntoEnlace}
++          puntosEnlace={catalogosRuta.puntosEnlace}
++          ciudades={catalogosRuta.ciudades}
++          onGuardar={handleGuardar}
++          onCancelar={() => setFilaEditando(null)}
++          isPending={insertarRuta.isPending || actualizarRuta.isPending}
++        />
++      ) : null}
+ 
+       <DataTable
+         columns={columns}
+diff --git a/src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx b/src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx
+index f5ca2b4..d89c574 100644
+--- a/src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx
++++ b/src/features/pricing/tarifas/components/metodos/scalling/scalling-columns.tsx
+@@ -13,8 +13,8 @@ export type {
+ } from "../../../lib/metodos/scalling";
+ 
+ type Props = {
+-  onEditar: (row: FilaMetodoScalling) => void;
+-  onEliminar: (row: FilaMetodoScalling) => void;
++  onEditar?: ((row: FilaMetodoScalling) => void) | undefined;
++  onEliminar?: ((row: FilaMetodoScalling) => void) | undefined;
+ };
+ 
+ export function crearScallingColumns({
+@@ -45,25 +45,29 @@ export function crearScallingColumns({
+ 
+       cell: ({ row }) => (
+         <div className="flex justify-end gap-1">
+-          <Button
+-            type="button"
+-            size="icon"
+-            variant="ghost"
+-            aria-label="Editar scalling"
+-            onClick={() => onEditar(row.original)}
+-          >
+-            <Pencil className="size-4" />
+-          </Button>
++          {onEditar ? (
++            <Button
++              type="button"
++              size="icon"
++              variant="ghost"
++              aria-label="Editar scalling"
++              onClick={() => onEditar(row.original)}
++            >
++              <Pencil className="size-4" />
++            </Button>
++          ) : null}
+ 
+-          <Button
+-            type="button"
+-            size="icon"
+-            variant="ghost"
+-            aria-label="Eliminar scalling"
+-            onClick={() => onEliminar(row.original)}
+-          >
+-            <Trash2 className="size-4" />
+-          </Button>
++          {onEliminar ? (
++            <Button
++              type="button"
++              size="icon"
++              variant="ghost"
++              aria-label="Eliminar scalling"
++              onClick={() => onEliminar(row.original)}
++            >
++              <Trash2 className="size-4" />
++            </Button>
++          ) : null}
+         </div>
+       ),
+     },
+diff --git a/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx b/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx
+index 945328f..759ab98 100644
+--- a/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx
++++ b/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx
+@@ -16,6 +16,7 @@ import {
+   useTarifaScalling,
+ } from "../../../api/tarifa-scalling";
+ import { useOpcionesMonedas } from "../../../hooks/use-opciones-tarifa";
++import { usePermisosTarifas } from "../../../hooks/use-permisos-tarifas";
+ import {
+   type FilaMetodoScalling,
+   METODO_SCALLING,
+@@ -258,13 +259,15 @@ export function ScallingTable({ codMetodo, codTipoTransporte }: Props) {
+    * =========================================================
+    */
+ 
++  const { puedeAgregar, puedeEditar, puedeEliminar } = usePermisosTarifas();
++
+   const columns = React.useMemo(
+     () =>
+       crearScallingColumns({
+-        onEditar: setFilaEditando,
+-        onEliminar: handleEliminar,
++        onEditar: puedeEditar ? setFilaEditando : undefined,
++        onEliminar: puedeEliminar ? handleEliminar : undefined,
+       }),
+-    [handleEliminar],
++    [handleEliminar, puedeEditar, puedeEliminar],
+   );
+ 
+   /*
+@@ -275,16 +278,18 @@ export function ScallingTable({ codMetodo, codTipoTransporte }: Props) {
+ 
+   return (
+     <div className="space-y-4">
+-      <ScallingForm
+-        value={filaEditando}
+-        tiposPuntoEnlace={tiposPuntoEnlace}
+-        puntosEnlace={puntosEnlace}
+-        monedas={monedas}
+-        tipoPuntoEnlaceDefault={tipoPuntoEnlaceDefault}
+-        onGuardar={handleGuardar}
+-        onCancelar={() => setFilaEditando(null)}
+-        isPending={insertarScalling.isPending || actualizarScalling.isPending}
+-      />
++      {(filaEditando ? puedeEditar : puedeAgregar) ? (
++        <ScallingForm
++          value={filaEditando}
++          tiposPuntoEnlace={tiposPuntoEnlace}
++          puntosEnlace={puntosEnlace}
++          monedas={monedas}
++          tipoPuntoEnlaceDefault={tipoPuntoEnlaceDefault}
++          onGuardar={handleGuardar}
++          onCancelar={() => setFilaEditando(null)}
++          isPending={insertarScalling.isPending || actualizarScalling.isPending}
++        />
++      ) : null}
+ 
+       <DataTable
+         columns={columns}
+diff --git a/src/features/pricing/tarifas/components/tab-tarifas.tsx b/src/features/pricing/tarifas/components/tab-tarifas.tsx
+index 7a1639d..eb661ba 100644
+--- a/src/features/pricing/tarifas/components/tab-tarifas.tsx
++++ b/src/features/pricing/tarifas/components/tab-tarifas.tsx
+@@ -18,6 +18,7 @@ import { useTarifaEquipo } from "../api/tarifa-equipo";
+ import { useTarifaPorcentaje } from "../api/tarifa-porcentaje";
+ import { useTarifaRangos } from "../api/tarifa-rangos";
+ import type { FilaServicioMetodo } from "../api/types-api";
++import { usePermisosTarifas } from "../hooks/use-permisos-tarifas";
+ import { aplicaATodosLosClientes, formatDateForInput } from "../lib/tarifa-helpers";
+ import { FormularioTarifa, type TarifaSubmitPayload } from "./formulario-tarifa";
+ import { CommoditiesTable } from "./metodo-commodities/commodities-table";
+@@ -334,13 +335,17 @@ export function TarifasTabs({
+     costoPorcentajeQuery.data,
+   ]);
+ 
++  const { puedeAgregar } = usePermisosTarifas();
++
+   const renderizarMetodoCalculo = React.useCallback(() => {
+     let componente = <></>;
+ 
+     const props = {
+       codMetodo: values.cod_metodo ?? 0,
+       codTipoTransporte: values.cod_tipo_transporte ?? null,
+-      readonly: metodoExiste,
++      // El método solo se captura una vez (alta): sin permiso de Agregar queda de lectura.
++      // Scalling guarda fila por fila y revisa sus permisos en su propia tabla.
++      readonly: metodoExiste || !puedeAgregar,
+     };
+ 
+     switch (values.cod_tipo) {
+@@ -381,7 +386,7 @@ export function TarifasTabs({
+         {componente}
+       </TabsContent>
+     );
+-  }, [values.cod_tipo, values.cod_metodo, values.cod_tipo_transporte, metodoExiste]);
++  }, [values.cod_tipo, values.cod_metodo, values.cod_tipo_transporte, metodoExiste, puedeAgregar]);
+ 
+   React.useEffect(() => {
+     if (!tabs.find((tab) => tab.value === tabsValue)) {
+diff --git a/src/features/pricing/tarifas/components/tarifas-columns.tsx b/src/features/pricing/tarifas/components/tarifas-columns.tsx
+index 4ebd1bb..7748779 100644
+--- a/src/features/pricing/tarifas/components/tarifas-columns.tsx
++++ b/src/features/pricing/tarifas/components/tarifas-columns.tsx
+@@ -11,7 +11,8 @@ type props = {
+   onVerDetalle: (tarifa: FilaServicioMetodo) => void;
+   mostrarVencidos?: boolean;
+   setAccion: React.Dispatch<React.SetStateAction<"ingreso" | "edicion" | "lectura" | "filtro">>;
+-  onAnular: (row: FilaServicioMetodo) => void;
++  /** Sin función (sin permiso de Eliminar) no se muestra el botón de anular. */
++  onAnular?: ((row: FilaServicioMetodo) => void) | undefined;
+ };
+ 
+ const LocalTooltip = ({
+@@ -71,18 +72,20 @@ export function crearTarifasColumns(
+           >
+             <Eye aria-hidden="true" />
+           </Button>
+-          <Button
+-            type="button"
+-            size="icon"
+-            variant="ghost"
+-            aria-label={`Ver tarifa ${row.original.cod_servicio}`}
+-            className="text-destructive"
+-            onClick={() => {
+-              onAnular(row.original);
+-            }}
+-          >
+-            <Trash aria-hidden="true" />
+-          </Button>
++          {onAnular ? (
++            <Button
++              type="button"
++              size="icon"
++              variant="ghost"
++              aria-label={`Anular tarifa ${row.original.cod_servicio}`}
++              className="text-destructive"
++              onClick={() => {
++                onAnular(row.original);
++              }}
++            >
++              <Trash aria-hidden="true" />
++            </Button>
++          ) : null}
+         </>
+       ),
+     },
+diff --git a/src/features/pricing/tarifas/components/tarifas-table.tsx b/src/features/pricing/tarifas/components/tarifas-table.tsx
+index 7bdf84f..962abd3 100644
+--- a/src/features/pricing/tarifas/components/tarifas-table.tsx
++++ b/src/features/pricing/tarifas/components/tarifas-table.tsx
+@@ -24,6 +24,7 @@ import {
+ import { cn } from "@/shared/lib/utils";
+ import type { FilaServicioMetodo } from "../api/types-api";
+ import { useCatalogosTarifas } from "../hooks/use-catalogos-tarifas";
++import { usePermisosTarifas } from "../hooks/use-permisos-tarifas";
+ import { useReferenciaEstable } from "../hooks/use-referencia-estable";
+ import { FormularioTarifa, type TarifaSubmitPayload } from "./formulario-tarifa";
+ import { crearTarifasColumns } from "./tarifas-columns";
+@@ -199,15 +200,18 @@ export function TarifasTable({
+     refetchMetodos();
+   }, [refetchServicios, refetchMetodos]);
+ 
++  const { puedeAgregar, puedeEliminar } = usePermisosTarifas();
++
+   const notasColumns = React.useMemo(
+     () =>
+       crearTarifasColumns({
+         onVerDetalle: setTarifaSeleccionada,
+         mostrarVencidos,
+         setAccion,
+-        onAnular,
++        // Anular = acción Eliminar de la opción "Servicios".
++        onAnular: puedeEliminar ? onAnular : undefined,
+       }),
+-    [setTarifaSeleccionada, mostrarVencidos, setAccion, onAnular],
++    [setTarifaSeleccionada, mostrarVencidos, setAccion, onAnular, puedeEliminar],
+   );
+ 
+   // Memoizado para que la tabla no reciba un arreglo nuevo en cada render.
+@@ -227,16 +231,18 @@ export function TarifasTable({
+         searchPlaceholder="Buscar resultado…"
+         extraActions={
+           <>
+-            <Button
+-              size="sm"
+-              onClick={() => {
+-                setTarifaSeleccionada({ cod_servicio: 0, cod_metodo: 0 } as FilaServicioMetodo);
+-                setAccion("ingreso");
+-              }}
+-            >
+-              <Plus className="h-4 w-4" />
+-              Agregar
+-            </Button>
++            {puedeAgregar ? (
++              <Button
++                size="sm"
++                onClick={() => {
++                  setTarifaSeleccionada({ cod_servicio: 0, cod_metodo: 0 } as FilaServicioMetodo);
++                  setAccion("ingreso");
++                }}
++              >
++                <Plus className="h-4 w-4" />
++                Agregar
++              </Button>
++            ) : null}
+             <Button
+               size="sm"
+               variant="default"
+diff --git a/src/features/pricing/tarifas/hooks/use-permisos-tarifas.tsx b/src/features/pricing/tarifas/hooks/use-permisos-tarifas.tsx
+new file mode 100644
+index 0000000..f971c53
+--- /dev/null
++++ b/src/features/pricing/tarifas/hooks/use-permisos-tarifas.tsx
+@@ -0,0 +1,48 @@
++"use client";
++
++import * as React from "react";
++import {
++  OPCION_PERMISOS,
++  type PermisosPricing,
++  usePermisosPricing,
++} from "@/features/pricing/shared";
++
++/* ==========================================================================
++ * PERMISOS DE TARIFAS
++ *
++ * `CreacionTarifa` (la pantalla) lee los permisos de la opción "Servicios" y
++ * los comparte por contexto con la tabla, el formulario, los métodos y las
++ * subtablas (cliente, países, detalle, commodities).
++ *
++ * Sin provider (componentes exportados y usados en otra pantalla) se permite
++ * todo: así se conserva el comportamiento que tenían antes.
++ * ========================================================================== */
++
++const TODO_PERMITIDO: PermisosPricing = {
++  puedeVer: true,
++  puedeAgregar: true,
++  puedeEditar: true,
++  puedeEliminar: true,
++};
++
++const PermisosTarifasContext = React.createContext<PermisosPricing>(TODO_PERMITIDO);
++
++export function PermisosTarifasProvider({ children }: { children: React.ReactNode }) {
++  const { puedeVer, puedeAgregar, puedeEditar, puedeEliminar } = usePermisosPricing(
++    OPCION_PERMISOS.tarifas,
++  );
++
++  const permisos = React.useMemo(
++    () => ({ puedeVer, puedeAgregar, puedeEditar, puedeEliminar }),
++    [puedeVer, puedeAgregar, puedeEditar, puedeEliminar],
++  );
++
++  return (
++    <PermisosTarifasContext.Provider value={permisos}>{children}</PermisosTarifasContext.Provider>
++  );
++}
++
++/** Permisos de la pantalla de Tarifas (todo permitido fuera de `PermisosTarifasProvider`). */
++export function usePermisosTarifas(): PermisosPricing {
++  return React.useContext(PermisosTarifasContext);
++}

@@ -9,6 +9,7 @@ import {
   useGuardarTarifaEntidad,
   useTarifaEntidades,
 } from "../../api/tarifa-entidades";
+import { usePermisosTarifas } from "../../hooks/use-permisos-tarifas";
 import { eliminarDuplicadosById } from "../../lib/tarifa-helpers";
 import { crearEntidadColumns, type FilaMetodoEntidad } from "./entidad-columns";
 import { EntidadForm } from "./entidad-form";
@@ -110,21 +111,25 @@ export function EntidadTable({ codMetodo }: Props) {
     [codMetodo, eliminarEntidad],
   );
 
+  const { puedeAgregar, puedeEliminar } = usePermisosTarifas();
+
   const columns = React.useMemo(
     () =>
       crearEntidadColumns({
-        onEliminar: handleEliminar,
+        onEliminar: puedeEliminar ? handleEliminar : undefined,
       }),
-    [handleEliminar],
+    [handleEliminar, puedeEliminar],
   );
 
   return (
     <div className="space-y-4">
-      <EntidadForm
-        fetchOptions={fetchOptions}
-        onAgregar={handleAgregar}
-        isPending={guardarEntidad.isPending}
-      />
+      {puedeAgregar ? (
+        <EntidadForm
+          fetchOptions={fetchOptions}
+          onAgregar={handleAgregar}
+          isPending={guardarEntidad.isPending}
+        />
+      ) : null}
 
       <DataTable
         columns={columns}

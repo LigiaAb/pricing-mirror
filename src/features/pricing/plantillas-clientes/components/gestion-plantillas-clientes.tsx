@@ -8,6 +8,7 @@ import {
   CotizacionForm,
   type OpcionFormularioCotizacion,
 } from "@/features/pricing/cotizacion/calculo";
+import { OPCION_PERMISOS, usePermisosPricing } from "@/features/pricing/shared";
 import { useCatalogosTarifas } from "@/features/pricing/tarifas";
 import { useContextoOperativoStore } from "@/features/shell";
 import { DataTable, DataTableColumnHeader } from "@/shared/components/data-table/data-table";
@@ -125,6 +126,9 @@ export function GestionPlantillasClientes() {
   const insertar = useInsertarPlantillaCliente();
   const actualizar = useActualizarPlantillaCliente();
   const eliminar = useEliminarPlantillaCliente();
+  const { puedeAgregar, puedeEditar, puedeEliminar } = usePermisosPricing(
+    OPCION_PERMISOS.plantillasClientes,
+  );
   const [seleccionada, setSeleccionada] = React.useState<PlantillaCliente | null>(null);
   const [nueva, setNueva] = React.useState(false);
   /** Plantilla que espera confirmación para eliminarse (abre el diálogo). */
@@ -205,20 +209,22 @@ export function GestionPlantillasClientes() {
             >
               <Eye className="size-4" />
             </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              aria-label="Eliminar plantilla"
-              onClick={() => setPorEliminar(row.original)}
-            >
-              <Trash2 className="size-4" />
-            </Button>
+            {puedeEliminar ? (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                aria-label="Eliminar plantilla"
+                onClick={() => setPorEliminar(row.original)}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            ) : null}
           </div>
         ),
       },
     ],
-    [],
+    [puedeEliminar],
   );
 
   const confirmarEliminar = () => {
@@ -298,22 +304,24 @@ export function GestionPlantillasClientes() {
               <ListRestart className="size-4" />
               Limpiar
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => {
-                setNueva(true);
-                setSeleccionada({
-                  cod_tarifaplantilla: 0,
-                  cod_empresa: codEmpresa,
-                  cod_cc: codCc,
-                  cod_estado: 1,
-                } as PlantillaCliente);
-              }}
-            >
-              <Plus className="size-4" />
-              Nueva
-            </Button>
+            {puedeAgregar ? (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  setNueva(true);
+                  setSeleccionada({
+                    cod_tarifaplantilla: 0,
+                    cod_empresa: codEmpresa,
+                    cod_cc: codCc,
+                    cod_estado: 1,
+                  } as PlantillaCliente);
+                }}
+              >
+                <Plus className="size-4" />
+                Nueva
+              </Button>
+            ) : null}
           </>
         }
       />
@@ -327,7 +335,7 @@ export function GestionPlantillasClientes() {
           </TabsList>
           <TabsContent value="informacion">
             <CotizacionForm
-              tipoFormulario={nueva ? "ingreso" : "edicion"}
+              tipoFormulario={nueva ? "ingreso" : puedeEditar ? "edicion" : "lectura"}
               defaultValues={seleccionada as CotizacionCabeceraPayload}
               catalogos={catalogosFormulario}
               resetKey={`${nueva ? "nueva" : seleccionada.cod_tarifaplantilla}`}
@@ -347,6 +355,7 @@ export function GestionPlantillasClientes() {
                 codTarifaPlantilla={seleccionada.cod_tarifaplantilla}
                 servicios={catalogos.servicios}
                 rubros={catalogos.rubros}
+                soloLectura={!puedeEditar}
               />
             )}
           </TabsContent>

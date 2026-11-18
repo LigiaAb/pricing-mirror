@@ -20,6 +20,7 @@ import {
   normalizarOpciones,
   type OpcionFormularioCotizacion,
 } from "@/features/pricing/cotizacion/calculo";
+import { OPCION_PERMISOS, usePermisosPricing } from "@/features/pricing/shared";
 import { useCatalogosTarifas, useReferenciaEstable } from "@/features/pricing/tarifas";
 import { useContextoOperativoStore } from "@/features/shell";
 import { Button } from "@/shared/components/ui/button";
@@ -146,6 +147,8 @@ export function AutorizarTarifaSpot() {
   const consulta = useAutorizacionSpot();
   const actualizar = useActualizarTarifaSpot();
   const autorizar = useAutorizarTarifaSpot();
+  // "Manejo de Tarifa SPOT" no tiene acción Autorizar: autorizar y rechazar piden Editar.
+  const { puedeEditar } = usePermisosPricing(OPCION_PERMISOS.autorizacionSpot);
   const { catalogos, isLoading: cargandoCatalogos } = useCatalogosTarifas({});
   const [mostrarAutorizados, setMostrarAutorizados] = React.useState(false);
   const [seleccionada, setSeleccionada] = React.useState<Fila | null>(null);
@@ -346,6 +349,7 @@ export function AutorizarTarifaSpot() {
   const mutando = actualizar.isPending || autorizar.isPending;
   const estadoSeleccionada = seleccionada ? estadoSpot(seleccionada) : null;
   const puedeResolver =
+    puedeEditar &&
     seleccionada != null &&
     Boolean(seleccionada.url_documento) &&
     mismoId(seleccionada.cod_estado, estados.activo);

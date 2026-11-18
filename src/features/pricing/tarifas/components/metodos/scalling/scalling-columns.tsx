@@ -13,8 +13,8 @@ export type {
 } from "../../../lib/metodos/scalling";
 
 type Props = {
-  onEditar: (row: FilaMetodoScalling) => void;
-  onEliminar: (row: FilaMetodoScalling) => void;
+  onEditar?: ((row: FilaMetodoScalling) => void) | undefined;
+  onEliminar?: ((row: FilaMetodoScalling) => void) | undefined;
 };
 
 export function crearScallingColumns({
@@ -45,25 +45,29 @@ export function crearScallingColumns({
 
       cell: ({ row }) => (
         <div className="flex justify-end gap-1">
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            aria-label="Editar scalling"
-            onClick={() => onEditar(row.original)}
-          >
-            <Pencil className="size-4" />
-          </Button>
+          {onEditar ? (
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label="Editar scalling"
+              onClick={() => onEditar(row.original)}
+            >
+              <Pencil className="size-4" />
+            </Button>
+          ) : null}
 
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            aria-label="Eliminar scalling"
-            onClick={() => onEliminar(row.original)}
-          >
-            <Trash2 className="size-4" />
-          </Button>
+          {onEliminar ? (
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label="Eliminar scalling"
+              onClick={() => onEliminar(row.original)}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          ) : null}
         </div>
       ),
     },
