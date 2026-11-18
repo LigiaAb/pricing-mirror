@@ -15,7 +15,7 @@ import {
   ShoppingCart,
   TriangleAlert,
 } from "lucide-react";
-import { createContext, use } from "react";
+import { createContext, type ReactNode, use } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -130,9 +130,12 @@ export function TarjetaActividad({
   pasoActual,
   editable,
   gestion,
+  antesDeCampos,
 }: PropsActividad & {
   /** Cómo se trabaja la actividad (definiciones del actor). */
   gestion: GestionActividad;
+  /** Control propio del actor antes de los campos (ej. formato de reserva de OPS 2.1). */
+  antesDeCampos?: ReactNode;
 }) {
   const Icono = ICONO_INTERACCION[gestion.interaccion];
   const estado = ESTADO[estadoActividad(actividad, pasoActual)];
@@ -227,6 +230,8 @@ export function TarjetaActividad({
                 <Dato label="Diferencia" valor="—" />
               </div>
             ) : null}
+
+            {editable ? antesDeCampos : null}
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {camposDe(gestion).map((campo) =>

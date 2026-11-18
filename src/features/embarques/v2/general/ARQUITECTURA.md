@@ -209,6 +209,9 @@ conteo; las que no tienen actividades quedan bloqueadas; abre la primera con act
 - Cambiar cómo se captura una actividad: su entrada en `<actor>/lib/gestion-actividades.ts`.
 - Un formulario propio de un actor (fuera de la tarjeta común): en `<actor>/components/`, usado desde
   `actividad-<actor>.tsx`.
+  Ej.: OPS 2.1 (`operaciones/components/solicitud-reserva.tsx`) elige el formato de reserva de la aerolínea
+  (`operaciones/lib/formatos-reserva.ts`: Iberia, LATAM, Delta; o General) y pasa sus campos a la tarjeta común; el
+  selector va en `antesDeCampos` de `TarjetaActividad`.
 - Un campo nuevo para todo un tipo: `base` del tipo en `INTERACCIONES`.
 
 ## Perfiles: Operaciones, Bodegas, Combex
