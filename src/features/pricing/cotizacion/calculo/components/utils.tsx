@@ -17,6 +17,7 @@ import { Loader } from "@/shared/components/ui/loader";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { cn } from "@/shared/lib/utils";
 
+import type { DetalleTarifa } from "../lib/tipos";
 import { formatNumero } from "../lib/utils";
 
 /* ==========================================================================
@@ -88,7 +89,7 @@ export function ValorMoneda({
  * ========================================================================== */
 
 /** Lista de detalles de un método ("CW: 120 / $2.50 Por KILO"). Muestra "—" si no hay. */
-export function Detalles({ detalles }: { detalles?: Array<Record<string, unknown>> }) {
+export function Detalles({ detalles }: { detalles?: DetalleTarifa[] | undefined }) {
   if (!detalles?.length) {
     return <span className="text-muted-foreground">—</span>;
   }
