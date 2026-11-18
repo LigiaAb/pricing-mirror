@@ -13,6 +13,7 @@ import { z } from "zod";
 import { CACHE_DYNAMIC } from "@/shared/api/cache";
 import { http } from "@/shared/api/client";
 import { parseEnvelope } from "@/shared/api/envelope";
+import { exigirExitoDeMutacion } from "@/shared/api/respuesta-mutacion";
 import { zId } from "@/shared/lib/zod-scalars";
 
 import {
@@ -87,24 +88,6 @@ function parseObjectEnvelope<TSchema extends z.ZodTypeAny>(
   }
 
   return parsed.data;
-}
-
-/**
- * Rechazar, validar elegibilidad y confirmar responden `{ success: false }` cuando la
- * acción no se hizo. Se convierte en error para que se notifique (toast de error) y
- * para que el `successMessage` solo se muestre cuando la acción sí se completó.
- */
-function exigirSuccess<T extends { success: boolean }>(resultado: T, mensaje: string): T {
-  if (resultado.success) {
-    return resultado;
-  }
-
-  const respuesta = resultado as Record<string, unknown>;
-  const delBackend = respuesta.message ?? respuesta.mensaje;
-
-  throw new Error(
-    typeof delBackend === "string" && delBackend.trim() !== "" ? delBackend : mensaje,
-  );
 }
 
 /** Opciones de las mutaciones que se usan con distinto `meta` según la pantalla. */
@@ -224,13 +207,16 @@ export const rechazarCotizacionCabeceraOptions = () =>
         cod_cotizacion_cabecera: codCotizacionCabecera,
       });
 
-      return exigirSuccess(
-        parseObjectEnvelope(
-          response,
-          accionCotizacionResponseSchema,
-          "rechazar-cotizacion-cabecera",
-        ),
-        "No se pudo rechazar la cotización.",
+      /*
+       * `data.success: false` (HTTP 200) pasa a error: así se notifica y el
+       * `successMessage` solo sale cuando la acción sí se hizo.
+       */
+      exigirExitoDeMutacion(response, "Rechazar cotización");
+
+      return parseObjectEnvelope(
+        response,
+        accionCotizacionResponseSchema,
+        "rechazar-cotizacion-cabecera",
       );
     },
   });
@@ -262,13 +248,12 @@ export const validarElegibilidadCotizacionOptions = () =>
         cod_cotizacion_cabecera: codCotizacionCabecera,
       });
 
-      return exigirSuccess(
-        parseObjectEnvelope(
-          response,
-          accionCotizacionResponseSchema,
-          "validar-elegibilidad-cotizacion",
-        ),
-        "La cotización no cumple los requisitos para confirmarse.",
+      exigirExitoDeMutacion(response, "Validar elegibilidad de la cotización");
+
+      return parseObjectEnvelope(
+        response,
+        accionCotizacionResponseSchema,
+        "validar-elegibilidad-cotizacion",
       );
     },
   });
@@ -288,13 +273,12 @@ export const confirmarCotizacionCabeceraOptions = () =>
         cod_cotizacion_cabecera: codCotizacionCabecera,
       });
 
-      return exigirSuccess(
-        parseObjectEnvelope(
-          response,
-          accionCotizacionResponseSchema,
-          "confirmar-cotizacion-cabecera",
-        ),
-        "No se pudo confirmar la cotización.",
+      exigirExitoDeMutacion(response, "Confirmar cotización");
+
+      return parseObjectEnvelope(
+        response,
+        accionCotizacionResponseSchema,
+        "confirmar-cotizacion-cabecera",
       );
     },
   });
