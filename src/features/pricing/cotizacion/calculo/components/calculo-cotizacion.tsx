@@ -5,23 +5,12 @@ import React from "react";
 
 import { Button } from "@/shared/components/ui/button";
 import { Loader } from "@/shared/components/ui/loader";
-import { useCalculoCotizacion } from "../hooks/use-calculo-cotizacion";
-import { useCarrierFlete } from "../hooks/use-carrier-flete";
-import { useCatalogosCotizacion } from "../hooks/use-catalogos-cotizacion";
-import { useCriteriosCotizacion } from "../hooks/use-criterios-cotizacion";
+import { useDetalleCalculoGuardado } from "../hooks/use-detalle-calculo-guardado";
+import { useDetalleCalculoSecciones } from "../hooks/use-detalle-calculo-secciones";
 import { useEstadosCalculo } from "../hooks/use-estados-cotizacion";
-import { useGuardarVersionCotizacion } from "../hooks/use-guardar-version-cotizacion";
 import { usePdfCotizacion } from "../hooks/use-pdf-cotizacion";
-import { usePorcentajesRubros } from "../hooks/use-porcentajes-rubros";
-import { useRubrosCotizacion } from "../hooks/use-rubros-cotizacion";
-import { useRubrosDueAgent } from "../hooks/use-rubros-due-agent";
-import { useRubrosDueCarrier } from "../hooks/use-rubros-due-carrier";
-import { useRubrosScalling } from "../hooks/use-rubros-scalling";
-import { useTotalesRubros } from "../hooks/use-totales-rubros";
 import { useVersionCotizacion } from "../hooks/use-version-cotizacion";
-import type { CotizacionParaCalculo } from "../lib/cabecera";
-import { RUBRO, TIPO_CALCULO } from "../lib/constantes";
-import type { EntidadCatalogo, Id, ReasonCodeSpot } from "../lib/tipos";
+import type { CalculoCotizacionProps as Props } from "../lib/calculo-cotizacion-tipos";
 import { CarrierSelector } from "./carrier-selector";
 import { CriteriosForm } from "./criterios-form";
 import { DatosComplementariosCotizacion } from "./datos-complementarios-cotizacion";
@@ -33,69 +22,6 @@ import { SpotDocumentoDialog } from "./spot-documento-dialog";
 import { TotalesRubros } from "./totales-rubros";
 import { SeccionConLoader } from "./utils";
 import { VersionesTable } from "./versiones-table";
-
-/** Arreglo vacío estable (evita recalcular memos en cada render). */
-const SIN_RUBROS: Record<string, unknown>[] = [];
-
-type Props = {
-  /** Cabecera de la cotización (campos definidos en lib/cabecera.ts). */
-  cotizacion: CotizacionParaCalculo;
-
-  plantillaSeleccionada?: {
-    cod_tarifaplantilla?: Id | null;
-    carrier_id?: Id | null;
-
-    criterios?: Array<{
-      campo: string;
-      cod_tipo_dato?: string | number | null;
-    }>;
-
-    [key: string]: unknown;
-  } | null;
-
-  codUsuario?: Id | null;
-
-  onActualizarEstadoCabecera?: (payload: {
-    cod_cotizacion_cabecera: Id;
-    cod_estado: Id;
-  }) => Promise<unknown>;
-
-  /*
-   * Los catálogos ya NO llegan por props: se leen con useCatalogosCotizacion()
-   * (ver hooks/use-catalogos-cotizacion.tsx).
-   */
-
-  /*
-   * Servicios que la plantilla solicita seleccionar automáticamente
-   * en Due Agent.
-   */
-  serviciosAutoSeleccion?: Id[];
-
-  filtrosCalculo: Record<string, unknown>;
-
-  /*
-   * Permisos de la pantalla (opción "Información" de Cotizaciones). Por defecto
-   * todo permitido: los lee GestionCotizacion y los pasa por aquí.
-   *   - puedeAgregar: "Nuevo cálculo" y guardar la versión nueva.
-   *   - puedeEditar: "Activar versión".
-   */
-  puedeAgregar?: boolean | undefined;
-  puedeEditar?: boolean | undefined;
-};
-
-function getEntidadId(entidad?: EntidadCatalogo | null) {
-  return entidad?.entidad_id ?? entidad?.cod_entidad ?? entidad?.id ?? entidad?.value ?? null;
-}
-
-function getCampoRegistro(value: unknown, campo: string): unknown {
-  if (typeof value !== "object" || value === null) return undefined;
-
-  return (value as Record<string, unknown>)[campo];
-}
-
-function getValorNumericoOTexto(value: unknown): string | number | null {
-  return typeof value === "string" || typeof value === "number" ? value : null;
-}
 
 export function CalculoCotizacion(props: Props) {
   const { cotizacion, codUsuario, filtrosCalculo, puedeAgregar = true, puedeEditar = true } = props;
@@ -174,7 +100,6 @@ export function CalculoCotizacion(props: Props) {
     </div>
   );
 }
-
 function DetalleCalculoCotizacion({
   cotizacion,
   plantillaSeleccionada,
@@ -187,572 +112,71 @@ function DetalleCalculoCotizacion({
 }: Props & {
   versiones: ReturnType<typeof useVersionCotizacion>;
 }) {
-  const { estados } = useEstadosCalculo();
-  const { calculo: catalogos } = useCatalogosCotizacion();
   const versionActual = versiones.versionActual;
 
-  const isReadOnly = React.useMemo(() => {
-    // Sin permiso de Agregar no se captura ni se guarda una versión nueva.
-    if (!versionActual || !puedeAgregar) {
-      return true;
-    }
-
-    const esNueva =
-      versionActual.isNew === true || Number(versionActual.cod_cotizaciondetalle) === 0;
-
-    return !esNueva;
-  }, [versionActual, puedeAgregar]);
-
-  const plantillaActiva = versiones.plantilla ?? plantillaSeleccionada ?? null;
-
   /* ==========================================================================
-   * CRITERIOS
+   * CRITERIOS → CARRIER → RUBROS → DUE AGENT / CARRIER → SCALLING → TOTAL
+   * (hooks/use-detalle-calculo-secciones.ts)
    * ========================================================================== */
 
-  const criterios = useCriteriosCotizacion({
-    resetKey: `${cotizacion.cod_cotizacion_cabecera}-${versionActual?.cod_cotizaciondetalle ?? 0}`,
-
-    valoresIniciales: versiones.criteriosIniciales,
-
-    dimensionesIniciales: versiones.dimensiones,
-
-    codTipoTransporte: cotizacion.cod_tipo_transporte ?? null,
-  });
-
-  const criteriosCalculo = React.useMemo(
-    () => criterios.obtenerCriteriosCalculo(),
-    [criterios.obtenerCriteriosCalculo],
-  );
-
-  /*
-   * IMPORTANTE:
-   * valor_factura NO pertenece al estado general que dispara Carrier/Flete.
-   *
-   * En el legado GenerarRubrosDueAgent recibía:
-   *
-   *   setCriterios={setCriterioCobertura}
-   *
-   * por lo que cobertura se almacenaba aparte y únicamente se mezclaba
-   * con los criterios al guardar la versión.
-   */
-  const [criterioCobertura, setCriterioCobertura] = React.useState<Record<string, unknown>>({});
-
-  /* ==========================================================================
-   * CÁLCULO GENERAL
-   * ========================================================================== */
-
-  const calculo = useCalculoCotizacion({
-    filtros: filtrosCalculo,
-
-    criterios: criteriosCalculo,
-
-    plantilla: plantillaActiva as Exclude<
-      Parameters<typeof useCalculoCotizacion>[0]["plantilla"],
-      undefined
-    >,
-
+  const {
     isReadOnly,
-  });
-
-  /* ==========================================================================
-   * CARRIER
-   * ========================================================================== */
-
-  const recalcularCarrier = React.useCallback(
-    async (
-      nextCriterios: Record<string, unknown>,
-      carrierSeleccionado: { entidad_id: Id | null },
-    ) => {
-      /*
-       * El formulario mantiene objetos { value, label } para selects.
-       * Por eso no sobrescribimos TODO el estado con el payload procesado:
-       * solo los campos que realmente determina Carrier.
-       */
-      criterios.actualizarValores({
-        categoria_transporte: nextCriterios.categoria_transporte,
-        valor_flete: nextCriterios.valor_flete,
-      });
-
-      return calculo.calcularCotizacion({
-        criteriosCalculo: nextCriterios,
-        codProveedorCarrier: carrierSeleccionado.entidad_id,
-      });
-    },
-    [criterios.actualizarValores, calculo.calcularCotizacion],
-  );
-
-  const carrier = useCarrierFlete({
-    fletes: calculo.fletesCalculados as Parameters<typeof useCarrierFlete>[0]["fletes"],
-
-    criterios: criteriosCalculo,
-
-    criteriosParaFlete: calculo.criteriosParaFlete,
-
-    plantillaId: plantillaActiva?.cod_tarifaplantilla ?? null,
-
-    carrierPlantillaId: plantillaActiva?.carrier_id ?? null,
-
-    codTipoPago: cotizacion.cod_tipo_pago ?? null,
-
-    codTipoTransporte: cotizacion.cod_tipo_transporte ?? null,
-
-    valorCw: criterios.valorCw,
-
-    entidadIdGuardadaEnVersion: versiones.entidadIdGuardada,
-
-    cotizacionEntidadId: cotizacion.entidad_id ?? null,
-
-    isReadOnly,
-
-    onRecalcular: recalcularCarrier,
-
-    onLimpiarResultados: calculo.limpiarResultadosTarifa,
-  });
-
-  /*
-   * En lectura no se vuelve a ejecutar el cálculo de fletes, por lo que
-   * Carrier puede no tener una opción viva seleccionada. La entidad guardada
-   * en la versión sigue siendo la fuente correcta para reconstruir lectura.
-   */
-  const entidadEfectivaId = isReadOnly
-    ? (versiones.entidadIdGuardada ?? cotizacion.entidad_id ?? null)
-    : carrier.entidadSeleccionadaId;
-
-  const entidadEfectiva = React.useMemo<EntidadCatalogo | null>(() => {
-    if (carrier.carrierSeleccionado && !isReadOnly) {
-      return carrier.carrierSeleccionado;
-    }
-
-    if (entidadEfectivaId == null) {
-      return null;
-    }
-
-    return (
-      catalogos.proveedores.find(
-        (entidad) => String(getEntidadId(entidad)) === String(entidadEfectivaId),
-      ) ??
-      ({
-        entidad_id: entidadEfectivaId,
-      } satisfies EntidadCatalogo)
-    );
-  }, [carrier.carrierSeleccionado, isReadOnly, entidadEfectivaId, catalogos.proveedores]);
-
-  const entidadNombre = React.useMemo(() => {
-    if (!entidadEfectiva) {
-      return null;
-    }
-
-    return String(
-      entidadEfectiva.entidad_nombre ??
-        entidadEfectiva.razon_social ??
-        entidadEfectiva.nombre ??
-        entidadEfectiva.label ??
-        "",
-    );
-  }, [entidadEfectiva]);
-
-  /* ==========================================================================
-   * RUBROS DEL CÁLCULO / LECTURA
-   * ========================================================================== */
-
-  const rubros = useRubrosCotizacion({
-    lectura: isReadOnly,
-
-    rubrosCalculados: calculo.valoresCalculados?.data ?? [],
-
-    codTipoTransporte: cotizacion.cod_tipo_transporte ?? null,
-
-    rubrosGuardados: (versiones.rubrosGuardados ?? []) as NonNullable<
-      Parameters<typeof useRubrosCotizacion>[0]["rubrosGuardados"]
-    >,
-
-    versionSpot: versionActual?.es_spot === true,
-
-    entidadSeleccionadaId: entidadEfectivaId,
-
-    categoriaSeleccionada: carrier.categoriaSeleccionada,
-
-    codRubroFleteSeleccionado: carrier.codRubroFleteSeleccionado,
-
-    codServicioFleteSeleccionado: carrier.codServicioFleteSeleccionado,
-
-    valorCw: criterios.valorCw,
-  });
-
-  /* ==========================================================================
-   * DUE AGENT
-   * ========================================================================== */
-
-  /*
-   * Solo debe existir el recálculo "Due Carrier basado en Due Agent"
-   * si alguno de los servicios actuales declara tipo 90.
-   *
-   * Se revisan tanto los campos directos del servicio como los del método
-   * porque durante el procesamiento los datos pueden venir normalizados
-   * en cualquiera de esas dos ubicaciones.
-   */
-  const requiereRecalculoDueCarrierDesdeAgent = React.useMemo(
-    () =>
-      rubros.rubrosDueCarrier.some((item) => {
-        const servicio = item.servicio ?? item;
-
-        const metodoServicio = getCampoRegistro(servicio, "metodo");
-        const metodoItem = getCampoRegistro(item, "metodo");
-
-        const codTipo =
-          getCampoRegistro(servicio, "cod_tipo") ??
-          getCampoRegistro(metodoServicio, "cod_tipo") ??
-          getCampoRegistro(item, "cod_tipo") ??
-          getCampoRegistro(metodoItem, "cod_tipo");
-
-        const codTipoCalculo =
-          getCampoRegistro(servicio, "cod_tipo_calculo") ??
-          getCampoRegistro(metodoServicio, "cod_tipo_calculo") ??
-          getCampoRegistro(item, "cod_tipo_calculo") ??
-          getCampoRegistro(metodoItem, "cod_tipo_calculo");
-
-        return (
-          Number(codTipo) === TIPO_CALCULO.DUE_AGENT ||
-          Number(codTipoCalculo) === TIPO_CALCULO.DUE_AGENT
-        );
-      }),
-    [rubros.rubrosDueCarrier],
-  );
-
-  const calcularDueCarrierDesdeAgent = React.useCallback(
-    (totalDueAgent: number) =>
-      calculo.calcularDueCarrierBasadoEnDueAgent({
-        totalDueAgent,
-        codProveedorCarrier: entidadEfectivaId,
-      }),
-    [calculo.calcularDueCarrierBasadoEnDueAgent, entidadEfectivaId],
-  );
-
-  /*
-   * No escribir en criterios generales:
-   * hacerlo cambia criteriosParaFlete y reinicia el pipeline Carrier.
-   *
-   * Igual que en el legado, valor_factura vive en criterioCobertura.
-   * La cobertura puede venir en Due Agent o en Due Carrier.
-   */
-  const cambiarValorFacturaCobertura = React.useCallback((valorFactura: number) => {
-    setCriterioCobertura({
-      valor_factura: valorFactura,
-    });
-  }, []);
-
-  const valorFleteCriterios = getValorNumericoOTexto(criterios.valores.valor_flete);
-
-  const dueAgentBase = useRubrosDueAgent({
-    rubros: rubros.rubrosDueAgent as Parameters<typeof useRubrosDueAgent>[0]["rubros"],
-
-    lectura: isReadOnly,
-
-    serviciosAutoSeleccion,
-
-    codMonedaPadre: carrier.servicioSeleccionado?.metodo?.cod_moneda_venta ?? null,
-
-    valorFlete: valorFleteCriterios,
-
-    entidadSeleccionadaId: entidadEfectivaId,
-
-    onValorFacturaChange: cambiarValorFacturaCobertura,
-
-    onCalcularDueCarrier: calcularDueCarrierDesdeAgent,
-
-    onLimpiarDueCarrier: calculo.limpiarDueCarrierBasadoEnDueAgent,
-
-    dueCarrierContextKey: calculo.dueCarrierDesdeAgentContextKey,
-
-    requiereRecalculoDueCarrier: requiereRecalculoDueCarrierDesdeAgent,
-  });
-
-  /* ==========================================================================
-   * DUE CARRIER
-   * ========================================================================== */
-
-  const rubrosDueCarrierConSpot = React.useMemo(
-    () => [...rubros.rubrosDueCarrier, ...carrier.tarifasSpot],
-    [rubros.rubrosDueCarrier, carrier.tarifasSpot],
-  );
-
-  const dueCarrierBase = useRubrosDueCarrier({
-    rubros: rubrosDueCarrierConSpot as Parameters<typeof useRubrosDueCarrier>[0]["rubros"],
-
-    lectura: isReadOnly,
-
-    valorFlete: valorFleteCriterios,
-
-    onValorFacturaChange: cambiarValorFacturaCobertura,
-  });
-
-  const dueCarrierDesdeAgentBase = useRubrosDueCarrier({
-    rubros: calculo.dueCarrierBasadoEnDueAgent as Parameters<
-      typeof useRubrosDueCarrier
-    >[0]["rubros"],
-
-    lectura: isReadOnly,
-
-    valorFlete: valorFleteCriterios,
-
-    onValorFacturaChange: cambiarValorFacturaCobertura,
-  });
-
-  /* ==========================================================================
-   * SCALLING
-   * ========================================================================== */
-
-  const tieneScalling = React.useMemo(() => {
-    /*
-     * En lectura basta que exista un rubro Scalling guardado.
-     */
-    if (rubros.rubrosScalling.length > 0) {
-      return true;
-    }
-
-    if (entidadEfectivaId == null) {
-      return false;
-    }
-
-    return catalogos.servicios.some(
-      (servicio) =>
-        String(servicio.entidad_id) === String(entidadEfectivaId) &&
-        Number(servicio.cod_rubro) === RUBRO.SCALLING,
-    );
-  }, [rubros.rubrosScalling, entidadEfectivaId, catalogos.servicios]);
-
-  const calcularScalling = React.useCallback(
-    ({ lista_paises }: { lista_paises: string[] }) =>
-      calculo.calcularScalling({
-        criteriosCalculo: {
-          ...criteriosCalculo,
-          lista_paises,
-        },
-        codProveedorCarrier: entidadEfectivaId,
-      }),
-    [calculo.calcularScalling, criteriosCalculo, entidadEfectivaId],
-  );
-
-  const scalling = useRubrosScalling({
-    rubros: rubros.rubrosScalling as Parameters<typeof useRubrosScalling>[0]["rubros"],
-
-    codTipoTransporte: cotizacion.cod_tipo_transporte ?? null,
-
-    codPuntoOrigen: cotizacion.cod_puntoenlace_origen ?? null,
-
-    codPuntoDestino: cotizacion.cod_puntoenlace_destino ?? null,
-
-    entidadId: tieneScalling ? entidadEfectivaId : null,
-
-    codCotizacionDetalle: versionActual?.cod_cotizaciondetalle ?? null,
-
-    lectura: isReadOnly,
-
-    legs: (versiones.legs ?? []) as NonNullable<Parameters<typeof useRubrosScalling>[0]["legs"]>,
-
-    onLegsChange: versiones.setLegs,
-
-    onCalcularScalling: calcularScalling,
-
-    calculoContextKey: calculo.calculoContextKey,
-  });
-
-  /* ==========================================================================
-   * MÉTODO PORCENTAJE (rubro = % de otro rubro, de cualquier sección)
-   * ========================================================================== */
-
-  const rubrosScallingAplicados = tieneScalling ? scalling.rutasProcesadas : SIN_RUBROS;
-
-  const { dueCarrier, dueAgent, dueCarrierDesdeAgent } = usePorcentajesRubros({
-    dueCarrier: dueCarrierBase,
-    dueAgent: dueAgentBase,
-    dueCarrierDesdeAgent: dueCarrierDesdeAgentBase,
-    rubrosScalling: rubrosScallingAplicados as Parameters<
-      typeof usePorcentajesRubros
-    >[0]["rubrosScalling"],
-    lectura: isReadOnly,
-  });
-
-  /* ==========================================================================
-   * TOTAL
-   * ========================================================================== */
-
-  const rubrosParaTotal = React.useMemo(
-    () => [
-      ...dueCarrier.rubros,
-      ...dueAgent.seleccionados,
-      ...dueCarrierDesdeAgent.rubros,
-      ...(tieneScalling ? scalling.rutasProcesadas : []),
-    ],
-    [
-      dueCarrier.rubros,
-      dueAgent.seleccionados,
-      dueCarrierDesdeAgent.rubros,
-      tieneScalling,
-      scalling.rutasProcesadas,
-    ],
-  );
-
-  const totales = useTotalesRubros({
-    rubros: rubrosParaTotal,
-
-    cotizacion,
-
-    entidad: entidadEfectiva,
-
-    lectura: isReadOnly,
-  });
-
-  /* ==========================================================================
-   * SPOT / GUARDADO
-   * ========================================================================== */
-
-  const [datosComplementariosValidos, setDatosComplementariosValidos] = React.useState(true);
-
-  const [archivoSpot, setArchivoSpot] = React.useState<File | null>(null);
-
-  const [descripcionSpot, setDescripcionSpot] = React.useState("");
-
-  const [reasonCodeSpot, setReasonCodeSpot] = React.useState<ReasonCodeSpot | null>(null);
-
-  const [solicitarArchivoSpot, setSolicitarArchivoSpot] = React.useState(false);
-
-  const criteriosParaGuardar = React.useMemo(
-    () => ({
-      ...criterios.valores,
-
-      total_cw:
-        criterios.valores.total_cw ??
-        criterios.valores.valor_cw ??
-        criterios.totalesDimensiones.valorCw,
-
-      total_peso:
-        criterios.valores.total_peso ??
-        criterios.valores.valor_por_peso ??
-        criterios.totalesDimensiones.pesoTotal,
-
-      total_volumen: criterios.valores.total_volumen ?? criterios.totalesDimensiones.volumenTotal,
-    }),
-    [
-      criterios.valores,
-      criterios.totalesDimensiones.valorCw,
-      criterios.totalesDimensiones.pesoTotal,
-      criterios.totalesDimensiones.volumenTotal,
-    ],
-  );
-
-  const [errorReactivarCabecera, setErrorReactivarCabecera] = React.useState(false);
-
-  const guardar = useGuardarVersionCotizacion({
-    codCotizacionCabecera: cotizacion.cod_cotizacion_cabecera,
-
-    codUsuario: codUsuario ?? null,
-
-    versionActual,
-
-    rubros: totales.rubrosAgrupados,
-
-    criterios: criteriosParaGuardar,
-
+    criterios,
     criterioCobertura,
-
-    criteriosCatalogo: versiones.criteriosDisponibles,
-
-    legs: versiones.legs,
-
-    dimensiones: criterios.dimensiones,
-
-    codCc: cotizacion.cod_cc ?? null,
-
-    codTipoTransporte: cotizacion.cod_tipo_transporte ?? null,
-
-    archivoSpot,
-
-    descripcionSpot,
-
-    reasonCodeSpot: reasonCodeSpot?.value ?? null,
-
-    estados,
-
-    onGuardado: async ({ codCotizacionDetalle }) => {
-      // Al guardar una versión nueva, la cabecera pasa a activa.
-      if (Number(versionActual?.cod_cotizaciondetalle) === 0) {
-        try {
-          if (estados.ACTIVO == null || !onActualizarEstadoCabecera) {
-            throw new Error("No se pudo determinar cómo reactivar la cabecera.");
-          }
-
-          await onActualizarEstadoCabecera({
-            cod_cotizacion_cabecera: cotizacion.cod_cotizacion_cabecera,
-            cod_estado: estados.ACTIVO,
-          });
-        } catch {
-          // La cabecera se actualiza por separado; un fallo no invalida la versión guardada.
-          setErrorReactivarCabecera(true);
-        }
-      }
-
-      await versiones.abrirVersionGuardada(codCotizacionDetalle);
-
-      setArchivoSpot(null);
-      setDescripcionSpot("");
-      setReasonCodeSpot(null);
-      setSolicitarArchivoSpot(false);
-    },
+    setCriterioCobertura,
+    calculo,
+    carrier,
+    entidadEfectivaId,
+    entidadNombre,
+    rubrosDueCarrierConSpot,
+    dueCarrier,
+    dueAgent,
+    dueCarrierDesdeAgent,
+    tieneScalling,
+    scalling,
+    totales,
+  } = useDetalleCalculoSecciones({
+    cotizacion,
+    plantillaSeleccionada,
+    serviciosAutoSeleccion,
+    filtrosCalculo,
+    versiones,
+    puedeAgregar,
   });
 
   /* ==========================================================================
-   * RESET ENTRE VERSIONES
+   * SPOT / GUARDADO / RESET / ACCIONES (hooks/use-detalle-calculo-guardado.ts)
    * ========================================================================== */
 
-  const versionKey = `${cotizacion.cod_cotizacion_cabecera}-${versionActual?.cod_cotizaciondetalle ?? "SIN_VERSION"}`;
-
-  React.useEffect(() => {
-    // versionKey fuerza el reset aunque los callbacks conserven su referencia.
-    void versionKey;
-
-    calculo.limpiarCalculo();
-    carrier.limpiarCarrier();
-
-    setCriterioCobertura({});
-
-    setArchivoSpot(null);
-    setDescripcionSpot("");
-    setReasonCodeSpot(null);
-    setSolicitarArchivoSpot(false);
-  }, [versionKey, calculo.limpiarCalculo, carrier.limpiarCarrier]);
-
-  /* ==========================================================================
-   * ACCIONES DE UI
-   * ========================================================================== */
-
-  const handleCalcular = React.useCallback(() => {
-    /*
-     * El botón Calcular reinicia el pipeline.
-     * useCalculoCotizacion volverá a ejecutar el paso A (fletes)
-     * por su resetFleteToken; Carrier se reconstruirá después.
-     */
-    calculo.limpiarCalculo();
-    carrier.limpiarCarrier();
-  }, [calculo.limpiarCalculo, carrier.limpiarCarrier]);
-
-  const puedeGuardar = Boolean(
-    versionActual &&
-      Number(versionActual.cod_cotizaciondetalle) === 0 &&
-      totales.rubrosAgrupados.length &&
-      dueAgent.isValid &&
-      datosComplementariosValidos &&
-      !guardar.guardando,
-  );
-
-  const handleGuardar = React.useCallback(async () => {
-    setErrorReactivarCabecera(false);
-    const resultado = await guardar.guardarVersion();
-
-    if (!resultado.ok && resultado.motivo === "DOCUMENTO_SPOT_REQUERIDO") {
-      setSolicitarArchivoSpot(true);
-    }
-  }, [guardar]);
+  const {
+    datosComplementariosValidos,
+    setDatosComplementariosValidos,
+    archivoSpot,
+    setArchivoSpot,
+    descripcionSpot,
+    setDescripcionSpot,
+    reasonCodeSpot,
+    setReasonCodeSpot,
+    solicitarArchivoSpot,
+    setSolicitarArchivoSpot,
+    errorReactivarCabecera,
+    guardar,
+    handleCalcular,
+    puedeGuardar,
+    handleGuardar,
+  } = useDetalleCalculoGuardado({
+    cotizacion,
+    codUsuario,
+    onActualizarEstadoCabecera,
+    versiones,
+    criterios,
+    criterioCobertura,
+    setCriterioCobertura,
+    calculo,
+    carrier,
+    dueAgent,
+    totales,
+  });
 
   return (
     <>
