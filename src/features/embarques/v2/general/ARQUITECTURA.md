@@ -239,6 +239,10 @@ Las pantallas de cada actor montan `VistaGeneral` con su perfil.
 2. **El tracking interactivo** (`TrackingDetalle`, Sheet de tracking): tiene su propia subida. **En pausa**: no se
    modifica desde v2 hasta que se retome.
 
+Mientras se revisa si el tracking ya cubre la subida y la selección de archivos para la notificación (#128), las
+actividades editables con campos `archivo` muestran en el pie un botón **Tracking** (copia del de la franja) que abre
+el Sheet del tracking. `VistaGeneral` lo da con `AbrirTrackingContext` (`shared/components/tarjeta-actividad.tsx`).
+
 La tab **Archivos** (`pasos/paso-archivos.tsx`, grupo `extra`, `paraTodos`) es solo la **lista** de los archivos
 del embarque para consulta y descarga: archivo, tipo, dónde se subió (actividad o Tracking), paso, usuario y
 fecha; botones Ver y Descargar (deshabilitados en la maqueta). Usa una **tabla propia** (no `DataTable`), con el
