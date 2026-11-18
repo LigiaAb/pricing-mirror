@@ -147,7 +147,7 @@ Un componente por tipo de dato, con los mismos componentes que ya usa el proyect
 Regla: lista corta y fija (Sí/No, PP/CC, estado…) → `seleccion` con `opciones`; proveedores, líneas aéreas,
 agentes, monedas, clientes… → `catalogo`. Fotografías → `acepta: "image/*"`. `soloLectura` deshabilita el control.
 Con valor y editable, cada campo muestra una **x** al final para limpiarlo (`BotonLimpiar`, mismo estilo que
-`AsyncComboboxInput`): selección, fecha, hora, texto, número y área; el `Combobox` usa `clearable`.
+`ComboboxOpcion` de pricing): selección, fecha, hora, texto, número y área; el `Combobox` usa `clearable`.
 
 ### Campos de Información (`shared/lib/campos-embarque.ts`)
 

@@ -73,7 +73,11 @@ refrescan la lista al terminar (`onSettled`) y los toasts se controlan con `meta
 
 - Consulta: `useMonedasOperativas()` (los nombres viejos `useMonedasPorcentaje`, `useMonedasEquipo`, ... siguen funcionando).
 - Opciones para un select: `useOpcionesMonedas(query.data)` y `useOpcionesRubros(rubros.data)`.
-- Búsqueda local en un `AsyncComboboxInput`: `const fetchX = useFiltroOpciones(opciones);`
+- Selects con opciones en memoria: `<ComboboxOpcion value={fila.x} onChange={...} options={opciones} />`
+  (`@/features/pricing/shared`). Usa el `Combobox` de `@/shared` (cuadro de búsqueda incluido) y convierte la opción
+  (objeto) ↔ `string`, así que la fila sigue guardando la opción completa y los payloads no cambian.
+  `disabled` en lugar de `readOnly`. Ya no hay `useFiltroOpciones` (se quitó al dejar `AsyncComboboxInput`).
+- `AsyncComboboxInput` solo para búsqueda en el servidor: **Entidad** (`metodo-entidad/`, `buscarClientesTarifa`).
 
 Excepción: **equipo** convierte monedas con `value` numérico porque ese valor se envía tal cual al backend.
 

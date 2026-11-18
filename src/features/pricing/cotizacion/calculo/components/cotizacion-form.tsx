@@ -4,9 +4,9 @@ import { Check, ChevronsUpDown, Loader2, Plus, X } from "lucide-react";
 import * as React from "react";
 
 import { NuevoContactoEntidad } from "@/features/entidades";
+import { ComboboxOpcion } from "@/features/pricing/shared";
 import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
 import { Button } from "@/shared/components/ui/button";
-import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
 import {
   Command,
   CommandEmpty,
@@ -122,7 +122,7 @@ function obtenerOpcion(value: unknown): OpcionFormularioCotizacion | null {
   return value as OpcionFormularioCotizacion;
 }
 
-function AsyncSelectCatalogo({
+function SelectCatalogo({
   id,
   label,
   value,
@@ -150,22 +150,16 @@ function AsyncSelectCatalogo({
         {requerido ? " *" : ""}
       </FieldLabel>
 
-      <AsyncComboboxInput<OpcionFormularioCotizacion>
+      <ComboboxOpcion<OpcionFormularioCotizacion>
         id={id}
         label={label}
-        contentClassName="z-[9999]"
-        initialOptions={options}
+        popoverClassName="z-[9999]"
+        options={options}
         value={value}
         onChange={onChange}
-        fetchOptions={() => Promise.resolve(options)}
-        getOptionValue={(option) => option.value}
-        getOptionLabel={(option) => String(option.label ?? "")}
         placeholder="Seleccione..."
         searchPlaceholder="Buscar..."
-        minSearchLength={1}
-        fetchOnEmpty={false}
-        clearable
-        readOnly={readOnly}
+        disabled={readOnly}
       />
     </Field>
   );
@@ -440,11 +434,6 @@ export function CotizacionForm({
     const esLectura = verificarSiEsLectura(id);
     const visible = verificarSiEsVisible(id);
     const value = (values[id] as T | null | undefined) ?? null;
-    const valorSeleccionado = value?.value == null ? "__NULL_OPTION__" : String(value.value);
-    const opcionesCombobox: ComboboxOption[] = opciones.map((option) => ({
-      value: option.value == null ? "__NULL_OPTION__" : String(option.value),
-      label: String(option.label ?? ""),
-    }));
 
     return (
       <Field className={cn("flex flex-col", className, !visible && "hidden")}>
@@ -453,43 +442,17 @@ export function CotizacionForm({
           {esObligatorio ? " *" : ""}
         </FieldLabel>
 
-        <div className="relative">
-          <Combobox
-            value={value == null ? "" : valorSeleccionado}
-            onChange={(nextValue) => {
-              const nextOption =
-                opciones.find(
-                  (option) =>
-                    (option.value == null ? "__NULL_OPTION__" : String(option.value)) === nextValue,
-                ) ?? null;
-
-              onInput({ id, val: nextOption });
-            }}
-            options={opcionesCombobox}
-            ariaLabel={label}
-            placeholder="Seleccione..."
-            searchPlaceholder="Buscar..."
-            disabled={esLectura}
-            className={value != null && !esLectura ? "pr-16" : ""}
-            popoverClassName="z-[9999]"
-          />
-
-          {value != null && !esLectura ? (
-            <button
-              type="button"
-              aria-label={`Limpiar ${label}`}
-              title="Limpiar"
-              className="absolute right-8 top-1/2 z-10 -translate-y-1/2 rounded-sm text-muted-foreground hover:text-destructive"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                onInput({ id, val: null });
-              }}
-            >
-              <X className="size-4" aria-hidden="true" />
-            </button>
-          ) : null}
-        </div>
+        <ComboboxOpcion
+          id={idGenerado}
+          label={label}
+          value={value}
+          onChange={(opcion) => onInput({ id, val: opcion })}
+          options={opciones}
+          placeholder="Seleccione..."
+          searchPlaceholder="Buscar..."
+          disabled={esLectura}
+          popoverClassName="z-[9999]"
+        />
       </Field>
     );
   }
@@ -639,7 +602,7 @@ export function CotizacionForm({
               />
             </Field>
 
-            <AsyncSelectCatalogo
+            <SelectCatalogo
               id={generarId("contacto")}
               label={etiquetaCampo("contacto")}
               value={obtenerOpcion(values.contacto)}

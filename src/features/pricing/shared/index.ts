@@ -6,7 +6,8 @@
  *
  *   api/         consultas de catálogos (métodos, proveedores, clientes) y
  *                lectura de rangos de tarifa.
- *   components/  FichaResumen (resumen de un servicio/método de tarifa).
+ *   components/  FichaResumen (resumen de un servicio/método de tarifa) y
+ *                ComboboxOpcion (select buscable en memoria con valor objeto).
  *   hooks/       usePermisosPricing (permisos por opción de cada pantalla).
  *   calculadora-embarque/  CalculadoraMedidas + cálculos de volumen, peso y
  *                CW por transporte (corporativos, sin datos de cotización).
@@ -84,6 +85,11 @@ export {
   normalizarUnidades,
   type TipoMedida,
 } from "./calculadora-embarque/lib/unidades";
+export {
+  ComboboxOpcion,
+  type ComboboxOpcionProps,
+  type OpcionComboboxBase,
+} from "./components/combobox-opcion";
 export {
   FichaResumen,
   type ItemFichaResumen,

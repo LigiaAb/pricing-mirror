@@ -2,11 +2,10 @@
 
 import { Plus, Save, X } from "lucide-react";
 import React from "react";
-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
+import { ComboboxOpcion } from "@/features/pricing/shared";
 import { Button } from "@/shared/components/ui/button";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { InputGroup } from "@/shared/components/ui/input-group";
-import { useFiltroOpciones } from "../../hooks/use-opciones-tarifa";
 import type { FilaMetodoPais, RutaOption } from "./pais-columns";
 
 type Props = {
@@ -68,13 +67,6 @@ export function PaisForm({
     );
   }, [puntosEnlace, row.pais, row.tipo_puntoenlace]);
 
-  const fetchTiposRuta = useFiltroOpciones(tiposRuta);
-  const fetchContinentes = useFiltroOpciones(continentes);
-  const fetchPaises = useFiltroOpciones(paisesFiltrados);
-  const fetchTiposPuntoEnlace = useFiltroOpciones(tiposPuntoEnlace);
-  const fetchPuntosEnlace = useFiltroOpciones(puntosFiltrados);
-  const fetchCiudades = useFiltroOpciones(ciudadesFiltradas);
-
   const guardar = () => {
     if (!row.tipo) return;
     if (!row.continente) return;
@@ -90,7 +82,7 @@ export function PaisForm({
         <FieldLabel>Tipo de Ruta</FieldLabel>
 
         <InputGroup>
-          <AsyncComboboxInput<RutaOption>
+          <ComboboxOpcion<RutaOption>
             label="Tipo de Ruta"
             value={row.tipo ?? null}
             onChange={(tipo) =>
@@ -99,15 +91,9 @@ export function PaisForm({
                 tipo,
               }))
             }
-            fetchOptions={fetchTiposRuta}
-            initialOptions={tiposRuta}
-            getOptionValue={(option) => option.value}
-            getOptionLabel={(option) => option.label}
+            options={tiposRuta}
             placeholder="Seleccione..."
             searchPlaceholder="Buscar tipo de ruta..."
-            minSearchLength={0}
-            fetchOnEmpty
-            clearable
           />
         </InputGroup>
       </Field>
@@ -116,7 +102,7 @@ export function PaisForm({
         <FieldLabel>Continente</FieldLabel>
 
         <InputGroup>
-          <AsyncComboboxInput<RutaOption>
+          <ComboboxOpcion<RutaOption>
             label="Continente"
             value={row.continente ?? null}
             onChange={(continente) =>
@@ -129,15 +115,9 @@ export function PaisForm({
                 punto_enlace: null,
               }))
             }
-            fetchOptions={fetchContinentes}
-            initialOptions={continentes}
-            getOptionValue={(option) => option.value}
-            getOptionLabel={(option) => option.label}
+            options={continentes}
             placeholder="Seleccione..."
             searchPlaceholder="Buscar continente..."
-            minSearchLength={0}
-            fetchOnEmpty
-            clearable
           />
         </InputGroup>
       </Field>
@@ -146,7 +126,7 @@ export function PaisForm({
         <FieldLabel>País</FieldLabel>
 
         <InputGroup>
-          <AsyncComboboxInput<RutaOption>
+          <ComboboxOpcion<RutaOption>
             label="País"
             value={row.pais ?? null}
             onChange={(pais) =>
@@ -157,15 +137,9 @@ export function PaisForm({
                 punto_enlace: null,
               }))
             }
-            fetchOptions={fetchPaises}
-            initialOptions={paisesFiltrados}
-            getOptionValue={(option) => option.value}
-            getOptionLabel={(option) => option.label}
+            options={paisesFiltrados}
             placeholder="Seleccione..."
             searchPlaceholder="Buscar país..."
-            minSearchLength={0}
-            fetchOnEmpty
-            clearable
             disabled={!row.continente}
           />
         </InputGroup>
@@ -176,7 +150,7 @@ export function PaisForm({
           <FieldLabel>Ciudad</FieldLabel>
 
           <InputGroup>
-            <AsyncComboboxInput<RutaOption>
+            <ComboboxOpcion<RutaOption>
               label="Ciudad"
               value={row.ciudad ?? null}
               onChange={(ciudad) =>
@@ -187,15 +161,9 @@ export function PaisForm({
                   punto_enlace: null,
                 }))
               }
-              fetchOptions={fetchCiudades}
-              initialOptions={ciudadesFiltradas}
-              getOptionValue={(option) => option.value}
-              getOptionLabel={(option) => option.label}
+              options={ciudadesFiltradas}
               placeholder="Seleccione..."
               searchPlaceholder="Buscar ciudad..."
-              minSearchLength={0}
-              fetchOnEmpty
-              clearable
               disabled={!row.pais}
             />
           </InputGroup>
@@ -206,7 +174,7 @@ export function PaisForm({
             <FieldLabel>Tipo</FieldLabel>
 
             <InputGroup>
-              <AsyncComboboxInput<RutaOption>
+              <ComboboxOpcion<RutaOption>
                 label="Tipo"
                 value={row.tipo_puntoenlace ?? null}
                 onChange={(tipo_puntoenlace) =>
@@ -217,15 +185,9 @@ export function PaisForm({
                     ciudad: null,
                   }))
                 }
-                fetchOptions={fetchTiposPuntoEnlace}
-                initialOptions={tiposPuntoEnlace}
-                getOptionValue={(option) => option.value}
-                getOptionLabel={(option) => option.label}
+                options={tiposPuntoEnlace}
                 placeholder="Seleccione..."
                 searchPlaceholder="Buscar tipo..."
-                minSearchLength={0}
-                fetchOnEmpty
-                clearable
                 disabled={!row.pais}
               />
             </InputGroup>
@@ -235,7 +197,7 @@ export function PaisForm({
             <FieldLabel>Aduana/Puerto/Aeropuerto</FieldLabel>
 
             <InputGroup>
-              <AsyncComboboxInput<RutaOption>
+              <ComboboxOpcion<RutaOption>
                 label="Aduana/Puerto/Aeropuerto"
                 value={row.punto_enlace ?? null}
                 onChange={(punto_enlace) =>
@@ -245,15 +207,9 @@ export function PaisForm({
                     ciudad: null,
                   }))
                 }
-                fetchOptions={fetchPuntosEnlace}
-                initialOptions={puntosFiltrados}
-                getOptionValue={(option) => option.value}
-                getOptionLabel={(option) => option.label}
+                options={puntosFiltrados}
                 placeholder="Seleccione..."
                 searchPlaceholder="Buscar punto de enlace..."
-                minSearchLength={0}
-                fetchOnEmpty
-                clearable
                 disabled={!row.pais || !row.tipo_puntoenlace}
               />
             </InputGroup>

@@ -39,7 +39,7 @@ import type { CampoGestion } from "../lib/interacciones";
  * Sin lógica de guardado: cada campo guarda su valor solo en estado local.
  * `soloLectura` deshabilita el control (ej. Información fuera de edición).
  * Con valor y editable, cada campo muestra una "x" al final para limpiarlo
- * (`BotonLimpiar`, mismo estilo que `AsyncComboboxInput`; el `Combobox` usa `clearable`).
+ * (`BotonLimpiar`, mismo estilo que `ComboboxOpcion` de pricing; el `Combobox` usa `clearable`).
  * ========================================================================== */
 
 type BaseCampo = {
@@ -63,7 +63,7 @@ function Etiqueta({ id, label, requerido }: Pick<BaseCampo, "id" | "label" | "re
 }
 
 /**
- * "x" para limpiar el valor del campo. Mismo estilo que la de `AsyncComboboxInput`.
+ * "x" para limpiar el valor del campo. Mismo estilo que la de `ComboboxOpcion` (pricing).
  * Fuera del tab (`tabIndex={-1}`): el teclado sigue de un campo al siguiente.
  */
 export function BotonLimpiar({

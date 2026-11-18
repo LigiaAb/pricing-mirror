@@ -8,8 +8,9 @@ export type { MonedaOpcion, RubroOpcion };
  * OPCIONES DE SELECT COMPARTIDAS POR LOS MÉTODOS DE TARIFA
  *
  * Antes cada tabla de método convertía monedas y rubros a { value, label }
- * con su propia copia del mismo código, y cada formulario tenía su propia
- * función de búsqueda local. Todo eso vive aquí.
+ * con su propia copia del mismo código. Todo eso vive aquí. Los selects las
+ * dibujan con `ComboboxOpcion` (@/features/pricing/shared), que ya trae la
+ * búsqueda local.
  * ========================================================================== */
 
 type Id = string | number;
@@ -79,26 +80,5 @@ export function useOpcionesRubros(rubros: unknown[] | undefined) {
         cod_rubro: (rubro.cod_rubro ?? rubro.codRubro) as Id,
       })),
     [rubros],
-  );
-}
-
-/* ==========================================================================
- * BÚSQUEDA LOCAL EN UN SELECT
- * ========================================================================== */
-
-/** Filtra opciones cuyo label contiene el texto (sin importar mayúsculas). */
-export function filtrarOpciones<T extends { label: string }>(opciones: T[], search: string): T[] {
-  const busqueda = search.trim().toLowerCase();
-
-  if (!busqueda) return opciones;
-
-  return opciones.filter((opcion) => opcion.label.toLowerCase().includes(busqueda));
-}
-
-/** `fetchOptions` para AsyncComboboxInput que busca dentro de opciones ya cargadas. */
-export function useFiltroOpciones<T extends { label: string }>(opciones: T[]) {
-  return React.useCallback(
-    async (search: string): Promise<T[]> => filtrarOpciones(opciones, search),
-    [opciones],
   );
 }

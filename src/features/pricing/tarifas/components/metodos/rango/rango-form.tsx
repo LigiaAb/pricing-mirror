@@ -2,13 +2,11 @@
 
 import { Plus, Save, X } from "lucide-react";
 import React from "react";
-import { METODO_RANGO } from "@/features/pricing/shared";
-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
+import { ComboboxOpcion, METODO_RANGO } from "@/features/pricing/shared";
 import { Button } from "@/shared/components/ui/button";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
 import { crearIdLocal } from "@/shared/lib/id";
-import { useFiltroOpciones } from "../../../hooks/use-opciones-tarifa";
 import type { FilaMetodoRango, MonedaRangoOption } from "./rango-columns";
 
 type Props = {
@@ -27,8 +25,6 @@ export function RangoForm({ value, monedas, onGuardar, onCancelar, readonly = fa
   React.useEffect(() => {
     setRow(value ?? null);
   }, [value]);
-
-  const fetchMonedas = useFiltroOpciones(monedas);
 
   const iniciarNuevo = () => {
     // Montos en "" y monedas en null (`inicial` en pricing/shared/lib/metodos/rango.ts).
@@ -117,7 +113,7 @@ export function RangoForm({ value, monedas, onGuardar, onCancelar, readonly = fa
         <Field>
           <FieldLabel>Moneda costo</FieldLabel>
           <InputGroup>
-            <AsyncComboboxInput<MonedaRangoOption>
+            <ComboboxOpcion<MonedaRangoOption>
               label="Moneda costo"
               value={row.moneda_costo ?? null}
               onChange={(moneda_costo) =>
@@ -130,13 +126,7 @@ export function RangoForm({ value, monedas, onGuardar, onCancelar, readonly = fa
                     : prev,
                 )
               }
-              fetchOptions={fetchMonedas}
-              initialOptions={monedas}
-              getOptionValue={(option) => option.value}
-              getOptionLabel={(option) => option.label}
-              minSearchLength={0}
-              fetchOnEmpty
-              clearable
+              options={monedas}
             />
           </InputGroup>
         </Field>
@@ -155,7 +145,7 @@ export function RangoForm({ value, monedas, onGuardar, onCancelar, readonly = fa
         <Field>
           <FieldLabel>Moneda venta</FieldLabel>
           <InputGroup>
-            <AsyncComboboxInput<MonedaRangoOption>
+            <ComboboxOpcion<MonedaRangoOption>
               label="Moneda venta"
               value={row.moneda_venta ?? null}
               onChange={(moneda_venta) =>
@@ -168,13 +158,7 @@ export function RangoForm({ value, monedas, onGuardar, onCancelar, readonly = fa
                     : prev,
                 )
               }
-              fetchOptions={fetchMonedas}
-              initialOptions={monedas}
-              getOptionValue={(option) => option.value}
-              getOptionLabel={(option) => option.label}
-              minSearchLength={0}
-              fetchOnEmpty
-              clearable
+              options={monedas}
             />
           </InputGroup>
         </Field>

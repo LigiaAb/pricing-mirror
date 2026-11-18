@@ -2,11 +2,10 @@
 
 import { Plus, Save, X } from "lucide-react";
 import React from "react";
-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
+import { ComboboxOpcion } from "@/features/pricing/shared";
 import { Button } from "@/shared/components/ui/button";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
-import { useFiltroOpciones } from "../../hooks/use-opciones-tarifa";
 import type { DetalleTipoOption, FilaMetodoDetalle } from "./detalle-columns";
 
 type Props = {
@@ -25,8 +24,6 @@ export function DetalleForm({ value, tipos, onGuardar, onCancelar, isPending = f
   React.useEffect(() => {
     setRow(value ?? {});
   }, [value]);
-
-  const fetchTipos = useFiltroOpciones(tipos);
 
   const guardar = () => {
     // comportamiento ACTUAL del componente viejo:
@@ -48,7 +45,7 @@ export function DetalleForm({ value, tipos, onGuardar, onCancelar, isPending = f
         <FieldLabel>Tipo de Detalle</FieldLabel>
 
         <InputGroup>
-          <AsyncComboboxInput<DetalleTipoOption>
+          <ComboboxOpcion<DetalleTipoOption>
             label="Tipo de Detalle"
             value={row.tipo ?? null}
             onChange={(tipo) =>
@@ -57,15 +54,9 @@ export function DetalleForm({ value, tipos, onGuardar, onCancelar, isPending = f
                 tipo,
               }))
             }
-            fetchOptions={fetchTipos}
-            initialOptions={tipos}
-            getOptionValue={(option) => option.value}
-            getOptionLabel={(option) => option.label}
+            options={tipos}
             placeholder="Seleccione..."
             searchPlaceholder="Buscar tipo..."
-            minSearchLength={0}
-            fetchOnEmpty
-            clearable
           />
         </InputGroup>
       </Field>

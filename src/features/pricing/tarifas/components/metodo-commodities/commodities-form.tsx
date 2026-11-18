@@ -2,11 +2,10 @@
 
 import { Plus, Save, X } from "lucide-react";
 import React from "react";
-import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
+import { ComboboxOpcion } from "@/features/pricing/shared";
 import { Button } from "@/shared/components/ui/button";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { InputGroup } from "@/shared/components/ui/input-group";
-import { useFiltroOpciones } from "../../hooks/use-opciones-tarifa";
 import type {
   CommodityOption,
   EstadoCommodityOption,
@@ -52,10 +51,6 @@ export function CommoditiesForm({
     });
   }, [value, estadoActivo]);
 
-  const fetchCommodities = useFiltroOpciones(commodities);
-
-  const fetchEstados = useFiltroOpciones(estados);
-
   const esEdicion = Boolean(row.cod_metodocommodity);
 
   const guardar = () => {
@@ -78,7 +73,7 @@ export function CommoditiesForm({
         <FieldLabel>Commodity</FieldLabel>
 
         <InputGroup>
-          <AsyncComboboxInput<CommodityOption>
+          <ComboboxOpcion<CommodityOption>
             label="Commodity"
             value={row.commodity ?? null}
             onChange={(commodity) =>
@@ -87,15 +82,9 @@ export function CommoditiesForm({
                 commodity,
               }))
             }
-            fetchOptions={fetchCommodities}
-            initialOptions={commodities}
-            getOptionValue={(option) => option.value}
-            getOptionLabel={(option) => option.label}
+            options={commodities}
             placeholder="Seleccione..."
             searchPlaceholder="Buscar commodity..."
-            minSearchLength={0}
-            fetchOnEmpty
-            clearable
           />
         </InputGroup>
       </Field>
@@ -104,7 +93,7 @@ export function CommoditiesForm({
         <FieldLabel>Estado</FieldLabel>
 
         <InputGroup>
-          <AsyncComboboxInput<EstadoCommodityOption>
+          <ComboboxOpcion<EstadoCommodityOption>
             label="Estado"
             value={row.estado ?? null}
             onChange={(estado) =>
@@ -113,14 +102,9 @@ export function CommoditiesForm({
                 estado,
               }))
             }
-            fetchOptions={fetchEstados}
-            initialOptions={estados}
-            getOptionValue={(option) => option.value}
-            getOptionLabel={(option) => option.label}
+            options={estados}
             placeholder="Estado"
             searchPlaceholder="Buscar estado..."
-            minSearchLength={0}
-            fetchOnEmpty
             clearable={false}
             // Igual que el viejo:
             // Estado visible pero no editable.

@@ -269,11 +269,9 @@ export { TarifasTable } from "./components/tarifas-table";
 export { keysToLowerCase, useCatalogosTarifas } from "./hooks/use-catalogos-tarifas";
 export { useFormulario } from "./hooks/use-formulario-tarifas";
 export {
-  filtrarOpciones,
   type MonedaOpcion,
   monedaAOpcion,
   type RubroOpcion,
-  useFiltroOpciones,
   useOpcionesMonedas,
   useOpcionesRubros,
 } from "./hooks/use-opciones-tarifa";
