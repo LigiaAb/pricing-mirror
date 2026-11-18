@@ -1,10 +1,16 @@
 "use client";
 
 import * as React from "react";
+import { esNombre, normalizarNombre } from "@/features/pricing/shared";
 import type { CotizacionCabeceraPayload } from "../api/cotizacion-cabecera";
 
 import { construirReglasFormulario } from "../lib/cabecera";
-import { COD_PAIS_GUATEMALA, COD_PUNTO_ENLACE_GUA, TIPO_PAGO } from "../lib/constantes";
+import {
+  COD_PAIS_GUATEMALA,
+  COD_PUNTO_ENLACE_GUA,
+  NOMBRE_TRANSPORTE,
+  TIPO_PAGO,
+} from "../lib/constantes";
 import {
   buscarPorLabel,
   buscarPorValue,
@@ -264,7 +270,7 @@ export function useFormularioCotizacion({
         }
 
         if (id === "tipoTransporte") {
-          const nombreTransporte = getLabel(valorFinal).trim().toUpperCase();
+          const nombreTransporte = normalizarNombre(getLabel(valorFinal));
 
           const nombreTipoPunto = TIPO_PUNTO_POR_TRANSPORTE[nombreTransporte];
 
@@ -287,7 +293,7 @@ export function useFormularioCotizacion({
             next.puntoEnlaceOrigen = gua;
             next.cod_puntoenlace_origen = gua?.value ?? null;
           }
-          if (nombreTransporte === "TERRESTRE") {
+          if (esNombre(nombreTransporte, NOMBRE_TRANSPORTE.TERRESTRE)) {
             const ciudadGtm =
               (catalogos.ciudades ?? []).find((ciudad) => ciudad.siglas_ciudad === "GTM") ?? null;
 

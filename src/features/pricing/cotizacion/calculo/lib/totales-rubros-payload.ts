@@ -1,5 +1,5 @@
 import { getClasificacionServicio } from "./clasificacion-rubros";
-import { TIPO_PAGO } from "./constantes";
+import { NOMBRE_RUBRO, TIPO_PAGO } from "./constantes";
 import type { Id } from "./tipos";
 import {
   construirDetalleMetodo,
@@ -269,7 +269,7 @@ export function construirPayloadRubrosAgrupados({
 
           cod_rubro: item.cod_rubro ?? codRubroIVA ?? null,
 
-          gruporubro_nombre: "IVA",
+          gruporubro_nombre: NOMBRE_RUBRO.IVA,
 
           costo_rubro: costoIva,
 
@@ -347,7 +347,7 @@ export function construirPayloadRubrosAgrupados({
 
         cod_rubro: codRubroIVA,
 
-        gruporubro_nombre: "IVA",
+        gruporubro_nombre: NOMBRE_RUBRO.IVA,
 
         costo_rubro: iva,
         costo_grupo: iva,

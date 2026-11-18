@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import type { Empresa, Pais, Tipo } from "@/features/catalogos";
+import { esNombre } from "@/features/pricing/shared";
 import type { CotizacionCabeceraPayload } from "../api/cotizacion-cabecera";
 import { CAMPOS_REQUERIDOS, type ReglaCampoCabecera } from "../lib/cabecera";
-import { COD_TIPO_SERVICIO_ESTACION, TIPO_PAGO } from "../lib/constantes";
+import { COD_TIPO_SERVICIO_ESTACION, NOMBRE_TRANSPORTE, TIPO_PAGO } from "../lib/constantes";
 import { getLabel, getValue, PAISES_TERRESTRES } from "../lib/formulario-cotizacion-helpers";
 import type {
   CatalogosFormularioCotizacion,
@@ -54,7 +55,7 @@ export function useFormularioCotizacionReglas({
 
       if (
         (id === "paisOrigen" || id === "paisDestino") &&
-        getLabel(values_inter.tipoTransporte).trim().toUpperCase() === "TERRESTRE"
+        esNombre(getLabel(values_inter.tipoTransporte), NOMBRE_TRANSPORTE.TERRESTRE)
       ) {
         return ((catalogos?.[catalogoId] ?? []) as readonly OpcionFormularioCotizacion[]).filter(
           (pais) =>
@@ -267,7 +268,7 @@ export function useFormularioCotizacionReglas({
       if (tipoFormulario === "lectura") return false;
       if (inputsNoObligatorios.includes(id)) return false;
 
-      const esTerrestre = getLabel(values.tipoTransporte).trim().toUpperCase() === "TERRESTRE";
+      const esTerrestre = esNombre(getLabel(values.tipoTransporte), NOMBRE_TRANSPORTE.TERRESTRE);
 
       if (id === "estacion") {
         const codTipoPago =

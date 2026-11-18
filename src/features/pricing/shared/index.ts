@@ -72,6 +72,7 @@ export {
   type Unidad,
 } from "./calculadora-embarque/lib/calculos";
 export {
+  NOMBRE_TRANSPORTE,
   TIPO_TRANSPORTE,
   TIPOS_TRANSPORTE,
   type TipoTransporte,
@@ -160,4 +161,5 @@ export {
   METODO_RANGO,
   type TarifaRangoMutationPayload,
 } from "./lib/metodos/rango";
+export { esNombre, normalizarNombre } from "./lib/nombres";
 export { getEstadoMetodo } from "./lib/vigencia-metodo";

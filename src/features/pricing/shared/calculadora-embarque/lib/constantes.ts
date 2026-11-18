@@ -12,11 +12,21 @@ export const TIPO_TRANSPORTE = {
   TERRESTRE: 51,
 } as const;
 
+/**
+ * Nombre (nomTipo) de cada tipo de transporte. Las decisiones por transporte comparan este
+ * nombre con `esNombre` (los códigos pueden ser distintos entre ambientes).
+ */
+export const NOMBRE_TRANSPORTE = {
+  AEREO: "AEREO",
+  MARITIMO: "MARITIMO",
+  TERRESTRE: "TERRESTRE",
+} as const;
+
 /** Nombre de cada tipo de transporte por su código. */
 export const TIPOS_TRANSPORTE = {
-  [TIPO_TRANSPORTE.AEREO]: "AEREO",
-  [TIPO_TRANSPORTE.MARITIMO]: "MARITIMO",
-  [TIPO_TRANSPORTE.TERRESTRE]: "TERRESTRE",
+  [TIPO_TRANSPORTE.AEREO]: NOMBRE_TRANSPORTE.AEREO,
+  [TIPO_TRANSPORTE.MARITIMO]: NOMBRE_TRANSPORTE.MARITIMO,
+  [TIPO_TRANSPORTE.TERRESTRE]: NOMBRE_TRANSPORTE.TERRESTRE,
 } as const;
 
 export type TipoTransporte = (typeof TIPOS_TRANSPORTE)[keyof typeof TIPOS_TRANSPORTE];
