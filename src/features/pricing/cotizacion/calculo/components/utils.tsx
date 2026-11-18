@@ -145,7 +145,7 @@ export function SeccionConLoader({
 }
 
 /** Encabezado de sección colapsable (barra con título y flecha). */
-export function SectionHeader({
+export function EncabezadoColapsable({
   title,
   open,
   onToggle,
