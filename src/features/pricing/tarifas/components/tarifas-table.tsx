@@ -82,7 +82,7 @@ export function TarifasTable({
 
   const [tarifaAAnular, setTarifaAAnular] = React.useState<FilaServicioMetodo | null>(null);
 
-  const { mapWithCatalogo, catalogos, refetchMetodos, refetchServicios } =
+  const { mapWithCatalogo, catalogos, isLoading, refetchMetodos, refetchServicios } =
     useCatalogosTarifas(CATALOGOS_TARIFAS);
 
   const porVencer = React.useCallback(
@@ -228,12 +228,16 @@ export function TarifasTable({
         searchKeys={searchKeys}
         onRefresh={reconsultar}
         isRefreshing={false}
+        // Hasta que carguen los catálogos: el formulario se inicializa al terminar la carga
+        // y borraría lo escrito antes, y las filas cambian (nombres) y vuelven a la página 1.
+        isLoading={isLoading}
         searchPlaceholder="Buscar resultado…"
         extraActions={
           <>
             {puedeAgregar ? (
               <Button
                 size="sm"
+                disabled={isLoading}
                 onClick={() => {
                   setTarifaSeleccionada({ cod_servicio: 0, cod_metodo: 0 } as FilaServicioMetodo);
                   setAccion("ingreso");
@@ -291,6 +295,7 @@ export function TarifasTable({
                 size="sm"
                 variant="outline"
                 className="border-teal-600 "
+                disabled={isLoading}
                 onClick={() => setAbrirFiltro(true)}
               >
                 Filtrar
