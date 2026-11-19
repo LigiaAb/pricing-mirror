@@ -8,12 +8,12 @@ campos sin guardado (los de las actividades se pueden llenar solo en pantalla; I
 `general/` es **solo la vista general** (tabla, resumen, tracking, tabs y Sheets). Los formularios de las
 actividades van en la carpeta de su actor, y lo que usan todos en `shared/`:
 
-| Carpeta        | Qué tiene                                                                                                                                                  |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `general/`     | Vista general: `VistaGeneral`, tabla, resumen, tracking general, tabs, Sheets, Información; operaciones (`lib/operaciones/`, `lib/registro-operaciones.ts`), `lib/pasos.ts` y `lib/datos-maqueta.ts` |
-| `operaciones/` | Formularios de OPS: `lib/gestion-actividades.ts` (`GESTION_OPERACIONES`) y formularios propios (`components/asignacion-guias.tsx`, `components/solicitud-reserva.tsx`) |
-| `bodegas/`     | Formularios de Bodega: `lib/gestion-actividades.ts` (`GESTION_BODEGAS`)                                                                                     |
-| `combex/`      | Formularios de CBX: `lib/gestion-actividades.ts` (`GESTION_COMBEX`)                                                                                         |
+| Carpeta        | Qué tiene                                                                                                                                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `general/`     | Vista general: `VistaGeneral`, tabla, resumen, tracking general, tabs, Sheets, Información; operaciones (`lib/operaciones/`, `lib/registro-operaciones.ts`), `lib/pasos.ts` y `lib/datos-maqueta.ts`    |
+| `operaciones/` | Formularios de OPS: `lib/gestion-actividades.ts` (`GESTION_OPERACIONES`) y formularios propios (`components/asignacion-guias.tsx`, `components/solicitud-reserva.tsx`)                                  |
+| `bodegas/`     | Formularios de Bodega: `lib/gestion-actividades.ts` (`GESTION_BODEGAS`)                                                                                                                                 |
+| `combex/`      | Formularios de CBX: `lib/gestion-actividades.ts` (`GESTION_COMBEX`)                                                                                                                                     |
 | `shared/`      | Común: tipos, `DefinicionOperacion` (`lib/operacion.ts`) y su contexto, actividades del Excel, tipos de interacción, motor de gestión (`camposDe`, `accionDe`), tarjeta genérica y piezas (`utils.tsx`) |
 
 Dependencias: `general` → actores → `shared`. `shared` no importa de `general` ni de los actores, y un actor
@@ -26,13 +26,13 @@ Información que dependen del transporte salen de la **operación del embarque s
 una operación = editar solo su definición. Las definiciones son la **fuente de verdad** (no hay Excel para todas
 las operaciones) y pueden estar a medias mientras llega el análisis.
 
-| Qué                                        | Dónde                                                                         |
-| ------------------------------------------ | ----------------------------------------------------------------------------- |
-| Tipo `DefinicionOperacion` y consultas     | `shared/lib/operacion.ts` (`actividadesPorId`, `actividadesDelPaso`, …)       |
-| Validación de consistencia                 | `validarOperacion` en `shared/lib/operacion.ts`                               |
-| Operación del embarque (contexto)          | `OperacionContext` / `useOperacion()` en `shared/components/operacion-context.tsx` |
-| Definición de cada operación               | `lib/operaciones/<clave>.ts` (hoy: `aereo-expo.ts`, `AEREO_EXPO`)             |
-| Registro y operación de un embarque        | `lib/registro-operaciones.ts` (`OPERACIONES`, `operacionDeEmbarque`)          |
+| Qué                                    | Dónde                                                                              |
+| -------------------------------------- | ---------------------------------------------------------------------------------- |
+| Tipo `DefinicionOperacion` y consultas | `shared/lib/operacion.ts` (`actividadesPorId`, `actividadesDelPaso`, …)            |
+| Validación de consistencia             | `validarOperacion` en `shared/lib/operacion.ts`                                    |
+| Operación del embarque (contexto)      | `OperacionContext` / `useOperacion()` en `shared/components/operacion-context.tsx` |
+| Definición de cada operación           | `lib/operaciones/<clave>.ts` (hoy: `aereo-expo.ts`, `AEREO_EXPO`)                  |
+| Registro y operación de un embarque    | `lib/registro-operaciones.ts` (`OPERACIONES`, `operacionDeEmbarque`)               |
 
 `DefinicionOperacion`: `clave` (`"<transporte>-<expo|impo>"`), `nombre`, `pasos` (tracking general, ids 1..n),
 `actividades` (ids únicos **dentro de la operación**), `tabs` (cada una con su `icono`), `responsables` (por área:
@@ -59,7 +59,7 @@ e `iconoRutas`).
 
 Las rutas de abajo sin carpeta son relativas a `general/`.
 
-## Pantalla (`components/VistaGeneral.tsx`)
+## Pantalla (`components/vista-general.tsx`)
 
 1. **Tabla de embarques** — `embarques-table.tsx` (`DataTable`, mismo patrón que Cotizaciones).
 2. **Resumen del seleccionado** (siempre visible) — `resumen-embarque.tsx`: franja con file/estado,

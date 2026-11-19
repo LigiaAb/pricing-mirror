@@ -12,6 +12,7 @@ import { EmbarquesTable } from "./embarques-table";
 import { ResumenEmbarque } from "./resumen-embarque";
 import { TabsEmbarque } from "./tabs-embarque";
 import { type ActualizarEstadoTracking, TrackingSheet } from "./tracking-sheet";
+import { useAuthStore } from "@/shared/stores/auth-store";
 
 /* ==========================================================================
  * VISTA GENERAL DE EMBARQUES (SOLO MAQUETA)
@@ -44,10 +45,14 @@ export const VistaGeneral = ({
   codTipoTracking = 0,
   onActualizarEstadoTracking,
 }: VistaGeneralProps) => {
+  const authRaw = useAuthStore((state) => state.user);
   const [seleccionado, setSeleccionado] = React.useState<EmbarqueMaqueta | null>(null);
   const [tab, setTab] = React.useState("informacion");
   const [trackingOpen, setTrackingOpen] = React.useState(false);
   const [actividadesOpen, setActividadesOpen] = React.useState(false);
+
+  // Asignacion de permisos quemados para pruebas configuradas segun peticion de usuarios
+  const perfilQuemadoDePruebas:PerfilEmbarque = authRaw?.email === 'mario.hernandez@cropa.com.gt' ? 'operaciones' : authRaw?.email === 'alejandro.calito@cropa.com.gt' ? 'bodegas' : authRaw?.email === 'estuardo.xocop@cropa.com.gt' ? 'combex' : perfil; 
 
   const abrirTracking = React.useCallback(() => setTrackingOpen(true), []);
   const operacion = seleccionado ? operacionDeEmbarque(seleccionado) : null;
@@ -93,7 +98,7 @@ export const VistaGeneral = ({
               <AbrirTrackingContext value={abrirTracking}>
                 <TabsEmbarque
                   embarque={seleccionado}
-                  perfil={perfil}
+                  perfil={perfilQuemadoDePruebas}
                   value={tab}
                   onValueChange={setTab}
                 />
@@ -128,7 +133,7 @@ export const VistaGeneral = ({
           open={actividadesOpen}
           onOpenChange={setActividadesOpen}
           embarque={seleccionado}
-          perfil={perfil}
+          perfil={perfilQuemadoDePruebas}
         />
       </div>
     </OperacionContext>
