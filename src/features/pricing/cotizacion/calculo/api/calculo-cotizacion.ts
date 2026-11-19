@@ -150,6 +150,12 @@ export type CalculoTarifaParams = Record<string, unknown>;
  * ========================================================================== */
 
 /*
+ * Los cálculos siempre van al backend (`cache: "no-store"`): con la misma URL,
+ * el navegador podía responder desde su caché HTTP y Calcular seguía mostrando
+ * tarifas ya anuladas o vencidas.
+ */
+
+/*
  * Endpoint principal.
  *
  * Lo utilizan actualmente:
@@ -162,6 +168,7 @@ export async function calcularTarifa(params: CalculoTarifaParams) {
   return parseEnvelope(
     await http.get<unknown>("/api/appweb/calcular-tarifa", {
       params,
+      cache: "no-store",
     }),
     rubroCalculoSchema,
     "calcular-tarifa",
@@ -176,6 +183,7 @@ export async function calcularTarifaRubros(params: CalculoTarifaParams) {
   return parseEnvelope(
     await http.get<unknown>("/api/appweb/calcular-tarifa-rubros", {
       params,
+      cache: "no-store",
     }),
     rubroCalculoSchema,
     "calcular-tarifa-rubros",
@@ -197,6 +205,7 @@ export async function calcularTarifaScalling(params: CalculoTarifaParams) {
   return parseEnvelope(
     await http.get<unknown>("/api/appweb/calcular-tarifa-scalling", {
       params: paramsScalling,
+      cache: "no-store",
     }),
     rubroCalculoSchema,
     "calcular-tarifa-scalling",
