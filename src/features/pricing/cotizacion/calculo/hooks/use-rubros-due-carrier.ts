@@ -8,8 +8,10 @@ import {
 } from "../lib/due-carrier";
 import {
   calcularCoberturaMercaderia,
+  calcularVentaCostoPorcentaje,
   claveValorFactura,
   esCoberturaMercaderia,
+  esMetodoCostoPorcentaje,
 } from "../lib/rubros-manuales";
 import { limpiarNumero } from "../lib/utils";
 import { useCatalogosCotizacion } from "./use-catalogos-cotizacion";
@@ -31,6 +33,12 @@ type Props = {
 
   /** Valor de factura escrito en una cobertura (se guarda en criterioCobertura). */
   onValorFacturaChange?: (value: number) => void;
+
+  /**
+   * Costo escrito en el flete (normal) Costo por porcentaje: recibe la venta
+   * calculada (`null` si se vació) para usarla como valor_flete y recalcular.
+   */
+  onVentaFleteCostoPorcentajeChange?: (venta: number | null) => void;
 };
 
 export function useRubrosDueCarrier({
@@ -40,6 +48,7 @@ export function useRubrosDueCarrier({
   onValoresManualChange,
   valorFlete = 0,
   onValorFacturaChange,
+  onVentaFleteCostoPorcentajeChange,
 }: Props) {
   const { monedas } = useCatalogosCotizacion().calculo;
 
@@ -155,8 +164,14 @@ export function useRubrosDueCarrier({
 
         [String(item.value)]: valor,
       }));
+
+      if (item.es_flete === true && !item.es_tarifa_spot && esMetodoCostoPorcentaje(item)) {
+        onVentaFleteCostoPorcentajeChange?.(
+          valor === "" ? null : calcularVentaCostoPorcentaje(item, valor).venta,
+        );
+      }
     },
-    [],
+    [onVentaFleteCostoPorcentajeChange],
   );
 
   /*

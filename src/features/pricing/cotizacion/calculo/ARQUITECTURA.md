@@ -159,6 +159,13 @@ Un transporte con `null` en la tabla (o que no esté en ella) **no lleva detalle
 están en `null` hasta que el departamento defina sus textos; para activarlos, cambia `null` por su configuración.
 El cambio solo afecta lo que se calcula de ahora en adelante; las versiones guardadas conservan su texto.
 
+## Flete con método Costo por porcentaje
+
+El costo del flete se escribe en Due Carrier (`useRubrosDueCarrier`, `onVentaFleteCostoPorcentajeChange`) y la venta
+calculada pasa a `useCarrierFlete.cambiarVentaFleteCostoPorcentaje`, que espera `DEMORA_RECALCULO_COSTO_FLETE` ms
+(`useDebouncedValue`) y la usa como `valor_flete` para volver a calcular Due Carrier y Due Agent. Ese flete pide un
+archivo de respaldo (`carrier.archivoCostoFlete`, obligatorio para guardar; aún no se envía al backend) y no ofrece SPOT.
+
 ## Estados de versiones
 
 `useEstadosCotizacion()` (`hooks/use-estados-cotizacion.ts`) resuelve los estados del catálogo; `estados` es `null`

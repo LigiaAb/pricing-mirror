@@ -1,0 +1,368 @@
+diff --git a/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md b/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md
+index 0d09bce..325126e 100644
+--- a/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md
++++ b/src/features/pricing/cotizacion/calculo/ARQUITECTURA.md
+@@ -159,6 +159,13 @@ Un transporte con `null` en la tabla (o que no esté en ella) **no lleva detalle
+ están en `null` hasta que el departamento defina sus textos; para activarlos, cambia `null` por su configuración.
+ El cambio solo afecta lo que se calcula de ahora en adelante; las versiones guardadas conservan su texto.
+ 
++## Flete con método Costo por porcentaje
++
++El costo del flete se escribe en Due Carrier (`useRubrosDueCarrier`, `onVentaFleteCostoPorcentajeChange`) y la venta
++calculada pasa a `useCarrierFlete.cambiarVentaFleteCostoPorcentaje`, que espera `DEMORA_RECALCULO_COSTO_FLETE` ms
++(`useDebouncedValue`) y la usa como `valor_flete` para volver a calcular Due Carrier y Due Agent. Ese flete pide un
++archivo de respaldo (`carrier.archivoCostoFlete`, obligatorio para guardar; aún no se envía al backend) y no ofrece SPOT.
++
+ ## Estados de versiones
+ 
+ `useEstadosCotizacion()` (`hooks/use-estados-cotizacion.ts`) resuelve los estados del catálogo; `estados` es `null`
+diff --git a/src/features/pricing/cotizacion/calculo/components/calculo-cotizacion.tsx b/src/features/pricing/cotizacion/calculo/components/calculo-cotizacion.tsx
+index bc8d299..e38b811 100644
+--- a/src/features/pricing/cotizacion/calculo/components/calculo-cotizacion.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/calculo-cotizacion.tsx
+@@ -129,6 +129,7 @@ function DetalleCalculoCotizacion({
+     entidadEfectivaId,
+     entidadNombre,
+     rubrosDueCarrierConSpot,
++    fleteCostoPorcentaje,
+     dueCarrier,
+     dueAgent,
+     dueCarrierDesdeAgent,
+@@ -175,6 +176,7 @@ function DetalleCalculoCotizacion({
+     calculo,
+     carrier,
+     dueAgent,
++    fleteCostoPorcentaje,
+     totales,
+   });
+ 
+@@ -270,6 +272,9 @@ function DetalleCalculoCotizacion({
+                     carrier.forzarRecalculo();
+                   }}
+                   onRemoveSpot={carrier.quitarSpot}
++                  solicitarArchivoCostoFlete={fleteCostoPorcentaje}
++                  archivoCostoFlete={carrier.archivoCostoFlete}
++                  onArchivoCostoFleteChange={carrier.setArchivoCostoFlete}
+                 />
+               </SeccionConLoader>
+ 
+diff --git a/src/features/pricing/cotizacion/calculo/components/due-carrier.tsx b/src/features/pricing/cotizacion/calculo/components/due-carrier.tsx
+index ff47e3b..c95fe93 100644
+--- a/src/features/pricing/cotizacion/calculo/components/due-carrier.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/due-carrier.tsx
+@@ -64,6 +64,13 @@ type Props = {
+   onAgregarSpot?: (rubro: RubroDueCarrier, valorFlete: number, rate: number) => void;
+ 
+   onRemoveSpot?: () => void;
++
++  /** El flete es Costo por porcentaje: se pide un archivo que respalde su costo. */
++  solicitarArchivoCostoFlete?: boolean;
++
++  archivoCostoFlete?: File | null;
++
++  onArchivoCostoFleteChange?: (archivo: File | null) => void;
+ };
+ 
+ /* ==========================================================================
+@@ -86,6 +93,9 @@ export function DueCarrier({
+   valorCw,
+   onAgregarSpot,
+   onRemoveSpot,
++  solicitarArchivoCostoFlete = false,
++  archivoCostoFlete = null,
++  onArchivoCostoFleteChange,
+ }: Props) {
+   const { monedas, metodos } = useCatalogosCotizacion().calculo;
+ 
+@@ -241,7 +251,10 @@ export function DueCarrier({
+                                   </Button>
+                                 ) : null}
+ 
+-                                {!lectura && item.es_flete && onAgregarSpot ? (
++                                {!lectura &&
++                                item.es_flete &&
++                                !esMetodoCostoPorcentaje(item) &&
++                                onAgregarSpot ? (
+                                   <Button
+                                     type="button"
+                                     variant="ghost"
+@@ -392,6 +405,35 @@ export function DueCarrier({
+                 ) : null}
+               </Table>
+             </div>
++
++            {/* ARCHIVO DEL FLETE COSTO POR PORCENTAJE */}
++
++            {solicitarArchivoCostoFlete && !lectura && onArchivoCostoFleteChange ? (
++              <div className="space-y-1 rounded-md border p-3">
++                <label htmlFor="archivo-costo-flete" className="text-sm font-medium">
++                  Archivo de respaldo del costo del flete
++                  <span className="text-destructive"> *</span>
++                </label>
++
++                <input
++                  id="archivo-costo-flete"
++                  type="file"
++                  accept="application/pdf,.pdf,image/*"
++                  className="file:bg-primary file:text-primary-foreground border-input bg-background w-full rounded-md border text-sm file:mr-3 file:border-0 file:px-3 file:py-2"
++                  onChange={(event) => {
++                    onArchivoCostoFleteChange(event.target.files?.[0] ?? null);
++                  }}
++                />
++
++                {archivoCostoFlete ? (
++                  <p className="truncate text-xs text-muted-foreground">{archivoCostoFlete.name}</p>
++                ) : (
++                  <p className="text-xs text-destructive">
++                    El flete es costo por porcentaje: adjunte el archivo para poder guardar.
++                  </p>
++                )}
++              </div>
++            ) : null}
+           </div>
+         </div>
+       </section>
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-carrier-flete.ts b/src/features/pricing/cotizacion/calculo/hooks/use-carrier-flete.ts
+index 8ba1413..15c47e1 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-carrier-flete.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-carrier-flete.ts
+@@ -1,6 +1,7 @@
+ "use client";
+ 
+ import React from "react";
++import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
+ 
+ import {
+   type CarrierOption,
+@@ -15,6 +16,15 @@ import type { Id } from "../lib/tipos";
+ import { crearKeyCriterios, getSimboloMoneda } from "../lib/utils";
+ import { useCatalogosCotizacion } from "./use-catalogos-cotizacion";
+ 
++/** Pausa (ms) tras la última tecla en el costo de un flete Costo por porcentaje antes de recalcular. */
++export const DEMORA_RECALCULO_COSTO_FLETE = 800;
++
++/**
++ * Venta calculada del flete Costo por porcentaje que espera el debounce.
++ * Es un objeto para que escribir el mismo valor otra vez también recalcule.
++ */
++type VentaFletePendiente = { venta: number | null };
++
+ type Props = {
+   fletes: RubroFlete[];
+ 
+@@ -101,6 +111,16 @@ export function useCarrierFlete({
+ 
+   const [recalculoToken, setRecalculoToken] = React.useState(0);
+ 
++  const [ventaFletePendiente, setVentaFletePendiente] = React.useState<VentaFletePendiente | null>(
++    null,
++  );
++
++  /*
++   * Archivo que respalda el costo de un flete Costo por porcentaje.
++   * TODO: aún no hay estructura en el backend; se pide, pero no se envía.
++   */
++  const [archivoCostoFlete, setArchivoCostoFlete] = React.useState<File | null>(null);
++
+   /*
+    * Sustituye tarifaReqKeyRef
+    * del Grid.
+@@ -239,6 +259,10 @@ export function useCarrierFlete({
+ 
+       setTarifasSpot([]);
+ 
++      setVentaFletePendiente(null);
++
++      setArchivoCostoFlete(null);
++
+       setCarrierSeleccionado(carrier ?? opcionesCarrier[0] ?? null);
+     },
+     [opcionesCarrier],
+@@ -280,6 +304,29 @@ export function useCarrierFlete({
+     setRecalculoToken((prev) => prev + 1);
+   }, []);
+ 
++  /* ==========================================================
++   * FLETE COSTO POR PORCENTAJE
++   * ==========================================================
++   *
++   * El usuario escribe el costo del flete en Due Carrier; la venta
++   * calculada pasa a ser el valor_flete y se vuelve a calcular
++   * (Due Carrier y Due Agent) cuando deja de escribir.
++   */
++
++  const cambiarVentaFleteCostoPorcentaje = React.useCallback((venta: number | null) => {
++    setVentaFletePendiente({ venta });
++  }, []);
++
++  const ventaFleteDiferida = useDebouncedValue(ventaFletePendiente, DEMORA_RECALCULO_COSTO_FLETE);
++
++  React.useEffect(() => {
++    if (ventaFleteDiferida == null) {
++      return;
++    }
++
++    cambiarFleteManual(ventaFleteDiferida.venta);
++  }, [ventaFleteDiferida, cambiarFleteManual]);
++
+   /* ==========================================================
+    * SPOT
+    * ========================================================== */
+@@ -470,6 +517,10 @@ export function useCarrierFlete({
+ 
+     setTarifasSpot([]);
+ 
++    setVentaFletePendiente(null);
++
++    setArchivoCostoFlete(null);
++
+     ultimaTarifaKeyRef.current = "";
+ 
+     setRecalculoToken(0);
+@@ -512,6 +563,10 @@ export function useCarrierFlete({
+ 
+     tarifasSpot,
+ 
++    /* Flete Costo por porcentaje */
++
++    archivoCostoFlete,
++
+     /* Acciones */
+ 
+     seleccionarCarrier,
+@@ -520,6 +575,10 @@ export function useCarrierFlete({
+ 
+     cambiarFleteManual,
+ 
++    cambiarVentaFleteCostoPorcentaje,
++
++    setArchivoCostoFlete,
++
+     agregarSpot,
+ 
+     quitarSpot,
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-detalle-calculo-guardado.ts b/src/features/pricing/cotizacion/calculo/hooks/use-detalle-calculo-guardado.ts
+index 1449e43..a33dccb 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-detalle-calculo-guardado.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-detalle-calculo-guardado.ts
+@@ -23,6 +23,8 @@ type Params = {
+   calculo: ReturnType<typeof useCalculoCotizacion>;
+   carrier: ReturnType<typeof useCarrierFlete>;
+   dueAgent: ReturnType<typeof usePorcentajesRubros>["dueAgent"];
++  /** El flete es Costo por porcentaje: se exige su archivo de respaldo para guardar. */
++  fleteCostoPorcentaje: boolean;
+   totales: ReturnType<typeof useTotalesRubros>;
+ };
+ 
+@@ -41,6 +43,7 @@ export function useDetalleCalculoGuardado({
+   calculo,
+   carrier,
+   dueAgent,
++  fleteCostoPorcentaje,
+   totales,
+ }: Params) {
+   const { estados } = useEstadosCalculo();
+@@ -185,6 +188,7 @@ export function useDetalleCalculoGuardado({
+       totales.rubrosAgrupados.length &&
+       dueAgent.isValid &&
+       datosComplementariosValidos &&
++      (!fleteCostoPorcentaje || carrier.archivoCostoFlete != null) &&
+       !guardar.guardando,
+   );
+ 
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-detalle-calculo-secciones.ts b/src/features/pricing/cotizacion/calculo/hooks/use-detalle-calculo-secciones.ts
+index 676e7c2..41a55aa 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-detalle-calculo-secciones.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-detalle-calculo-secciones.ts
+@@ -3,6 +3,7 @@
+ import * as React from "react";
+ import type { CalculoCotizacionProps } from "../lib/calculo-cotizacion-tipos";
+ import { RUBRO, TIPO_CALCULO } from "../lib/constantes";
++import { esMetodoCostoPorcentaje } from "../lib/rubros-manuales";
+ import type { EntidadCatalogo, Id } from "../lib/tipos";
+ import { useCalculoCotizacion } from "./use-calculo-cotizacion";
+ import { useCarrierFlete } from "./use-carrier-flete";
+@@ -350,8 +351,23 @@ export function useDetalleCalculoSecciones({
+     valorFlete: valorFleteCriterios,
+ 
+     onValorFacturaChange: cambiarValorFacturaCobertura,
++
++    onVentaFleteCostoPorcentajeChange: carrier.cambiarVentaFleteCostoPorcentaje,
+   });
+ 
++  /*
++   * Flete (normal) con método Costo por porcentaje: su costo se escribe a mano
++   * y debe respaldarse con un archivo para poder guardar la versión.
++   */
++  const fleteCostoPorcentaje = React.useMemo(
++    () =>
++      !isReadOnly &&
++      dueCarrierBase.rubros.some(
++        (item) => item.es_flete === true && !item.es_tarifa_spot && esMetodoCostoPorcentaje(item),
++      ),
++    [isReadOnly, dueCarrierBase.rubros],
++  );
++
+   const dueCarrierDesdeAgentBase = useRubrosDueCarrier({
+     rubros: calculo.dueCarrierBasadoEnDueAgent as Parameters<
+       typeof useRubrosDueCarrier
+@@ -480,6 +496,7 @@ export function useDetalleCalculoSecciones({
+     entidadEfectivaId,
+     entidadNombre,
+     rubrosDueCarrierConSpot,
++    fleteCostoPorcentaje,
+     dueCarrier,
+     dueAgent,
+     dueCarrierDesdeAgent,
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-rubros-due-carrier.ts b/src/features/pricing/cotizacion/calculo/hooks/use-rubros-due-carrier.ts
+index c4b59bb..50c14c2 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-rubros-due-carrier.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-rubros-due-carrier.ts
+@@ -8,8 +8,10 @@ import {
+ } from "../lib/due-carrier";
+ import {
+   calcularCoberturaMercaderia,
++  calcularVentaCostoPorcentaje,
+   claveValorFactura,
+   esCoberturaMercaderia,
++  esMetodoCostoPorcentaje,
+ } from "../lib/rubros-manuales";
+ import { limpiarNumero } from "../lib/utils";
+ import { useCatalogosCotizacion } from "./use-catalogos-cotizacion";
+@@ -31,6 +33,12 @@ type Props = {
+ 
+   /** Valor de factura escrito en una cobertura (se guarda en criterioCobertura). */
+   onValorFacturaChange?: (value: number) => void;
++
++  /**
++   * Costo escrito en el flete (normal) Costo por porcentaje: recibe la venta
++   * calculada (`null` si se vació) para usarla como valor_flete y recalcular.
++   */
++  onVentaFleteCostoPorcentajeChange?: (venta: number | null) => void;
+ };
+ 
+ export function useRubrosDueCarrier({
+@@ -40,6 +48,7 @@ export function useRubrosDueCarrier({
+   onValoresManualChange,
+   valorFlete = 0,
+   onValorFacturaChange,
++  onVentaFleteCostoPorcentajeChange,
+ }: Props) {
+   const { monedas } = useCatalogosCotizacion().calculo;
+ 
+@@ -155,8 +164,14 @@ export function useRubrosDueCarrier({
+ 
+         [String(item.value)]: valor,
+       }));
++
++      if (item.es_flete === true && !item.es_tarifa_spot && esMetodoCostoPorcentaje(item)) {
++        onVentaFleteCostoPorcentajeChange?.(
++          valor === "" ? null : calcularVentaCostoPorcentaje(item, valor).venta,
++        );
++      }
+     },
+-    [],
++    [onVentaFleteCostoPorcentajeChange],
+   );
+ 
+   /*

@@ -64,6 +64,13 @@ type Props = {
   onAgregarSpot?: (rubro: RubroDueCarrier, valorFlete: number, rate: number) => void;
 
   onRemoveSpot?: () => void;
+
+  /** El flete es Costo por porcentaje: se pide un archivo que respalde su costo. */
+  solicitarArchivoCostoFlete?: boolean;
+
+  archivoCostoFlete?: File | null;
+
+  onArchivoCostoFleteChange?: (archivo: File | null) => void;
 };
 
 /* ==========================================================================
@@ -86,6 +93,9 @@ export function DueCarrier({
   valorCw,
   onAgregarSpot,
   onRemoveSpot,
+  solicitarArchivoCostoFlete = false,
+  archivoCostoFlete = null,
+  onArchivoCostoFleteChange,
 }: Props) {
   const { monedas, metodos } = useCatalogosCotizacion().calculo;
 
@@ -241,7 +251,10 @@ export function DueCarrier({
                                   </Button>
                                 ) : null}
 
-                                {!lectura && item.es_flete && onAgregarSpot ? (
+                                {!lectura &&
+                                item.es_flete &&
+                                !esMetodoCostoPorcentaje(item) &&
+                                onAgregarSpot ? (
                                   <Button
                                     type="button"
                                     variant="ghost"
@@ -392,6 +405,35 @@ export function DueCarrier({
                 ) : null}
               </Table>
             </div>
+
+            {/* ARCHIVO DEL FLETE COSTO POR PORCENTAJE */}
+
+            {solicitarArchivoCostoFlete && !lectura && onArchivoCostoFleteChange ? (
+              <div className="space-y-1 rounded-md border p-3">
+                <label htmlFor="archivo-costo-flete" className="text-sm font-medium">
+                  Archivo de respaldo del costo del flete
+                  <span className="text-destructive"> *</span>
+                </label>
+
+                <input
+                  id="archivo-costo-flete"
+                  type="file"
+                  accept="application/pdf,.pdf,image/*"
+                  className="file:bg-primary file:text-primary-foreground border-input bg-background w-full rounded-md border text-sm file:mr-3 file:border-0 file:px-3 file:py-2"
+                  onChange={(event) => {
+                    onArchivoCostoFleteChange(event.target.files?.[0] ?? null);
+                  }}
+                />
+
+                {archivoCostoFlete ? (
+                  <p className="truncate text-xs text-muted-foreground">{archivoCostoFlete.name}</p>
+                ) : (
+                  <p className="text-xs text-destructive">
+                    El flete es costo por porcentaje: adjunte el archivo para poder guardar.
+                  </p>
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
