@@ -1,0 +1,26 @@
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts b/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts
+index 40fc3de..632ada3 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts
+@@ -293,9 +293,19 @@ export function useFormularioCotizacion({
+             next.puntoEnlaceOrigen = gua;
+             next.cod_puntoenlace_origen = gua?.value ?? null;
+           }
+-          if (esNombre(nombreTransporte, NOMBRE_TRANSPORTE.TERRESTRE)) {
++          /*
++           * Las siglas de ciudad se repiten entre países: se valida que el país origen
++           * sea Guatemala y que la ciudad sea de Guatemala.
++           */
++          if (
++            esNombre(nombreTransporte, NOMBRE_TRANSPORTE.TERRESTRE) &&
++            mismoId(getValue(next.paisOrigen), COD_PAIS_GUATEMALA)
++          ) {
+             const ciudadGtm =
+-              (catalogos.ciudades ?? []).find((ciudad) => ciudad.siglas_ciudad === "GUA") ?? null;
++              (catalogos.ciudades ?? []).find(
++                (ciudad) =>
++                  ciudad.siglas_ciudad === "GUA" && mismoId(ciudad.cod_pais, COD_PAIS_GUATEMALA),
++              ) ?? null;
+ 
+             next.ciudadOrigen = ciudadGtm;
+             next.cod_ciudad_origen = ciudadGtm?.value ?? null;
