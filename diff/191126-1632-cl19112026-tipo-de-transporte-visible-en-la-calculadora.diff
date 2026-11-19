@@ -1,0 +1,64 @@
+diff --git a/src/features/pricing/shared/calculadora-embarque/components/calculadora-medidas.tsx b/src/features/pricing/shared/calculadora-embarque/components/calculadora-medidas.tsx
+index 64a6909..e4cb6d2 100644
+--- a/src/features/pricing/shared/calculadora-embarque/components/calculadora-medidas.tsx
++++ b/src/features/pricing/shared/calculadora-embarque/components/calculadora-medidas.tsx
+@@ -505,6 +505,9 @@ export function CalculadoraMedidas({
+     ),
+   ];
+ 
++  /* Transporte con el que se calcula, visible en la calculadora y en el detalle (#161). */
++  const textoTransporte = cargandoTransporte ? "Cargando…" : (transporte ?? "Sin seleccionar");
++
+   const avisos = [
+     ...(avisoTransporte ? [avisoTransporte] : []),
+     ...(unidadesSinConversion.length
+@@ -523,6 +526,10 @@ export function CalculadoraMedidas({
+       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
+         <DialogHeader>
+           <DialogTitle>{etiquetas.titulo}</DialogTitle>
++          <DialogDescription>
++            Tipo de transporte:{" "}
++            <span className="font-semibold text-primary">{textoTransporte}</span>
++          </DialogDescription>
+         </DialogHeader>
+ 
+         {avisos.length ? (
+@@ -944,7 +951,12 @@ export function CalculadoraMedidas({
+           ) : null}
+         </DialogFooter>
+ 
+-        <DetalleFila detalle={detalle} etiquetas={etiquetas} onCerrar={() => setDetalleId(null)} />
++        <DetalleFila
++          detalle={detalle}
++          etiquetas={etiquetas}
++          transporte={textoTransporte}
++          onCerrar={() => setDetalleId(null)}
++        />
+       </DialogContent>
+     </Dialog>
+   );
+@@ -970,10 +982,12 @@ function DatoDetalle({ label, valor }: { label: string; valor: React.ReactNode }
+ function DetalleFila({
+   detalle,
+   etiquetas,
++  transporte,
+   onCerrar,
+ }: {
+   detalle: DimensionCalculo | null;
+   etiquetas: ReturnType<typeof obtenerEtiquetasCalculadora>;
++  transporte: string;
+   onCerrar: () => void;
+ }) {
+   const unidadMedida = detalle?.unidadMedida?.tipo_desc ?? detalle?.unidadMedida?.label ?? "—";
+@@ -989,7 +1003,10 @@ function DetalleFila({
+       <DialogContent className="sm:max-w-2xl">
+         <DialogHeader>
+           <DialogTitle>Detalles del volumen o peso</DialogTitle>
+-          <DialogDescription>Resumen de dimensiones seleccionadas</DialogDescription>
++          <DialogDescription>
++            Resumen de dimensiones seleccionadas · Tipo de transporte:{" "}
++            <span className="font-semibold text-primary">{transporte}</span>
++          </DialogDescription>
+         </DialogHeader>
+ 
+         {detalle ? (
