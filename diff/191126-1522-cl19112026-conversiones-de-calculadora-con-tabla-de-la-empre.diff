@@ -1,0 +1,874 @@
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-criterios-cotizacion.ts b/src/features/pricing/cotizacion/calculo/hooks/use-criterios-cotizacion.ts
+index 3a0c605..14b486e 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-criterios-cotizacion.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-criterios-cotizacion.ts
+@@ -6,6 +6,7 @@ import {
+   calcularTotalesMedidas,
+   type DimensionCalculo,
+   type TotalesMedidas,
++  useNombreTransporte,
+ } from "@/features/pricing/shared";
+ 
+ import {
+@@ -52,6 +53,9 @@ export function useCriteriosCotizacion({
+ }: Props) {
+   const { unidadesMedida, unidadesPeso } = useCatalogosCotizacion().calculo;
+ 
++  /* Las conversiones deciden por el nombre del transporte, no por su código (#157). */
++  const { nombre: transporte } = useNombreTransporte(codTipoTransporte);
++
+   /* ==========================================================================
+    * ESTADO
+    * ========================================================================== */
+@@ -99,10 +103,10 @@ export function useCriteriosCotizacion({
+ 
+         unidadesPeso,
+ 
+-        codTipoTransporte: codTipoTransporte ?? null,
++        transporte,
+       }),
+     );
+-  }, [resetKey, dimensionesIniciales, unidadesMedida, unidadesPeso, codTipoTransporte]);
++  }, [resetKey, dimensionesIniciales, unidadesMedida, unidadesPeso, transporte]);
+ 
+   /* ==========================================================================
+    * TOTALES DE LAS FILAS DE DIMENSIONES
+@@ -123,8 +127,8 @@ export function useCriteriosCotizacion({
+    * ========================================================================== */
+ 
+   const totalesDimensiones = React.useMemo(
+-    () => calcularTotalesMedidas(dimensiones, codTipoTransporte),
+-    [dimensiones, codTipoTransporte],
++    () => calcularTotalesMedidas(dimensiones, transporte),
++    [dimensiones, transporte],
+   );
+ 
+   /* ==========================================================================
+diff --git a/src/features/pricing/cotizacion/calculo/lib/dimensiones-cotizacion.ts b/src/features/pricing/cotizacion/calculo/lib/dimensiones-cotizacion.ts
+index c7b7996..709f397 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/dimensiones-cotizacion.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/dimensiones-cotizacion.ts
+@@ -30,7 +30,7 @@ export function reconstruirDimensiones({
+   dimensiones,
+   unidadesMedida,
+   unidadesPeso,
+-  codTipoTransporte,
++  transporte,
+ }: {
+   dimensiones: Array<Record<string, unknown>>;
+ 
+@@ -38,7 +38,8 @@ export function reconstruirDimensiones({
+ 
+   unidadesPeso: Unidad[];
+ 
+-  codTipoTransporte?: Id | null;
++  /** Nombre del tipo de transporte (nomTipo). */
++  transporte?: string | null;
+ }): DimensionCalculo[] {
+   /*
+    * El guardado sin medidas representa los totales directos con una fila:
+@@ -56,7 +57,10 @@ export function reconstruirDimensiones({
+     Number(primera.cotdetdim_unidad_medida) === UNIDAD_DEFAULT.MEDIDA &&
+     Number(primera.cotdetdim_unidad_peso) === UNIDAD_DEFAULT.PESO &&
+     primera.total_volumen != null &&
+-    Math.ceil(numero(primera.cotdetdim_largo)) === numero(primera.total_volumen) &&
++    // Los totales directos se guardan como se ingresan (con decimales); antes solo se
++    // reconocía el valor entero. Se aceptan ambos (#157).
++    (numero(primera.cotdetdim_largo) === numero(primera.total_volumen) ||
++      Math.ceil(numero(primera.cotdetdim_largo)) === numero(primera.total_volumen)) &&
+     (numero(primera.total_volumen) > 0 || numero(primera.total_peso) > 0)
+   ) {
+     return [];
+@@ -124,8 +128,7 @@ export function reconstruirDimensiones({
+        * el comportamiento de la calculadora.
+        */
+       volumenTotalKg:
+-        convertirVolumetrico(volumenUnitario, unidadMedida?.tipo_desc, codTipoTransporte) *
+-        cantidad,
++        convertirVolumetrico(volumenUnitario, unidadMedida?.tipo_desc, transporte) * cantidad,
+ 
+       pesoTotal,
+ 
+diff --git a/src/features/pricing/shared/ARQUITECTURA.md b/src/features/pricing/shared/ARQUITECTURA.md
+index ce75be0..936e3d6 100644
+--- a/src/features/pricing/shared/ARQUITECTURA.md
++++ b/src/features/pricing/shared/ARQUITECTURA.md
+@@ -27,11 +27,13 @@ shared/
+    │                        acción) y MensajeVacio. Copia propia de wms-hn (mismo markup); hoy los usa Reportes
+    └─ resumen-item.tsx
+ └─ calculadora-embarque/  ← CALCULADORA DE EMBARQUES (corporativa, ver abajo)
+-   ├─ constantes.ts       ← TIPO_TRANSPORTE (49/50/51), TIPOS_TRANSPORTE, UNIDAD_DEFAULT (165/162)
+-   ├─ calculos.ts         ← volumen, peso, volumétrico por transporte, CW, totales (funciones puras)
++   ├─ constantes.ts       ← TIPO_TRANSPORTE (49/50/51), NOMBRE_TRANSPORTE, NOMBRE_UNIDAD, UNIDAD_DEFAULT (165/162)
++   ├─ calculos.ts         ← volumen, peso, volumétrico por transporte (por nombre), CW, totales (funciones puras;
++   │                        FACTORES = tabla oficial de la empresa, #157)
+    ├─ etiquetas.ts        ← textos por tipo de transporte (base + solo lo que cambia)
+    ├─ unidades.ts         ← filtro y normalización de unidades de medida/peso
+    ├─ use-unidades-embarque.ts ← unidades para la calculadora (misma consulta que useCatalogosPricing)
++   ├─ use-nombre-transporte.ts ← nombre (nomTipo) del transporte por su código: tipos con tipo_tabla TRANSPORTE
+    └─ calculadora-medidas.tsx  ← CalculadoraMedidas (diálogo)
+ ```
+ 
+@@ -69,7 +71,7 @@ Los componentes que se usan en otras pantallas no leen permisos solos: la pantal
+ ```tsx
+ <CalculadoraMedidas
+   trigger={<Button>Abrir calculadora</Button>}   // o controlarla con open / onOpenChange
+-  codTipoTransporte={codTipoTransporte}          // cambia el volumétrico y los textos
++  codTipoTransporte={codTipoTransporte}          // se busca su nombre (useNombreTransporte); cambia volumétrico y textos
+   dimensiones={filasGuardadas}                   // opcional
+   pesoInicial={peso} volumenInicial={volumen}    // opcional: totales escritos a mano
+   onAplicar={({ dimensiones, totales }) => ...}  // cada módulo decide dónde guardar
+@@ -78,11 +80,16 @@ Los componentes que se usan en otras pantallas no leen permisos solos: la pantal
+ 
+ | Es de la calculadora (aquí)                                                                                    | Es de cada módulo (fuera de aquí)                                                                   |
+ | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+-| Conversiones de longitud y peso, volumétrico por transporte (aéreo /6000, marítimo CBM×1000, terrestre m³×333) | Leer filas guardadas en BD (`cotdetdim_*`) → `cotizacion/calculo/lib/dimensiones-cotizacion.ts`     |
+-| CW = mayor entre peso y volumétrico; redondeo a 0 decimales                                                    | Dónde se guarda el resultado (`valor_cw`, `valor_por_peso`, `total_*`) → `use-criterios-cotizacion` |
++| Conversiones de peso y volumétrico por transporte, con la tabla de la empresa; se decide por nombre, no código | Leer filas guardadas en BD (`cotdetdim_*`) → `cotizacion/calculo/lib/dimensiones-cotizacion.ts`     |
++| CW = mayor entre peso y volumétrico; redondeo hacia arriba (`redondearArriba`)                                 | Dónde se guarda el resultado (`valor_cw`, `valor_por_peso`, `total_*`) → `use-criterios-cotizacion` |
+ | Prioridad filas > total escrito a mano (`combinarTotales`)                                                     | Payload de guardado y fila "falsa" de totales directos → `guardar-version.ts`                       |
+ | Unidades por defecto 165/162 y textos por transporte                                                           | El botón que la abre (texto, ícono, dónde está)                                                     |
+ 
++Factores (`FACTORES` en `calculos.ts`, tabla oficial, #157): aéreo cm³ ÷ 6000, m³ ÷ 0.006, in³ ÷ 366 (pies: ft³ × 1728 ÷ 366);
++marítimo m³ × 1000; terrestre m³ × 350 (in³ ÷ 1728 = ft³, ft³ ÷ 35.3145 = m³, cm³ ÷ 1 000 000 = m³); libras ÷ 2.2046,
++toneladas × 1000. Transporte no reconocido = AEREO con aviso en el diálogo; unidad sin conversión = 0 con aviso. El
++volumétrico de cada fila se recalcula con el transporte actual (`recalcularDimension`).
++
+ Textos propios de un transporte: agregar solo la propiedad que cambia en `ETIQUETAS_POR_TRANSPORTE` (`etiquetas.ts`).
+ 
+ React Query comparte la caché: `useCatalogosTarifas`, `useCatalogosCotizacion` y `FichaResumen` piden las mismas
+diff --git a/src/features/pricing/shared/calculadora-embarque/components/calculadora-medidas.tsx b/src/features/pricing/shared/calculadora-embarque/components/calculadora-medidas.tsx
+index 58b431e..b634ad9 100644
+--- a/src/features/pricing/shared/calculadora-embarque/components/calculadora-medidas.tsx
++++ b/src/features/pricing/shared/calculadora-embarque/components/calculadora-medidas.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { Plus, Trash2 } from "lucide-react";
++import { AlertTriangle, Plus, Trash2 } from "lucide-react";
+ import React from "react";
+ 
+ import { Button } from "@/shared/components/ui/button";
+@@ -21,14 +21,18 @@ import {
+   TableHeader,
+   TableRow,
+ } from "@/shared/components/ui/table";
++import { useNombreTransporte } from "../hooks/use-nombre-transporte";
+ import { useUnidadesEmbarque } from "../hooks/use-unidades-embarque";
+ import {
+   calcularTotalesMedidas,
+   combinarTotales,
+   crearDimension,
+   type DimensionCalculo,
++  esUnidadConocida,
+   type Id,
+   numero,
++  recalcularDimension,
++  redondearArriba,
+   type TotalesMedidas,
+   type Unidad,
+ } from "../lib/calculos";
+@@ -125,11 +129,8 @@ function crearFormularioInicial({
+ function mostrarNumero(value: unknown) {
+   const result = numero(value);
+ 
+-  /*
+-   * El componente anterior muestra estos
+-   * resultados con redondeo a 0 decimales.
+-   */
+-  return result.toFixed(0);
++  /* Redondeo hacia arriba a entero (#157). */
++  return String(redondearArriba(result));
+ }
+ 
+ /* ==========================================================================
+@@ -162,6 +163,13 @@ export function CalculadoraMedidas({
+ }: CalculadoraMedidasProps) {
+   const { unidadesMedida, unidadesPeso } = useUnidadesEmbarque();
+ 
++  /* Las conversiones deciden por el nombre del transporte, no por su código (#157). */
++  const {
++    nombre: transporte,
++    reconocido: transporteReconocido,
++    isLoading: cargandoTransporte,
++  } = useNombreTransporte(codTipoTransporte);
++
+   /* ==========================================================================
+    * APERTURA (controlada o con trigger)
+    * ========================================================================== */
+@@ -197,7 +205,7 @@ export function CalculadoraMedidas({
+     cantidad: `${idBase}-cantidad`,
+   };
+ 
+-  const etiquetas = obtenerEtiquetasCalculadora(codTipoTransporte);
++  const etiquetas = obtenerEtiquetasCalculadora(transporte);
+ 
+   const [items, setItems] = React.useState<DimensionCalculo[]>([]);
+ 
+@@ -286,9 +294,15 @@ export function CalculadoraMedidas({
+    * TOTALES DE FILAS
+    * ========================================================================== */
+ 
++  /* Cada fila con el volumétrico del transporte actual (si cambia, se recalcula). */
++  const itemsCalculados = React.useMemo(
++    () => items.map((item) => recalcularDimension(item, transporte)),
++    [items, transporte],
++  );
++
+   const totalesFilas = React.useMemo(
+-    () => calcularTotalesMedidas(items, codTipoTransporte),
+-    [items, codTipoTransporte],
++    () => calcularTotalesMedidas(items, transporte),
++    [items, transporte],
+   );
+ 
+   /*
+@@ -371,7 +385,7 @@ export function CalculadoraMedidas({
+ 
+       unidadPeso: pesoValido ? form.unidadPeso : null,
+ 
+-      codTipoTransporte: codTipoTransporte ?? null,
++      transporte,
+     });
+ 
+     setItems((prev) => [...prev, dimension]);
+@@ -393,7 +407,7 @@ export function CalculadoraMedidas({
+ 
+       pesoUnitario: "",
+     }));
+-  }, [puedeAgregarFila, form, items, medidasValidas, pesoValido, codTipoTransporte]);
++  }, [puedeAgregarFila, form, items, medidasValidas, pesoValido, transporte]);
+ 
+   /* ==========================================================================
+    * ELIMINAR FILA
+@@ -454,13 +468,37 @@ export function CalculadoraMedidas({
+     }
+ 
+     onAplicar({
+-      dimensiones: items,
++      dimensiones: itemsCalculados,
+ 
+       totales: totalesFinales,
+     });
+ 
+     onOpenChange(false);
+-  }, [puedeAplicar, items, totalesFinales, onAplicar, onOpenChange]);
++  }, [puedeAplicar, itemsCalculados, totalesFinales, onAplicar, onOpenChange]);
++
++  /* ==========================================================================
++   * AVISOS (#157): transporte o unidad sin conversión
++   * ========================================================================== */
++
++  const avisoTransporte =
++    !cargandoTransporte && !transporteReconocido
++      ? `No se reconoce el tipo de transporte${transporte ? ` "${transporte}"` : ""}; se calcula como AEREO.`
++      : null;
++
++  const unidadesSinConversion = [
++    ...new Set(
++      [form.unidadMedida, form.unidadPeso, ...items.flatMap((i) => [i.unidadMedida, i.unidadPeso])]
++        .map((unidad) => unidad?.tipo_desc)
++        .filter((nombre): nombre is string => Boolean(nombre) && !esUnidadConocida(nombre)),
++    ),
++  ];
++
++  const avisos = [
++    ...(avisoTransporte ? [avisoTransporte] : []),
++    ...(unidadesSinConversion.length
++      ? [`Sin conversión para: ${unidadesSinConversion.join(", ")}; esas medidas cuentan como 0.`]
++      : []),
++  ];
+ 
+   /* ==========================================================================
+    * RENDER
+@@ -475,6 +513,20 @@ export function CalculadoraMedidas({
+           <DialogTitle>{etiquetas.titulo}</DialogTitle>
+         </DialogHeader>
+ 
++        {avisos.length ? (
++          <div
++            role="alert"
++            className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-200"
++          >
++            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
++            <div className="space-y-1">
++              {avisos.map((aviso) => (
++                <p key={aviso}>{aviso}</p>
++              ))}
++            </div>
++          </div>
++        ) : null}
++
+         <div className="space-y-5">
+           {/* ================================================================
+               INGRESO DE UNA FILA
+@@ -708,7 +760,7 @@ export function CalculadoraMedidas({
+               </TableHeader>
+ 
+               <TableBody>
+-                {!items.length ? (
++                {!itemsCalculados.length ? (
+                   <TableRow>
+                     <TableCell
+                       colSpan={lectura ? 5 : 6}
+@@ -718,7 +770,7 @@ export function CalculadoraMedidas({
+                     </TableCell>
+                   </TableRow>
+                 ) : (
+-                  items.map((item) => (
++                  itemsCalculados.map((item) => (
+                     <TableRow key={String(item.id)}>
+                       <TableCell>{item.cantidad}</TableCell>
+ 
+diff --git a/src/features/pricing/shared/calculadora-embarque/hooks/use-nombre-transporte.ts b/src/features/pricing/shared/calculadora-embarque/hooks/use-nombre-transporte.ts
+new file mode 100644
+index 0000000..f723e13
+--- /dev/null
++++ b/src/features/pricing/shared/calculadora-embarque/hooks/use-nombre-transporte.ts
+@@ -0,0 +1,39 @@
++"use client";
++
++import React from "react";
++
++import { tipos } from "@/features/catalogos";
++
++import { reconocerTransporte } from "../lib/calculos";
++
++/**
++ * Nombre (nomTipo) del tipo de transporte, desde el catálogo `tipos` con
++ * `tipo_tabla = 'TRANSPORTE'`. Las conversiones deciden por nombre, no por código,
++ * porque los códigos pueden cambiar entre ambientes (#157).
++ *
++ * Usa la misma consulta que `useCatalogosPricing` (`tipos.useLista()` sin filtros),
++ * así que React Query no repite la llamada si la pantalla ya cargó los catálogos.
++ *
++ * `reconocido`: `false` si el código no está en el catálogo o su nombre no es
++ * AEREO / MARITIMO / TERRESTRE; la calculadora calcula como AEREO y lo avisa.
++ */
++export function useNombreTransporte(codTipoTransporte?: string | number | null) {
++  const lista = tipos.useLista();
++
++  const nombre = React.useMemo(() => {
++    if (codTipoTransporte == null || codTipoTransporte === "") return null;
++
++    const tipo = (lista.data ?? []).find(
++      (item) =>
++        item.tipoTabla === "TRANSPORTE" && String(item.codTipo) === String(codTipoTransporte),
++    );
++
++    return tipo?.nomTipo ?? null;
++  }, [lista.data, codTipoTransporte]);
++
++  return {
++    nombre,
++    reconocido: reconocerTransporte(nombre) != null,
++    isLoading: Boolean(lista.isLoading),
++  };
++}
+diff --git a/src/features/pricing/shared/calculadora-embarque/lib/calculos.ts b/src/features/pricing/shared/calculadora-embarque/lib/calculos.ts
+index 78a4163..7094f64 100644
+--- a/src/features/pricing/shared/calculadora-embarque/lib/calculos.ts
++++ b/src/features/pricing/shared/calculadora-embarque/lib/calculos.ts
+@@ -1,4 +1,5 @@
+-import { TIPOS_TRANSPORTE, type TipoTransporte } from "./constantes";
++import { esNombre, normalizarNombre } from "../../lib/nombres";
++import { NOMBRE_TRANSPORTE, NOMBRE_UNIDAD, type TipoTransporte } from "./constantes";
+ 
+ /* ==========================================================================
+  * CÁLCULOS DE EMBARQUE (corporativos)
+@@ -91,8 +92,6 @@ export type TotalesMedidas = {
+  * CONSTANTES
+  * ========================================================================== */
+ 
+-const UNIDAD_BASE_VOLUMEN = "CENTIMETROS";
+-
+ const CONVERSIONES_LONGITUD = [
+   {
+     from: "METROS",
+@@ -132,37 +131,60 @@ const CONVERSIONES_LONGITUD = [
+ ] as const;
+ 
+ /*
+- * Estas son las reglas que realmente terminan
+- * afectando peso/volumétrico en el componente viejo.
++ * Tabla oficial "Factores de conversión" de la empresa (#157). Se usan tal cual;
++ * cada volumen se lleva primero a una medida que la tabla maneja para su
++ * transporte y luego se calcula (ver convertirVolumetrico).
+  */
+-const CONVERSIONES_PESO_KG = [
+-  {
+-    from: "TONELADAS",
+-    factor: 1000,
+-  },
+-  {
+-    from: "LIBRAS",
+-    factor: 0.453592909,
+-  },
+-] as const;
++const FACTORES = {
++  /** 1 pie = 12 pulgadas. */
++  PIE_PULGADAS: 12,
++  /** 1 tonelada = 1000 kilogramos. */
++  TONELADA_KG: 1000,
++  /** 1 kilo = 2.2046 libras. */
++  KILO_LIBRAS: 2.2046,
++  /** Aéreo: centímetros cúbicos ÷ 6000 = kilos volumétricos. */
++  AEREO_CM3: 6000,
++  /** Aéreo: metros cúbicos ÷ 0.006 = kilos volumétricos. */
++  AEREO_M3: 0.006,
++  /** Aéreo: pulgadas cúbicas ÷ 366 = kilos volumétricos. */
++  AEREO_IN3: 366,
++  /** Pulgadas cúbicas ÷ 1728 = pies cúbicos (y pie cúbico × 1728 = pulgadas cúbicas). */
++  IN3_FT3: 1728,
++  /** Pies cúbicos ÷ 35.3145 = metro cúbico. */
++  FT3_M3: 35.3145,
++  /** Centímetros cúbicos ÷ 1 000 000 = metro cúbico (1 m = 100 cm). */
++  CM3_M3: 1_000_000,
++  /** Marítimo: 1 metro cúbico (CBM) = 1000 kilos volumétricos. */
++  MARITIMO_M3: 1000,
++  /** Terrestre: metro cúbico × 350 = kilos volumétricos. */
++  TERRESTRE_M3: 350,
++} as const;
+ 
+ /* ==========================================================================
+  * HELPERS INTERNOS
+  * ========================================================================== */
+ 
+ /**
+- * El componente legado usa:
+- *
+- * Number(valor).toFixed(0)
+- *
+- * antes de determinar el peso facturable.
++ * Redondeo hacia arriba a entero (regla de la empresa, #157).
++ * Antes se quitan los decimales de punto flotante (333.00000000000006 → 333).
+  */
+-function redondearTotal(value: number): number {
+-  return Number(Number(value).toFixed(0));
++export function redondearArriba(value: unknown): number {
++  return Math.ceil(Number(numero(value).toFixed(6)));
++}
++
++/** Tipo de transporte por su nombre (nomTipo); `null` si el nombre no es uno conocido. */
++export function reconocerTransporte(transporte?: string | null): TipoTransporte | null {
++  return Object.values(NOMBRE_TRANSPORTE).find((nombre) => esNombre(transporte, nombre)) ?? null;
++}
++
++/** Transporte para calcular: si el nombre no se reconoce, se calcula como AEREO. */
++function obtenerTipoTransporte(transporte?: string | null): TipoTransporte {
++  return reconocerTransporte(transporte) ?? NOMBRE_TRANSPORTE.AEREO;
+ }
+ 
+-function obtenerTipoTransporte(codTipoTransporte?: Id | null): TipoTransporte {
+-  return TIPOS_TRANSPORTE[Number(codTipoTransporte) as keyof typeof TIPOS_TRANSPORTE] ?? "AEREO";
++/** `true` si la unidad (tipo_desc) tiene conversión en la calculadora. */
++export function esUnidadConocida(unidad?: string | null): boolean {
++  return Object.values(NOMBRE_UNIDAD).some((nombre) => esNombre(unidad, nombre));
+ }
+ 
+ /* ==========================================================================
+@@ -171,6 +193,7 @@ function obtenerTipoTransporte(codTipoTransporte?: Id | null): TipoTransporte {
+ 
+ /**
+  * Replica convertirLongitud del componente legado.
++ * El volumétrico ya no la usa: sigue los caminos de la tabla (convertirVolumetrico).
+  */
+ export function convertirLongitud(
+   valor: number,
+@@ -216,22 +239,35 @@ export function calcularVolumen(largo: unknown, ancho: unknown, alto: unknown):
+   return numero(largo) * numero(ancho) * numero(alto);
+ }
+ 
+-function volumenACentimetrosCubicos(volumenUnitario: number, unidad?: string | null): number {
+-  if (!unidad) {
+-    return 0;
+-  }
++/**
++ * Volumen en metros cúbicos (Marítimo y Terrestre), con los factores de la tabla:
++ * pulgadas³ ÷ 1728 = pies³; pies³ ÷ 35.3145 = m³; cm³ ÷ 1 000 000 = m³.
++ * `0` si la unidad no se reconoce.
++ */
++function volumenAMetrosCubicos(volumen: number, unidad?: string | null): number {
++  const nombre = normalizarNombre(unidad);
+ 
+-  if (unidad === UNIDAD_BASE_VOLUMEN) {
+-    return volumenUnitario;
+-  }
++  if (nombre === NOMBRE_UNIDAD.METROS) return volumen;
++  if (nombre === NOMBRE_UNIDAD.PIES) return volumen / FACTORES.FT3_M3;
++  if (nombre === NOMBRE_UNIDAD.PULGADAS) return volumen / FACTORES.IN3_FT3 / FACTORES.FT3_M3;
++  if (nombre === NOMBRE_UNIDAD.CENTIMETROS) return volumen / FACTORES.CM3_M3;
+ 
+-  const ladoEnCm = convertirLongitud(1, unidad, UNIDAD_BASE_VOLUMEN);
++  return 0;
++}
+ 
+-  if (!ladoEnCm) {
+-    return 0;
+-  }
++/**
++ * Aéreo, con los factores de la tabla: cm³ ÷ 6000, m³ ÷ 0.006, pulgadas³ ÷ 366.
++ * Pies: pies³ × 1728 = pulgadas³ y luego ÷ 366. `0` si la unidad no se reconoce.
++ */
++function volumetricoAereo(volumen: number, unidad?: string | null): number {
++  const nombre = normalizarNombre(unidad);
+ 
+-  return volumenUnitario * ladoEnCm ** 3;
++  if (nombre === NOMBRE_UNIDAD.CENTIMETROS) return volumen / FACTORES.AEREO_CM3;
++  if (nombre === NOMBRE_UNIDAD.METROS) return volumen / FACTORES.AEREO_M3;
++  if (nombre === NOMBRE_UNIDAD.PULGADAS) return volumen / FACTORES.AEREO_IN3;
++  if (nombre === NOMBRE_UNIDAD.PIES) return (volumen * FACTORES.IN3_FT3) / FACTORES.AEREO_IN3;
++
++  return 0;
+ }
+ 
+ /* ==========================================================================
+@@ -239,30 +275,22 @@ function volumenACentimetrosCubicos(volumenUnitario: number, unidad?: string | n
+  * ========================================================================== */
+ 
+ /**
+- * Convierte peso a kilogramos.
+- *
+- * El componente antiguo busca estas reglas dentro
+- * de las conversiones marcadas como AEREO,
+- * independientemente del transporte seleccionado.
++ * Convierte peso a kilogramos (tabla de la empresa): toneladas × 1000, libras ÷ 2.2046.
++ * Igual para todos los transportes. `0` si la unidad no se reconoce.
+  */
+ export function convertirPesoAKg(valor: unknown, unidad?: string | null): number {
+   const peso = numero(valor);
++  const nombre = normalizarNombre(unidad);
+ 
+-  if (!peso || !unidad) {
++  if (!peso || !nombre) {
+     return 0;
+   }
+ 
+-  if (unidad === "KILOGRAMOS") {
+-    return peso;
+-  }
++  if (nombre === NOMBRE_UNIDAD.KILOGRAMOS) return peso;
++  if (nombre === NOMBRE_UNIDAD.TONELADAS) return peso * FACTORES.TONELADA_KG;
++  if (nombre === NOMBRE_UNIDAD.LIBRAS) return peso / FACTORES.KILO_LIBRAS;
+ 
+-  const regla = CONVERSIONES_PESO_KG.find((item) => item.from === unidad);
+-
+-  if (!regla) {
+-    return 0;
+-  }
+-
+-  return peso * regla.factor;
++  return 0;
+ }
+ 
+ /* ==========================================================================
+@@ -270,29 +298,20 @@ export function convertirPesoAKg(valor: unknown, unidad?: string | null): number
+  * ========================================================================== */
+ 
+ /**
+- * Convierte el volumen UNITARIO según transporte.
+- *
+- * AEREO
+- * ------
+- * cm³ / 6000
++ * Convierte el volumen UNITARIO a kilos volumétricos según el transporte (por su
++ * nombre), con la tabla de la empresa. Primero se lleva a una medida que la tabla
++ * maneja para ese transporte y luego se calcula:
+  *
+- * MARITIMO
+- * ---------
+- * (cm³ / 1,000,000) * 1000
+- * 1 CBM = 1000 kilos volumétricos.
++ * AEREO      cm³ ÷ 6000 · m³ ÷ 0.006 · pulgadas³ ÷ 366 · pies³ × 1728 ÷ 366
++ * MARITIMO   m³ × 1000 (1 CBM = 1000 kilos volumétricos)
++ * TERRESTRE  m³ × 350
+  *
+- * TERRESTRE
+- * ----------
+- * convierte el volumen a m³ y multiplica por 333.
+- *
+- * IMPORTANTE:
+- * El valor actual es 333, aunque anteriormente
+- * se haya hablado de 350.
++ * Si el transporte no se reconoce se calcula como AEREO (la calculadora avisa).
+  */
+ export function convertirVolumetrico(
+   volumenUnitario: unknown,
+   unidad?: string | null,
+-  codTipoTransporte?: Id | null,
++  transporte?: string | null,
+ ): number {
+   const volumen = numero(volumenUnitario);
+ 
+@@ -300,47 +319,17 @@ export function convertirVolumetrico(
+     return 0;
+   }
+ 
+-  const transporte = obtenerTipoTransporte(codTipoTransporte);
+-
+-  /* --------------------------------------------------------------------------
+-   * MARÍTIMO
+-   * ----------------------------------------------------------------------- */
++  const tipo = obtenerTipoTransporte(transporte);
+ 
+-  if (transporte === "MARITIMO") {
+-    const volumenCm3 = volumenACentimetrosCubicos(volumen, unidad);
+-
+-    const volumenCbm = volumenCm3 / 1_000_000;
+-
+-    return volumenCbm * 1000;
++  if (tipo === NOMBRE_TRANSPORTE.MARITIMO) {
++    return volumenAMetrosCubicos(volumen, unidad) * FACTORES.MARITIMO_M3;
+   }
+ 
+-  /* --------------------------------------------------------------------------
+-   * AÉREO
+-   * ----------------------------------------------------------------------- */
+-
+-  if (transporte === "AEREO") {
+-    const volumenCm3 = volumenACentimetrosCubicos(volumen, unidad);
+-
+-    return volumenCm3 / 6000;
+-  }
+-
+-  /* --------------------------------------------------------------------------
+-   * TERRESTRE
+-   *
+-   * La regla actual es:
+-   *
+-   * METROS³ * 333
+-   * ----------------------------------------------------------------------- */
+-
+-  const ladoEnMetros = convertirLongitud(1, unidad, "METROS");
+-
+-  if (!ladoEnMetros) {
+-    return 0;
++  if (tipo === NOMBRE_TRANSPORTE.TERRESTRE) {
++    return volumenAMetrosCubicos(volumen, unidad) * FACTORES.TERRESTRE_M3;
+   }
+ 
+-  const volumenM3 = volumen * ladoEnMetros ** 3;
+-
+-  return volumenM3 * 333;
++  return volumetricoAereo(volumen, unidad);
+ }
+ 
+ /* ==========================================================================
+@@ -364,7 +353,7 @@ export function crearDimension({
+ 
+   unidadPeso,
+ 
+-  codTipoTransporte,
++  transporte,
+ }: {
+   id: Id;
+ 
+@@ -382,7 +371,8 @@ export function crearDimension({
+ 
+   unidadPeso: Unidad | null;
+ 
+-  codTipoTransporte?: Id | null;
++  /** Nombre del tipo de transporte (nomTipo). */
++  transporte?: string | null;
+ }): DimensionCalculo {
+   const cantidadProcesada = numero(cantidad || 1);
+ 
+@@ -403,7 +393,7 @@ export function crearDimension({
+ 
+     unidadMedida?.tipo_desc,
+ 
+-    codTipoTransporte,
++    transporte,
+   );
+ 
+   const volumenTotalKg = volumenUnitarioKg * cantidadProcesada;
+@@ -459,9 +449,32 @@ export function crearDimension({
+  * TOTALES
+  * ========================================================================== */
+ 
++/**
++ * La misma fila con el volumétrico del transporte indicado (nombre). La fila guarda
++ * el del transporte con el que se creó; si el transporte cambia, se recalcula.
++ */
++export function recalcularDimension(
++  dimension: DimensionCalculo,
++  transporte?: string | null,
++): DimensionCalculo {
++  const volumenUnitario =
++    dimension.volumenUnitario ?? calcularVolumen(dimension.largo, dimension.ancho, dimension.alto);
++
++  const volumenTotalKg =
++    convertirVolumetrico(volumenUnitario, dimension.unidadMedida?.tipo_desc, transporte) *
++    numero(dimension.cantidad);
++
++  return {
++    ...dimension,
++    volumenTotalKg,
++    total_volumen: volumenTotalKg,
++    total_cw: Math.max(numero(dimension.pesoTotalKg), volumenTotalKg),
++  };
++}
++
+ export function calcularTotalesMedidas(
+   dimensiones: DimensionCalculo[],
+-  codTipoTransporte?: Id | null,
++  transporte?: string | null,
+ ): TotalesMedidas {
+   const pesoSinRedondear = dimensiones.reduce((total, dimension) => {
+     /*
+@@ -481,46 +494,21 @@ export function calcularTotalesMedidas(
+     return total + pesoUnitarioKg * numero(dimension.cantidad);
+   }, 0);
+ 
+-  const volumenSinRedondear = dimensiones.reduce((total, dimension) => {
+-    if (dimension.volumenTotalKg != null) {
+-      return total + numero(dimension.volumenTotalKg);
+-    }
+-
+-    const volumenUnitario =
+-      dimension.volumenUnitario ??
+-      calcularVolumen(
+-        dimension.largo,
+-
+-        dimension.ancho,
+-
+-        dimension.alto,
+-      );
+-
+-    const volumetricoUnitario = convertirVolumetrico(
+-      volumenUnitario,
+-
+-      dimension.unidadMedida?.tipo_desc,
+-
+-      codTipoTransporte,
+-    );
+-
+-    return total + volumetricoUnitario * numero(dimension.cantidad);
+-  }, 0);
++  /* El volumétrico siempre se recalcula con el transporte actual (no el de la fila). */
++  const volumenSinRedondear = dimensiones.reduce(
++    (total, dimension) => total + recalcularDimension(dimension, transporte).volumenTotalKg,
++    0,
++  );
+ 
+   const cantidadTotal = dimensiones.reduce(
+     (total, dimension) => total + numero(dimension.cantidad),
+     0,
+   );
+ 
+-  /*
+-   * El código legado ejecuta redondear()
+-   * antes de calcular facturableKg.
+-   *
+-   * redondear() usa toFixed(0).
+-   */
+-  const pesoTotal = redondearTotal(pesoSinRedondear);
++  /* Se redondea hacia arriba antes de determinar el CW (#157). */
++  const pesoTotal = redondearArriba(pesoSinRedondear);
+ 
+-  const volumenTotal = redondearTotal(volumenSinRedondear);
++  const volumenTotal = redondearArriba(volumenSinRedondear);
+ 
+   if (pesoTotal === 0 && volumenTotal === 0) {
+     return {
+diff --git a/src/features/pricing/shared/calculadora-embarque/lib/constantes.ts b/src/features/pricing/shared/calculadora-embarque/lib/constantes.ts
+index d936407..ee8d156 100644
+--- a/src/features/pricing/shared/calculadora-embarque/lib/constantes.ts
++++ b/src/features/pricing/shared/calculadora-embarque/lib/constantes.ts
+@@ -31,6 +31,22 @@ export const TIPOS_TRANSPORTE = {
+ 
+ export type TipoTransporte = (typeof TIPOS_TRANSPORTE)[keyof typeof TIPOS_TRANSPORTE];
+ 
++/**
++ * Nombre (tipo_desc) de cada unidad de la relación de tipos COORDINACION_CARGA / TIPO_MEDIDA.
++ * Las conversiones comparan este nombre con `esNombre` (los códigos pueden cambiar entre ambientes).
++ */
++export const NOMBRE_UNIDAD = {
++  /* VOLUMEN (longitud de cada lado) */
++  CENTIMETROS: "CENTIMETROS",
++  METROS: "METROS",
++  PIES: "PIES",
++  PULGADAS: "PULGADAS",
++  /* PESO */
++  KILOGRAMOS: "KILOGRAMOS",
++  LIBRAS: "LIBRAS",
++  TONELADAS: "TONELADAS",
++} as const;
++
+ /** Unidades por defecto de la calculadora (cod_tipo de la relación de tipos). */
+ export const UNIDAD_DEFAULT = {
+   /** Unidad de volumen / medida. */
+diff --git a/src/features/pricing/shared/calculadora-embarque/lib/etiquetas.ts b/src/features/pricing/shared/calculadora-embarque/lib/etiquetas.ts
+index fdc2d3f..585a847 100644
+--- a/src/features/pricing/shared/calculadora-embarque/lib/etiquetas.ts
++++ b/src/features/pricing/shared/calculadora-embarque/lib/etiquetas.ts
+@@ -1,4 +1,5 @@
+-import { TIPO_TRANSPORTE } from "./constantes";
++import { normalizarNombre } from "../../lib/nombres";
++import { NOMBRE_TRANSPORTE } from "./constantes";
+ 
+ /* ==========================================================================
+  * TEXTOS DE LA CALCULADORA POR TIPO DE TRANSPORTE
+@@ -6,7 +7,7 @@ import { TIPO_TRANSPORTE } from "./constantes";
+  * ETIQUETAS_BASE aplica a todos. Si un transporte necesita un texto propio,
+  * se agrega SOLO ese texto en ETIQUETAS_POR_TRANSPORTE; lo demás se hereda.
+  *
+- *   [TIPO_TRANSPORTE.MARITIMO]: { volumen: "CBM", tipoVolumen: "CBM" },
++ *   [NOMBRE_TRANSPORTE.MARITIMO]: { volumen: "CBM", tipoVolumen: "CBM" },
+  * ========================================================================== */
+ 
+ export type EtiquetasCalculadora = {
+@@ -33,17 +34,16 @@ const ETIQUETAS_BASE: EtiquetasCalculadora = {
+ };
+ 
+ /** Solo los textos que cambian respecto a ETIQUETAS_BASE. Hoy ninguno. */
+-const ETIQUETAS_POR_TRANSPORTE: Partial<Record<number, Partial<EtiquetasCalculadora>>> = {
+-  [TIPO_TRANSPORTE.AEREO]: {},
+-  [TIPO_TRANSPORTE.MARITIMO]: {},
+-  [TIPO_TRANSPORTE.TERRESTRE]: {},
++const ETIQUETAS_POR_TRANSPORTE: Partial<Record<string, Partial<EtiquetasCalculadora>>> = {
++  [NOMBRE_TRANSPORTE.AEREO]: {},
++  [NOMBRE_TRANSPORTE.MARITIMO]: {},
++  [NOMBRE_TRANSPORTE.TERRESTRE]: {},
+ };
+ 
+-export function obtenerEtiquetasCalculadora(
+-  codTipoTransporte?: string | number | null,
+-): EtiquetasCalculadora {
++/** `transporte`: nombre del tipo de transporte (nomTipo). */
++export function obtenerEtiquetasCalculadora(transporte?: string | null): EtiquetasCalculadora {
+   const propias =
+-    codTipoTransporte == null ? undefined : ETIQUETAS_POR_TRANSPORTE[Number(codTipoTransporte)];
++    transporte == null ? undefined : ETIQUETAS_POR_TRANSPORTE[normalizarNombre(transporte)];
+ 
+   return propias ? { ...ETIQUETAS_BASE, ...propias } : ETIQUETAS_BASE;
+ }
+diff --git a/src/features/pricing/shared/index.ts b/src/features/pricing/shared/index.ts
+index f2ef73c..3bb8654 100644
+--- a/src/features/pricing/shared/index.ts
++++ b/src/features/pricing/shared/index.ts
+@@ -58,6 +58,7 @@ export {
+   CalculadoraMedidas,
+   type CalculadoraMedidasProps,
+ } from "./calculadora-embarque/components/calculadora-medidas";
++export { useNombreTransporte } from "./calculadora-embarque/hooks/use-nombre-transporte";
+ export { useUnidadesEmbarque } from "./calculadora-embarque/hooks/use-unidades-embarque";
+ export {
+   calcularTotalesMedidas,
+@@ -68,11 +69,16 @@ export {
+   convertirVolumetrico,
+   crearDimension,
+   type DimensionCalculo,
++  esUnidadConocida,
++  recalcularDimension,
++  reconocerTransporte,
++  redondearArriba,
+   type TotalesMedidas,
+   type Unidad,
+ } from "./calculadora-embarque/lib/calculos";
+ export {
+   NOMBRE_TRANSPORTE,
++  NOMBRE_UNIDAD,
+   TIPO_TRANSPORTE,
+   TIPOS_TRANSPORTE,
+   type TipoTransporte,

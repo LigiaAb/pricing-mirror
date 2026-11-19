@@ -1,4 +1,5 @@
-import { TIPOS_TRANSPORTE, type TipoTransporte } from "./constantes";
+import { esNombre, normalizarNombre } from "../../lib/nombres";
+import { NOMBRE_TRANSPORTE, NOMBRE_UNIDAD, type TipoTransporte } from "./constantes";
 
 /* ==========================================================================
  * CÁLCULOS DE EMBARQUE (corporativos)
@@ -91,8 +92,6 @@ export type TotalesMedidas = {
  * CONSTANTES
  * ========================================================================== */
 
-const UNIDAD_BASE_VOLUMEN = "CENTIMETROS";
-
 const CONVERSIONES_LONGITUD = [
   {
     from: "METROS",
@@ -132,37 +131,60 @@ const CONVERSIONES_LONGITUD = [
 ] as const;
 
 /*
- * Estas son las reglas que realmente terminan
- * afectando peso/volumétrico en el componente viejo.
+ * Tabla oficial "Factores de conversión" de la empresa (#157). Se usan tal cual;
+ * cada volumen se lleva primero a una medida que la tabla maneja para su
+ * transporte y luego se calcula (ver convertirVolumetrico).
  */
-const CONVERSIONES_PESO_KG = [
-  {
-    from: "TONELADAS",
-    factor: 1000,
-  },
-  {
-    from: "LIBRAS",
-    factor: 0.453592909,
-  },
-] as const;
+const FACTORES = {
+  /** 1 pie = 12 pulgadas. */
+  PIE_PULGADAS: 12,
+  /** 1 tonelada = 1000 kilogramos. */
+  TONELADA_KG: 1000,
+  /** 1 kilo = 2.2046 libras. */
+  KILO_LIBRAS: 2.2046,
+  /** Aéreo: centímetros cúbicos ÷ 6000 = kilos volumétricos. */
+  AEREO_CM3: 6000,
+  /** Aéreo: metros cúbicos ÷ 0.006 = kilos volumétricos. */
+  AEREO_M3: 0.006,
+  /** Aéreo: pulgadas cúbicas ÷ 366 = kilos volumétricos. */
+  AEREO_IN3: 366,
+  /** Pulgadas cúbicas ÷ 1728 = pies cúbicos (y pie cúbico × 1728 = pulgadas cúbicas). */
+  IN3_FT3: 1728,
+  /** Pies cúbicos ÷ 35.3145 = metro cúbico. */
+  FT3_M3: 35.3145,
+  /** Centímetros cúbicos ÷ 1 000 000 = metro cúbico (1 m = 100 cm). */
+  CM3_M3: 1_000_000,
+  /** Marítimo: 1 metro cúbico (CBM) = 1000 kilos volumétricos. */
+  MARITIMO_M3: 1000,
+  /** Terrestre: metro cúbico × 350 = kilos volumétricos. */
+  TERRESTRE_M3: 350,
+} as const;
 
 /* ==========================================================================
  * HELPERS INTERNOS
  * ========================================================================== */
 
 /**
- * El componente legado usa:
- *
- * Number(valor).toFixed(0)
- *
- * antes de determinar el peso facturable.
+ * Redondeo hacia arriba a entero (regla de la empresa, #157).
+ * Antes se quitan los decimales de punto flotante (333.00000000000006 → 333).
  */
-function redondearTotal(value: number): number {
-  return Number(Number(value).toFixed(0));
+export function redondearArriba(value: unknown): number {
+  return Math.ceil(Number(numero(value).toFixed(6)));
 }
 
-function obtenerTipoTransporte(codTipoTransporte?: Id | null): TipoTransporte {
-  return TIPOS_TRANSPORTE[Number(codTipoTransporte) as keyof typeof TIPOS_TRANSPORTE] ?? "AEREO";
+/** Tipo de transporte por su nombre (nomTipo); `null` si el nombre no es uno conocido. */
+export function reconocerTransporte(transporte?: string | null): TipoTransporte | null {
+  return Object.values(NOMBRE_TRANSPORTE).find((nombre) => esNombre(transporte, nombre)) ?? null;
+}
+
+/** Transporte para calcular: si el nombre no se reconoce, se calcula como AEREO. */
+function obtenerTipoTransporte(transporte?: string | null): TipoTransporte {
+  return reconocerTransporte(transporte) ?? NOMBRE_TRANSPORTE.AEREO;
+}
+
+/** `true` si la unidad (tipo_desc) tiene conversión en la calculadora. */
+export function esUnidadConocida(unidad?: string | null): boolean {
+  return Object.values(NOMBRE_UNIDAD).some((nombre) => esNombre(unidad, nombre));
 }
 
 /* ==========================================================================
@@ -171,6 +193,7 @@ function obtenerTipoTransporte(codTipoTransporte?: Id | null): TipoTransporte {
 
 /**
  * Replica convertirLongitud del componente legado.
+ * El volumétrico ya no la usa: sigue los caminos de la tabla (convertirVolumetrico).
  */
 export function convertirLongitud(
   valor: number,
@@ -216,22 +239,35 @@ export function calcularVolumen(largo: unknown, ancho: unknown, alto: unknown): 
   return numero(largo) * numero(ancho) * numero(alto);
 }
 
-function volumenACentimetrosCubicos(volumenUnitario: number, unidad?: string | null): number {
-  if (!unidad) {
-    return 0;
-  }
+/**
+ * Volumen en metros cúbicos (Marítimo y Terrestre), con los factores de la tabla:
+ * pulgadas³ ÷ 1728 = pies³; pies³ ÷ 35.3145 = m³; cm³ ÷ 1 000 000 = m³.
+ * `0` si la unidad no se reconoce.
+ */
+function volumenAMetrosCubicos(volumen: number, unidad?: string | null): number {
+  const nombre = normalizarNombre(unidad);
 
-  if (unidad === UNIDAD_BASE_VOLUMEN) {
-    return volumenUnitario;
-  }
+  if (nombre === NOMBRE_UNIDAD.METROS) return volumen;
+  if (nombre === NOMBRE_UNIDAD.PIES) return volumen / FACTORES.FT3_M3;
+  if (nombre === NOMBRE_UNIDAD.PULGADAS) return volumen / FACTORES.IN3_FT3 / FACTORES.FT3_M3;
+  if (nombre === NOMBRE_UNIDAD.CENTIMETROS) return volumen / FACTORES.CM3_M3;
 
-  const ladoEnCm = convertirLongitud(1, unidad, UNIDAD_BASE_VOLUMEN);
+  return 0;
+}
 
-  if (!ladoEnCm) {
-    return 0;
-  }
+/**
+ * Aéreo, con los factores de la tabla: cm³ ÷ 6000, m³ ÷ 0.006, pulgadas³ ÷ 366.
+ * Pies: pies³ × 1728 = pulgadas³ y luego ÷ 366. `0` si la unidad no se reconoce.
+ */
+function volumetricoAereo(volumen: number, unidad?: string | null): number {
+  const nombre = normalizarNombre(unidad);
 
-  return volumenUnitario * ladoEnCm ** 3;
+  if (nombre === NOMBRE_UNIDAD.CENTIMETROS) return volumen / FACTORES.AEREO_CM3;
+  if (nombre === NOMBRE_UNIDAD.METROS) return volumen / FACTORES.AEREO_M3;
+  if (nombre === NOMBRE_UNIDAD.PULGADAS) return volumen / FACTORES.AEREO_IN3;
+  if (nombre === NOMBRE_UNIDAD.PIES) return (volumen * FACTORES.IN3_FT3) / FACTORES.AEREO_IN3;
+
+  return 0;
 }
 
 /* ==========================================================================
@@ -239,30 +275,22 @@ function volumenACentimetrosCubicos(volumenUnitario: number, unidad?: string | n
  * ========================================================================== */
 
 /**
- * Convierte peso a kilogramos.
- *
- * El componente antiguo busca estas reglas dentro
- * de las conversiones marcadas como AEREO,
- * independientemente del transporte seleccionado.
+ * Convierte peso a kilogramos (tabla de la empresa): toneladas × 1000, libras ÷ 2.2046.
+ * Igual para todos los transportes. `0` si la unidad no se reconoce.
  */
 export function convertirPesoAKg(valor: unknown, unidad?: string | null): number {
   const peso = numero(valor);
+  const nombre = normalizarNombre(unidad);
 
-  if (!peso || !unidad) {
+  if (!peso || !nombre) {
     return 0;
   }
 
-  if (unidad === "KILOGRAMOS") {
-    return peso;
-  }
+  if (nombre === NOMBRE_UNIDAD.KILOGRAMOS) return peso;
+  if (nombre === NOMBRE_UNIDAD.TONELADAS) return peso * FACTORES.TONELADA_KG;
+  if (nombre === NOMBRE_UNIDAD.LIBRAS) return peso / FACTORES.KILO_LIBRAS;
 
-  const regla = CONVERSIONES_PESO_KG.find((item) => item.from === unidad);
-
-  if (!regla) {
-    return 0;
-  }
-
-  return peso * regla.factor;
+  return 0;
 }
 
 /* ==========================================================================
@@ -270,29 +298,20 @@ export function convertirPesoAKg(valor: unknown, unidad?: string | null): number
  * ========================================================================== */
 
 /**
- * Convierte el volumen UNITARIO según transporte.
+ * Convierte el volumen UNITARIO a kilos volumétricos según el transporte (por su
+ * nombre), con la tabla de la empresa. Primero se lleva a una medida que la tabla
+ * maneja para ese transporte y luego se calcula:
  *
- * AEREO
- * ------
- * cm³ / 6000
+ * AEREO      cm³ ÷ 6000 · m³ ÷ 0.006 · pulgadas³ ÷ 366 · pies³ × 1728 ÷ 366
+ * MARITIMO   m³ × 1000 (1 CBM = 1000 kilos volumétricos)
+ * TERRESTRE  m³ × 350
  *
- * MARITIMO
- * ---------
- * (cm³ / 1,000,000) * 1000
- * 1 CBM = 1000 kilos volumétricos.
- *
- * TERRESTRE
- * ----------
- * convierte el volumen a m³ y multiplica por 333.
- *
- * IMPORTANTE:
- * El valor actual es 333, aunque anteriormente
- * se haya hablado de 350.
+ * Si el transporte no se reconoce se calcula como AEREO (la calculadora avisa).
  */
 export function convertirVolumetrico(
   volumenUnitario: unknown,
   unidad?: string | null,
-  codTipoTransporte?: Id | null,
+  transporte?: string | null,
 ): number {
   const volumen = numero(volumenUnitario);
 
@@ -300,47 +319,17 @@ export function convertirVolumetrico(
     return 0;
   }
 
-  const transporte = obtenerTipoTransporte(codTipoTransporte);
+  const tipo = obtenerTipoTransporte(transporte);
 
-  /* --------------------------------------------------------------------------
-   * MARÍTIMO
-   * ----------------------------------------------------------------------- */
-
-  if (transporte === "MARITIMO") {
-    const volumenCm3 = volumenACentimetrosCubicos(volumen, unidad);
-
-    const volumenCbm = volumenCm3 / 1_000_000;
-
-    return volumenCbm * 1000;
+  if (tipo === NOMBRE_TRANSPORTE.MARITIMO) {
+    return volumenAMetrosCubicos(volumen, unidad) * FACTORES.MARITIMO_M3;
   }
 
-  /* --------------------------------------------------------------------------
-   * AÉREO
-   * ----------------------------------------------------------------------- */
-
-  if (transporte === "AEREO") {
-    const volumenCm3 = volumenACentimetrosCubicos(volumen, unidad);
-
-    return volumenCm3 / 6000;
+  if (tipo === NOMBRE_TRANSPORTE.TERRESTRE) {
+    return volumenAMetrosCubicos(volumen, unidad) * FACTORES.TERRESTRE_M3;
   }
 
-  /* --------------------------------------------------------------------------
-   * TERRESTRE
-   *
-   * La regla actual es:
-   *
-   * METROS³ * 333
-   * ----------------------------------------------------------------------- */
-
-  const ladoEnMetros = convertirLongitud(1, unidad, "METROS");
-
-  if (!ladoEnMetros) {
-    return 0;
-  }
-
-  const volumenM3 = volumen * ladoEnMetros ** 3;
-
-  return volumenM3 * 333;
+  return volumetricoAereo(volumen, unidad);
 }
 
 /* ==========================================================================
@@ -364,7 +353,7 @@ export function crearDimension({
 
   unidadPeso,
 
-  codTipoTransporte,
+  transporte,
 }: {
   id: Id;
 
@@ -382,7 +371,8 @@ export function crearDimension({
 
   unidadPeso: Unidad | null;
 
-  codTipoTransporte?: Id | null;
+  /** Nombre del tipo de transporte (nomTipo). */
+  transporte?: string | null;
 }): DimensionCalculo {
   const cantidadProcesada = numero(cantidad || 1);
 
@@ -403,7 +393,7 @@ export function crearDimension({
 
     unidadMedida?.tipo_desc,
 
-    codTipoTransporte,
+    transporte,
   );
 
   const volumenTotalKg = volumenUnitarioKg * cantidadProcesada;
@@ -459,9 +449,32 @@ export function crearDimension({
  * TOTALES
  * ========================================================================== */
 
+/**
+ * La misma fila con el volumétrico del transporte indicado (nombre). La fila guarda
+ * el del transporte con el que se creó; si el transporte cambia, se recalcula.
+ */
+export function recalcularDimension(
+  dimension: DimensionCalculo,
+  transporte?: string | null,
+): DimensionCalculo {
+  const volumenUnitario =
+    dimension.volumenUnitario ?? calcularVolumen(dimension.largo, dimension.ancho, dimension.alto);
+
+  const volumenTotalKg =
+    convertirVolumetrico(volumenUnitario, dimension.unidadMedida?.tipo_desc, transporte) *
+    numero(dimension.cantidad);
+
+  return {
+    ...dimension,
+    volumenTotalKg,
+    total_volumen: volumenTotalKg,
+    total_cw: Math.max(numero(dimension.pesoTotalKg), volumenTotalKg),
+  };
+}
+
 export function calcularTotalesMedidas(
   dimensiones: DimensionCalculo[],
-  codTipoTransporte?: Id | null,
+  transporte?: string | null,
 ): TotalesMedidas {
   const pesoSinRedondear = dimensiones.reduce((total, dimension) => {
     /*
@@ -481,46 +494,21 @@ export function calcularTotalesMedidas(
     return total + pesoUnitarioKg * numero(dimension.cantidad);
   }, 0);
 
-  const volumenSinRedondear = dimensiones.reduce((total, dimension) => {
-    if (dimension.volumenTotalKg != null) {
-      return total + numero(dimension.volumenTotalKg);
-    }
-
-    const volumenUnitario =
-      dimension.volumenUnitario ??
-      calcularVolumen(
-        dimension.largo,
-
-        dimension.ancho,
-
-        dimension.alto,
-      );
-
-    const volumetricoUnitario = convertirVolumetrico(
-      volumenUnitario,
-
-      dimension.unidadMedida?.tipo_desc,
-
-      codTipoTransporte,
-    );
-
-    return total + volumetricoUnitario * numero(dimension.cantidad);
-  }, 0);
+  /* El volumétrico siempre se recalcula con el transporte actual (no el de la fila). */
+  const volumenSinRedondear = dimensiones.reduce(
+    (total, dimension) => total + recalcularDimension(dimension, transporte).volumenTotalKg,
+    0,
+  );
 
   const cantidadTotal = dimensiones.reduce(
     (total, dimension) => total + numero(dimension.cantidad),
     0,
   );
 
-  /*
-   * El código legado ejecuta redondear()
-   * antes de calcular facturableKg.
-   *
-   * redondear() usa toFixed(0).
-   */
-  const pesoTotal = redondearTotal(pesoSinRedondear);
+  /* Se redondea hacia arriba antes de determinar el CW (#157). */
+  const pesoTotal = redondearArriba(pesoSinRedondear);
 
-  const volumenTotal = redondearTotal(volumenSinRedondear);
+  const volumenTotal = redondearArriba(volumenSinRedondear);
 
   if (pesoTotal === 0 && volumenTotal === 0) {
     return {

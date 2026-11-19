@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Plus, Trash2 } from "lucide-react";
 import React from "react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -21,14 +21,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/components/ui/table";
+import { useNombreTransporte } from "../hooks/use-nombre-transporte";
 import { useUnidadesEmbarque } from "../hooks/use-unidades-embarque";
 import {
   calcularTotalesMedidas,
   combinarTotales,
   crearDimension,
   type DimensionCalculo,
+  esUnidadConocida,
   type Id,
   numero,
+  recalcularDimension,
+  redondearArriba,
   type TotalesMedidas,
   type Unidad,
 } from "../lib/calculos";
@@ -125,11 +129,8 @@ function crearFormularioInicial({
 function mostrarNumero(value: unknown) {
   const result = numero(value);
 
-  /*
-   * El componente anterior muestra estos
-   * resultados con redondeo a 0 decimales.
-   */
-  return result.toFixed(0);
+  /* Redondeo hacia arriba a entero (#157). */
+  return String(redondearArriba(result));
 }
 
 /* ==========================================================================
@@ -161,6 +162,13 @@ export function CalculadoraMedidas({
   onAplicar,
 }: CalculadoraMedidasProps) {
   const { unidadesMedida, unidadesPeso } = useUnidadesEmbarque();
+
+  /* Las conversiones deciden por el nombre del transporte, no por su código (#157). */
+  const {
+    nombre: transporte,
+    reconocido: transporteReconocido,
+    isLoading: cargandoTransporte,
+  } = useNombreTransporte(codTipoTransporte);
 
   /* ==========================================================================
    * APERTURA (controlada o con trigger)
@@ -197,7 +205,7 @@ export function CalculadoraMedidas({
     cantidad: `${idBase}-cantidad`,
   };
 
-  const etiquetas = obtenerEtiquetasCalculadora(codTipoTransporte);
+  const etiquetas = obtenerEtiquetasCalculadora(transporte);
 
   const [items, setItems] = React.useState<DimensionCalculo[]>([]);
 
@@ -286,9 +294,15 @@ export function CalculadoraMedidas({
    * TOTALES DE FILAS
    * ========================================================================== */
 
+  /* Cada fila con el volumétrico del transporte actual (si cambia, se recalcula). */
+  const itemsCalculados = React.useMemo(
+    () => items.map((item) => recalcularDimension(item, transporte)),
+    [items, transporte],
+  );
+
   const totalesFilas = React.useMemo(
-    () => calcularTotalesMedidas(items, codTipoTransporte),
-    [items, codTipoTransporte],
+    () => calcularTotalesMedidas(items, transporte),
+    [items, transporte],
   );
 
   /*
@@ -371,7 +385,7 @@ export function CalculadoraMedidas({
 
       unidadPeso: pesoValido ? form.unidadPeso : null,
 
-      codTipoTransporte: codTipoTransporte ?? null,
+      transporte,
     });
 
     setItems((prev) => [...prev, dimension]);
@@ -393,7 +407,7 @@ export function CalculadoraMedidas({
 
       pesoUnitario: "",
     }));
-  }, [puedeAgregarFila, form, items, medidasValidas, pesoValido, codTipoTransporte]);
+  }, [puedeAgregarFila, form, items, medidasValidas, pesoValido, transporte]);
 
   /* ==========================================================================
    * ELIMINAR FILA
@@ -454,13 +468,37 @@ export function CalculadoraMedidas({
     }
 
     onAplicar({
-      dimensiones: items,
+      dimensiones: itemsCalculados,
 
       totales: totalesFinales,
     });
 
     onOpenChange(false);
-  }, [puedeAplicar, items, totalesFinales, onAplicar, onOpenChange]);
+  }, [puedeAplicar, itemsCalculados, totalesFinales, onAplicar, onOpenChange]);
+
+  /* ==========================================================================
+   * AVISOS (#157): transporte o unidad sin conversión
+   * ========================================================================== */
+
+  const avisoTransporte =
+    !cargandoTransporte && !transporteReconocido
+      ? `No se reconoce el tipo de transporte${transporte ? ` "${transporte}"` : ""}; se calcula como AEREO.`
+      : null;
+
+  const unidadesSinConversion = [
+    ...new Set(
+      [form.unidadMedida, form.unidadPeso, ...items.flatMap((i) => [i.unidadMedida, i.unidadPeso])]
+        .map((unidad) => unidad?.tipo_desc)
+        .filter((nombre): nombre is string => Boolean(nombre) && !esUnidadConocida(nombre)),
+    ),
+  ];
+
+  const avisos = [
+    ...(avisoTransporte ? [avisoTransporte] : []),
+    ...(unidadesSinConversion.length
+      ? [`Sin conversión para: ${unidadesSinConversion.join(", ")}; esas medidas cuentan como 0.`]
+      : []),
+  ];
 
   /* ==========================================================================
    * RENDER
@@ -474,6 +512,20 @@ export function CalculadoraMedidas({
         <DialogHeader>
           <DialogTitle>{etiquetas.titulo}</DialogTitle>
         </DialogHeader>
+
+        {avisos.length ? (
+          <div
+            role="alert"
+            className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-200"
+          >
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <div className="space-y-1">
+              {avisos.map((aviso) => (
+                <p key={aviso}>{aviso}</p>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div className="space-y-5">
           {/* ================================================================
@@ -708,7 +760,7 @@ export function CalculadoraMedidas({
               </TableHeader>
 
               <TableBody>
-                {!items.length ? (
+                {!itemsCalculados.length ? (
                   <TableRow>
                     <TableCell
                       colSpan={lectura ? 5 : 6}
@@ -718,7 +770,7 @@ export function CalculadoraMedidas({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  items.map((item) => (
+                  itemsCalculados.map((item) => (
                     <TableRow key={String(item.id)}>
                       <TableCell>{item.cantidad}</TableCell>
 

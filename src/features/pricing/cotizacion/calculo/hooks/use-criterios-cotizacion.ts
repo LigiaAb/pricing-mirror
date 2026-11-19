@@ -6,6 +6,7 @@ import {
   calcularTotalesMedidas,
   type DimensionCalculo,
   type TotalesMedidas,
+  useNombreTransporte,
 } from "@/features/pricing/shared";
 
 import {
@@ -51,6 +52,9 @@ export function useCriteriosCotizacion({
   codTipoTransporte,
 }: Props) {
   const { unidadesMedida, unidadesPeso } = useCatalogosCotizacion().calculo;
+
+  /* Las conversiones deciden por el nombre del transporte, no por su código (#157). */
+  const { nombre: transporte } = useNombreTransporte(codTipoTransporte);
 
   /* ==========================================================================
    * ESTADO
@@ -99,10 +103,10 @@ export function useCriteriosCotizacion({
 
         unidadesPeso,
 
-        codTipoTransporte: codTipoTransporte ?? null,
+        transporte,
       }),
     );
-  }, [resetKey, dimensionesIniciales, unidadesMedida, unidadesPeso, codTipoTransporte]);
+  }, [resetKey, dimensionesIniciales, unidadesMedida, unidadesPeso, transporte]);
 
   /* ==========================================================================
    * TOTALES DE LAS FILAS DE DIMENSIONES
@@ -123,8 +127,8 @@ export function useCriteriosCotizacion({
    * ========================================================================== */
 
   const totalesDimensiones = React.useMemo(
-    () => calcularTotalesMedidas(dimensiones, codTipoTransporte),
-    [dimensiones, codTipoTransporte],
+    () => calcularTotalesMedidas(dimensiones, transporte),
+    [dimensiones, transporte],
   );
 
   /* ==========================================================================

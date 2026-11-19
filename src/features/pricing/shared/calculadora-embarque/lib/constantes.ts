@@ -31,6 +31,22 @@ export const TIPOS_TRANSPORTE = {
 
 export type TipoTransporte = (typeof TIPOS_TRANSPORTE)[keyof typeof TIPOS_TRANSPORTE];
 
+/**
+ * Nombre (tipo_desc) de cada unidad de la relación de tipos COORDINACION_CARGA / TIPO_MEDIDA.
+ * Las conversiones comparan este nombre con `esNombre` (los códigos pueden cambiar entre ambientes).
+ */
+export const NOMBRE_UNIDAD = {
+  /* VOLUMEN (longitud de cada lado) */
+  CENTIMETROS: "CENTIMETROS",
+  METROS: "METROS",
+  PIES: "PIES",
+  PULGADAS: "PULGADAS",
+  /* PESO */
+  KILOGRAMOS: "KILOGRAMOS",
+  LIBRAS: "LIBRAS",
+  TONELADAS: "TONELADAS",
+} as const;
+
 /** Unidades por defecto de la calculadora (cod_tipo de la relación de tipos). */
 export const UNIDAD_DEFAULT = {
   /** Unidad de volumen / medida. */
