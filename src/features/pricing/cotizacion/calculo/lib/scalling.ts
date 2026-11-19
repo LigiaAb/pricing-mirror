@@ -1,15 +1,23 @@
+import { TIPOS_TRANSPORTE } from "@/features/pricing/shared";
+
 import type { RutaScalling } from "../api/scalling";
 
+import { NOMBRE_TRANSPORTE } from "./constantes";
 import type { Id, MonedaCatalogo, PuntoEnlaceCatalogo } from "./tipos";
 import { buscarMoneda } from "./utils";
 
+/** Solo AEREO usa scalling (marítimo y terrestre no). */
 export const TIPO_PUNTO_POR_TRANSPORTE = {
-  AEREO: "AEROPUERTO",
-  MARITIMO: "PUERTO",
-  TERRESTRE: "ADUANA",
+  [NOMBRE_TRANSPORTE.AEREO]: "AEROPUERTO",
 } as const;
 
 export type TipoTransporteScalling = keyof typeof TIPO_PUNTO_POR_TRANSPORTE;
+
+export function transporteUsaScalling(codTipoTransporte?: Id | null) {
+  const nombre = TIPOS_TRANSPORTE[Number(codTipoTransporte) as keyof typeof TIPOS_TRANSPORTE];
+
+  return nombre != null && nombre in TIPO_PUNTO_POR_TRANSPORTE;
+}
 
 export type PuntoEnlaceScalling = PuntoEnlaceCatalogo;
 
