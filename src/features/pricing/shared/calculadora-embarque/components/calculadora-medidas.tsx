@@ -546,21 +546,21 @@ export function CalculadoraMedidas({
           </div>
         ) : null}
 
-        <div className="space-y-5">
+        <div className="space-y-3">
           {/* ================================================================
               INGRESO DE UNA FILA
           ================================================================= */}
 
           {!lectura ? (
-            <div className="rounded-lg border p-4">
-              <div className="grid gap-5 md:grid-cols-2">
+            <div className="rounded-lg border p-3">
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_auto]">
                 {/* VOLUMEN */}
 
-                <div className="space-y-3">
-                  <p className="font-medium">Volumen</p>
+                <div className="grid grid-cols-[minmax(9rem,1fr)_minmax(0,2fr)] gap-2">
+                  <p className="col-span-2 text-sm font-medium">Volumen</p>
 
                   <div className="space-y-1">
-                    <label htmlFor={ids.unidadMedida} className="text-sm">
+                    <label htmlFor={ids.unidadMedida} className="text-xs text-muted-foreground">
                       Unidad de medida
                     </label>
 
@@ -657,17 +657,19 @@ export function CalculadoraMedidas({
                   </div>
 
                   {medidasParciales ? (
-                    <p className="text-xs text-destructive">Debe ingresar largo, ancho y alto.</p>
+                    <p className="col-span-2 text-xs text-destructive">
+                      Debe ingresar largo, ancho y alto.
+                    </p>
                   ) : null}
                 </div>
 
                 {/* PESO */}
 
-                <div className="space-y-3">
-                  <p className="font-medium">Peso</p>
+                <div className="grid grid-cols-[minmax(9rem,1fr)_minmax(0,1fr)] gap-2">
+                  <p className="col-span-2 text-sm font-medium">Peso</p>
 
                   <div className="space-y-1">
-                    <label htmlFor={ids.unidadPeso} className="text-sm">
+                    <label htmlFor={ids.unidadPeso} className="text-xs text-muted-foreground">
                       Unidad de peso
                     </label>
 
@@ -719,39 +721,41 @@ export function CalculadoraMedidas({
                   </div>
 
                   {pesoParcial ? (
-                    <p className="text-xs text-destructive">Debe seleccionar una unidad de peso.</p>
+                    <p className="col-span-2 text-xs text-destructive">
+                      Debe seleccionar una unidad de peso.
+                    </p>
                   ) : null}
                 </div>
-              </div>
 
-              {/* CANTIDAD / AGREGAR */}
+                {/* CANTIDAD / AGREGAR */}
 
-              <div className="mt-4 flex flex-wrap items-end gap-3">
-                <div className="w-32 space-y-1">
-                  <label htmlFor={ids.cantidad} className="text-sm">
-                    Cantidad
-                  </label>
+                <div className="flex flex-wrap items-end gap-2 lg:pt-7">
+                  <div className="w-20 space-y-1">
+                    <label htmlFor={ids.cantidad} className="text-xs text-muted-foreground">
+                      Cantidad
+                    </label>
 
-                  <Input
-                    id={ids.cantidad}
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={form.cantidad}
-                    onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                      setForm((prev) => ({
-                        ...prev,
+                    <Input
+                      id={ids.cantidad}
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={form.cantidad}
+                      onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                        setForm((prev) => ({
+                          ...prev,
 
-                        cantidad: event.target.value,
-                      }))
-                    }
-                  />
+                          cantidad: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <Button type="button" disabled={!puedeAgregarFila} onClick={agregarFila}>
+                    <Plus className="size-4" />
+                    Agregar a cálculo
+                  </Button>
                 </div>
-
-                <Button type="button" disabled={!puedeAgregarFila} onClick={agregarFila}>
-                  <Plus className="size-4" />
-                  Agregar a cálculo
-                </Button>
               </div>
             </div>
           ) : null}
@@ -851,7 +855,7 @@ export function CalculadoraMedidas({
               TOTALES
           ================================================================= */}
 
-          <div className="grid gap-4 rounded-lg border p-4 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 rounded-lg border p-3 sm:grid-cols-4">
             {/* CANTIDAD */}
 
             <div className="space-y-1">
