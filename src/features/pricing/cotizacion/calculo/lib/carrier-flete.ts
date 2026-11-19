@@ -1,3 +1,4 @@
+import { TIPO_METODO } from "./constantes";
 import { construirDetalleFlete } from "./detalle-flete";
 import type { CatalogoTipo, DetalleTarifa, Id, MonedaCatalogo } from "./tipos";
 import { buscarMoneda } from "./utils";
@@ -122,6 +123,33 @@ export type CarrierOption = {
 };
 
 /* ==========================================================================
+ * MÉTODO DEL SERVICIO
+ * ========================================================================== */
+
+/*
+ * El back no siempre devuelve el método en `metodo`: Costo por porcentaje
+ * llega en `porcentaje_cotizacion`, Cobertura en `cobertura` y Porcentaje en
+ * `porcentaje`. Misma regla que normalizarServicio (procesar-rubros-calculados).
+ */
+function normalizarServicioFlete(servicio: ServicioFlete): ServicioFlete {
+  if (servicio.metodo) {
+    return servicio;
+  }
+
+  const metodo = (servicio.porcentaje_cotizacion ?? servicio.cobertura ?? servicio.porcentaje) as
+    | MetodoFlete
+    | null
+    | undefined;
+
+  return metodo ? { ...servicio, metodo } : servicio;
+}
+
+/** Flete con método Costo por porcentaje: no trae venta, el costo lo escribe el usuario. */
+export function esFleteCostoPorcentaje(servicio: ServicioFlete): boolean {
+  return Number(servicio.metodo?.cod_tipo_metodo) === TIPO_METODO.COSTO_PORCENTAJE;
+}
+
+/* ==========================================================================
  * CATEGORÍA
  * ========================================================================== */
 
@@ -212,6 +240,7 @@ export function construirOpcionCarrier({
     nombreRubro,
     categoria,
     flete != null ? `FLETE ${flete}` : "",
+    flete == null && esFleteCostoPorcentaje(servicio) ? "COSTO POR PORCENTAJE" : "",
     tipoCarga?.label,
     clasificacionCarga?.label,
   ]
@@ -279,7 +308,8 @@ export function construirOpcionesCarrier({
   const values = new Set<string>();
 
   for (const rubro of fletes) {
-    const servicios = [...(rubro.servicios ?? [])]
+    const servicios = (rubro.servicios ?? [])
+      .map(normalizarServicioFlete)
       .filter((servicio) => {
         if (carrierPlantillaId == null) {
           return true;
@@ -336,13 +366,13 @@ export function obtenerServicioFleteSeleccionado({
     return null;
   }
 
-  return (
-    (rubro.servicios ?? []).find(
-      (servicio) =>
-        String(servicio.entidad_id) === String(carrier.entidad_id) &&
-        String(servicio.cod_servicio) === String(carrier.cod_servicio),
-    ) ?? null
+  const servicio = (rubro.servicios ?? []).find(
+    (item) =>
+      String(item.entidad_id) === String(carrier.entidad_id) &&
+      String(item.cod_servicio) === String(carrier.cod_servicio),
   );
+
+  return servicio ? normalizarServicioFlete(servicio) : null;
 }
 
 /* ==========================================================================
@@ -363,7 +393,21 @@ export function construirCriteriosCarrier({
   const nuevoValor = valorManual ?? carrier.flete ?? servicio.metodo?.venta;
 
   if (nuevoValor == null) {
-    return null;
+    if (!esFleteCostoPorcentaje(servicio)) {
+      return null;
+    }
+
+    /*
+     * Costo por porcentaje sin costo escrito: se calcula sin valor_flete para
+     * que aparezca la fila del flete en Due Carrier, donde se escribe el costo;
+     * entonces se recalcula con la venta como valor_flete (useCarrierFlete).
+     */
+    const { valor_flete: _valorFlete, ...resto } = criterios;
+
+    return {
+      ...resto,
+      categoria_transporte: servicio.categoria_transporte ?? null,
+    };
   }
 
   return {
