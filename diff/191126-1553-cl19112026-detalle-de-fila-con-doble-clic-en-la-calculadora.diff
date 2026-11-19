@@ -1,0 +1,238 @@
+diff --git a/src/features/pricing/shared/calculadora-embarque/components/calculadora-medidas.tsx b/src/features/pricing/shared/calculadora-embarque/components/calculadora-medidas.tsx
+index b634ad9..64a6909 100644
+--- a/src/features/pricing/shared/calculadora-embarque/components/calculadora-medidas.tsx
++++ b/src/features/pricing/shared/calculadora-embarque/components/calculadora-medidas.tsx
+@@ -7,6 +7,7 @@ import { Button } from "@/shared/components/ui/button";
+ import {
+   Dialog,
+   DialogContent,
++  DialogDescription,
+   DialogFooter,
+   DialogHeader,
+   DialogTitle,
+@@ -226,6 +227,9 @@ export function CalculadoraMedidas({
+ 
+   const [volumenDirecto, setVolumenDirecto] = React.useState("");
+ 
++  /* Fila cuyo detalle se muestra (doble clic, como el legado) (#159). */
++  const [detalleId, setDetalleId] = React.useState<Id | null>(null);
++
+   /*
+    * Inicializar únicamente cuando el diálogo
+    * pasa de cerrado -> abierto.
+@@ -239,6 +243,8 @@ export function CalculadoraMedidas({
+     if (!open) {
+       wasOpenRef.current = false;
+ 
++      setDetalleId(null);
++
+       return;
+     }
+ 
+@@ -300,6 +306,12 @@ export function CalculadoraMedidas({
+     [items, transporte],
+   );
+ 
++  /* Se busca en las filas calculadas: si la fila se elimina, el detalle se cierra. */
++  const detalle =
++    detalleId == null
++      ? null
++      : (itemsCalculados.find((item) => String(item.id) === String(detalleId)) ?? null);
++
+   const totalesFilas = React.useMemo(
+     () => calcularTotalesMedidas(items, transporte),
+     [items, transporte],
+@@ -741,6 +753,12 @@ export function CalculadoraMedidas({
+               FILAS
+           ================================================================= */}
+ 
++          {itemsCalculados.length ? (
++            <p className="text-xs text-primary">
++              * Dar doble clic en una fila para ver los detalles
++            </p>
++          ) : null}
++
+           <div className="overflow-x-auto rounded-md border">
+             <Table>
+               <TableHeader>
+@@ -771,7 +789,19 @@ export function CalculadoraMedidas({
+                   </TableRow>
+                 ) : (
+                   itemsCalculados.map((item) => (
+-                    <TableRow key={String(item.id)}>
++                    <TableRow
++                      key={String(item.id)}
++                      tabIndex={0}
++                      title="Doble clic para ver los detalles"
++                      aria-selected={String(item.id) === String(detalle?.id)}
++                      className="cursor-pointer aria-selected:bg-primary/10"
++                      onDoubleClick={() => setDetalleId(item.id)}
++                      onKeyDown={(event) => {
++                        if (event.key === "Enter" && event.target === event.currentTarget) {
++                          setDetalleId(item.id);
++                        }
++                      }}
++                    >
+                       <TableCell>{item.cantidad}</TableCell>
+ 
+                       <TableCell className="font-mono text-xs">
+@@ -913,7 +943,159 @@ export function CalculadoraMedidas({
+             </Button>
+           ) : null}
+         </DialogFooter>
++
++        <DetalleFila detalle={detalle} etiquetas={etiquetas} onCerrar={() => setDetalleId(null)} />
++      </DialogContent>
++    </Dialog>
++  );
++}
++
++/* ==========================================================================
++ * DETALLE DE UNA FILA (doble clic, como el legado) (#159)
++ * ========================================================================== */
++
++function mostrarDecimal(value: unknown) {
++  return numero(value).toLocaleString("es-GT", { maximumFractionDigits: 4 });
++}
++
++function DatoDetalle({ label, valor }: { label: string; valor: React.ReactNode }) {
++  return (
++    <div className="flex items-baseline justify-between gap-3 rounded px-2 py-1 hover:bg-primary/10">
++      <span className="text-sm text-muted-foreground">{label}</span>
++      <span className="font-mono text-sm font-semibold">{valor}</span>
++    </div>
++  );
++}
++
++function DetalleFila({
++  detalle,
++  etiquetas,
++  onCerrar,
++}: {
++  detalle: DimensionCalculo | null;
++  etiquetas: ReturnType<typeof obtenerEtiquetasCalculadora>;
++  onCerrar: () => void;
++}) {
++  const unidadMedida = detalle?.unidadMedida?.tipo_desc ?? detalle?.unidadMedida?.label ?? "—";
++  const unidadPeso = detalle?.unidadPeso?.tipo_desc ?? detalle?.unidadPeso?.label ?? "—";
++
++  return (
++    <Dialog
++      open={detalle != null}
++      onOpenChange={(abierto) => {
++        if (!abierto) onCerrar();
++      }}
++    >
++      <DialogContent className="sm:max-w-2xl">
++        <DialogHeader>
++          <DialogTitle>Detalles del volumen o peso</DialogTitle>
++          <DialogDescription>Resumen de dimensiones seleccionadas</DialogDescription>
++        </DialogHeader>
++
++        {detalle ? (
++          <div className="grid gap-4 sm:grid-cols-2">
++            <div className="space-y-3">
++              <DatoDetalle label="Cantidad" valor={detalle.cantidad} />
++
++              <div className="space-y-1 border-t pt-2">
++                <p className="px-2 text-sm font-semibold text-primary">Volumen</p>
++                <DatoDetalle label="Unidad" valor={unidadMedida} />
++                <DatoDetalle label="Largo" valor={mostrarDecimal(detalle.largo)} />
++                <DatoDetalle label="Ancho" valor={mostrarDecimal(detalle.ancho)} />
++                <DatoDetalle label="Alto" valor={mostrarDecimal(detalle.alto)} />
++                <DatoDetalle
++                  label="Volumen unitario"
++                  valor={mostrarDecimal(detalle.volumenUnitario)}
++                />
++                <DatoDetalle
++                  label={etiquetas.volumen}
++                  valor={detalle.volumenTotalKg > 0 ? mostrarNumero(detalle.volumenTotalKg) : "—"}
++                />
++              </div>
++
++              <div className="space-y-1 border-t pt-2">
++                <p className="px-2 text-sm font-semibold text-primary">Peso</p>
++                <DatoDetalle label="Unidad" valor={unidadPeso} />
++                <DatoDetalle label="Peso unitario" valor={mostrarDecimal(detalle.pesoUnitario)} />
++                <DatoDetalle
++                  label={etiquetas.peso}
++                  valor={detalle.pesoTotalKg > 0 ? mostrarNumero(detalle.pesoTotalKg) : "—"}
++                />
++              </div>
++            </div>
++
++            <DibujoCaja
++              cantidad={detalle.cantidad}
++              largo={mostrarDecimal(detalle.largo)}
++              ancho={mostrarDecimal(detalle.ancho)}
++              alto={mostrarDecimal(detalle.alto)}
++              volumen={`${mostrarDecimal(detalle.volumenUnitario)} ${unidadMedida}`}
++            />
++          </div>
++        ) : null}
++
++        <DialogFooter>
++          <Button type="button" variant="outline" onClick={onCerrar}>
++            Cerrar
++          </Button>
++        </DialogFooter>
+       </DialogContent>
+     </Dialog>
+   );
+ }
++
++/* Caja con sus medidas: mismo dibujo que VolumenIconTexto del legado. */
++const TRAZO_CAJA =
++  "M 360.368 417.132 C 359.44 417.131 358.524 416.906 357.704 416.474 L 324.831 399.23 C 320.893 397.215 320.613 391.691 324.327 389.288 C 326.085 388.151 328.324 388.06 330.17 389.052 L 345.359 397.018 L 466.812 333.313 L 458.656 329.035 C 454.759 326.94 454.59 321.413 458.353 319.085 C 460.064 318.026 462.205 317.938 463.996 318.856 L 496.867 336.098 C 500.806 338.113 501.085 343.638 497.371 346.04 C 495.612 347.178 493.374 347.269 491.528 346.276 L 479.185 339.803 L 357.732 403.507 L 363.042 406.293 C 366.961 408.348 367.186 413.874 363.448 416.239 C 362.527 416.823 361.459 417.134 360.368 417.132 Z M 247.163 417.132 C 245.024 417.134 243.062 415.946 242.069 414.051 C 240.594 411.241 241.678 407.768 244.489 406.292 L 249.798 403.507 L 128.345 339.802 L 116.002 346.275 C 112.105 348.37 107.402 345.461 107.537 341.038 C 107.601 338.945 108.797 337.051 110.662 336.097 L 143.535 318.854 C 147.432 316.761 152.135 319.67 152 324.093 C 151.937 326.185 150.738 328.079 148.873 329.035 L 140.719 333.312 L 262.171 397.018 L 277.36 389.052 C 280.172 387.575 283.645 388.66 285.119 391.47 C 286.593 394.282 285.509 397.756 282.698 399.228 L 249.828 416.472 C 249.006 416.906 248.092 417.131 247.163 417.132 Z M 303.765 387.58 C 302.835 387.581 301.92 387.355 301.096 386.923 L 167.27 316.726 C 165.377 315.734 164.192 313.773 164.192 311.637 L 164.192 147.277 C 164.192 145.141 165.377 143.18 167.27 142.187 L 301.096 71.991 C 302.768 71.113 304.764 71.113 306.437 71.991 L 360.091 100.135 C 364.03 102.151 364.31 107.675 360.596 110.078 C 358.838 111.215 356.598 111.306 354.752 110.315 L 303.766 83.571 L 261.647 105.664 L 383.097 169.37 L 425.219 147.277 L 374.856 120.86 C 370.918 118.844 370.638 113.322 374.354 110.917 C 376.112 109.78 378.35 109.69 380.195 110.679 L 440.261 142.187 C 442.153 143.18 443.339 145.141 443.339 147.277 L 443.339 311.638 C 443.339 313.774 442.153 315.734 440.261 316.727 L 306.435 386.924 C 305.612 387.355 304.695 387.581 303.765 387.58 Z M 303.765 315.379 C 306.94 315.379 309.512 317.951 309.512 321.127 L 309.512 372.326 L 431.844 308.16 L 431.844 156.781 L 388.845 179.338 L 388.845 229.639 C 388.845 231.841 387.584 233.852 385.601 234.811 L 360.764 246.834 C 356.949 248.683 352.512 245.903 352.512 241.662 L 352.512 198.393 L 309.512 220.949 L 309.512 298.138 C 309.512 301.313 306.94 303.886 303.765 303.886 C 300.592 303.886 298.018 301.313 298.018 298.138 L 298.018 220.948 L 175.688 156.781 L 175.688 308.16 L 298.018 372.326 L 298.018 321.127 C 298.018 317.951 300.592 315.379 303.765 315.379 Z M 364.007 192.364 L 364.007 232.493 L 377.349 226.033 L 377.349 185.366 L 364.007 192.364 Z M 182.314 147.277 L 303.765 210.983 L 345.887 188.889 L 224.435 125.183 L 182.314 147.277 Z M 236.808 118.692 L 358.261 182.398 L 370.723 175.861 L 249.271 112.155 L 236.808 118.692 Z M 146.199 305.079 C 145.271 305.079 144.356 304.852 143.533 304.421 L 110.662 287.178 C 107.851 285.703 106.769 282.23 108.244 279.418 C 109.716 276.607 113.191 275.524 116.002 277 L 122.614 280.467 L 122.862 129.073 L 110.934 122.816 C 106.994 120.8 106.714 115.276 110.428 112.874 C 112.187 111.736 114.426 111.645 116.271 112.638 L 149.144 129.877 C 153.042 131.973 153.209 137.501 149.447 139.829 C 147.736 140.888 145.596 140.976 143.804 140.059 L 134.348 135.098 L 134.099 286.49 L 148.873 294.24 C 151.684 295.714 152.768 299.186 151.294 301.998 C 150.301 303.894 148.338 305.08 146.199 305.079 Z";
++
++function DibujoCaja({
++  cantidad,
++  largo,
++  ancho,
++  alto,
++  volumen,
++}: {
++  cantidad: number;
++  largo: string;
++  ancho: string;
++  alto: string;
++  volumen: string;
++}) {
++  return (
++    <svg
++      xmlns="http://www.w3.org/2000/svg"
++      viewBox="-40 -0.555 600 530"
++      className="h-auto w-full max-w-xs justify-self-center fill-current text-primary"
++      role="img"
++      aria-label={`Caja de ${largo} × ${ancho} × ${alto}, cantidad ${cantidad}, volumen ${volumen}`}
++    >
++      <path d={TRAZO_CAJA} />
++
++      <g className="fill-foreground" fontFamily="Arial, sans-serif" fontSize="40">
++        <text x="-40" y="60" textAnchor="start">
++          Cantidad: {cantidad}
++        </text>
++
++        <text x="100" y="230" textAnchor="end">
++          {alto}
++        </text>
++
++        <text x="180" y="420" textAnchor="end">
++          {ancho}
++        </text>
++
++        <text x="412.925" y="420" textAnchor="start">
++          {largo}
++        </text>
++
++        <text x="260" y="470" textAnchor="middle" fontWeight="bold">
++          Volumen:
++        </text>
++
++        <text x="260" y="518" textAnchor="middle" fontWeight="bold" fontSize="36">
++          {volumen}
++        </text>
++      </g>
++    </svg>
++  );
++}
