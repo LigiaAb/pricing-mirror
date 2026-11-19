@@ -2,6 +2,7 @@
 
 import { MousePointerClick, TriangleAlert } from "lucide-react";
 import * as React from "react";
+import { useAuthStore } from "@/shared/stores/auth-store";
 import { OperacionContext } from "../../shared/components/operacion-context";
 import { AbrirTrackingContext } from "../../shared/components/tarjeta-actividad";
 import type { EmbarqueMaqueta, PerfilEmbarque } from "../../shared/lib/tipos";
@@ -12,7 +13,6 @@ import { EmbarquesTable } from "./embarques-table";
 import { ResumenEmbarque } from "./resumen-embarque";
 import { TabsEmbarque } from "./tabs-embarque";
 import { type ActualizarEstadoTracking, TrackingSheet } from "./tracking-sheet";
-import { useAuthStore } from "@/shared/stores/auth-store";
 
 /* ==========================================================================
  * VISTA GENERAL DE EMBARQUES (SOLO MAQUETA)
@@ -52,7 +52,14 @@ export const VistaGeneral = ({
   const [actividadesOpen, setActividadesOpen] = React.useState(false);
 
   // Asignacion de permisos quemados para pruebas configuradas segun peticion de usuarios
-  const perfilQuemadoDePruebas:PerfilEmbarque = authRaw?.email === 'mario.hernandez@cropa.com.gt' ? 'operaciones' : authRaw?.email === 'alejandro.calito@cropa.com.gt' ? 'bodegas' : authRaw?.email === 'estuardo.xocop@cropa.com.gt' ? 'combex' : perfil; 
+  const perfilQuemadoDePruebas: PerfilEmbarque =
+    authRaw?.email === "mario.hernandez@cropa.com.gt"
+      ? "operaciones"
+      : authRaw?.email === "alejandro.calito@cropa.com.gt"
+        ? "bodegas"
+        : authRaw?.email === "estuardo.xocop@cropa.com.gt"
+          ? "combex"
+          : perfil;
 
   const abrirTracking = React.useCallback(() => setTrackingOpen(true), []);
   const operacion = seleccionado ? operacionDeEmbarque(seleccionado) : null;

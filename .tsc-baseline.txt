@@ -138,6 +138,8 @@ src/features/embarques/lib/pdf-cca.ts: error TS2307: Cannot find module '@/asset
 src/features/embarques/lib/pdf-generator-embarques.ts: error TS2345: Argument of type '(doc: jsPDF, barcodeValue: string, options?: Options | undefined) => jsPDF' is not assignable to parameter of type '(doc: jsPDF, value: string, options: Record<string, unknown>) => void'.
 src/features/embarques/lib/pdf-informacion-embarque/items-table.ts: error TS2339: Property 'lastAutoTable' does not exist on type 'jsPDF'.
 src/features/embarques/lib/pdf-informacion-embarque/items-table.ts: error TS2339: Property 'lastAutoTable' does not exist on type 'jsPDF'.
+src/features/objetivos/components/lista-objetivos-client.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/features/objetivos/components/lista-objetivos-client.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
