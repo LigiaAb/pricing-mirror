@@ -3,6 +3,10 @@
 Registro para dar seguimiento a lo hecho en el módulo **pricing**. Entradas nuevas **arriba**, agrupadas por fecha.
 Cada entrada: rama · módulo/submódulo · qué y por qué · diff generado (si aplica).
 
+## 19/11/2026
+
+- **Embarques / General** (`claude/19112026-work-embarques-general`, #145): se validó el SYNC `2a6d7d9` (pruebas de usuario) y el `SYNC OBJETIVOS`. Finales de línea OK. Biome marcaba 2 errores en `v2/general/components/vista-general.tsx` (orden del import de `useAuthStore` y formato de `perfilQuemadoDePruebas`). Se corrigieron solo esas líneas con `biome check --write`, sin cambio de lógica. Los 2 errores nuevos `TS7006` de `objetivos/components/lista-objetivos-client.tsx` vienen del stub `any` de `@/features/shell` (el mismo error ya está en la base para pricing) y se agregaron a `.tsc-baseline.txt`. Pendiente del usuario: `perfilQuemadoDePruebas` (perfiles quemados por correo, solo para pruebas) y `PasoDocumentos`, que todavía no se usa. Diff: `191126-1009-cl19112026-validar-sync-de-pruebas-de-usuario.diff`.
+
 ## 18/11/2026
 
 - **Tarifas / Métodos** (`cl/modest-babbage-csunas`) (#143): nota "Ej.: 50 para un 50%" debajo de cada input de porcentaje (no en los mínimos). Nueva opción `nota?` en `FormularioCampo` (`pricing/shared/lib/campos-metodo.ts`) que `CampoMetodo` dibuja debajo del input (mismo estilo que la nota que ya tenía Costo por porcentaje); se agrega al `PORCENTAJE` de `lib/metodos/porcentaje.ts` y `lib/metodos/cobertura.ts` (Porcentaje costo y venta). En `costo-porcentaje-form.tsx` (input a mano) la nota existente "Ingrese el porcentaje en enteros con decimales (ej. 25.26 para 25.26 %)" pasa al mismo texto; sigue saliendo solo con tipo de valor Porcentaje. Sin cambios de lógica ni payload. Probado con esbuild + react-dom/server: la nota sale en `porcentaje_costo`/`porcentaje_venta` y no en `minimo_costo`. `check:nuevos`: 0 errores nuevos de este cambio (los 3 de `objetivos/index.ts` están igual en `main`); Biome 0 en pricing (el único error es `embarques/v2/general/ARQUITECTURA.md`, de `main`); finales OK. Diff: `181126-1627-cl18112026-tarifas-nota-de-ejemplo-en-inputs-de-porcentaje.diff`.
