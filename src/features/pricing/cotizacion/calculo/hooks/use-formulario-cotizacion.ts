@@ -295,7 +295,7 @@ export function useFormularioCotizacion({
           }
           if (esNombre(nombreTransporte, NOMBRE_TRANSPORTE.TERRESTRE)) {
             const ciudadGtm =
-              (catalogos.ciudades ?? []).find((ciudad) => ciudad.siglas_ciudad === "GTM") ?? null;
+              (catalogos.ciudades ?? []).find((ciudad) => ciudad.siglas_ciudad === "GUA") ?? null;
 
             next.ciudadOrigen = ciudadGtm;
             next.cod_ciudad_origen = ciudadGtm?.value ?? null;
