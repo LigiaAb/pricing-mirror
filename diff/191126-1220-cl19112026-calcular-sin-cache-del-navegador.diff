@@ -1,0 +1,41 @@
+diff --git a/src/features/pricing/cotizacion/calculo/api/calculo-cotizacion.ts b/src/features/pricing/cotizacion/calculo/api/calculo-cotizacion.ts
+index 6140817..b8e95b8 100644
+--- a/src/features/pricing/cotizacion/calculo/api/calculo-cotizacion.ts
++++ b/src/features/pricing/cotizacion/calculo/api/calculo-cotizacion.ts
+@@ -149,6 +149,12 @@ export type CalculoTarifaParams = Record<string, unknown>;
+  * FUNCIONES API
+  * ========================================================================== */
+ 
++/*
++ * Los cálculos siempre van al backend (`cache: "no-store"`): con la misma URL,
++ * el navegador podía responder desde su caché HTTP y Calcular seguía mostrando
++ * tarifas ya anuladas o vencidas.
++ */
++
+ /*
+  * Endpoint principal.
+  *
+@@ -162,6 +168,7 @@ export async function calcularTarifa(params: CalculoTarifaParams) {
+   return parseEnvelope(
+     await http.get<unknown>("/api/appweb/calcular-tarifa", {
+       params,
++      cache: "no-store",
+     }),
+     rubroCalculoSchema,
+     "calcular-tarifa",
+@@ -176,6 +183,7 @@ export async function calcularTarifaRubros(params: CalculoTarifaParams) {
+   return parseEnvelope(
+     await http.get<unknown>("/api/appweb/calcular-tarifa-rubros", {
+       params,
++      cache: "no-store",
+     }),
+     rubroCalculoSchema,
+     "calcular-tarifa-rubros",
+@@ -197,6 +205,7 @@ export async function calcularTarifaScalling(params: CalculoTarifaParams) {
+   return parseEnvelope(
+     await http.get<unknown>("/api/appweb/calcular-tarifa-scalling", {
+       params: paramsScalling,
++      cache: "no-store",
+     }),
+     rubroCalculoSchema,
+     "calcular-tarifa-scalling",
