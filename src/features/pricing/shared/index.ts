@@ -58,6 +58,7 @@ export {
   CalculadoraMedidas,
   type CalculadoraMedidasProps,
 } from "./calculadora-embarque/components/calculadora-medidas";
+export { useNombreTransporte } from "./calculadora-embarque/hooks/use-nombre-transporte";
 export { useUnidadesEmbarque } from "./calculadora-embarque/hooks/use-unidades-embarque";
 export {
   calcularTotalesMedidas,
@@ -68,11 +69,16 @@ export {
   convertirVolumetrico,
   crearDimension,
   type DimensionCalculo,
+  esUnidadConocida,
+  recalcularDimension,
+  reconocerTransporte,
+  redondearArriba,
   type TotalesMedidas,
   type Unidad,
 } from "./calculadora-embarque/lib/calculos";
 export {
   NOMBRE_TRANSPORTE,
+  NOMBRE_UNIDAD,
   TIPO_TRANSPORTE,
   TIPOS_TRANSPORTE,
   type TipoTransporte,

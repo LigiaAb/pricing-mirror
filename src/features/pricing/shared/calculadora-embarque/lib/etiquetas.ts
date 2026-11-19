@@ -1,4 +1,5 @@
-import { TIPO_TRANSPORTE } from "./constantes";
+import { normalizarNombre } from "../../lib/nombres";
+import { NOMBRE_TRANSPORTE } from "./constantes";
 
 /* ==========================================================================
  * TEXTOS DE LA CALCULADORA POR TIPO DE TRANSPORTE
@@ -6,7 +7,7 @@ import { TIPO_TRANSPORTE } from "./constantes";
  * ETIQUETAS_BASE aplica a todos. Si un transporte necesita un texto propio,
  * se agrega SOLO ese texto en ETIQUETAS_POR_TRANSPORTE; lo demás se hereda.
  *
- *   [TIPO_TRANSPORTE.MARITIMO]: { volumen: "CBM", tipoVolumen: "CBM" },
+ *   [NOMBRE_TRANSPORTE.MARITIMO]: { volumen: "CBM", tipoVolumen: "CBM" },
  * ========================================================================== */
 
 export type EtiquetasCalculadora = {
@@ -33,17 +34,16 @@ const ETIQUETAS_BASE: EtiquetasCalculadora = {
 };
 
 /** Solo los textos que cambian respecto a ETIQUETAS_BASE. Hoy ninguno. */
-const ETIQUETAS_POR_TRANSPORTE: Partial<Record<number, Partial<EtiquetasCalculadora>>> = {
-  [TIPO_TRANSPORTE.AEREO]: {},
-  [TIPO_TRANSPORTE.MARITIMO]: {},
-  [TIPO_TRANSPORTE.TERRESTRE]: {},
+const ETIQUETAS_POR_TRANSPORTE: Partial<Record<string, Partial<EtiquetasCalculadora>>> = {
+  [NOMBRE_TRANSPORTE.AEREO]: {},
+  [NOMBRE_TRANSPORTE.MARITIMO]: {},
+  [NOMBRE_TRANSPORTE.TERRESTRE]: {},
 };
 
-export function obtenerEtiquetasCalculadora(
-  codTipoTransporte?: string | number | null,
-): EtiquetasCalculadora {
+/** `transporte`: nombre del tipo de transporte (nomTipo). */
+export function obtenerEtiquetasCalculadora(transporte?: string | null): EtiquetasCalculadora {
   const propias =
-    codTipoTransporte == null ? undefined : ETIQUETAS_POR_TRANSPORTE[Number(codTipoTransporte)];
+    transporte == null ? undefined : ETIQUETAS_POR_TRANSPORTE[normalizarNombre(transporte)];
 
   return propias ? { ...ETIQUETAS_BASE, ...propias } : ETIQUETAS_BASE;
 }

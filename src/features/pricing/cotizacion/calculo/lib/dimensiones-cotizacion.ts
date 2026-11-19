@@ -30,7 +30,7 @@ export function reconstruirDimensiones({
   dimensiones,
   unidadesMedida,
   unidadesPeso,
-  codTipoTransporte,
+  transporte,
 }: {
   dimensiones: Array<Record<string, unknown>>;
 
@@ -38,7 +38,8 @@ export function reconstruirDimensiones({
 
   unidadesPeso: Unidad[];
 
-  codTipoTransporte?: Id | null;
+  /** Nombre del tipo de transporte (nomTipo). */
+  transporte?: string | null;
 }): DimensionCalculo[] {
   /*
    * El guardado sin medidas representa los totales directos con una fila:
@@ -56,7 +57,10 @@ export function reconstruirDimensiones({
     Number(primera.cotdetdim_unidad_medida) === UNIDAD_DEFAULT.MEDIDA &&
     Number(primera.cotdetdim_unidad_peso) === UNIDAD_DEFAULT.PESO &&
     primera.total_volumen != null &&
-    Math.ceil(numero(primera.cotdetdim_largo)) === numero(primera.total_volumen) &&
+    // Los totales directos se guardan como se ingresan (con decimales); antes solo se
+    // reconocía el valor entero. Se aceptan ambos (#157).
+    (numero(primera.cotdetdim_largo) === numero(primera.total_volumen) ||
+      Math.ceil(numero(primera.cotdetdim_largo)) === numero(primera.total_volumen)) &&
     (numero(primera.total_volumen) > 0 || numero(primera.total_peso) > 0)
   ) {
     return [];
@@ -124,8 +128,7 @@ export function reconstruirDimensiones({
        * el comportamiento de la calculadora.
        */
       volumenTotalKg:
-        convertirVolumetrico(volumenUnitario, unidadMedida?.tipo_desc, codTipoTransporte) *
-        cantidad,
+        convertirVolumetrico(volumenUnitario, unidadMedida?.tipo_desc, transporte) * cantidad,
 
       pesoTotal,
 
