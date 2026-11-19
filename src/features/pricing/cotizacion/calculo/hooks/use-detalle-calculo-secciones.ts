@@ -3,6 +3,7 @@
 import * as React from "react";
 import type { CalculoCotizacionProps } from "../lib/calculo-cotizacion-tipos";
 import { RUBRO, TIPO_CALCULO } from "../lib/constantes";
+import { esMetodoCostoPorcentaje } from "../lib/rubros-manuales";
 import type { EntidadCatalogo, Id } from "../lib/tipos";
 import { useCalculoCotizacion } from "./use-calculo-cotizacion";
 import { useCarrierFlete } from "./use-carrier-flete";
@@ -350,7 +351,22 @@ export function useDetalleCalculoSecciones({
     valorFlete: valorFleteCriterios,
 
     onValorFacturaChange: cambiarValorFacturaCobertura,
+
+    onVentaFleteCostoPorcentajeChange: carrier.cambiarVentaFleteCostoPorcentaje,
   });
+
+  /*
+   * Flete (normal) con método Costo por porcentaje: su costo se escribe a mano
+   * y debe respaldarse con un archivo para poder guardar la versión.
+   */
+  const fleteCostoPorcentaje = React.useMemo(
+    () =>
+      !isReadOnly &&
+      dueCarrierBase.rubros.some(
+        (item) => item.es_flete === true && !item.es_tarifa_spot && esMetodoCostoPorcentaje(item),
+      ),
+    [isReadOnly, dueCarrierBase.rubros],
+  );
 
   const dueCarrierDesdeAgentBase = useRubrosDueCarrier({
     rubros: calculo.dueCarrierBasadoEnDueAgent as Parameters<
@@ -480,6 +496,7 @@ export function useDetalleCalculoSecciones({
     entidadEfectivaId,
     entidadNombre,
     rubrosDueCarrierConSpot,
+    fleteCostoPorcentaje,
     dueCarrier,
     dueAgent,
     dueCarrierDesdeAgent,

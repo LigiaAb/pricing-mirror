@@ -129,6 +129,7 @@ function DetalleCalculoCotizacion({
     entidadEfectivaId,
     entidadNombre,
     rubrosDueCarrierConSpot,
+    fleteCostoPorcentaje,
     dueCarrier,
     dueAgent,
     dueCarrierDesdeAgent,
@@ -175,6 +176,7 @@ function DetalleCalculoCotizacion({
     calculo,
     carrier,
     dueAgent,
+    fleteCostoPorcentaje,
     totales,
   });
 
@@ -270,6 +272,9 @@ function DetalleCalculoCotizacion({
                     carrier.forzarRecalculo();
                   }}
                   onRemoveSpot={carrier.quitarSpot}
+                  solicitarArchivoCostoFlete={fleteCostoPorcentaje}
+                  archivoCostoFlete={carrier.archivoCostoFlete}
+                  onArchivoCostoFleteChange={carrier.setArchivoCostoFlete}
                 />
               </SeccionConLoader>
 

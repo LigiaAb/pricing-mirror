@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 
 import {
   type CarrierOption,
@@ -14,6 +15,15 @@ import {
 import type { Id } from "../lib/tipos";
 import { crearKeyCriterios, getSimboloMoneda } from "../lib/utils";
 import { useCatalogosCotizacion } from "./use-catalogos-cotizacion";
+
+/** Pausa (ms) tras la última tecla en el costo de un flete Costo por porcentaje antes de recalcular. */
+export const DEMORA_RECALCULO_COSTO_FLETE = 800;
+
+/**
+ * Venta calculada del flete Costo por porcentaje que espera el debounce.
+ * Es un objeto para que escribir el mismo valor otra vez también recalcule.
+ */
+type VentaFletePendiente = { venta: number | null };
 
 type Props = {
   fletes: RubroFlete[];
@@ -100,6 +110,16 @@ export function useCarrierFlete({
   const [tarifasSpot, setTarifasSpot] = React.useState<RubroFlete[]>([]);
 
   const [recalculoToken, setRecalculoToken] = React.useState(0);
+
+  const [ventaFletePendiente, setVentaFletePendiente] = React.useState<VentaFletePendiente | null>(
+    null,
+  );
+
+  /*
+   * Archivo que respalda el costo de un flete Costo por porcentaje.
+   * TODO: aún no hay estructura en el backend; se pide, pero no se envía.
+   */
+  const [archivoCostoFlete, setArchivoCostoFlete] = React.useState<File | null>(null);
 
   /*
    * Sustituye tarifaReqKeyRef
@@ -239,6 +259,10 @@ export function useCarrierFlete({
 
       setTarifasSpot([]);
 
+      setVentaFletePendiente(null);
+
+      setArchivoCostoFlete(null);
+
       setCarrierSeleccionado(carrier ?? opcionesCarrier[0] ?? null);
     },
     [opcionesCarrier],
@@ -279,6 +303,29 @@ export function useCarrierFlete({
 
     setRecalculoToken((prev) => prev + 1);
   }, []);
+
+  /* ==========================================================
+   * FLETE COSTO POR PORCENTAJE
+   * ==========================================================
+   *
+   * El usuario escribe el costo del flete en Due Carrier; la venta
+   * calculada pasa a ser el valor_flete y se vuelve a calcular
+   * (Due Carrier y Due Agent) cuando deja de escribir.
+   */
+
+  const cambiarVentaFleteCostoPorcentaje = React.useCallback((venta: number | null) => {
+    setVentaFletePendiente({ venta });
+  }, []);
+
+  const ventaFleteDiferida = useDebouncedValue(ventaFletePendiente, DEMORA_RECALCULO_COSTO_FLETE);
+
+  React.useEffect(() => {
+    if (ventaFleteDiferida == null) {
+      return;
+    }
+
+    cambiarFleteManual(ventaFleteDiferida.venta);
+  }, [ventaFleteDiferida, cambiarFleteManual]);
 
   /* ==========================================================
    * SPOT
@@ -470,6 +517,10 @@ export function useCarrierFlete({
 
     setTarifasSpot([]);
 
+    setVentaFletePendiente(null);
+
+    setArchivoCostoFlete(null);
+
     ultimaTarifaKeyRef.current = "";
 
     setRecalculoToken(0);
@@ -512,6 +563,10 @@ export function useCarrierFlete({
 
     tarifasSpot,
 
+    /* Flete Costo por porcentaje */
+
+    archivoCostoFlete,
+
     /* Acciones */
 
     seleccionarCarrier,
@@ -519,6 +574,10 @@ export function useCarrierFlete({
     establecerCarrier,
 
     cambiarFleteManual,
+
+    cambiarVentaFleteCostoPorcentaje,
+
+    setArchivoCostoFlete,
 
     agregarSpot,
 

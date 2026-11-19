@@ -23,6 +23,8 @@ type Params = {
   calculo: ReturnType<typeof useCalculoCotizacion>;
   carrier: ReturnType<typeof useCarrierFlete>;
   dueAgent: ReturnType<typeof usePorcentajesRubros>["dueAgent"];
+  /** El flete es Costo por porcentaje: se exige su archivo de respaldo para guardar. */
+  fleteCostoPorcentaje: boolean;
   totales: ReturnType<typeof useTotalesRubros>;
 };
 
@@ -41,6 +43,7 @@ export function useDetalleCalculoGuardado({
   calculo,
   carrier,
   dueAgent,
+  fleteCostoPorcentaje,
   totales,
 }: Params) {
   const { estados } = useEstadosCalculo();
@@ -185,6 +188,7 @@ export function useDetalleCalculoGuardado({
       totales.rubrosAgrupados.length &&
       dueAgent.isValid &&
       datosComplementariosValidos &&
+      (!fleteCostoPorcentaje || carrier.archivoCostoFlete != null) &&
       !guardar.guardando,
   );
 
