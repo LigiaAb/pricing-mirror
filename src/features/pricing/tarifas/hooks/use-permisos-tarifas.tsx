@@ -18,14 +18,17 @@ import {
  * todo: así se conserva el comportamiento que tenían antes.
  * ========================================================================== */
 
-const TODO_PERMITIDO: PermisosPricing = {
+/** Tarifas no usa la acción Autorizar. */
+type PermisosTarifas = Omit<PermisosPricing, "puedeAutorizar">;
+
+const TODO_PERMITIDO: PermisosTarifas = {
   puedeVer: true,
   puedeAgregar: true,
   puedeEditar: true,
   puedeEliminar: true,
 };
 
-const PermisosTarifasContext = React.createContext<PermisosPricing>(TODO_PERMITIDO);
+const PermisosTarifasContext = React.createContext<PermisosTarifas>(TODO_PERMITIDO);
 
 export function PermisosTarifasProvider({ children }: { children: React.ReactNode }) {
   const { puedeVer, puedeAgregar, puedeEditar, puedeEliminar } = usePermisosPricing(
@@ -43,6 +46,6 @@ export function PermisosTarifasProvider({ children }: { children: React.ReactNod
 }
 
 /** Permisos de la pantalla de Tarifas (todo permitido fuera de `PermisosTarifasProvider`). */
-export function usePermisosTarifas(): PermisosPricing {
+export function usePermisosTarifas(): PermisosTarifas {
   return React.useContext(PermisosTarifasContext);
 }

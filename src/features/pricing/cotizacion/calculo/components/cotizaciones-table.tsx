@@ -37,6 +37,8 @@ export type CotizacionesTableProps = {
   nuevaCotizacion: () => void;
   /** Permiso de Agregar: sin él no se muestra "Nuevo". Por defecto `true`. */
   puedeAgregar?: boolean | undefined;
+  /** Permiso de Autorizar: sin él no se muestran Confirmar ni Rechazar. Por defecto `true`. */
+  puedeAutorizar?: boolean | undefined;
   limpiarCotizacion: () => void;
   rechazarCotizacion: (codCotizacionCabecera: Id) => Promise<boolean>;
   confirmarCotizacion: (codCotizacionCabecera: Id) => Promise<boolean>;
@@ -73,12 +75,14 @@ function crearCotizacionesColumns({
   onConfirmar,
   onRechazar,
   puedeConfirmar,
+  puedeAutorizar,
   accionesDeshabilitadas,
 }: {
   onVer: (cotizacion: CotizacionCabecera) => void;
   onConfirmar: (cotizacion: CotizacionCabecera) => void;
   onRechazar: (cotizacion: CotizacionCabecera) => void;
   puedeConfirmar: (cotizacion: CotizacionCabecera) => boolean;
+  puedeAutorizar: boolean;
   accionesDeshabilitadas: boolean;
 }): ColumnDef<CotizacionTabla>[] {
   return [
@@ -195,28 +199,32 @@ function crearCotizacionesColumns({
               <Eye className="size-4" aria-hidden="true" />
             </Button>
 
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              aria-label={`Confirmar cotización ${cotizacion.cod_cotizacion_cabecera}`}
-              disabled={!confirmarHabilitado || accionesDeshabilitadas}
-              onClick={() => onConfirmar(cotizacion)}
-            >
-              <ShieldCheck className="size-4" aria-hidden="true" />
-            </Button>
+            {puedeAutorizar ? (
+              <>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label={`Confirmar cotización ${cotizacion.cod_cotizacion_cabecera}`}
+                  disabled={!confirmarHabilitado || accionesDeshabilitadas}
+                  onClick={() => onConfirmar(cotizacion)}
+                >
+                  <ShieldCheck className="size-4" aria-hidden="true" />
+                </Button>
 
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="text-destructive hover:text-destructive"
-              aria-label={`Rechazar cotización ${cotizacion.cod_cotizacion_cabecera}`}
-              disabled={accionesDeshabilitadas}
-              onClick={() => onRechazar(cotizacion)}
-            >
-              <Trash2 className="size-4" aria-hidden="true" />
-            </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
+                  aria-label={`Rechazar cotización ${cotizacion.cod_cotizacion_cabecera}`}
+                  disabled={accionesDeshabilitadas}
+                  onClick={() => onRechazar(cotizacion)}
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                </Button>
+              </>
+            ) : null}
           </div>
         );
       },
@@ -233,6 +241,7 @@ export function CotizacionesTable({
   seleccionarCotizacion,
   nuevaCotizacion,
   puedeAgregar = true,
+  puedeAutorizar = true,
   limpiarCotizacion,
   rechazarCotizacion,
   confirmarCotizacion,
@@ -298,6 +307,7 @@ export function CotizacionesTable({
         onConfirmar: handleConfirmar,
         onRechazar: handleRechazar,
         puedeConfirmar: puedeConfirmarCotizacion,
+        puedeAutorizar,
         accionesDeshabilitadas,
       }),
     [
@@ -305,6 +315,7 @@ export function CotizacionesTable({
       handleConfirmar,
       handleRechazar,
       puedeConfirmarCotizacion,
+      puedeAutorizar,
       accionesDeshabilitadas,
     ],
   );

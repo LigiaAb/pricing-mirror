@@ -1,0 +1,215 @@
+diff --git a/src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx b/src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx
+index fbdbb9f..7a05c3b 100644
+--- a/src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/cotizaciones-table.tsx
+@@ -37,6 +37,8 @@ export type CotizacionesTableProps = {
+   nuevaCotizacion: () => void;
+   /** Permiso de Agregar: sin él no se muestra "Nuevo". Por defecto `true`. */
+   puedeAgregar?: boolean | undefined;
++  /** Permiso de Autorizar: sin él no se muestran Confirmar ni Rechazar. Por defecto `true`. */
++  puedeAutorizar?: boolean | undefined;
+   limpiarCotizacion: () => void;
+   rechazarCotizacion: (codCotizacionCabecera: Id) => Promise<boolean>;
+   confirmarCotizacion: (codCotizacionCabecera: Id) => Promise<boolean>;
+@@ -73,12 +75,14 @@ function crearCotizacionesColumns({
+   onConfirmar,
+   onRechazar,
+   puedeConfirmar,
++  puedeAutorizar,
+   accionesDeshabilitadas,
+ }: {
+   onVer: (cotizacion: CotizacionCabecera) => void;
+   onConfirmar: (cotizacion: CotizacionCabecera) => void;
+   onRechazar: (cotizacion: CotizacionCabecera) => void;
+   puedeConfirmar: (cotizacion: CotizacionCabecera) => boolean;
++  puedeAutorizar: boolean;
+   accionesDeshabilitadas: boolean;
+ }): ColumnDef<CotizacionTabla>[] {
+   return [
+@@ -195,28 +199,32 @@ function crearCotizacionesColumns({
+               <Eye className="size-4" aria-hidden="true" />
+             </Button>
+ 
+-            <Button
+-              type="button"
+-              size="icon"
+-              variant="ghost"
+-              aria-label={`Confirmar cotización ${cotizacion.cod_cotizacion_cabecera}`}
+-              disabled={!confirmarHabilitado || accionesDeshabilitadas}
+-              onClick={() => onConfirmar(cotizacion)}
+-            >
+-              <ShieldCheck className="size-4" aria-hidden="true" />
+-            </Button>
++            {puedeAutorizar ? (
++              <>
++                <Button
++                  type="button"
++                  size="icon"
++                  variant="ghost"
++                  aria-label={`Confirmar cotización ${cotizacion.cod_cotizacion_cabecera}`}
++                  disabled={!confirmarHabilitado || accionesDeshabilitadas}
++                  onClick={() => onConfirmar(cotizacion)}
++                >
++                  <ShieldCheck className="size-4" aria-hidden="true" />
++                </Button>
+ 
+-            <Button
+-              type="button"
+-              size="icon"
+-              variant="ghost"
+-              className="text-destructive hover:text-destructive"
+-              aria-label={`Rechazar cotización ${cotizacion.cod_cotizacion_cabecera}`}
+-              disabled={accionesDeshabilitadas}
+-              onClick={() => onRechazar(cotizacion)}
+-            >
+-              <Trash2 className="size-4" aria-hidden="true" />
+-            </Button>
++                <Button
++                  type="button"
++                  size="icon"
++                  variant="ghost"
++                  className="text-destructive hover:text-destructive"
++                  aria-label={`Rechazar cotización ${cotizacion.cod_cotizacion_cabecera}`}
++                  disabled={accionesDeshabilitadas}
++                  onClick={() => onRechazar(cotizacion)}
++                >
++                  <Trash2 className="size-4" aria-hidden="true" />
++                </Button>
++              </>
++            ) : null}
+           </div>
+         );
+       },
+@@ -233,6 +241,7 @@ export function CotizacionesTable({
+   seleccionarCotizacion,
+   nuevaCotizacion,
+   puedeAgregar = true,
++  puedeAutorizar = true,
+   limpiarCotizacion,
+   rechazarCotizacion,
+   confirmarCotizacion,
+@@ -298,6 +307,7 @@ export function CotizacionesTable({
+         onConfirmar: handleConfirmar,
+         onRechazar: handleRechazar,
+         puedeConfirmar: puedeConfirmarCotizacion,
++        puedeAutorizar,
+         accionesDeshabilitadas,
+       }),
+     [
+@@ -305,6 +315,7 @@ export function CotizacionesTable({
+       handleConfirmar,
+       handleRechazar,
+       puedeConfirmarCotizacion,
++      puedeAutorizar,
+       accionesDeshabilitadas,
+     ],
+   );
+diff --git a/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx b/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx
+index e6f3083..34d2859 100644
+--- a/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx
+@@ -401,11 +401,10 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
+    * FORMULARIO SELECCIONADO
+    * ========================================================================== */
+ 
+-  /*
+-   * Permisos de la opción "Información" de Cotizaciones. Autorizar (confirmar /
+-   * rechazar) queda pendiente: falta confirmar su propiedad en usePermisosCategoria.
+-   */
+-  const { puedeAgregar, puedeEditar } = usePermisosPricing(OPCION_PERMISOS.cotizaciones);
++  /* Permisos de la opción "Información" de Cotizaciones (Autorizar = confirmar / rechazar). */
++  const { puedeAgregar, puedeEditar, puedeAutorizar } = usePermisosPricing(
++    OPCION_PERMISOS.cotizaciones,
++  );
+ 
+   const tipoFormularioInformacion = React.useMemo(() => {
+     if (!cotizacionSeleccionada) {
+@@ -491,6 +490,7 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
+     seleccionarCotizacion,
+     nuevaCotizacion,
+     puedeAgregar,
++    puedeAutorizar,
+     limpiarCotizacion,
+     rechazarCotizacion,
+     confirmarCotizacion,
+diff --git a/src/features/pricing/shared/ARQUITECTURA.md b/src/features/pricing/shared/ARQUITECTURA.md
+index 936e3d6..946fa90 100644
+--- a/src/features/pricing/shared/ARQUITECTURA.md
++++ b/src/features/pricing/shared/ARQUITECTURA.md
+@@ -50,12 +50,13 @@ Cotización es otro componente: `EncabezadoColapsable` (`cotizacion/calculo/comp
+ Permisos = menú → categoría → opción → acción. La categoría es la pantalla (sale de la ruta) y
+ `usePermisosCategoria` (`@/features/shell`) recibe el nombre de la **opción**. `usePermisosPricing` lo envuelve:
+ `OPCION_PERMISOS` tiene el nombre de opción de cada pantalla y devuelve `puedeVer / puedeAgregar / puedeEditar /
+-puedeEliminar` como booleanos. Solo es interfaz: el backend valida cada request.
++puedeEliminar / puedeAutorizar` como booleanos (`puedeAutorizar` = acción "Autorizar": el hook arma `puede` +
++nombre de la acción, como `puedeFiltrarEmpresaCentroCosto` en objetivos). Solo es interfaz: el backend valida cada request.
+ 
+ | Pantalla          | Categoría             | Opción      | Qué pide cada botón                                                                                                  |
+ | ----------------- | --------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------- |
+ | Tarifas           | Tarifas               | Servicios   | Agregar: nueva, copiar, alta de método y filas · Editar: actualizar, editar filas · Eliminar: anular, eliminar filas |
+-| Cotizaciones      | Cotizaciones          | Información | Agregar: nuevo, nuevo cálculo, guardar versión · Editar: cabecera, activar versión · Autorizar: pendiente (#104)     |
++| Cotizaciones      | Cotizaciones          | Información | Agregar: nuevo, nuevo cálculo, guardar versión · Editar: cabecera, activar versión · Autorizar: confirmar, rechazar  |
+ | Autorización SPOT | Manejo de Tarifa SPOT | Información | Editar: autorizar y rechazar (la categoría no tiene acción Autorizar)                                                |
+ | Plantillas        | Tarifario de clientes | Lista       | Agregar: nueva · Editar: guardar, rubros · Eliminar: eliminar                                                        |
+ | Carga masiva      | Carga Masiva de Flete | Información | Agregar: enviar                                                                                                      |
+diff --git a/src/features/pricing/shared/hooks/use-permisos-pricing.ts b/src/features/pricing/shared/hooks/use-permisos-pricing.ts
+index 9149bf2..4f28a96 100644
+--- a/src/features/pricing/shared/hooks/use-permisos-pricing.ts
++++ b/src/features/pricing/shared/hooks/use-permisos-pricing.ts
+@@ -31,12 +31,16 @@ export const OPCION_PERMISOS = {
+ 
+ export type OpcionPermisosPricing = (typeof OPCION_PERMISOS)[keyof typeof OPCION_PERMISOS];
+ 
+-/** Acciones que usa pricing (las mismas que expone el hook en embarques). */
++/**
++ * Acciones que usa pricing. `puedeAutorizar` = acción "Autorizar" (el hook arma
++ * `puede` + nombre de la acción, como `puedeFiltrarEmpresaCentroCosto` en objetivos).
++ */
+ export interface PermisosPricing {
+   puedeVer: boolean;
+   puedeAgregar: boolean;
+   puedeEditar: boolean;
+   puedeEliminar: boolean;
++  puedeAutorizar: boolean;
+ }
+ 
+ /**
+@@ -51,5 +55,6 @@ export function usePermisosPricing(opcion: OpcionPermisosPricing): PermisosPrici
+     puedeAgregar: permisos?.puedeAgregar === true,
+     puedeEditar: permisos?.puedeEditar === true,
+     puedeEliminar: permisos?.puedeEliminar === true,
++    puedeAutorizar: permisos?.puedeAutorizar === true,
+   };
+ }
+diff --git a/src/features/pricing/tarifas/hooks/use-permisos-tarifas.tsx b/src/features/pricing/tarifas/hooks/use-permisos-tarifas.tsx
+index f971c53..a113316 100644
+--- a/src/features/pricing/tarifas/hooks/use-permisos-tarifas.tsx
++++ b/src/features/pricing/tarifas/hooks/use-permisos-tarifas.tsx
+@@ -18,14 +18,17 @@ import {
+  * todo: así se conserva el comportamiento que tenían antes.
+  * ========================================================================== */
+ 
+-const TODO_PERMITIDO: PermisosPricing = {
++/** Tarifas no usa la acción Autorizar. */
++type PermisosTarifas = Omit<PermisosPricing, "puedeAutorizar">;
++
++const TODO_PERMITIDO: PermisosTarifas = {
+   puedeVer: true,
+   puedeAgregar: true,
+   puedeEditar: true,
+   puedeEliminar: true,
+ };
+ 
+-const PermisosTarifasContext = React.createContext<PermisosPricing>(TODO_PERMITIDO);
++const PermisosTarifasContext = React.createContext<PermisosTarifas>(TODO_PERMITIDO);
+ 
+ export function PermisosTarifasProvider({ children }: { children: React.ReactNode }) {
+   const { puedeVer, puedeAgregar, puedeEditar, puedeEliminar } = usePermisosPricing(
+@@ -43,6 +46,6 @@ export function PermisosTarifasProvider({ children }: { children: React.ReactNod
+ }
+ 
+ /** Permisos de la pantalla de Tarifas (todo permitido fuera de `PermisosTarifasProvider`). */
+-export function usePermisosTarifas(): PermisosPricing {
++export function usePermisosTarifas(): PermisosTarifas {
+   return React.useContext(PermisosTarifasContext);
+ }

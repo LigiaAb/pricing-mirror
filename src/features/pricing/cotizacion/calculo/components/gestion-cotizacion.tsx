@@ -401,11 +401,10 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
    * FORMULARIO SELECCIONADO
    * ========================================================================== */
 
-  /*
-   * Permisos de la opción "Información" de Cotizaciones. Autorizar (confirmar /
-   * rechazar) queda pendiente: falta confirmar su propiedad en usePermisosCategoria.
-   */
-  const { puedeAgregar, puedeEditar } = usePermisosPricing(OPCION_PERMISOS.cotizaciones);
+  /* Permisos de la opción "Información" de Cotizaciones (Autorizar = confirmar / rechazar). */
+  const { puedeAgregar, puedeEditar, puedeAutorizar } = usePermisosPricing(
+    OPCION_PERMISOS.cotizaciones,
+  );
 
   const tipoFormularioInformacion = React.useMemo(() => {
     if (!cotizacionSeleccionada) {
@@ -491,6 +490,7 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
     seleccionarCotizacion,
     nuevaCotizacion,
     puedeAgregar,
+    puedeAutorizar,
     limpiarCotizacion,
     rechazarCotizacion,
     confirmarCotizacion,
