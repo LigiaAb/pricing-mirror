@@ -78,7 +78,6 @@ src/features/embarques/components/secciones/fechas.tsx: error TS2307: Cannot fin
 src/features/embarques/components/secciones/fechas.tsx: error TS7006: Parameter 'fecha' implicitly has an 'any' type.
 src/features/embarques/components/secciones/fechas.tsx: error TS7006: Parameter 'fecha' implicitly has an 'any' type.
 src/features/embarques/components/secciones/fechas.tsx: error TS7006: Parameter 'index' implicitly has an 'any' type.
-src/features/embarques/components/secciones/gastos.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/embarques/components/secciones/rutas.tsx: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
 src/features/embarques/components/secciones/rutas.tsx: error TS7006: Parameter 'a' implicitly has an 'any' type.
 src/features/embarques/components/secciones/rutas.tsx: error TS7006: Parameter 'a' implicitly has an 'any' type.
@@ -105,8 +104,6 @@ src/features/embarques/components/tracking/tracking-vista.tsx: error TS2307: Can
 src/features/embarques/components/tracking/tracking-vista.tsx: error TS2307: Cannot find module '@/features/gestion-aduanal/api/tracking/mutations' or its corresponding type declarations.
 src/features/embarques/components/tracking/tracking-vista.tsx: error TS2307: Cannot find module '@/features/tracking-embarques/api/mutations' or its corresponding type declarations.
 src/features/embarques/components/tracking/tracking-vista.tsx: error TS7006: Parameter 'error' implicitly has an 'any' type.
-src/features/embarques/components/tracking/tracking-vista.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/embarques/components/tracking/tracking-vista.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/embarques/components/tracking/tracking-vista.tsx: error TS7031: Binding element 'data' implicitly has an 'any' type.
 src/features/embarques/hooks/use-cargas-coordinacion.ts: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
 src/features/embarques/hooks/use-cargas-coordinacion.ts: error TS2307: Cannot find module '@/features/gastos' or its corresponding type declarations.
@@ -138,29 +135,35 @@ src/features/embarques/lib/pdf-cca.ts: error TS2307: Cannot find module '@/asset
 src/features/embarques/lib/pdf-generator-embarques.ts: error TS2345: Argument of type '(doc: jsPDF, barcodeValue: string, options?: Options | undefined) => jsPDF' is not assignable to parameter of type '(doc: jsPDF, value: string, options: Record<string, unknown>) => void'.
 src/features/embarques/lib/pdf-informacion-embarque/items-table.ts: error TS2339: Property 'lastAutoTable' does not exist on type 'jsPDF'.
 src/features/embarques/lib/pdf-informacion-embarque/items-table.ts: error TS2339: Property 'lastAutoTable' does not exist on type 'jsPDF'.
-src/features/objetivos/components/lista-objetivos-client.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/objetivos/components/lista-objetivos-client.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/carga-masiva-fletes/components/carga-masiva-fletes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/carga-masiva-fletes/components/carga-masiva-fletes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion-entidades.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion-entidades.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion-entidades.ts: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/plantillas-clientes/components/gestion-plantillas-clientes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/reportes/components/lista-reportes.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/shared/hooks/use-catalogos-pricing.ts: error TS2709: Cannot use namespace 'Entidad' as a type.
-src/features/pricing/tarifas/components/creacion-tarifa.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/creacion-tarifa.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/tarifas/components/creacion-tarifa.tsx: error TS7006: Parameter 'state' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/formulario-tarifa.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/pricing/tarifas/components/metodo-entidad/entidad-table.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
-src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts: error TS7006: Parameter 'state' implicitly has an 'any' type.
-src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts: error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/features/shell/components/module-dashboard.tsx: error TS2307: Cannot find module '@/features/permisos' or its corresponding type declarations.
+src/features/shell/components/module-dashboard.tsx: error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/features/shell/components/module-dashboard.tsx: error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/features/shell/components/module-dashboard.tsx: error TS7006: Parameter 'module' implicitly has an 'any' type.
+src/features/shell/components/module-dashboard.tsx: error TS7006: Parameter 'modulo' implicitly has an 'any' type.
+src/features/shell/components/protected-shell.tsx: error TS2307: Cannot find module '@/features/notificaciones' or its corresponding type declarations.
+src/features/shell/components/protected-shell.tsx: error TS2307: Cannot find module '@/features/permisos' or its corresponding type declarations.
+src/features/shell/components/sidebar.tsx: error TS2307: Cannot find module '@/features/auth' or its corresponding type declarations.
+src/features/shell/components/sidebar.tsx: error TS2307: Cannot find module '@/features/permisos' or its corresponding type declarations.
+src/features/shell/components/sidebar.tsx: error TS7006: Parameter 'cat' implicitly has an 'any' type.
+src/features/shell/components/sidebar.tsx: error TS7006: Parameter 'cat' implicitly has an 'any' type.
+src/features/shell/components/sidebar.tsx: error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/features/shell/components/sidebar.tsx: error TS7006: Parameter 'menu' implicitly has an 'any' type.
+src/features/shell/hooks/use-navegacion-actual.ts: error TS18046: 'c' is of type 'unknown'.
+src/features/shell/hooks/use-navegacion-actual.ts: error TS18046: 'm' is of type 'unknown'.
+src/features/shell/hooks/use-navegacion-actual.ts: error TS18046: 'm' is of type 'unknown'.
+src/features/shell/hooks/use-navegacion-actual.ts: error TS2307: Cannot find module '@/features/permisos' or its corresponding type declarations.
+src/features/shell/hooks/use-navegacion-actual.ts: error TS2339: Property 'categorias' does not exist on type '{}'.
+src/features/shell/hooks/use-navegacion-actual.ts: error TS2339: Property 'menu_ruta' does not exist on type '{}'.
+src/features/shell/hooks/use-navegacion-actual.ts: error TS2339: Property 'menus' does not exist on type '{}'.
+src/features/shell/hooks/use-navegacion-actual.ts: error TS2339: Property 'modulo_ruta' does not exist on type '{}'.
+src/features/shell/hooks/use-navegacion-actual.ts: error TS2339: Property 'modulo_ruta' does not exist on type '{}'.
+src/features/shell/hooks/use-permisos-actuales.ts: error TS2307: Cannot find module '@/features/permisos' or its corresponding type declarations.
+src/features/shell/hooks/use-permisos-actuales.ts: error TS7006: Parameter 'o' implicitly has an 'any' type.
+src/features/shell/hooks/use-permisos-actuales.ts: error TS7006: Parameter 'o' implicitly has an 'any' type.
+src/features/shell/hooks/use-permisos-categoria.ts: error TS7006: Parameter 'a' implicitly has an 'any' type.
