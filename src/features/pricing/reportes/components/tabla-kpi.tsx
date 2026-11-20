@@ -1,7 +1,7 @@
 "use client";
 
 import { Download, Loader2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import NivelesBuilder from "@/shared/components/tabla-double/niveles-builder";
 import TablaDouble from "@/shared/components/tabla-double/tabla-double";
 import { Button } from "@/shared/components/ui/button";
@@ -20,7 +20,6 @@ import {
   CAMPOS_NIVELES_KPI,
   type CampoKpi,
   construirTablaKpi,
-  NIVELES_DEFECTO_KPI,
 } from "../lib/tabla-kpi";
 
 /** El Select de Radix no acepta "" como valor: "sin columnas" se guarda como "". */
@@ -31,14 +30,68 @@ const NOMBRE_ARCHIVO: Record<ReporteKpi, string> = {
   realizacion_de_precio: "realizacion-de-precio",
 };
 
+type ConfiguracionKpi = {
+  /** Niveles de filas, en el orden en que se agrupan. */
+  niveles: CampoKpi[];
+  /** Campo de columnas; "" = sin columnas (solo el total). */
+  campoColumna: string;
+};
+
 /**
- * Tabla dinámica de Hit Rate o Realización de Precio: el usuario elige los niveles de filas
- * (y su orden) y el campo de columnas. Lee `report_kpi_cotizaciones`.
+ * Controles de la tabla dinámica (van en "Personaliza tu reporte"): niveles de filas
+ * (y su orden) y campo de columnas.
  */
-export function TablaKpi({ filtros, reporte }: { filtros: Filtros; reporte: ReporteKpi }) {
+export function ConfiguracionTablaKpi({
+  niveles,
+  campoColumna,
+  onNivelesChange,
+  onCampoColumnaChange,
+}: ConfiguracionKpi & {
+  onNivelesChange: (niveles: CampoKpi[]) => void;
+  onCampoColumnaChange: (campo: string) => void;
+}) {
+  return (
+    <div className="space-y-4 p-4">
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Columnas (qué se desglosa en columnas)
+        </p>
+        <Select
+          value={campoColumna || SIN_COLUMNA}
+          onValueChange={(valor) => onCampoColumnaChange(valor === SIN_COLUMNA ? "" : valor)}
+        >
+          <SelectTrigger className="h-9 text-sm">
+            <SelectValue placeholder="Seleccione el campo de columnas" />
+          </SelectTrigger>
+          <SelectContent>
+            {CAMPOS_COLUMNA_KPI.map((c) => (
+              <SelectItem key={c.campo || SIN_COLUMNA} value={c.campo || SIN_COLUMNA}>
+                {c.etiqueta}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <NivelesBuilder
+        camposDisponibles={CAMPOS_NIVELES_KPI}
+        nivelesActivos={niveles}
+        onChange={onNivelesChange}
+      />
+    </div>
+  );
+}
+
+/**
+ * Tabla dinámica de Hit Rate o Realización de Precio, agrupada según `ConfiguracionTablaKpi`.
+ * Lee `report_kpi_cotizaciones`.
+ */
+export function TablaKpi({
+  filtros,
+  reporte,
+  niveles,
+  campoColumna,
+}: ConfiguracionKpi & { filtros: Filtros; reporte: ReporteKpi }) {
   const consulta = useKpiCotizaciones(filtros, reporte);
-  const [niveles, setNiveles] = useState<CampoKpi[]>(NIVELES_DEFECTO_KPI);
-  const [campoColumna, setCampoColumna] = useState("");
   const { loadExcelJS, isLoading: cargandoExcel } = useExcelJS();
 
   const tabla = useMemo(
@@ -82,50 +135,21 @@ export function TablaKpi({ filtros, reporte }: { filtros: Filtros; reporte: Repo
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <div className="lg:col-span-8">
-          <NivelesBuilder
-            camposDisponibles={CAMPOS_NIVELES_KPI}
-            nivelesActivos={niveles}
-            onChange={setNiveles}
-          />
-        </div>
-        <div className="space-y-3 lg:col-span-4">
-          <div>
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Columnas (qué se desglosa en columnas)
-            </p>
-            <Select
-              value={campoColumna || SIN_COLUMNA}
-              onValueChange={(valor) => setCampoColumna(valor === SIN_COLUMNA ? "" : valor)}
-            >
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Seleccione el campo de columnas" />
-              </SelectTrigger>
-              <SelectContent>
-                {CAMPOS_COLUMNA_KPI.map((c) => (
-                  <SelectItem key={c.campo || SIN_COLUMNA} value={c.campo || SIN_COLUMNA}>
-                    {c.etiqueta}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => void exportarExcel()}
-            disabled={tabla.data.length === 0 || cargandoExcel}
-            className="gap-1.5"
-          >
-            {cargandoExcel ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Download className="h-3.5 w-3.5" />
-            )}
-            Exportar Excel
-          </Button>
-        </div>
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => void exportarExcel()}
+          disabled={tabla.data.length === 0 || cargandoExcel}
+          className="gap-1.5"
+        >
+          {cargandoExcel ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Download className="h-3.5 w-3.5" />
+          )}
+          Exportar Excel
+        </Button>
       </div>
 
       {consulta.isLoading ? (

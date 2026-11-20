@@ -28,9 +28,10 @@ import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/popover";
 import { cn } from "@/shared/lib/utils";
 import type { ConfiguracionReporte, Filtros, SelectOption } from "../lib/filtros-types";
+import { type CampoKpi, NIVELES_DEFECTO_KPI } from "../lib/tabla-kpi";
 import { HitRate } from "./hit-rate";
 import RealizacionDePrecio from "./realizacion-de-precio";
-import { TablaKpi } from "./tabla-kpi";
+import { ConfiguracionTablaKpi, TablaKpi } from "./tabla-kpi";
 
 const hoy = new Date();
 
@@ -147,6 +148,9 @@ export function ListaReportes() {
   const [descargar, setDescargar] = React.useState(0);
   const [errorPdf, setErrorPdf] = React.useState<string | null>(null);
   const [generandoPdf, setGenerandoPdf] = React.useState(false);
+  // Configuración de la tabla dinámica ("Personaliza tu reporte")
+  const [nivelesKpi, setNivelesKpi] = React.useState<CampoKpi[]>(NIVELES_DEFECTO_KPI);
+  const [campoColumnaKpi, setCampoColumnaKpi] = React.useState("");
 
   const reporte = React.useMemo(() => filtros.reporte?.value, [filtros.reporte]);
 
@@ -424,6 +428,14 @@ export function ListaReportes() {
                   title={"Personaliza tu reporte"}
                   subtitle={"Define cómo se agrupan y desglosan los datos"}
                 />
+                {(reporte === "hit-rate" || reporte === "realizacion-de-precio") && (
+                  <ConfiguracionTablaKpi
+                    niveles={nivelesKpi}
+                    campoColumna={campoColumnaKpi}
+                    onNivelesChange={setNivelesKpi}
+                    onCampoColumnaChange={setCampoColumnaKpi}
+                  />
+                )}
               </Panel>
               <Panel className="w-full">
                 <SectionHeader
@@ -481,12 +493,14 @@ export function ListaReportes() {
           <SectionHeader
             icon={<Table2Icon className="w-4 h-4" />}
             title="Resumen agrupado"
-            subtitle="Elija y ordene los niveles de filas y el campo de columnas"
+            subtitle="Agrupado según «Personaliza tu reporte»"
           />
           <div className="p-4">
             <TablaKpi
               filtros={filtros}
               reporte={reporte === "hit-rate" ? "hit_rate" : "realizacion_de_precio"}
+              niveles={nivelesKpi}
+              campoColumna={campoColumnaKpi}
             />
           </div>
         </Panel>
