@@ -1,0 +1,113 @@
+diff --git a/src/features/pricing/cotizacion/calculo/index.ts b/src/features/pricing/cotizacion/calculo/index.ts
+index 7719bff..fbb1def 100644
+--- a/src/features/pricing/cotizacion/calculo/index.ts
++++ b/src/features/pricing/cotizacion/calculo/index.ts
+@@ -26,4 +26,5 @@ export type {
+ export { CAMPOS_CABECERA, construirFiltrosCalculo } from "./lib/cabecera";
+ export { filtrarPorTipoTabla, normalizarOpciones } from "./lib/catalogos";
+ export { esRubroDueAgent } from "./lib/clasificacion-rubros";
++export { unirDetallesGuardados } from "./lib/rubros-guardados";
+ export { formatFecha, formatNumero, getSimboloMoneda } from "./lib/utils";
+diff --git a/src/features/pricing/reportes/components/ficha-cotizacion-sheet.tsx b/src/features/pricing/reportes/components/ficha-cotizacion-sheet.tsx
+index 69de561..7485b0b 100644
+--- a/src/features/pricing/reportes/components/ficha-cotizacion-sheet.tsx
++++ b/src/features/pricing/reportes/components/ficha-cotizacion-sheet.tsx
+@@ -25,6 +25,7 @@ import {
+   formatFecha,
+   formatNumero,
+   getSimboloMoneda,
++  unirDetallesGuardados,
+   useCatalogosCotizacion,
+   type VersionCotizacion,
+ } from "@/features/pricing/cotizacion/calculo";
+@@ -261,6 +262,16 @@ function ContenidoFicha({ fila }: { fila: FilaKpi }) {
+           </Datos>
+         </CardInfo>
+ 
++        <CardInfo titulo="Datos complementarios" icono={FileText}>
++          <Datos>
++            {DATOS_COMPLEMENTARIOS.map(([campo, label]) => (
++              <Fila key={campo} label={label}>
++                {textoLibre(versionActiva?.[campo]) ?? VACIO}
++              </Fila>
++            ))}
++          </Datos>
++        </CardInfo>
++
+         <CardInfo titulo="En el periodo del reporte" icono={Target}>
+           <Datos>
+             <Fila label="Creación">{formatFecha(fila.fecha_creacion ?? null)}</Fila>
+@@ -303,8 +314,8 @@ function ContenidoFicha({ fila }: { fila: FilaKpi }) {
+             <SinDatos texto="Sin rubros guardados." />
+           ) : (
+             <Tabla
+-              columnas={["Grupo", "Rubro", "Proveedor", "Costo", "Venta"]}
+-              numericas={[3, 4]}
++              columnas={["Grupo", "Rubro", "Servicio", "Proveedor", "Detalle", "Costo", "Venta"]}
++              numericas={[5, 6]}
+               filas={rubros.map((r, i) => ({
+                 clave: String(r.cod_detallerubro ?? `${String(r.cod_rubro)}-${i}`),
+                 celdas: [
+@@ -318,7 +329,18 @@ function ContenidoFicha({ fila }: { fila: FilaKpi }) {
+                       r.cod_rubro,
+                     ) ??
+                     VACIO,
++                  texto(r.nombre_servicio as string) ??
++                    texto(r.siglas_servicio as string) ??
++                    etiquetaDe(
++                      calculo.servicios.map((x) => ({
++                        value: x.cod_servicio,
++                        label: x.nombre_servicio ?? x.nombre,
++                      })),
++                      r.cod_servicio,
++                    ) ??
++                    VACIO,
+                   etiquetaDe(formulario.proveedores, r.entidad_id ?? r.cod_entidad) ?? VACIO,
++                  detalleRubro(r) ?? VACIO,
+                   monto(
+                     r.costo ?? r.costo_rubro ?? r.precio_costo,
+                     getSimboloMoneda(
+@@ -438,6 +460,15 @@ const COD_CRITERIO_CW = "15";
+  * Realización de Precio (solo en ese reporte, cotizaciones cerradas): compara la venta Spot
+  * con la venta original del flete en la versión activa.
+  */
++/** Datos complementarios de la versión (los de `DatosComplementariosCotizacion`). */
++const DATOS_COMPLEMENTARIOS = [
++  ["tipo_servicio", "Tipo de servicio"],
++  ["tipo_transito", "Tiempo de tránsito"],
++  ["salida", "Salida"],
++  ["tipo_producto", "Tipo de producto"],
++  ["opcionales", "Opcionales"],
++] as const;
++
+ const TIPO_PRECIO: Record<NonNullable<FilaKpi["tipo_precio"]>, string> = {
+   SOBRE_TARIFA: "Sobre tarifa (venta Spot mayor que la tarifa publicada)",
+   SPOT: "Spot (venta Spot menor que la tarifa publicada)",
+@@ -446,6 +477,27 @@ const TIPO_PRECIO: Record<NonNullable<FilaKpi["tipo_precio"]>, string> = {
+ 
+ const texto = (valor: string | null | undefined) => valor?.trim() || undefined;
+ 
++/** Texto de un campo libre (string o número); vacío si no hay. */
++const textoLibre = (valor: unknown) =>
++  typeof valor === "string" || typeof valor === "number" ? texto(String(valor)) : undefined;
++
++/** Detalles guardados del rubro ("Tipo: descripción valor"), como los lee el cálculo. */
++const detalleRubro = (rubro: Registro) =>
++  unirDetallesGuardados(
++    rubro.detalles,
++    rubro.metodo_detalle,
++    rubro.metodo_detalles,
++    typeof rubro.detalle === "string" ? rubro.detalle.trim() : rubro.detalle,
++  )
++    .map((d) => {
++      const descripcion = [d.tarifadetalle_descripcion, d.tarifadetalle_valor]
++        .filter((v) => v != null && v !== "")
++        .join(" ");
++      return [d.tipo_desc, descripcion].filter(Boolean).join(": ");
++    })
++    .filter(Boolean)
++    .join(", ") || undefined;
++
+ const nombreUsuario = (fila: FilaKpi) =>
+   texto(`${fila.nombres ?? ""} ${fila.apellidos ?? ""}`) ?? `Usuario ${fila.usuario}`;
+ 
