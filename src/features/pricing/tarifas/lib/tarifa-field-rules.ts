@@ -259,3 +259,22 @@ export const fieldRules: Record<string, FieldRule> = {
     payload: ["metodo"],
   },
 };
+
+/**
+ * Campos obligatorios al CREAR una tarifa (id → etiqueta para el mensaje).
+ * Regla: todos, menos los que tienen "TODOS" en el catálogo (CATALOGOS_AGREGAR_TODOS),
+ * las fechas, los checkboxes y los que llena el sistema (usuario, mínimo de Scale).
+ */
+export const CAMPOS_OBLIGATORIOS_INGRESO: Readonly<Record<string, string>> = {
+  empresa: "Empresa",
+  centroCosto: "Centro de Costo",
+  tipoTransporte: "Tipo de Transporte",
+  tipoClasificacion: "Clasificación",
+  rubro: "Rubro",
+  proveedor: "Proveedor",
+  nombre: "Servicio",
+  siglas: "Siglas",
+  tipoPago: "Tipo de Pago",
+  tipoCalculo: "Tipo de Cálculo",
+  metodoCalculo: "Método de Cálculo",
+};

@@ -1,0 +1,142 @@
+diff --git a/src/features/pricing/tarifas/ARQUITECTURA.md b/src/features/pricing/tarifas/ARQUITECTURA.md
+index 2f8649b..faf8985 100644
+--- a/src/features/pricing/tarifas/ARQUITECTURA.md
++++ b/src/features/pricing/tarifas/ARQUITECTURA.md
+@@ -17,7 +17,7 @@ tarifas/
+ ├─ lib/
+ │  ├─ campos-metodo.ts      ← reexporta el motor de definición única (vive en pricing/shared/lib/campos-metodo.ts)
+ │  ├─ metodos/<metodo>.ts   ← DEFINICIÓN ÚNICA de los campos de cada método (rango: pricing/shared/lib/metodos/rango.ts)
+-│  ├─ tarifa-field-rules.ts ← reglas de campos del formulario principal
++│  ├─ tarifa-field-rules.ts ← reglas de campos del formulario principal + CAMPOS_OBLIGATORIOS_INGRESO
+ │  └─ tarifa-helpers.ts     ← funciones compartidas (decimales, fechas, ...)
+ └─ components/
+    └─ metodos/
+diff --git a/src/features/pricing/tarifas/components/formulario-tarifa.tsx b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
+index 47dc66d..a94b42b 100644
+--- a/src/features/pricing/tarifas/components/formulario-tarifa.tsx
++++ b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
+@@ -29,6 +29,7 @@ import type { FilaServicioMetodo, OptionEntidad } from "../api/types-api";
+ import { useCatalogosTarifas } from "../hooks/use-catalogos-tarifas";
+ import { useFormulario } from "../hooks/use-formulario-tarifas";
+ import { usePermisosTarifas } from "../hooks/use-permisos-tarifas";
++import { CAMPOS_OBLIGATORIOS_INGRESO } from "../lib/tarifa-field-rules";
+ import { formatDateForInput } from "../lib/tarifa-helpers";
+ 
+ const TIPO_ENTIDAD_PROVEEDOR = "PROVEEDOR"; // "CARRIER";
+@@ -97,6 +98,14 @@ type RemoteProveedorOption = {
+   original: OptionEntidad;
+ };
+ 
++/** Vacío: sin valor, texto en blanco u opción de select sin `value`. */
++function estaVacio(valor: unknown): boolean {
++  if (valor == null) return true;
++  if (typeof valor === "string") return valor.trim() === "";
++  if (typeof valor === "object" && "value" in valor) return valor.value == null;
++  return false;
++}
++
+ function entidadAProveedor(entidadOrigen: object): OptionEntidad | null {
+   const entidad = entidadOrigen as Record<string, unknown>;
+   const entidadId = entidad.entidad_id;
+@@ -369,6 +378,16 @@ export const FormularioTarifa = ({
+     tipoFormulario === "filtro" ||
+     (tipoFormulario === "ingreso" ? permisos.puedeAgregar : permisos.puedeEditar);
+ 
++  /** Al crear se exigen CAMPOS_OBLIGATORIOS_INGRESO (como el legacy); editar no valida. */
++  const obligatoriosFormulario = React.useMemo(
++    () =>
++      tipoFormulario === "ingreso"
++        ? [...new Set([...Object.keys(CAMPOS_OBLIGATORIOS_INGRESO), ...obligatorios])]
++        : obligatorios,
++    [tipoFormulario, obligatorios],
++  );
++  const [faltantes, setFaltantes] = React.useState<string[]>([]);
++
+   const {
+     values,
+     valoresSoloCodigos,
+@@ -393,7 +412,7 @@ export const FormularioTarifa = ({
+     inputsToHide,
+     inputsReadOnlyScale: camposScale,
+     groupsToHide,
+-    obligatorios,
++    obligatorios: obligatoriosFormulario,
+     isLoading: catalogosLoading,
+     validarSiTieneMetodoDeCalculo: true,
+   });
+@@ -581,6 +600,14 @@ export const FormularioTarifa = ({
+       return;
+     }
+ 
++    if (tipoFormulario === "ingreso") {
++      const vacios = obligatoriosFormulario.filter(
++        (id) => verificarSiEsVisible(id) && estaVacio(values[id]),
++      );
++      setFaltantes(vacios.map((id) => CAMPOS_OBLIGATORIOS_INGRESO[id] ?? id));
++      if (vacios.length > 0) return;
++    }
++
+     await onGuardar({
+       values: values as Partial<FilaServicioMetodo>,
+ 
+@@ -588,7 +615,15 @@ export const FormularioTarifa = ({
+ 
+       metodo: valoresSoloCodigos("metodo"),
+     });
+-  }, [tipoFormulario, onSubmit, onGuardar, valoresSoloCodigos, values]);
++  }, [
++    tipoFormulario,
++    onSubmit,
++    onGuardar,
++    valoresSoloCodigos,
++    values,
++    obligatoriosFormulario,
++    verificarSiEsVisible,
++  ]);
+ 
+   // const handleLimpiar = React.useCallback(() => {
+   //   // handleClearForm();
+@@ -802,6 +837,16 @@ export const FormularioTarifa = ({
+             </Button>
+           </div>
+         )}
++      {tipoFormulario === "ingreso" && faltantes.length > 0 && (
++        <div role="alert" className="text-sm text-destructive">
++          <p>Hay campos obligatorios vacíos:</p>
++          <ul className="list-disc pl-6">
++            {faltantes.map((label) => (
++              <li key={label}>{label}</li>
++            ))}
++          </ul>
++        </div>
++      )}
+       {(tipoFormulario !== "lectura" || defaultValues?.fecha_final) && (
+         <div className="flex flex-row space-x-3 justify-end">
+           {tipoFormulario !== "lectura" && puedeGuardar && (
+diff --git a/src/features/pricing/tarifas/lib/tarifa-field-rules.ts b/src/features/pricing/tarifas/lib/tarifa-field-rules.ts
+index e756d0f..7348beb 100644
+--- a/src/features/pricing/tarifas/lib/tarifa-field-rules.ts
++++ b/src/features/pricing/tarifas/lib/tarifa-field-rules.ts
+@@ -259,3 +259,22 @@ export const fieldRules: Record<string, FieldRule> = {
+     payload: ["metodo"],
+   },
+ };
++
++/**
++ * Campos obligatorios al CREAR una tarifa (id → etiqueta para el mensaje).
++ * Regla: todos, menos los que tienen "TODOS" en el catálogo (CATALOGOS_AGREGAR_TODOS),
++ * las fechas, los checkboxes y los que llena el sistema (usuario, mínimo de Scale).
++ */
++export const CAMPOS_OBLIGATORIOS_INGRESO: Readonly<Record<string, string>> = {
++  empresa: "Empresa",
++  centroCosto: "Centro de Costo",
++  tipoTransporte: "Tipo de Transporte",
++  tipoClasificacion: "Clasificación",
++  rubro: "Rubro",
++  proveedor: "Proveedor",
++  nombre: "Servicio",
++  siglas: "Siglas",
++  tipoPago: "Tipo de Pago",
++  tipoCalculo: "Tipo de Cálculo",
++  metodoCalculo: "Método de Cálculo",
++};

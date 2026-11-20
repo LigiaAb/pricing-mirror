@@ -29,6 +29,7 @@ import type { FilaServicioMetodo, OptionEntidad } from "../api/types-api";
 import { useCatalogosTarifas } from "../hooks/use-catalogos-tarifas";
 import { useFormulario } from "../hooks/use-formulario-tarifas";
 import { usePermisosTarifas } from "../hooks/use-permisos-tarifas";
+import { CAMPOS_OBLIGATORIOS_INGRESO } from "../lib/tarifa-field-rules";
 import { formatDateForInput } from "../lib/tarifa-helpers";
 
 const TIPO_ENTIDAD_PROVEEDOR = "PROVEEDOR"; // "CARRIER";
@@ -96,6 +97,14 @@ type RemoteProveedorOption = {
   label: string;
   original: OptionEntidad;
 };
+
+/** Vacío: sin valor, texto en blanco u opción de select sin `value`. */
+function estaVacio(valor: unknown): boolean {
+  if (valor == null) return true;
+  if (typeof valor === "string") return valor.trim() === "";
+  if (typeof valor === "object" && "value" in valor) return valor.value == null;
+  return false;
+}
 
 function entidadAProveedor(entidadOrigen: object): OptionEntidad | null {
   const entidad = entidadOrigen as Record<string, unknown>;
@@ -369,6 +378,16 @@ export const FormularioTarifa = ({
     tipoFormulario === "filtro" ||
     (tipoFormulario === "ingreso" ? permisos.puedeAgregar : permisos.puedeEditar);
 
+  /** Al crear se exigen CAMPOS_OBLIGATORIOS_INGRESO (como el legacy); editar no valida. */
+  const obligatoriosFormulario = React.useMemo(
+    () =>
+      tipoFormulario === "ingreso"
+        ? [...new Set([...Object.keys(CAMPOS_OBLIGATORIOS_INGRESO), ...obligatorios])]
+        : obligatorios,
+    [tipoFormulario, obligatorios],
+  );
+  const [faltantes, setFaltantes] = React.useState<string[]>([]);
+
   const {
     values,
     valoresSoloCodigos,
@@ -393,7 +412,7 @@ export const FormularioTarifa = ({
     inputsToHide,
     inputsReadOnlyScale: camposScale,
     groupsToHide,
-    obligatorios,
+    obligatorios: obligatoriosFormulario,
     isLoading: catalogosLoading,
     validarSiTieneMetodoDeCalculo: true,
   });
@@ -581,6 +600,14 @@ export const FormularioTarifa = ({
       return;
     }
 
+    if (tipoFormulario === "ingreso") {
+      const vacios = obligatoriosFormulario.filter(
+        (id) => verificarSiEsVisible(id) && estaVacio(values[id]),
+      );
+      setFaltantes(vacios.map((id) => CAMPOS_OBLIGATORIOS_INGRESO[id] ?? id));
+      if (vacios.length > 0) return;
+    }
+
     await onGuardar({
       values: values as Partial<FilaServicioMetodo>,
 
@@ -588,7 +615,15 @@ export const FormularioTarifa = ({
 
       metodo: valoresSoloCodigos("metodo"),
     });
-  }, [tipoFormulario, onSubmit, onGuardar, valoresSoloCodigos, values]);
+  }, [
+    tipoFormulario,
+    onSubmit,
+    onGuardar,
+    valoresSoloCodigos,
+    values,
+    obligatoriosFormulario,
+    verificarSiEsVisible,
+  ]);
 
   // const handleLimpiar = React.useCallback(() => {
   //   // handleClearForm();
@@ -802,6 +837,16 @@ export const FormularioTarifa = ({
             </Button>
           </div>
         )}
+      {tipoFormulario === "ingreso" && faltantes.length > 0 && (
+        <div role="alert" className="text-sm text-destructive">
+          <p>Hay campos obligatorios vacíos:</p>
+          <ul className="list-disc pl-6">
+            {faltantes.map((label) => (
+              <li key={label}>{label}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {(tipoFormulario !== "lectura" || defaultValues?.fecha_final) && (
         <div className="flex flex-row space-x-3 justify-end">
           {tipoFormulario !== "lectura" && puedeGuardar && (

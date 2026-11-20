@@ -17,7 +17,7 @@ tarifas/
 ├─ lib/
 │  ├─ campos-metodo.ts      ← reexporta el motor de definición única (vive en pricing/shared/lib/campos-metodo.ts)
 │  ├─ metodos/<metodo>.ts   ← DEFINICIÓN ÚNICA de los campos de cada método (rango: pricing/shared/lib/metodos/rango.ts)
-│  ├─ tarifa-field-rules.ts ← reglas de campos del formulario principal
+│  ├─ tarifa-field-rules.ts ← reglas de campos del formulario principal + CAMPOS_OBLIGATORIOS_INGRESO
 │  └─ tarifa-helpers.ts     ← funciones compartidas (decimales, fechas, ...)
 └─ components/
    └─ metodos/
