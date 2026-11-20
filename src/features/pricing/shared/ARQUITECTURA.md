@@ -50,16 +50,20 @@ Cotización es otro componente: `EncabezadoColapsable` (`cotizacion/calculo/comp
 Permisos = menú → categoría → opción → acción. La categoría es la pantalla (sale de la ruta) y
 `usePermisosCategoria` (`@/features/shell`) recibe el nombre de la **opción**. `usePermisosPricing` lo envuelve:
 `OPCION_PERMISOS` tiene el nombre de opción de cada pantalla y devuelve `puedeVer / puedeAgregar / puedeEditar /
-puedeEliminar / puedeAutorizar` como booleanos (`puedeAutorizar` = acción "Autorizar": el hook arma `puede` +
-nombre de la acción, como `puedeFiltrarEmpresaCentroCosto` en objetivos). Solo es interfaz: el backend valida cada request.
+puedeEliminar / puedeAutorizar / puedeAnular / puedeFiltrarEmpresaCentroCosto` como booleanos (el hook real arma
+`puede` + nombre de la acción). Solo es interfaz: el backend valida cada request.
 
-| Pantalla          | Categoría             | Opción      | Qué pide cada botón                                                                                                  |
-| ----------------- | --------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------- |
-| Tarifas           | Tarifas               | Servicios   | Agregar: nueva, copiar, alta de método y filas · Editar: actualizar, editar filas · Eliminar: anular, eliminar filas |
-| Cotizaciones      | Cotizaciones          | Información | Agregar: nuevo, nuevo cálculo, guardar versión · Editar: cabecera, activar versión · Autorizar: confirmar, rechazar  |
-| Autorización SPOT | Manejo de Tarifa SPOT | Información | Editar: autorizar y rechazar (la categoría no tiene acción Autorizar)                                                |
-| Plantillas        | Tarifario de clientes | Lista       | Agregar: nueva · Editar: guardar, rubros · Eliminar: eliminar                                                        |
-| Carga masiva      | Carga Masiva de Flete | Información | Agregar: enviar                                                                                                      |
+| Pantalla          | Categoría             | Opción      | Qué pide cada botón                                                                                                           |
+| ----------------- | --------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Tarifas           | Tarifas               | Servicios   | Agregar: nueva, copiar, alta de método y filas · Editar: actualizar, editar filas · Eliminar: eliminar filas · Anular: anular |
+| Cotizaciones      | Cotizaciones          | Información | Agregar: nuevo, nuevo cálculo, guardar versión · Editar: cabecera, activar versión · Autorizar: confirmar, rechazar           |
+| Autorización SPOT | Manejo de Tarifa SPOT | Información | Editar: autorizar · Anular: rechazar                                                                                          |
+| Plantillas        | Tarifario de clientes | Lista       | Agregar: nueva · Editar: guardar, rubros · Eliminar: eliminar                                                                 |
+| Carga masiva      | Carga Masiva de Flete | Información | Agregar: enviar                                                                                                               |
+
+**Filtrar Empresa Centro Costo** (Tarifas y Cotizaciones): con el permiso, el filtro deja elegir empresa y centro de
+costo; sin él, se usan los del contexto (Tarifas no los muestra; Cotizaciones los muestra fijos). Si cambia el
+contexto, el filtro vuelve a la empresa y el centro de costo del contexto.
 
 Los componentes que se usan en otras pantallas no leen permisos solos: la pantalla los lee y los pasa por props
 (con `true` por defecto) o, en Tarifas, por `PermisosTarifasProvider` (sin provider se permite todo).

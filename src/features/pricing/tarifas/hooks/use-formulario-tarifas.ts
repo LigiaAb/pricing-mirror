@@ -711,7 +711,11 @@ export function useFormulario({
               }
             }
           }
-        } else if (CAMPOS_SIEMPRE_LECTURA.includes(id)) {
+        } else if (
+          CAMPOS_SIEMPRE_LECTURA.includes(id) &&
+          // En el filtro, empresa y centro de costo solo se ven con permiso y se pueden cambiar.
+          !(tipoForm === "filtro" && (id === "empresa" || id === "centroCosto"))
+        ) {
           resultadoFinal = true;
         } else if (id === "fechaInicio" && defaultValues?.[id]) {
           resultadoFinal = true;

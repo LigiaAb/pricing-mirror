@@ -61,6 +61,11 @@ const CAMPOS_FILTRO = [
   "carrier",
 ] as const;
 
+const SIN_CAMPOS: readonly string[] = [];
+
+/** Campos del filtro que pide el permiso "Filtrar Empresa Centro Costo". */
+const CAMPOS_EMPRESA_CC = ["empresa", "centroCosto"] as const;
+
 const CAMPOS_EDICION_NORMAL = ["cliente", "empresa", "contacto"] as const;
 
 const CAMPOS_EDICION_CONFIRMADO = [
@@ -402,9 +407,8 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
    * ========================================================================== */
 
   /* Permisos de la opción "Información" de Cotizaciones (Autorizar = confirmar / rechazar). */
-  const { puedeAgregar, puedeEditar, puedeAutorizar } = usePermisosPricing(
-    OPCION_PERMISOS.cotizaciones,
-  );
+  const { puedeAgregar, puedeEditar, puedeAutorizar, puedeFiltrarEmpresaCentroCosto } =
+    usePermisosPricing(OPCION_PERMISOS.cotizaciones);
 
   const tipoFormularioInformacion = React.useMemo(() => {
     if (!cotizacionSeleccionada) {
@@ -570,7 +574,10 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
               resetKey="filtro-cotizaciones"
               groupsToHide={GRUPOS_FILTRO}
               inputsToHide={CAMPOS_FILTRO}
-              inputsReadOnly={[]}
+              // Empresa y centro de costo: editables con "Filtrar Empresa Centro Costo";
+              // sin ese permiso quedan los del contexto.
+              inputsReadOnly={puedeFiltrarEmpresaCentroCosto ? SIN_CAMPOS : CAMPOS_EMPRESA_CC}
+              inputsEditables={puedeFiltrarEmpresaCentroCosto ? CAMPOS_EMPRESA_CC : SIN_CAMPOS}
               currentEmpresaId={currentEmpresaId}
               currentCentroCostoId={currentCentroCostoId}
               currentPaisId={currentPaisId}

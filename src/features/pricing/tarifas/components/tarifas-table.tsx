@@ -80,6 +80,8 @@ export function TarifasTable({
 
   const [mostrarAnular, setMostrarAnular] = React.useState(false);
 
+  const { puedeAgregar, puedeAnular, puedeFiltrarEmpresaCentroCosto } = usePermisosTarifas();
+
   const [tarifaAAnular, setTarifaAAnular] = React.useState<FilaServicioMetodo | null>(null);
 
   const { mapWithCatalogo, catalogos, isLoading, refetchMetodos, refetchServicios } =
@@ -129,7 +131,12 @@ export function TarifasTable({
               : !item.vencido;
         })
         .filter((item) => {
-          const filtrosActivos = Object.entries({ ...filtros, ...filtrosIniciales }).filter(
+          // Con "Filtrar Empresa Centro Costo", la empresa y el centro de costo del filtro
+          // reemplazan a los del contexto; sin el permiso, siempre se usan los del contexto.
+          const filtrosConEmpresaYCentroCosto = puedeFiltrarEmpresaCentroCosto
+            ? { ...filtrosIniciales, ...filtros }
+            : { ...filtros, ...filtrosIniciales };
+          const filtrosActivos = Object.entries(filtrosConEmpresaYCentroCosto).filter(
             ([key, value]) => {
               const valor = obtenerValorFiltro(value);
 
@@ -166,6 +173,7 @@ export function TarifasTable({
       mostrarPorVencer,
       filtros,
       filtrosIniciales,
+      puedeFiltrarEmpresaCentroCosto,
       porVencer,
       vencidos,
     ],
@@ -200,18 +208,16 @@ export function TarifasTable({
     refetchMetodos();
   }, [refetchServicios, refetchMetodos]);
 
-  const { puedeAgregar, puedeEliminar } = usePermisosTarifas();
-
   const notasColumns = React.useMemo(
     () =>
       crearTarifasColumns({
         onVerDetalle: setTarifaSeleccionada,
         mostrarVencidos,
         setAccion,
-        // Anular = acción Eliminar de la opción "Servicios".
-        onAnular: puedeEliminar ? onAnular : undefined,
+        // Anular = acción Anular de la opción "Servicios".
+        onAnular: puedeAnular ? onAnular : undefined,
       }),
-    [setTarifaSeleccionada, mostrarVencidos, setAccion, onAnular, puedeEliminar],
+    [setTarifaSeleccionada, mostrarVencidos, setAccion, onAnular, puedeAnular],
   );
 
   // Memoizado para que la tabla no reciba un arreglo nuevo en cada render.

@@ -49,6 +49,7 @@ type Props = {
   groupsToHide?: readonly string[];
   inputsReadOnly?: readonly string[];
   inputsNoObligatorios?: readonly string[];
+  inputsEditables?: readonly string[];
 
   currentEmpresaId?: Id | null;
   currentCentroCostoId?: Id | null;
@@ -90,6 +91,7 @@ export function useFormularioCotizacion({
   groupsToHide = EMPTY_FIELDS,
   inputsReadOnly = DEFAULT_READ_ONLY_FIELDS,
   inputsNoObligatorios = EMPTY_FIELDS,
+  inputsEditables = EMPTY_FIELDS,
 
   currentEmpresaId,
   currentCentroCostoId,
@@ -367,6 +369,7 @@ export function useFormularioCotizacion({
     groupsToHide,
     inputsReadOnly,
     inputsNoObligatorios,
+    inputsEditables,
   });
 
   /* ==========================================================================

@@ -679,6 +679,24 @@ export const FormularioTarifa = ({
           })}
         </FieldGroup> */}
 
+        {tipoFormulario === "filtro" && permisos.puedeFiltrarEmpresaCentroCosto && (
+          <FieldGroup className={groupclassess}>
+            <p className="col-span-2 text-center">EMPRESA</p>
+
+            {renderSelectCatalogo({
+              id: "empresa",
+              label: "Empresa",
+              options: catalogos?.empresas ?? [],
+            })}
+
+            {renderSelectCatalogo({
+              id: "centroCosto",
+              label: "Centro de Costo",
+              options: catalogos?.centrosCosto ?? [],
+            })}
+          </FieldGroup>
+        )}
+
         <FieldGroup
           className={cn(groupclassess, !verificarSiGrupoEsVisible("transporte") && "hidden")}
         >

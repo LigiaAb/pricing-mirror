@@ -1,0 +1,428 @@
+diff --git a/src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx b/src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx
+index 287b879..a17b67e 100644
+--- a/src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx
++++ b/src/features/pricing/autorizacion-spot/components/autorizar-tarifa-spot.tsx
+@@ -147,8 +147,8 @@ export function AutorizarTarifaSpot() {
+   const consulta = useAutorizacionSpot();
+   const actualizar = useActualizarTarifaSpot();
+   const autorizar = useAutorizarTarifaSpot();
+-  // "Manejo de Tarifa SPOT" no tiene acción Autorizar: autorizar y rechazar piden Editar.
+-  const { puedeEditar } = usePermisosPricing(OPCION_PERMISOS.autorizacionSpot);
++  // "Manejo de Tarifa SPOT": autorizar pide Editar y rechazar pide Anular.
++  const { puedeEditar, puedeAnular } = usePermisosPricing(OPCION_PERMISOS.autorizacionSpot);
+   const { catalogos, isLoading: cargandoCatalogos } = useCatalogosTarifas({});
+   const [mostrarAutorizados, setMostrarAutorizados] = React.useState(false);
+   const [seleccionada, setSeleccionada] = React.useState<Fila | null>(null);
+@@ -349,7 +349,6 @@ export function AutorizarTarifaSpot() {
+   const mutando = actualizar.isPending || autorizar.isPending;
+   const estadoSeleccionada = seleccionada ? estadoSpot(seleccionada) : null;
+   const puedeResolver =
+-    puedeEditar &&
+     seleccionada != null &&
+     Boolean(seleccionada.url_documento) &&
+     mismoId(seleccionada.cod_estado, estados.activo);
+@@ -469,7 +468,7 @@ export function AutorizarTarifaSpot() {
+                 />
+               </div>
+               <div className="grid grid-cols-3 gap-3">
+-                {puedeResolver ? (
++                {puedeResolver && puedeEditar ? (
+                   <Button
+                     type="button"
+                     disabled={mutando}
+@@ -487,7 +486,7 @@ export function AutorizarTarifaSpot() {
+                     Autorizar
+                   </Button>
+                 ) : null}
+-                {puedeResolver ? (
++                {puedeResolver && puedeAnular ? (
+                   <Button
+                     type="button"
+                     variant="destructive"
+diff --git a/src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx b/src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx
+index b657511..b368236 100644
+--- a/src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/cotizacion-form.tsx
+@@ -61,6 +61,8 @@ type Props = {
+   groupsToHide?: readonly string[];
+   inputsReadOnly?: readonly string[];
+   inputsNoObligatorios?: readonly string[];
++  /** Campos editables aunque su regla diga `readonly` (empresa en el filtro con permiso). */
++  inputsEditables?: readonly string[];
+ 
+   currentEmpresaId?: Id | null;
+   currentCentroCostoId?: Id | null;
+@@ -339,6 +341,7 @@ export function CotizacionForm({
+   groupsToHide = EMPTY_FIELDS,
+   inputsReadOnly = DEFAULT_READ_ONLY_FIELDS,
+   inputsNoObligatorios = EMPTY_FIELDS,
++  inputsEditables = EMPTY_FIELDS,
+ 
+   currentEmpresaId,
+   currentCentroCostoId,
+@@ -372,6 +375,7 @@ export function CotizacionForm({
+     groupsToHide,
+     inputsReadOnly,
+     inputsNoObligatorios,
++    inputsEditables,
+     currentEmpresaId: currentEmpresaId ?? null,
+     currentCentroCostoId: currentCentroCostoId ?? null,
+     currentPaisId: currentPaisId ?? null,
+diff --git a/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx b/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx
+index 34d2859..e6e0d82 100644
+--- a/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/gestion-cotizacion.tsx
+@@ -61,6 +61,11 @@ const CAMPOS_FILTRO = [
+   "carrier",
+ ] as const;
+ 
++const SIN_CAMPOS: readonly string[] = [];
++
++/** Campos del filtro que pide el permiso "Filtrar Empresa Centro Costo". */
++const CAMPOS_EMPRESA_CC = ["empresa", "centroCosto"] as const;
++
+ const CAMPOS_EDICION_NORMAL = ["cliente", "empresa", "contacto"] as const;
+ 
+ const CAMPOS_EDICION_CONFIRMADO = [
+@@ -402,9 +407,8 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
+    * ========================================================================== */
+ 
+   /* Permisos de la opción "Información" de Cotizaciones (Autorizar = confirmar / rechazar). */
+-  const { puedeAgregar, puedeEditar, puedeAutorizar } = usePermisosPricing(
+-    OPCION_PERMISOS.cotizaciones,
+-  );
++  const { puedeAgregar, puedeEditar, puedeAutorizar, puedeFiltrarEmpresaCentroCosto } =
++    usePermisosPricing(OPCION_PERMISOS.cotizaciones);
+ 
+   const tipoFormularioInformacion = React.useMemo(() => {
+     if (!cotizacionSeleccionada) {
+@@ -570,7 +574,10 @@ function GestionCotizacionContenido({ codCotizacionInicial = null }: GestionCoti
+               resetKey="filtro-cotizaciones"
+               groupsToHide={GRUPOS_FILTRO}
+               inputsToHide={CAMPOS_FILTRO}
+-              inputsReadOnly={[]}
++              // Empresa y centro de costo: editables con "Filtrar Empresa Centro Costo";
++              // sin ese permiso quedan los del contexto.
++              inputsReadOnly={puedeFiltrarEmpresaCentroCosto ? SIN_CAMPOS : CAMPOS_EMPRESA_CC}
++              inputsEditables={puedeFiltrarEmpresaCentroCosto ? CAMPOS_EMPRESA_CC : SIN_CAMPOS}
+               currentEmpresaId={currentEmpresaId}
+               currentCentroCostoId={currentCentroCostoId}
+               currentPaisId={currentPaisId}
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion-reglas.ts b/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion-reglas.ts
+index a2c8160..9de9be3 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion-reglas.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion-reglas.ts
+@@ -26,6 +26,7 @@ type Params = {
+   groupsToHide: readonly string[];
+   inputsReadOnly: readonly string[];
+   inputsNoObligatorios: readonly string[];
++  inputsEditables: readonly string[];
+ };
+ 
+ /**
+@@ -42,6 +43,7 @@ export function useFormularioCotizacionReglas({
+   groupsToHide,
+   inputsReadOnly,
+   inputsNoObligatorios,
++  inputsEditables,
+ }: Params) {
+   /* ==========================================================================
+    * CATÁLOGOS DEPENDIENTES
+@@ -245,7 +247,7 @@ export function useFormularioCotizacionReglas({
+       }
+ 
+       if (inputsReadOnly.includes(id)) return true;
+-      if (reglasCampos[id]?.readonly) return true;
++      if (reglasCampos[id]?.readonly && !inputsEditables.includes(id)) return true;
+ 
+       const dependencia = reglasCampos[id]?.require;
+ 
+@@ -259,6 +261,7 @@ export function useFormularioCotizacionReglas({
+       defaultValues?.entidadcontacto_id,
+       values,
+       inputsReadOnly,
++      inputsEditables,
+       reglasCampos,
+     ],
+   );
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts b/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts
+index d50bef8..fca84a7 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-formulario-cotizacion.ts
+@@ -49,6 +49,7 @@ type Props = {
+   groupsToHide?: readonly string[];
+   inputsReadOnly?: readonly string[];
+   inputsNoObligatorios?: readonly string[];
++  inputsEditables?: readonly string[];
+ 
+   currentEmpresaId?: Id | null;
+   currentCentroCostoId?: Id | null;
+@@ -90,6 +91,7 @@ export function useFormularioCotizacion({
+   groupsToHide = EMPTY_FIELDS,
+   inputsReadOnly = DEFAULT_READ_ONLY_FIELDS,
+   inputsNoObligatorios = EMPTY_FIELDS,
++  inputsEditables = EMPTY_FIELDS,
+ 
+   currentEmpresaId,
+   currentCentroCostoId,
+@@ -367,6 +369,7 @@ export function useFormularioCotizacion({
+     groupsToHide,
+     inputsReadOnly,
+     inputsNoObligatorios,
++    inputsEditables,
+   });
+ 
+   /* ==========================================================================
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-gestion-cotizaciones.ts b/src/features/pricing/cotizacion/calculo/hooks/use-gestion-cotizaciones.ts
+index 1a3fd62..e96cef2 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-gestion-cotizaciones.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-gestion-cotizaciones.ts
+@@ -181,6 +181,19 @@ export function useGestionCotizaciones({
+     filtrosABorrador(filtrosIniciales),
+   );
+ 
++  /*
++   * Empresa y centro de costo siguen al contexto: si el usuario cambia de empresa o
++   * de centro de costo en el shell, los filtros vuelven a los iniciales del nuevo contexto.
++   */
++  const claveContexto = `${filtrosIniciales.cod_empresa ?? ""}|${filtrosIniciales.cod_cc ?? ""}`;
++  const [claveContextoAplicada, setClaveContextoAplicada] = React.useState(claveContexto);
++
++  if (claveContextoAplicada !== claveContexto) {
++    setClaveContextoAplicada(claveContexto);
++    setFiltros(filtrosIniciales);
++    setFiltrosBorrador(filtrosABorrador(filtrosIniciales));
++  }
++
+   const [mostrarConfirmados, setMostrarConfirmados] = React.useState(false);
+   const [mostrarVencidas, setMostrarVencidas] = React.useState(false);
+ 
+diff --git a/src/features/pricing/shared/ARQUITECTURA.md b/src/features/pricing/shared/ARQUITECTURA.md
+index 946fa90..586d4ce 100644
+--- a/src/features/pricing/shared/ARQUITECTURA.md
++++ b/src/features/pricing/shared/ARQUITECTURA.md
+@@ -50,16 +50,20 @@ Cotización es otro componente: `EncabezadoColapsable` (`cotizacion/calculo/comp
+ Permisos = menú → categoría → opción → acción. La categoría es la pantalla (sale de la ruta) y
+ `usePermisosCategoria` (`@/features/shell`) recibe el nombre de la **opción**. `usePermisosPricing` lo envuelve:
+ `OPCION_PERMISOS` tiene el nombre de opción de cada pantalla y devuelve `puedeVer / puedeAgregar / puedeEditar /
+-puedeEliminar / puedeAutorizar` como booleanos (`puedeAutorizar` = acción "Autorizar": el hook arma `puede` +
+-nombre de la acción, como `puedeFiltrarEmpresaCentroCosto` en objetivos). Solo es interfaz: el backend valida cada request.
+-
+-| Pantalla          | Categoría             | Opción      | Qué pide cada botón                                                                                                  |
+-| ----------------- | --------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------- |
+-| Tarifas           | Tarifas               | Servicios   | Agregar: nueva, copiar, alta de método y filas · Editar: actualizar, editar filas · Eliminar: anular, eliminar filas |
+-| Cotizaciones      | Cotizaciones          | Información | Agregar: nuevo, nuevo cálculo, guardar versión · Editar: cabecera, activar versión · Autorizar: confirmar, rechazar  |
+-| Autorización SPOT | Manejo de Tarifa SPOT | Información | Editar: autorizar y rechazar (la categoría no tiene acción Autorizar)                                                |
+-| Plantillas        | Tarifario de clientes | Lista       | Agregar: nueva · Editar: guardar, rubros · Eliminar: eliminar                                                        |
+-| Carga masiva      | Carga Masiva de Flete | Información | Agregar: enviar                                                                                                      |
++puedeEliminar / puedeAutorizar / puedeAnular / puedeFiltrarEmpresaCentroCosto` como booleanos (el hook real arma
++`puede` + nombre de la acción). Solo es interfaz: el backend valida cada request.
++
++| Pantalla          | Categoría             | Opción      | Qué pide cada botón                                                                                                           |
++| ----------------- | --------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
++| Tarifas           | Tarifas               | Servicios   | Agregar: nueva, copiar, alta de método y filas · Editar: actualizar, editar filas · Eliminar: eliminar filas · Anular: anular |
++| Cotizaciones      | Cotizaciones          | Información | Agregar: nuevo, nuevo cálculo, guardar versión · Editar: cabecera, activar versión · Autorizar: confirmar, rechazar           |
++| Autorización SPOT | Manejo de Tarifa SPOT | Información | Editar: autorizar · Anular: rechazar                                                                                          |
++| Plantillas        | Tarifario de clientes | Lista       | Agregar: nueva · Editar: guardar, rubros · Eliminar: eliminar                                                                 |
++| Carga masiva      | Carga Masiva de Flete | Información | Agregar: enviar                                                                                                               |
++
++**Filtrar Empresa Centro Costo** (Tarifas y Cotizaciones): con el permiso, el filtro deja elegir empresa y centro de
++costo; sin él, se usan los del contexto (Tarifas no los muestra; Cotizaciones los muestra fijos). Si cambia el
++contexto, el filtro vuelve a la empresa y el centro de costo del contexto.
+ 
+ Los componentes que se usan en otras pantallas no leen permisos solos: la pantalla los lee y los pasa por props
+ (con `true` por defecto) o, en Tarifas, por `PermisosTarifasProvider` (sin provider se permite todo).
+diff --git a/src/features/pricing/shared/hooks/use-permisos-pricing.ts b/src/features/pricing/shared/hooks/use-permisos-pricing.ts
+index 4f28a96..cea5bf8 100644
+--- a/src/features/pricing/shared/hooks/use-permisos-pricing.ts
++++ b/src/features/pricing/shared/hooks/use-permisos-pricing.ts
+@@ -41,6 +41,9 @@ export interface PermisosPricing {
+   puedeEditar: boolean;
+   puedeEliminar: boolean;
+   puedeAutorizar: boolean;
++  puedeAnular: boolean;
++  /** Cambiar empresa y centro de costo en los filtros (Tarifas y Cotizaciones). */
++  puedeFiltrarEmpresaCentroCosto: boolean;
+ }
+ 
+ /**
+@@ -56,5 +59,7 @@ export function usePermisosPricing(opcion: OpcionPermisosPricing): PermisosPrici
+     puedeEditar: permisos?.puedeEditar === true,
+     puedeEliminar: permisos?.puedeEliminar === true,
+     puedeAutorizar: permisos?.puedeAutorizar === true,
++    puedeAnular: permisos?.puedeAnular === true,
++    puedeFiltrarEmpresaCentroCosto: permisos?.puedeFiltrarEmpresaCentroCosto === true,
+   };
+ }
+diff --git a/src/features/pricing/tarifas/components/creacion-tarifa.tsx b/src/features/pricing/tarifas/components/creacion-tarifa.tsx
+index b1f1d9e..899f55f 100644
+--- a/src/features/pricing/tarifas/components/creacion-tarifa.tsx
++++ b/src/features/pricing/tarifas/components/creacion-tarifa.tsx
+@@ -55,6 +55,15 @@ export function CreacionTarifa() {
+     [ctx?.empresaId?.cod_empresa, ctx?.centroCostoId?.cod_cc],
+   );
+ 
++  // Si cambia la empresa o el centro de costo del contexto, el filtro vuelve a los del contexto.
++  const claveContexto = `${filtrosIniciales.cod_empresa ?? ""}|${filtrosIniciales.cod_cc ?? ""}`;
++  const [claveContextoAplicada, setClaveContextoAplicada] = React.useState(claveContexto);
++
++  if (claveContextoAplicada !== claveContexto) {
++    setClaveContextoAplicada(claveContexto);
++    setFiltros({});
++  }
++
+   const handleGuardarTarifa = React.useCallback(
+     async ({ values, servicio, metodo, anular }: TarifaSubmitPayload) => {
+       /*
+diff --git a/src/features/pricing/tarifas/components/formulario-tarifa.tsx b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
+index 293e3d2..53fc0ad 100644
+--- a/src/features/pricing/tarifas/components/formulario-tarifa.tsx
++++ b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
+@@ -679,6 +679,24 @@ export const FormularioTarifa = ({
+           })}
+         </FieldGroup> */}
+ 
++        {tipoFormulario === "filtro" && permisos.puedeFiltrarEmpresaCentroCosto && (
++          <FieldGroup className={groupclassess}>
++            <p className="col-span-2 text-center">EMPRESA</p>
++
++            {renderSelectCatalogo({
++              id: "empresa",
++              label: "Empresa",
++              options: catalogos?.empresas ?? [],
++            })}
++
++            {renderSelectCatalogo({
++              id: "centroCosto",
++              label: "Centro de Costo",
++              options: catalogos?.centrosCosto ?? [],
++            })}
++          </FieldGroup>
++        )}
++
+         <FieldGroup
+           className={cn(groupclassess, !verificarSiGrupoEsVisible("transporte") && "hidden")}
+         >
+diff --git a/src/features/pricing/tarifas/components/tarifas-table.tsx b/src/features/pricing/tarifas/components/tarifas-table.tsx
+index 7f9d50d..66890d6 100644
+--- a/src/features/pricing/tarifas/components/tarifas-table.tsx
++++ b/src/features/pricing/tarifas/components/tarifas-table.tsx
+@@ -80,6 +80,8 @@ export function TarifasTable({
+ 
+   const [mostrarAnular, setMostrarAnular] = React.useState(false);
+ 
++  const { puedeAgregar, puedeAnular, puedeFiltrarEmpresaCentroCosto } = usePermisosTarifas();
++
+   const [tarifaAAnular, setTarifaAAnular] = React.useState<FilaServicioMetodo | null>(null);
+ 
+   const { mapWithCatalogo, catalogos, isLoading, refetchMetodos, refetchServicios } =
+@@ -129,7 +131,12 @@ export function TarifasTable({
+               : !item.vencido;
+         })
+         .filter((item) => {
+-          const filtrosActivos = Object.entries({ ...filtros, ...filtrosIniciales }).filter(
++          // Con "Filtrar Empresa Centro Costo", la empresa y el centro de costo del filtro
++          // reemplazan a los del contexto; sin el permiso, siempre se usan los del contexto.
++          const filtrosConEmpresaYCentroCosto = puedeFiltrarEmpresaCentroCosto
++            ? { ...filtrosIniciales, ...filtros }
++            : { ...filtros, ...filtrosIniciales };
++          const filtrosActivos = Object.entries(filtrosConEmpresaYCentroCosto).filter(
+             ([key, value]) => {
+               const valor = obtenerValorFiltro(value);
+ 
+@@ -166,6 +173,7 @@ export function TarifasTable({
+       mostrarPorVencer,
+       filtros,
+       filtrosIniciales,
++      puedeFiltrarEmpresaCentroCosto,
+       porVencer,
+       vencidos,
+     ],
+@@ -200,18 +208,16 @@ export function TarifasTable({
+     refetchMetodos();
+   }, [refetchServicios, refetchMetodos]);
+ 
+-  const { puedeAgregar, puedeEliminar } = usePermisosTarifas();
+-
+   const notasColumns = React.useMemo(
+     () =>
+       crearTarifasColumns({
+         onVerDetalle: setTarifaSeleccionada,
+         mostrarVencidos,
+         setAccion,
+-        // Anular = acción Eliminar de la opción "Servicios".
+-        onAnular: puedeEliminar ? onAnular : undefined,
++        // Anular = acción Anular de la opción "Servicios".
++        onAnular: puedeAnular ? onAnular : undefined,
+       }),
+-    [setTarifaSeleccionada, mostrarVencidos, setAccion, onAnular, puedeEliminar],
++    [setTarifaSeleccionada, mostrarVencidos, setAccion, onAnular, puedeAnular],
+   );
+ 
+   // Memoizado para que la tabla no reciba un arreglo nuevo en cada render.
+diff --git a/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts b/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
+index 0cdb209..c93453f 100644
+--- a/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
++++ b/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
+@@ -711,7 +711,11 @@ export function useFormulario({
+               }
+             }
+           }
+-        } else if (CAMPOS_SIEMPRE_LECTURA.includes(id)) {
++        } else if (
++          CAMPOS_SIEMPRE_LECTURA.includes(id) &&
++          // En el filtro, empresa y centro de costo solo se ven con permiso y se pueden cambiar.
++          !(tipoForm === "filtro" && (id === "empresa" || id === "centroCosto"))
++        ) {
+           resultadoFinal = true;
+         } else if (id === "fechaInicio" && defaultValues?.[id]) {
+           resultadoFinal = true;
+diff --git a/src/features/pricing/tarifas/hooks/use-permisos-tarifas.tsx b/src/features/pricing/tarifas/hooks/use-permisos-tarifas.tsx
+index a113316..06ed0c1 100644
+--- a/src/features/pricing/tarifas/hooks/use-permisos-tarifas.tsx
++++ b/src/features/pricing/tarifas/hooks/use-permisos-tarifas.tsx
+@@ -26,18 +26,39 @@ const TODO_PERMITIDO: PermisosTarifas = {
+   puedeAgregar: true,
+   puedeEditar: true,
+   puedeEliminar: true,
++  puedeAnular: true,
++  puedeFiltrarEmpresaCentroCosto: true,
+ };
+ 
+ const PermisosTarifasContext = React.createContext<PermisosTarifas>(TODO_PERMITIDO);
+ 
+ export function PermisosTarifasProvider({ children }: { children: React.ReactNode }) {
+-  const { puedeVer, puedeAgregar, puedeEditar, puedeEliminar } = usePermisosPricing(
+-    OPCION_PERMISOS.tarifas,
+-  );
++  const {
++    puedeVer,
++    puedeAgregar,
++    puedeEditar,
++    puedeEliminar,
++    puedeAnular,
++    puedeFiltrarEmpresaCentroCosto,
++  } = usePermisosPricing(OPCION_PERMISOS.tarifas);
+ 
+   const permisos = React.useMemo(
+-    () => ({ puedeVer, puedeAgregar, puedeEditar, puedeEliminar }),
+-    [puedeVer, puedeAgregar, puedeEditar, puedeEliminar],
++    () => ({
++      puedeVer,
++      puedeAgregar,
++      puedeEditar,
++      puedeEliminar,
++      puedeAnular,
++      puedeFiltrarEmpresaCentroCosto,
++    }),
++    [
++      puedeVer,
++      puedeAgregar,
++      puedeEditar,
++      puedeEliminar,
++      puedeAnular,
++      puedeFiltrarEmpresaCentroCosto,
++    ],
+   );
+ 
+   return (

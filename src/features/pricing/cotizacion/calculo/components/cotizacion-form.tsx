@@ -61,6 +61,8 @@ type Props = {
   groupsToHide?: readonly string[];
   inputsReadOnly?: readonly string[];
   inputsNoObligatorios?: readonly string[];
+  /** Campos editables aunque su regla diga `readonly` (empresa en el filtro con permiso). */
+  inputsEditables?: readonly string[];
 
   currentEmpresaId?: Id | null;
   currentCentroCostoId?: Id | null;
@@ -339,6 +341,7 @@ export function CotizacionForm({
   groupsToHide = EMPTY_FIELDS,
   inputsReadOnly = DEFAULT_READ_ONLY_FIELDS,
   inputsNoObligatorios = EMPTY_FIELDS,
+  inputsEditables = EMPTY_FIELDS,
 
   currentEmpresaId,
   currentCentroCostoId,
@@ -372,6 +375,7 @@ export function CotizacionForm({
     groupsToHide,
     inputsReadOnly,
     inputsNoObligatorios,
+    inputsEditables,
     currentEmpresaId: currentEmpresaId ?? null,
     currentCentroCostoId: currentCentroCostoId ?? null,
     currentPaisId: currentPaisId ?? null,
