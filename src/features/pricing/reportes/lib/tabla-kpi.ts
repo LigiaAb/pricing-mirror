@@ -41,6 +41,7 @@ const LECTORES: Record<string, (fila: FilaKpi, momento: Momento) => string> = {
   cliente: (fila) => textoONulo(fila.cliente),
   tipo_pago: (fila) => textoONulo(fila.tipo_pago),
   estado: (fila) => textoONulo(fila.estado),
+  cotizacion: (fila) => `COTIZACIÓN ${fila.cotizacion}`,
   anio: (fila, momento) =>
     parteFecha(momento === "creacion" ? fila.fecha_creacion : fila.fecha_aprobacion, 4),
   mes: (fila, momento) =>
@@ -54,8 +55,11 @@ export const CAMPOS_NIVELES_KPI: CampoKpi[] = [
   { campo: "transporte", etiqueta: "Servicio (transporte)" },
   { campo: "cliente", etiqueta: "Cliente" },
   { campo: "tipo_pago", etiqueta: "Tipo de pago" },
+  { campo: "estado", etiqueta: "Estado" },
   { campo: "anio", etiqueta: "Año" },
   { campo: "mes", etiqueta: "Mes" },
+  /** Último nivel recomendado: una fila por cotización. */
+  { campo: "cotizacion", etiqueta: "Cotización" },
 ];
 
 export const NIVELES_DEFECTO_KPI: CampoKpi[] = [{ campo: "usuario", etiqueta: "Usuario" }];
@@ -68,6 +72,7 @@ export const CAMPOS_COLUMNA_KPI: CampoKpi[] = [
   { campo: "transporte", etiqueta: "Servicio (transporte)" },
   { campo: "cc_nombre", etiqueta: "Departamento (centro de costo)" },
   { campo: "tipo_pago", etiqueta: "Tipo de pago" },
+  { campo: "estado", etiqueta: "Estado" },
 ];
 
 export function valorCampoKpi(fila: FilaKpi, campo: string, momento: Momento): string {
