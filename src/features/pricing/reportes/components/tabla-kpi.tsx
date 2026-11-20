@@ -116,17 +116,16 @@ export function TablaKpi({
     const { ExcelJS, saveAs } = await loadExcelJS();
     const libro = new ExcelJS.Workbook();
 
-    // Una columna por cada nivel de agrupación; cada fila repite los valores de sus
-    // niveles superiores (así se puede filtrar en Excel). El total general va en la primera.
+    // Una columna por cada nivel de agrupación; cada fila escribe solo su valor, en la
+    // columna de su nivel (sin repetir los superiores). El total general va en la primera.
     const columnasNivel = niveles.length ? niveles.map((n) => n.etiqueta) : ["Concepto"];
     const filas: FilaExcel[] = [];
     const agregar = (nodos: typeof tabla.data, ruta: string[]) => {
       for (const nodo of nodos) {
         const esRaiz = ruta.length === 0 && nodo.id === "total";
         const rutaNodo = esRaiz ? [] : [...ruta, nodo.label];
-        const celdasNivel = columnasNivel.map((_, i) =>
-          esRaiz ? (i === 0 ? nodo.label : null) : (rutaNodo[i] ?? null),
-        );
+        const columnaNodo = Math.max(0, rutaNodo.length - 1);
+        const celdasNivel = columnasNivel.map((_, i) => (i === columnaNodo ? nodo.label : null));
         filas.push({
           celdas: [
             ...celdasNivel,
