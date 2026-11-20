@@ -21,7 +21,9 @@ al proyecto completo. Responder siempre en **español**.
   pricing y embarques no los usan). El real no exporta `Filtros`.
 - `src/shared/components/form/fields/async-combobox-input.tsx` contiene el **código real** de `AsyncComboboxInput`,
   idéntico al proyecto (para tipar `onOpenChange` hay stub en `src/shared/components/ui/popover.tsx`). Es la única
-  ruta de `src/shared` que **sí** sale en los `diff/` (`RUTAS_CODIGO` de `scripts/guardar-diff.mjs`).
+  ruta de `src/shared` que **sí** sale en los `diff/` (`RUTAS_CODIGO` de `scripts/guardar-diff.mjs`), junto con
+  `src/shared/components/data-table/data-table-pagination.tsx` (real, del SYNC; en CRLF, por eso no lo revisa
+  `check:biome`: Biome pide LF en todo el archivo).
   Consulta solo con el listado abierto. Caché de 30 s, pero al abrir vuelve a pedir las opciones si `fetchOptions`
   cambió desde la última consulta; las búsquedas en servidor memoizadas no consultan de nuevo al reabrir. Dibuja
   máximo `maxOptions` (100) opciones.

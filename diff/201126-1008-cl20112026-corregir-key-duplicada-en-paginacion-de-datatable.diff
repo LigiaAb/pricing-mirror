@@ -1,0 +1,16 @@
+diff --git a/src/shared/components/data-table/data-table-pagination.tsx b/src/shared/components/data-table/data-table-pagination.tsx
+index be94b0a..79e8d35 100644
+--- a/src/shared/components/data-table/data-table-pagination.tsx
++++ b/src/shared/components/data-table/data-table-pagination.tsx
+@@ -26,7 +26,10 @@ type ItemPaginacion =
+  * Ventana de páginas: primera, última, la actual y sus vecinas. El resto se
+  * colapsa en elipsis para que la barra no crezca con el número de páginas.
+  */
+-export function ventanaPaginas(pageIndex: number, pageCount: number): ItemPaginacion[] {
++export function ventanaPaginas(indicePedido: number, pageCount: number): ItemPaginacion[] {
++  // Si la lista se achica (anular, filtrar) estando en las últimas páginas, el
++  // índice puede quedar fuera de rango y ambas elipsis saldrían como "inicio".
++  const pageIndex = Math.min(Math.max(indicePedido, 0), pageCount - 1);
+   if (pageCount <= PAGINAS_SIN_RECORTE) {
+     return Array.from({ length: pageCount }, (_, indice) => ({ tipo: "pagina", indice }));
+   }
