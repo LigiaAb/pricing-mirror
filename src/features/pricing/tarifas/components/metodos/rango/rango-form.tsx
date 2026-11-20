@@ -2,11 +2,10 @@
 
 import { Plus, Save, X } from "lucide-react";
 import React from "react";
-import { ComboboxOpcion, METODO_RANGO } from "@/features/pricing/shared";
+import { METODO_RANGO } from "@/features/pricing/shared";
 import { Button } from "@/shared/components/ui/button";
-import { Field, FieldLabel } from "@/shared/components/ui/field";
-import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
 import { crearIdLocal } from "@/shared/lib/id";
+import { CampoMetodo } from "../campo-metodo";
 import type { FilaMetodoRango, MonedaRangoOption } from "./rango-columns";
 
 type Props = {
@@ -49,119 +48,23 @@ export function RangoForm({ value, monedas, onGuardar, onCancelar, readonly = fa
 
   const errores = [...validacion.faltantes, ...Object.values(validacion.errores).flat()];
 
-  const setNumero = (
-    field: "inicio" | "costo_minimo" | "venta_minimo" | "costo" | "venta",
-    value: string,
-  ) => {
-    setRow((prev) =>
-      prev
-        ? {
-            ...prev,
-            [field]: value === "" ? "" : Number(value),
-          }
-        : prev,
-    );
+  const cambiar = (cambio: Partial<FilaMetodoRango>) => {
+    setRow((prev) => (prev ? { ...prev, ...cambio } : prev));
   };
+
+  // Etiquetas, inputs y selects: de la definición. Los errores se listan abajo (no por campo).
+  const campo = { metodo: METODO_RANGO, fila: row, onChange: cambiar, monedas };
 
   return (
     <div className="space-y-2">
       <div className="grid items-end gap-2 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-7">
-        <Field>
-          <FieldLabel>A partir de...</FieldLabel>
-          <InputGroup>
-            <InputGroupInput
-              type="number"
-              value={row.inicio ?? ""}
-              onChange={(e) => setNumero("inicio", e.target.value)}
-            />
-          </InputGroup>
-        </Field>
-
-        <Field>
-          <FieldLabel>Mínimo costo</FieldLabel>
-          <InputGroup>
-            <InputGroupInput
-              type="number"
-              value={row.costo_minimo ?? ""}
-              onChange={(e) => setNumero("costo_minimo", e.target.value)}
-            />
-          </InputGroup>
-        </Field>
-
-        <Field>
-          <FieldLabel>Mínimo venta</FieldLabel>
-          <InputGroup>
-            <InputGroupInput
-              type="number"
-              value={row.venta_minimo ?? ""}
-              onChange={(e) => setNumero("venta_minimo", e.target.value)}
-            />
-          </InputGroup>
-        </Field>
-
-        <Field>
-          <FieldLabel>Costo</FieldLabel>
-          <InputGroup>
-            <InputGroupInput
-              type="number"
-              value={row.costo ?? ""}
-              onChange={(e) => setNumero("costo", e.target.value)}
-            />
-          </InputGroup>
-        </Field>
-
-        <Field>
-          <FieldLabel>Moneda costo</FieldLabel>
-          <InputGroup>
-            <ComboboxOpcion<MonedaRangoOption>
-              label="Moneda costo"
-              value={row.moneda_costo ?? null}
-              onChange={(moneda_costo) =>
-                setRow((prev) =>
-                  prev
-                    ? {
-                        ...prev,
-                        moneda_costo,
-                      }
-                    : prev,
-                )
-              }
-              options={monedas}
-            />
-          </InputGroup>
-        </Field>
-
-        <Field>
-          <FieldLabel>Venta</FieldLabel>
-          <InputGroup>
-            <InputGroupInput
-              type="number"
-              value={row.venta ?? ""}
-              onChange={(e) => setNumero("venta", e.target.value)}
-            />
-          </InputGroup>
-        </Field>
-
-        <Field>
-          <FieldLabel>Moneda venta</FieldLabel>
-          <InputGroup>
-            <ComboboxOpcion<MonedaRangoOption>
-              label="Moneda venta"
-              value={row.moneda_venta ?? null}
-              onChange={(moneda_venta) =>
-                setRow((prev) =>
-                  prev
-                    ? {
-                        ...prev,
-                        moneda_venta,
-                      }
-                    : prev,
-                )
-              }
-              options={monedas}
-            />
-          </InputGroup>
-        </Field>
+        <CampoMetodo {...campo} campo="inicio" />
+        <CampoMetodo {...campo} campo="costo_minimo" />
+        <CampoMetodo {...campo} campo="venta_minimo" />
+        <CampoMetodo {...campo} campo="costo" />
+        <CampoMetodo {...campo} campo="cod_moneda_costo" />
+        <CampoMetodo {...campo} campo="venta" />
+        <CampoMetodo {...campo} campo="cod_moneda_venta" />
       </div>
 
       {errores.length > 0 && <p className="text-sm text-destructive">{errores.join(", ")}</p>}

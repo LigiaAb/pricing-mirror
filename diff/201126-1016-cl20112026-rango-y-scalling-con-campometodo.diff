@@ -1,0 +1,292 @@
+diff --git a/src/features/pricing/shared/lib/metodos/rango.ts b/src/features/pricing/shared/lib/metodos/rango.ts
+index b60a4c6..dca156c 100644
+--- a/src/features/pricing/shared/lib/metodos/rango.ts
++++ b/src/features/pricing/shared/lib/metodos/rango.ts
+@@ -11,7 +11,7 @@
+  * Se conserva del código viejo:
+  *   - Los montos se envían tal cual (sin Number) y `inicio || 0`; `final` siempre null.
+  *   - Un campo requerido falta si es falso (`!valor`): 0 cuenta como vacío.
+- *   - El formulario (grilla de 7 columnas, "" en lugar de null) se escribe a mano.
++ *   - El formulario usa <CampoMetodo>; la grilla de 7 columnas y la lista de faltantes, a mano.
+  * ========================================================================== */
+ 
+ import { zId } from "@/shared/lib/zod-scalars";
+diff --git a/src/features/pricing/tarifas/ARQUITECTURA.md b/src/features/pricing/tarifas/ARQUITECTURA.md
+index faf8985..d25133e 100644
+--- a/src/features/pricing/tarifas/ARQUITECTURA.md
++++ b/src/features/pricing/tarifas/ARQUITECTURA.md
+@@ -124,7 +124,7 @@ forzar la abstracción.
+    `minimo: monto({ label: "Mínimo", inicial: 0 })`. Con eso ya quedan el esquema, los tipos, el payload, la
+    fila nueva y la validación (si es `requerido` o tiene reglas).
+ 2. Si se ve en pantalla: `<CampoMetodo {...campo} campo="minimo" />` en su `-form.tsx`, donde va en la grilla
+-   (equipo, rango y scalling tienen el formulario a mano: ahí se agrega el input con su markup).
++   (equipo y el tipo/punto de scalling se escriben a mano: ahí se agrega el input con su markup).
+ 3. Si va en la tabla (rango, scalling): su código en la lista de `columnasMetodo` de `-columns.tsx`.
+ 
+ ### Componentes padre reutilizables
+@@ -144,10 +144,11 @@ Rango y scalling conservan `-columns`, `-form` y `-table` (`RangoTable`, `Scalli
+   para validar. Sus selects guardan la opción en la misma llave del API (`cod_moneda_costo`, ...), las monedas
+   usan `value` numérico y se envía `value || null` (campos `opcion`); al insertar no se envía
+   `cod_tarifa_equipo` (lo quita `MetodoEquipo`).
+-- rango: el formulario (grilla de 7 columnas, montos en "" en vez de null) y la edición local con "Guardar
+-  todo". Columnas id, "A partir de..." y acciones.
++- rango: la grilla de 7 columnas, la lista de faltantes debajo y la edición local con "Guardar todo" (los
++  campos usan `<CampoMetodo>`; un monto vacío queda en `null`). Columnas id, "A partir de..." y acciones.
+ - scalling: el tipo de punto de enlace (no se envía: al leer sale del punto y en el formulario filtra los
+-  puntos), el formulario y las columnas tipo y acciones.
++  puntos), el select de punto (cascada; al cambiarlo reinicia costo y moneda) y las columnas tipo y acciones.
++  Moneda y Valor usan `<CampoMetodo>`.
+ - El JSON enviado conserva valores, pero el orden de llaves sigue `cod_metodo` primero y luego `campos`
+   (equipo y rango tenían otro orden; el backend no depende del orden).
+ 
+diff --git a/src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx b/src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx
+index 565ce6b..8d57296 100644
+--- a/src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx
++++ b/src/features/pricing/tarifas/components/metodos/rango/rango-form.tsx
+@@ -2,11 +2,10 @@
+ 
+ import { Plus, Save, X } from "lucide-react";
+ import React from "react";
+-import { ComboboxOpcion, METODO_RANGO } from "@/features/pricing/shared";
++import { METODO_RANGO } from "@/features/pricing/shared";
+ import { Button } from "@/shared/components/ui/button";
+-import { Field, FieldLabel } from "@/shared/components/ui/field";
+-import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
+ import { crearIdLocal } from "@/shared/lib/id";
++import { CampoMetodo } from "../campo-metodo";
+ import type { FilaMetodoRango, MonedaRangoOption } from "./rango-columns";
+ 
+ type Props = {
+@@ -49,119 +48,23 @@ export function RangoForm({ value, monedas, onGuardar, onCancelar, readonly = fa
+ 
+   const errores = [...validacion.faltantes, ...Object.values(validacion.errores).flat()];
+ 
+-  const setNumero = (
+-    field: "inicio" | "costo_minimo" | "venta_minimo" | "costo" | "venta",
+-    value: string,
+-  ) => {
+-    setRow((prev) =>
+-      prev
+-        ? {
+-            ...prev,
+-            [field]: value === "" ? "" : Number(value),
+-          }
+-        : prev,
+-    );
++  const cambiar = (cambio: Partial<FilaMetodoRango>) => {
++    setRow((prev) => (prev ? { ...prev, ...cambio } : prev));
+   };
+ 
++  // Etiquetas, inputs y selects: de la definición. Los errores se listan abajo (no por campo).
++  const campo = { metodo: METODO_RANGO, fila: row, onChange: cambiar, monedas };
++
+   return (
+     <div className="space-y-2">
+       <div className="grid items-end gap-2 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-7">
+-        <Field>
+-          <FieldLabel>A partir de...</FieldLabel>
+-          <InputGroup>
+-            <InputGroupInput
+-              type="number"
+-              value={row.inicio ?? ""}
+-              onChange={(e) => setNumero("inicio", e.target.value)}
+-            />
+-          </InputGroup>
+-        </Field>
+-
+-        <Field>
+-          <FieldLabel>Mínimo costo</FieldLabel>
+-          <InputGroup>
+-            <InputGroupInput
+-              type="number"
+-              value={row.costo_minimo ?? ""}
+-              onChange={(e) => setNumero("costo_minimo", e.target.value)}
+-            />
+-          </InputGroup>
+-        </Field>
+-
+-        <Field>
+-          <FieldLabel>Mínimo venta</FieldLabel>
+-          <InputGroup>
+-            <InputGroupInput
+-              type="number"
+-              value={row.venta_minimo ?? ""}
+-              onChange={(e) => setNumero("venta_minimo", e.target.value)}
+-            />
+-          </InputGroup>
+-        </Field>
+-
+-        <Field>
+-          <FieldLabel>Costo</FieldLabel>
+-          <InputGroup>
+-            <InputGroupInput
+-              type="number"
+-              value={row.costo ?? ""}
+-              onChange={(e) => setNumero("costo", e.target.value)}
+-            />
+-          </InputGroup>
+-        </Field>
+-
+-        <Field>
+-          <FieldLabel>Moneda costo</FieldLabel>
+-          <InputGroup>
+-            <ComboboxOpcion<MonedaRangoOption>
+-              label="Moneda costo"
+-              value={row.moneda_costo ?? null}
+-              onChange={(moneda_costo) =>
+-                setRow((prev) =>
+-                  prev
+-                    ? {
+-                        ...prev,
+-                        moneda_costo,
+-                      }
+-                    : prev,
+-                )
+-              }
+-              options={monedas}
+-            />
+-          </InputGroup>
+-        </Field>
+-
+-        <Field>
+-          <FieldLabel>Venta</FieldLabel>
+-          <InputGroup>
+-            <InputGroupInput
+-              type="number"
+-              value={row.venta ?? ""}
+-              onChange={(e) => setNumero("venta", e.target.value)}
+-            />
+-          </InputGroup>
+-        </Field>
+-
+-        <Field>
+-          <FieldLabel>Moneda venta</FieldLabel>
+-          <InputGroup>
+-            <ComboboxOpcion<MonedaRangoOption>
+-              label="Moneda venta"
+-              value={row.moneda_venta ?? null}
+-              onChange={(moneda_venta) =>
+-                setRow((prev) =>
+-                  prev
+-                    ? {
+-                        ...prev,
+-                        moneda_venta,
+-                      }
+-                    : prev,
+-                )
+-              }
+-              options={monedas}
+-            />
+-          </InputGroup>
+-        </Field>
++        <CampoMetodo {...campo} campo="inicio" />
++        <CampoMetodo {...campo} campo="costo_minimo" />
++        <CampoMetodo {...campo} campo="venta_minimo" />
++        <CampoMetodo {...campo} campo="costo" />
++        <CampoMetodo {...campo} campo="cod_moneda_costo" />
++        <CampoMetodo {...campo} campo="venta" />
++        <CampoMetodo {...campo} campo="cod_moneda_venta" />
+       </div>
+ 
+       {errores.length > 0 && <p className="text-sm text-destructive">{errores.join(", ")}</p>}
+diff --git a/src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx b/src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx
+index a35f5df..d7d9978 100644
+--- a/src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx
++++ b/src/features/pricing/tarifas/components/metodos/scalling/scalling-form.tsx
+@@ -9,7 +9,7 @@ import { Button } from "@/shared/components/ui/button";
+ 
+ import { Field, FieldLabel } from "@/shared/components/ui/field";
+ 
+-import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
++import { InputGroup } from "@/shared/components/ui/input-group";
+ import {
+   type FilaMetodoScalling,
+   METODO_SCALLING,
+@@ -17,6 +17,7 @@ import {
+   type PuntoEnlaceScallingOption,
+   type TipoPuntoEnlaceScallingOption,
+ } from "../../../lib/metodos/scalling";
++import { CampoMetodo } from "../campo-metodo";
+ 
+ type Props = {
+   value?: FilaMetodoScalling | null;
+@@ -74,6 +75,19 @@ export function ScallingForm({
+     );
+   }, [puntosEnlace, row.tipo_puntoenlace]);
+ 
++  const cambiar = React.useCallback((cambio: Partial<FilaMetodoScalling>) => {
++    setRow((prev) => ({ ...prev, ...cambio }));
++  }, []);
++
++  // Moneda y Valor: de la definición (lib/metodos/scalling.ts). Tipo y punto, a mano por la cascada.
++  const campo = {
++    metodo: METODO_SCALLING,
++    fila: row,
++    onChange: cambiar,
++    monedas,
++    comboEnvuelto: true,
++  };
++
+   const esEdicion = value?.cod_tarifa_scalling != null && Number(value.cod_tarifa_scalling) !== 0;
+ 
+   // Punto y moneda requeridos (ver la definición); el tipo, por la cascada.
+@@ -157,44 +171,9 @@ export function ScallingForm({
+         </InputGroup>
+       </Field>
+ 
+-      <Field>
+-        <FieldLabel>Moneda</FieldLabel>
+-
+-        <InputGroup>
+-          <div className="w-full">
+-            <ComboboxOpcion<MonedaScallingOption>
+-              value={row.moneda ?? null}
+-              onChange={(moneda) =>
+-                setRow((prev) => ({
+-                  ...prev,
+-                  moneda,
+-                }))
+-              }
+-              options={monedas}
+-              placeholder="Seleccione..."
+-              searchPlaceholder="Buscar moneda..."
+-            />
+-          </div>
+-        </InputGroup>
+-      </Field>
+-
+-      <Field>
+-        <FieldLabel>Valor</FieldLabel>
++      <CampoMetodo {...campo} campo="cod_moneda" />
+ 
+-        <InputGroup>
+-          <InputGroupInput
+-            type="number"
+-            value={row.costo ?? ""}
+-            onChange={(event) =>
+-              setRow((prev) => ({
+-                ...prev,
+-
+-                costo: event.target.value === "" ? null : Number(event.target.value),
+-              }))
+-            }
+-          />
+-        </InputGroup>
+-      </Field>
++      <CampoMetodo {...campo} campo="costo" />
+ 
+       <div className="flex gap-2">
+         <Button type="button" onClick={guardar} disabled={!puedeGuardar || isPending}>
+diff --git a/src/features/pricing/tarifas/lib/metodos/scalling.ts b/src/features/pricing/tarifas/lib/metodos/scalling.ts
+index afdf0ba..8c1951f 100644
+--- a/src/features/pricing/tarifas/lib/metodos/scalling.ts
++++ b/src/features/pricing/tarifas/lib/metodos/scalling.ts
+@@ -10,7 +10,7 @@
+  *   - El tipo de punto de enlace no se envía: al leer sale del punto y en el
+  *     formulario filtra los puntos (cascada). También es requerido para guardar.
+  *   - cod_moneda ?? value ?? 1, costo ?? 0 (sin Number) y cod_estado ?? 1.
+- *   - El formulario (combos sin `label`, placeholders propios) se escribe a mano.
++ *   - En el formulario, tipo y punto (cascada) se escriben a mano; moneda y valor usan <CampoMetodo>.
+  * ========================================================================== */
+ 
+ import { zId } from "@/shared/lib/zod-scalars";
