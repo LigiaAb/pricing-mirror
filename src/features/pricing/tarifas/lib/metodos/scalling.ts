@@ -10,7 +10,7 @@
  *   - El tipo de punto de enlace no se envía: al leer sale del punto y en el
  *     formulario filtra los puntos (cascada). También es requerido para guardar.
  *   - cod_moneda ?? value ?? 1, costo ?? 0 (sin Number) y cod_estado ?? 1.
- *   - El formulario (combos sin `label`, placeholders propios) se escribe a mano.
+ *   - En el formulario, tipo y punto (cascada) se escriben a mano; moneda y valor usan <CampoMetodo>.
  * ========================================================================== */
 
 import { zId } from "@/shared/lib/zod-scalars";

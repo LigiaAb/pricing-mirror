@@ -207,7 +207,6 @@ Resumen:
 
 Viven como **issues con la etiqueta `backlog`** (ver *Issues y etiquetas*); no se listan aquí para no duplicar:
 #95 dividir archivos grandes del cálculo ·
-#98 formularios de equipo/rango/scalling a `<CampoMetodo>` ·
 #101 `tarifas/api/monedas.ts` → catálogo `monedas`.
 
 ## Issues y etiquetas (control de pedidos)

@@ -124,7 +124,7 @@ forzar la abstracción.
    `minimo: monto({ label: "Mínimo", inicial: 0 })`. Con eso ya quedan el esquema, los tipos, el payload, la
    fila nueva y la validación (si es `requerido` o tiene reglas).
 2. Si se ve en pantalla: `<CampoMetodo {...campo} campo="minimo" />` en su `-form.tsx`, donde va en la grilla
-   (equipo, rango y scalling tienen el formulario a mano: ahí se agrega el input con su markup).
+   (equipo y el tipo/punto de scalling se escriben a mano: ahí se agrega el input con su markup).
 3. Si va en la tabla (rango, scalling): su código en la lista de `columnasMetodo` de `-columns.tsx`.
 
 ### Componentes padre reutilizables
@@ -144,10 +144,11 @@ Rango y scalling conservan `-columns`, `-form` y `-table` (`RangoTable`, `Scalli
   para validar. Sus selects guardan la opción en la misma llave del API (`cod_moneda_costo`, ...), las monedas
   usan `value` numérico y se envía `value || null` (campos `opcion`); al insertar no se envía
   `cod_tarifa_equipo` (lo quita `MetodoEquipo`).
-- rango: el formulario (grilla de 7 columnas, montos en "" en vez de null) y la edición local con "Guardar
-  todo". Columnas id, "A partir de..." y acciones.
+- rango: la grilla de 7 columnas, la lista de faltantes debajo y la edición local con "Guardar todo" (los
+  campos usan `<CampoMetodo>`; un monto vacío queda en `null`). Columnas id, "A partir de..." y acciones.
 - scalling: el tipo de punto de enlace (no se envía: al leer sale del punto y en el formulario filtra los
-  puntos), el formulario y las columnas tipo y acciones.
+  puntos), el select de punto (cascada; al cambiarlo reinicia costo y moneda) y las columnas tipo y acciones.
+  Moneda y Valor usan `<CampoMetodo>`.
 - El JSON enviado conserva valores, pero el orden de llaves sigue `cod_metodo` primero y luego `campos`
   (equipo y rango tenían otro orden; el backend no depende del orden).
 
