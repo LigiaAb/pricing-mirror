@@ -181,6 +181,19 @@ export function useGestionCotizaciones({
     filtrosABorrador(filtrosIniciales),
   );
 
+  /*
+   * Empresa y centro de costo siguen al contexto: si el usuario cambia de empresa o
+   * de centro de costo en el shell, los filtros vuelven a los iniciales del nuevo contexto.
+   */
+  const claveContexto = `${filtrosIniciales.cod_empresa ?? ""}|${filtrosIniciales.cod_cc ?? ""}`;
+  const [claveContextoAplicada, setClaveContextoAplicada] = React.useState(claveContexto);
+
+  if (claveContextoAplicada !== claveContexto) {
+    setClaveContextoAplicada(claveContexto);
+    setFiltros(filtrosIniciales);
+    setFiltrosBorrador(filtrosABorrador(filtrosIniciales));
+  }
+
   const [mostrarConfirmados, setMostrarConfirmados] = React.useState(false);
   const [mostrarVencidas, setMostrarVencidas] = React.useState(false);
 

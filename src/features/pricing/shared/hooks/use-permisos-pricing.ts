@@ -41,6 +41,9 @@ export interface PermisosPricing {
   puedeEditar: boolean;
   puedeEliminar: boolean;
   puedeAutorizar: boolean;
+  puedeAnular: boolean;
+  /** Cambiar empresa y centro de costo en los filtros (Tarifas y Cotizaciones). */
+  puedeFiltrarEmpresaCentroCosto: boolean;
 }
 
 /**
@@ -56,5 +59,7 @@ export function usePermisosPricing(opcion: OpcionPermisosPricing): PermisosPrici
     puedeEditar: permisos?.puedeEditar === true,
     puedeEliminar: permisos?.puedeEliminar === true,
     puedeAutorizar: permisos?.puedeAutorizar === true,
+    puedeAnular: permisos?.puedeAnular === true,
+    puedeFiltrarEmpresaCentroCosto: permisos?.puedeFiltrarEmpresaCentroCosto === true,
   };
 }

@@ -55,6 +55,15 @@ export function CreacionTarifa() {
     [ctx?.empresaId?.cod_empresa, ctx?.centroCostoId?.cod_cc],
   );
 
+  // Si cambia la empresa o el centro de costo del contexto, el filtro vuelve a los del contexto.
+  const claveContexto = `${filtrosIniciales.cod_empresa ?? ""}|${filtrosIniciales.cod_cc ?? ""}`;
+  const [claveContextoAplicada, setClaveContextoAplicada] = React.useState(claveContexto);
+
+  if (claveContextoAplicada !== claveContexto) {
+    setClaveContextoAplicada(claveContexto);
+    setFiltros({});
+  }
+
   const handleGuardarTarifa = React.useCallback(
     async ({ values, servicio, metodo, anular }: TarifaSubmitPayload) => {
       /*

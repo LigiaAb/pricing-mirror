@@ -26,6 +26,7 @@ type Params = {
   groupsToHide: readonly string[];
   inputsReadOnly: readonly string[];
   inputsNoObligatorios: readonly string[];
+  inputsEditables: readonly string[];
 };
 
 /**
@@ -42,6 +43,7 @@ export function useFormularioCotizacionReglas({
   groupsToHide,
   inputsReadOnly,
   inputsNoObligatorios,
+  inputsEditables,
 }: Params) {
   /* ==========================================================================
    * CATÁLOGOS DEPENDIENTES
@@ -245,7 +247,7 @@ export function useFormularioCotizacionReglas({
       }
 
       if (inputsReadOnly.includes(id)) return true;
-      if (reglasCampos[id]?.readonly) return true;
+      if (reglasCampos[id]?.readonly && !inputsEditables.includes(id)) return true;
 
       const dependencia = reglasCampos[id]?.require;
 
@@ -259,6 +261,7 @@ export function useFormularioCotizacionReglas({
       defaultValues?.entidadcontacto_id,
       values,
       inputsReadOnly,
+      inputsEditables,
       reglasCampos,
     ],
   );

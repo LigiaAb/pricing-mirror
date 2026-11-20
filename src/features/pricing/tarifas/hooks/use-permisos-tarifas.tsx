@@ -26,18 +26,39 @@ const TODO_PERMITIDO: PermisosTarifas = {
   puedeAgregar: true,
   puedeEditar: true,
   puedeEliminar: true,
+  puedeAnular: true,
+  puedeFiltrarEmpresaCentroCosto: true,
 };
 
 const PermisosTarifasContext = React.createContext<PermisosTarifas>(TODO_PERMITIDO);
 
 export function PermisosTarifasProvider({ children }: { children: React.ReactNode }) {
-  const { puedeVer, puedeAgregar, puedeEditar, puedeEliminar } = usePermisosPricing(
-    OPCION_PERMISOS.tarifas,
-  );
+  const {
+    puedeVer,
+    puedeAgregar,
+    puedeEditar,
+    puedeEliminar,
+    puedeAnular,
+    puedeFiltrarEmpresaCentroCosto,
+  } = usePermisosPricing(OPCION_PERMISOS.tarifas);
 
   const permisos = React.useMemo(
-    () => ({ puedeVer, puedeAgregar, puedeEditar, puedeEliminar }),
-    [puedeVer, puedeAgregar, puedeEditar, puedeEliminar],
+    () => ({
+      puedeVer,
+      puedeAgregar,
+      puedeEditar,
+      puedeEliminar,
+      puedeAnular,
+      puedeFiltrarEmpresaCentroCosto,
+    }),
+    [
+      puedeVer,
+      puedeAgregar,
+      puedeEditar,
+      puedeEliminar,
+      puedeAnular,
+      puedeFiltrarEmpresaCentroCosto,
+    ],
   );
 
   return (
