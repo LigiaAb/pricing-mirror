@@ -134,6 +134,8 @@ export const insertarCotizacionCabeceraOptions = () =>
         payload,
       );
 
+      exigirExitoDeMutacion(response, "Crear cotización");
+
       return parseObjectEnvelope(
         response,
         insertarCotizacionCabeceraResponseSchema,
@@ -169,7 +171,19 @@ export const actualizarCotizacionCabeceraOptions = () =>
         throw new Error("cod_cotizacion_cabecera es requerido para actualizar la cotización");
       }
 
-      return http.post<unknown>("/api/appweb/actualizar-cotizacion-cabecera", payload);
+      const response = await http.post<unknown>(
+        "/api/appweb/actualizar-cotizacion-cabecera",
+        payload,
+      );
+
+      /*
+       * El backend responde HTTP 200 con `data.success: false` si rechaza el
+       * UPDATE (p. ej. "Campos inválidos"): pasa a error para no mostrar el toast
+       * de éxito sin haber guardado.
+       */
+      exigirExitoDeMutacion(response, "Actualizar cotización");
+
+      return response;
     },
   });
 
