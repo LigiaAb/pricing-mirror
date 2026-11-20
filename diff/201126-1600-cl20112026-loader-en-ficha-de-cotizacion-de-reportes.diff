@@ -1,0 +1,43 @@
+diff --git a/src/features/pricing/reportes/components/ficha-cotizacion-sheet.tsx b/src/features/pricing/reportes/components/ficha-cotizacion-sheet.tsx
+index 9bd2ac0..69de561 100644
+--- a/src/features/pricing/reportes/components/ficha-cotizacion-sheet.tsx
++++ b/src/features/pricing/reportes/components/ficha-cotizacion-sheet.tsx
+@@ -29,6 +29,7 @@ import {
+   type VersionCotizacion,
+ } from "@/features/pricing/cotizacion/calculo";
+ import { Button } from "@/shared/components/ui/button";
++import { Loader } from "@/shared/components/ui/loader";
+ import {
+   Sheet,
+   SheetContent,
+@@ -156,7 +157,7 @@ type Opcion = { value?: unknown; label?: unknown };
+ 
+ function ContenidoFicha({ fila }: { fila: FilaKpi }) {
+   const ficha = useFichaCotizacion(fila);
+-  const { formulario, calculo } = useCatalogosCotizacion();
++  const { formulario, calculo, isLoading: cargandoCatalogos } = useCatalogosCotizacion();
+ 
+   /** Texto de un código buscándolo en un catálogo `{ value, label }`. */
+   const etiquetaDe = (catalogo: readonly Opcion[] | undefined, valor: unknown) => {
+@@ -199,6 +200,11 @@ function ContenidoFicha({ fila }: { fila: FilaKpi }) {
+   const cw = criterios.find((c) => c.campo === "valor_cw" || c.cod === COD_CRITERIO_CW)?.valor;
+   const rubros = (detalle?.rubros ?? []) as Registro[];
+ 
++  // Espera datos y catálogos para que las cards no aparezcan a medias ni con códigos.
++  if (ficha.cargando || cargandoCatalogos) {
++    return <Loader texto="CARGANDO LA COTIZACIÓN" className="min-h-[50vh]" />;
++  }
++
+   return (
+     <div className="space-y-4 p-4 sm:p-6">
+       {ficha.error ? (
+@@ -206,9 +212,6 @@ function ContenidoFicha({ fila }: { fila: FilaKpi }) {
+           {ficha.error instanceof Error ? ficha.error.message : "No se pudo cargar la cotización."}
+         </p>
+       ) : null}
+-      {ficha.cargando ? (
+-        <p className="text-sm text-muted-foreground">Cargando la información de la cotización…</p>
+-      ) : null}
+ 
+       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+         <CardInfo titulo="General" icono={ClipboardList}>
