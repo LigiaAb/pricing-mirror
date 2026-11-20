@@ -13,7 +13,12 @@
  * realizada en junio y la cerrada en julio, igual que report_hit_rate.
  */
 
-import type { ColumnaTabla, TreeNode } from "@/features/pricing/shared";
+import {
+  type ColumnaTabla,
+  esNombre,
+  NOMBRE_TRANSPORTE,
+  type TreeNode,
+} from "@/features/pricing/shared";
 import type { FilaKpi, ReporteKpi } from "../api/kpi-cotizaciones";
 
 export type CampoKpi = { campo: string; etiqueta: string };
@@ -31,7 +36,24 @@ const textoONulo = (valor: string | null | undefined) => {
 const parteFecha = (fecha: string | null | undefined, largo: 4 | 7) =>
   fecha && fecha.length >= largo ? fecha.slice(0, largo) : SIN_DATO;
 
-const LECTORES: Record<string, (fila: FilaKpi, momento: Momento) => string> = {
+/**
+ * Origen o destino. Con un servicio seleccionado: ciudad (terrestre) o punto de enlace (los
+ * demás); sin servicio, el país, para que se puedan juntar transportes distintos.
+ */
+const lugar = (fila: FilaKpi, extremo: "origen" | "destino", porTransporte: boolean): string => {
+  const pais = fila[`${extremo}_pais`];
+  if (!porTransporte) return textoONulo(pais);
+  const ciudad = fila[`${extremo}_ciudad`];
+  const punto = fila[`${extremo}_punto`];
+  return esNombre(fila.transporte, NOMBRE_TRANSPORTE.TERRESTRE)
+    ? textoONulo(ciudad || punto)
+    : textoONulo(punto || ciudad);
+};
+
+const LECTORES: Record<
+  string,
+  (fila: FilaKpi, momento: Momento, porTransporte: boolean) => string
+> = {
   usuario: (fila) => {
     const nombre = textoONulo(`${fila.nombres ?? ""} ${fila.apellidos ?? ""}`);
     return nombre === SIN_DATO ? `USUARIO ${fila.usuario}` : nombre;
@@ -42,6 +64,9 @@ const LECTORES: Record<string, (fila: FilaKpi, momento: Momento) => string> = {
   tipo_pago: (fila) => textoONulo(fila.tipo_pago),
   estado: (fila) => textoONulo(fila.estado),
   cotizacion: (fila) => `COTIZACIÓN ${fila.cotizacion}`,
+  origen: (fila, _momento, porTransporte) => lugar(fila, "origen", porTransporte),
+  destino: (fila, _momento, porTransporte) => lugar(fila, "destino", porTransporte),
+  carrier: (fila) => textoONulo(fila.carrier),
   anio: (fila, momento) =>
     parteFecha(momento === "creacion" ? fila.fecha_creacion : fila.fecha_aprobacion, 4),
   mes: (fila, momento) =>
@@ -56,6 +81,9 @@ export const CAMPOS_NIVELES_KPI: CampoKpi[] = [
   { campo: "cliente", etiqueta: "Cliente" },
   { campo: "tipo_pago", etiqueta: "Tipo de pago" },
   { campo: "estado", etiqueta: "Estado" },
+  { campo: "origen", etiqueta: "Origen" },
+  { campo: "destino", etiqueta: "Destino" },
+  { campo: "carrier", etiqueta: "Carrier" },
   { campo: "anio", etiqueta: "Año" },
   { campo: "mes", etiqueta: "Mes" },
   /** Último nivel recomendado: una fila por cotización. */
@@ -73,10 +101,19 @@ export const CAMPOS_COLUMNA_KPI: CampoKpi[] = [
   { campo: "cc_nombre", etiqueta: "Departamento (centro de costo)" },
   { campo: "tipo_pago", etiqueta: "Tipo de pago" },
   { campo: "estado", etiqueta: "Estado" },
+  { campo: "origen", etiqueta: "Origen" },
+  { campo: "destino", etiqueta: "Destino" },
+  { campo: "carrier", etiqueta: "Carrier" },
 ];
 
-export function valorCampoKpi(fila: FilaKpi, campo: string, momento: Momento): string {
-  return LECTORES[campo]?.(fila, momento) ?? SIN_DATO;
+/** `porTransporte`: hay un servicio seleccionado (cambia el detalle de origen y destino). */
+export function valorCampoKpi(
+  fila: FilaKpi,
+  campo: string,
+  momento: Momento,
+  porTransporte = false,
+): string {
+  return LECTORES[campo]?.(fila, momento, porTransporte) ?? SIN_DATO;
 }
 
 type Conteo = {
@@ -189,6 +226,7 @@ export function construirTablaKpi(
   reporte: ReporteKpi,
   niveles: CampoKpi[],
   campoColumna: string,
+  porTransporte = false,
 ): TablaKpi {
   const raiz = nuevoNodo("total", "TOTAL GENERAL");
   const valoresColumna = new Set<string>();
@@ -196,14 +234,14 @@ export function construirTablaKpi(
   for (const fila of filas) {
     for (const aporte of aportesDeFila(fila)) {
       const columna = campoColumna
-        ? valorCampoKpi(fila, campoColumna, aporte.momento)
+        ? valorCampoKpi(fila, campoColumna, aporte.momento, porTransporte)
         : CLAVE_TOTAL;
       if (columna !== CLAVE_TOTAL) valoresColumna.add(columna);
 
       let nodo = raiz;
       sumarEn(nodo, columna, aporte);
       for (const nivel of niveles) {
-        const valor = valorCampoKpi(fila, nivel.campo, aporte.momento);
+        const valor = valorCampoKpi(fila, nivel.campo, aporte.momento, porTransporte);
         let hijo = nodo.hijos.get(valor);
         if (!hijo) {
           hijo = nuevoNodo(`${nodo.id}|${nivel.campo}:${valor}`, valor);
