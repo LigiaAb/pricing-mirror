@@ -22,11 +22,19 @@ export function paramsReporte(filtros: Filtros) {
 export type ParamsReporte = ReturnType<typeof paramsReporte>;
 
 const errorApiSchema = z.object({
-  data: z.object({ success: z.literal(false), mensaje: z.string() }),
+  data: z.object({
+    success: z.literal(false),
+    mensaje: z.string().optional(),
+    /** El `catch` de los reportes devuelve el error de la consulta aquí, sin `mensaje`. */
+    error: z.string().optional(),
+  }),
 });
 
 /** Lanza el mensaje del backend cuando la respuesta trae data.success = false. */
 export function validarRespuestaReporte(respuesta: unknown): void {
   const errorApi = errorApiSchema.safeParse(respuesta);
-  if (errorApi.success) throw new Error(errorApi.data.data.mensaje);
+  if (errorApi.success) {
+    const { mensaje, error } = errorApi.data.data;
+    throw new Error(mensaje ?? error ?? "El reporte respondió con error");
+  }
 }
