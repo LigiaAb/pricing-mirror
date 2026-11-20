@@ -13,7 +13,7 @@
  * realizada en junio y la cerrada en julio, igual que report_hit_rate.
  */
 
-import type { ColumnaTabla, TreeNode } from "@/shared/components/tabla-double/tabla-double";
+import type { ColumnaTabla, TreeNode } from "@/features/pricing/shared";
 import type { FilaKpi, ReporteKpi } from "../api/kpi-cotizaciones";
 
 export type CampoKpi = { campo: string; etiqueta: string };
