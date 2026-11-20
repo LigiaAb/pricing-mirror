@@ -1,5 +1,6 @@
 "use client";
 
+import { format } from "date-fns";
 import { Download, Loader2 } from "lucide-react";
 import { useMemo } from "react";
 import { TablaDouble } from "@/features/pricing/shared";
@@ -14,6 +15,7 @@ import {
 } from "@/shared/components/ui/select";
 import { useExcelJS } from "@/shared/hooks/use-dynamic-libraries";
 import { type ReporteKpi, useKpiCotizaciones } from "../api/kpi-cotizaciones";
+import { agregarHojaReporte, type FilaExcel } from "../lib/excel-reporte";
 import type { Filtros } from "../lib/filtros-types";
 import {
   CAMPOS_COLUMNA_KPI,
@@ -28,6 +30,12 @@ const SIN_COLUMNA = "__ninguna__";
 const NOMBRE_ARCHIVO: Record<ReporteKpi, string> = {
   hit_rate: "hit-rate",
   realizacion_de_precio: "realizacion-de-precio",
+};
+
+/** Mismos títulos que el PDF de cada reporte. */
+const TITULO_REPORTE: Record<ReporteKpi, string> = {
+  hit_rate: "Hit Rate",
+  realizacion_de_precio: "Realizacion de Precio (RdP)",
 };
 
 type ConfiguracionKpi = {
@@ -107,27 +115,56 @@ export function TablaKpi({
   const exportarExcel = async () => {
     const { ExcelJS, saveAs } = await loadExcelJS();
     const libro = new ExcelJS.Workbook();
-    const hoja = libro.addWorksheet("Reporte");
 
-    const encabezado = hoja.addRow(["Concepto", ...tabla.columnas.map((c) => c.label)]);
-    encabezado.font = { bold: true };
-
-    const agregar = (nodos: typeof tabla.data, profundidad: number) => {
+    // Una columna por cada nivel de agrupación; cada fila repite los valores de sus
+    // niveles superiores (así se puede filtrar en Excel). El total general va en la primera.
+    const columnasNivel = niveles.length ? niveles.map((n) => n.etiqueta) : ["Concepto"];
+    const filas: FilaExcel[] = [];
+    const agregar = (nodos: typeof tabla.data, ruta: string[]) => {
       for (const nodo of nodos) {
-        const fila = hoja.addRow([
-          nodo.label,
-          ...tabla.columnas.map((c) => {
-            const valor = nodo.values?.[c.key];
-            return valor === "" || valor == null ? null : Number(valor);
-          }),
-        ]);
-        fila.getCell(1).alignment = { indent: profundidad };
-        if (nodo.children?.length) fila.font = { bold: true };
-        agregar(nodo.children ?? [], profundidad + 1);
+        const esRaiz = ruta.length === 0 && nodo.id === "total";
+        const rutaNodo = esRaiz ? [] : [...ruta, nodo.label];
+        const celdasNivel = columnasNivel.map((_, i) =>
+          esRaiz ? (i === 0 ? nodo.label : null) : (rutaNodo[i] ?? null),
+        );
+        filas.push({
+          celdas: [
+            ...celdasNivel,
+            ...tabla.columnas.map((c) => {
+              const valor = nodo.values?.[c.key];
+              return valor === "" || valor == null ? null : Number(valor);
+            }),
+          ],
+          negrita: Boolean(nodo.children?.length) || esRaiz,
+        });
+        agregar(nodo.children ?? [], rutaNodo);
       }
     };
-    agregar(tabla.data, 0);
-    hoja.getColumn(1).width = 40;
+    agregar(tabla.data, []);
+
+    const etiquetaColumna = CAMPOS_COLUMNA_KPI.find((c) => c.campo === campoColumna)?.etiqueta;
+    await agregarHojaReporte(libro, {
+      titulo: `${TITULO_REPORTE[reporte]} - Resumen agrupado`,
+      hoja: "Resumen agrupado",
+      header: {
+        Período: `${format(filtros.fecha_inicio, "dd-MM-yyyy")} al ${format(filtros.fecha_fin, "dd-MM-yyyy")}`,
+        Empresa: filtros.cod_empresa?.nombre,
+        "Centro de Costo": filtros.cod_cc?.nombre,
+        Usuario: filtros.cod_usuario?.label,
+        Cliente: filtros.cod_cliente?.label,
+        "Tipo de pago": filtros.cod_tipo_pago?.label,
+        Servicio: filtros.cod_servicio?.label,
+        "Agrupado por": columnasNivel.join(" > "),
+        ...(campoColumna ? { Columnas: etiquetaColumna } : {}),
+      },
+      columnas: [...columnasNivel, ...tabla.columnas.map((c) => c.label)],
+      filas,
+      anchos: [...columnasNivel.map(() => 28), ...tabla.columnas.map(() => 14)],
+      formatos: [
+        ...columnasNivel.map(() => undefined),
+        ...tabla.columnas.map((c) => (c.label.includes("%") ? '0.00"%"' : "#,##0")),
+      ],
+    });
 
     const buffer = await libro.xlsx.writeBuffer();
     saveAs(
