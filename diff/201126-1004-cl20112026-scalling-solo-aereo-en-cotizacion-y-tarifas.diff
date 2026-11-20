@@ -82,18 +82,6 @@ index 5c1c5c9..546df60 100644
  export type PuntoEnlaceScalling = PuntoEnlaceCatalogo;
  
  export type MonedaScalling = MonedaCatalogo;
-diff --git a/src/features/pricing/tarifas/components/formulario-tarifa.tsx b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
-index 90d81fc..7e6f58c 100644
---- a/src/features/pricing/tarifas/components/formulario-tarifa.tsx
-+++ b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
-@@ -1,6 +1,6 @@
- "use client";
- 
--import { Check, ChevronsUpDown, CircleAlert, Loader2, TriangleAlert, X } from "lucide-react";
-+import { Check, ChevronsUpDown, Loader2, TriangleAlert, X } from "lucide-react";
- import React from "react";
- 
- import { useFetchEntidades } from "@/features/entidades";
 diff --git a/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx b/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx
 index 759ab98..92796d9 100644
 --- a/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx
