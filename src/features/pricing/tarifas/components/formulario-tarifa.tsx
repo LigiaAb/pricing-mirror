@@ -379,13 +379,18 @@ export const FormularioTarifa = ({
     tipoFormulario === "filtro" ||
     (tipoFormulario === "ingreso" ? permisos.puedeAgregar : permisos.puedeEditar);
 
-  /** Al crear se exigen CAMPOS_OBLIGATORIOS_INGRESO (como el legacy); editar no valida. */
+  /**
+   * Al crear y al editar se exigen CAMPOS_OBLIGATORIOS_INGRESO. No aplica si la edición
+   * se muestra como lectura (vencida o sin permiso).
+   */
+  const validaObligatorios =
+    tipoFormulario === "ingreso" || (tipoFormulario === "edicion" && !vencido && !sinPermisoEditar);
   const obligatoriosFormulario = React.useMemo(
     () =>
-      tipoFormulario === "ingreso"
+      validaObligatorios
         ? [...new Set([...Object.keys(CAMPOS_OBLIGATORIOS_INGRESO), ...obligatorios])]
         : obligatorios,
-    [tipoFormulario, obligatorios],
+    [validaObligatorios, obligatorios],
   );
   const [faltantes, setFaltantes] = React.useState<string[]>([]);
 
@@ -601,7 +606,7 @@ export const FormularioTarifa = ({
       return;
     }
 
-    if (tipoFormulario === "ingreso") {
+    if (validaObligatorios) {
       const vacios = obligatoriosFormulario.filter(
         (id) => verificarSiEsVisible(id) && estaVacio(values[id]),
       );
@@ -622,6 +627,7 @@ export const FormularioTarifa = ({
     onGuardar,
     valoresSoloCodigos,
     values,
+    validaObligatorios,
     obligatoriosFormulario,
     verificarSiEsVisible,
   ]);
@@ -632,7 +638,7 @@ export const FormularioTarifa = ({
 
   return (
     <div className="space-y-4 w-full">
-      {tipoFormulario === "ingreso" && faltantes.length > 0 && (
+      {validaObligatorios && faltantes.length > 0 && (
         <Alert variant="destructive">
           <TriangleAlert className="size-4" aria-hidden="true" color="red" />
           <AlertTitle>Hay campos obligatorios vacíos</AlertTitle>
