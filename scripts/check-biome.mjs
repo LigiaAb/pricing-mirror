@@ -5,44 +5,64 @@
 //   npm run biome:arreglar         → aplica formato, orden de imports y arreglos seguros
 //
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 const RUTAS = [
   "src/features/pricing",
   "src/features/embarques/v2", // el resto de embarques es solo referencia
+  "src/features/actividades",
   "src/shared/components/form/fields/async-combobox-input.tsx",
+  "src/shared/components/data-table/data-table-pagination.tsx",
 ];
+
+// El proyecto real mezcla CRLF y LF por archivo. Cada archivo se revisa con su propio final de
+// línea (--line-ending), así el formato no marca error por CRLF y nunca se convierte el archivo.
+const archivos = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "--", ...RUTAS], { encoding: "utf8" })
+  .split("\n")
+  .filter((f) => /\.(ts|tsx|js|jsx|mjs|json|css)$/.test(f));
+const esCrlf = (f) => readFileSync(f, "latin1").includes("\r\n");
+const grupos = [
+  { finLinea: "lf", archivos: archivos.filter((f) => !esCrlf(f)) },
+  { finLinea: "crlf", archivos: archivos.filter(esCrlf) },
+].filter((g) => g.archivos.length);
 
 const arreglar = process.argv.includes("--arreglar");
 const biome = "node_modules/@biomejs/biome/bin/biome";
 
 if (arreglar) {
   try {
-    execFileSync(process.execPath, [biome, "check", "--write", ...RUTAS], { stdio: "inherit" });
+    for (const g of grupos) {
+      execFileSync(
+        process.execPath,
+        [biome, "check", "--write", `--line-ending=${g.finLinea}`, ...g.archivos],
+        { stdio: "inherit" },
+      );
+    }
   } catch {
     // Los errores que no se arreglan solos se muestran abajo.
   }
 }
 
-let salida = "";
-try {
-  salida = execFileSync(process.execPath, [biome, "check", "--reporter=json", "--max-diagnostics=none", ...RUTAS], {
-    encoding: "utf8",
-    maxBuffer: 64 * 1024 * 1024,
-    stdio: ["ignore", "pipe", "ignore"],
-  });
-} catch (error) {
-  salida = error.stdout ?? "";
+const diagnosticos = [];
+for (const g of grupos) {
+  let salida = "";
+  try {
+    salida = execFileSync(
+      process.execPath,
+      [biome, "check", "--reporter=json", "--max-diagnostics=none", `--line-ending=${g.finLinea}`, ...g.archivos],
+      { encoding: "utf8", maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] },
+    );
+  } catch (error) {
+    salida = error.stdout ?? "";
+  }
+  try {
+    diagnosticos.push(...JSON.parse(salida).diagnostics);
+  } catch {
+    console.error("Biome no devolvió un resultado válido. ¿Corriste npm install?");
+    process.exit(2);
+  }
 }
 
-let resultado;
-try {
-  resultado = JSON.parse(salida);
-} catch {
-  console.error("Biome no devolvió un resultado válido. ¿Corriste npm install?");
-  process.exit(2);
-}
-
-const diagnosticos = resultado.diagnostics;
 const errores = diagnosticos.filter((d) => d.severity === "error" || d.severity === "fatal");
 const avisos = diagnosticos.filter((d) => d.severity === "warning");
 

@@ -1,5 +1,16 @@
 src/app/(protected)/cxc/estadoscuenta/dashcxc/dashcxc-client.tsx: error TS2307: Cannot find module '@/features/cxc' or its corresponding type declarations.
 src/app/(protected)/cxc/estadoscuenta/dashcxc/dashcxc-client.tsx: error TS2307: Cannot find module '@/features/reportesbi' or its corresponding type declarations.
+src/features/actividades/components/calendario/calendario-actividades.tsx: error TS7006: Parameter 'accion' implicitly has an 'any' type.
+src/features/actividades/components/calendario/tabla-actividades-dia.tsx: error TS2307: Cannot find module '@/features/cxc' or its corresponding type declarations.
+src/features/actividades/components/detalle/actividad-detalle.tsx: error TS7006: Parameter 'resultado' implicitly has an 'any' type.
+src/features/actividades/components/detalle/visiting-report.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/features/actividades/components/detalle/visiting-report.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/features/actividades/components/detalle/visiting-report.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/features/actividades/components/formulario/actividad-form.tsx: error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/features/actividades/components/formulario/actividad-form.tsx: error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/features/actividades/components/formulario/actividad-form.tsx: error TS7006: Parameter 'contacto' implicitly has an 'any' type.
+src/features/actividades/components/formulario/actividad-form.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/features/actividades/components/formulario/actividad-form.tsx: error TS7006: Parameter 'item' implicitly has an 'any' type.
 src/features/embarques/components/asignacion-cts/asignacion-cts-form.tsx: error TS7006: Parameter 'cliente' implicitly has an 'any' type.
 src/features/embarques/components/cca/utils.ts: error TS2307: Cannot find module '@/features/gastos' or its corresponding type declarations.
 src/features/embarques/components/cts-detalle/use-datos-carta-privada.ts: error TS2307: Cannot find module '@/features/carta-instrucciones' or its corresponding type declarations.
@@ -88,12 +99,8 @@ src/features/embarques/components/secciones/rutas.tsx: error TS7006: Parameter '
 src/features/embarques/components/secciones/rutas.tsx: error TS7006: Parameter 'leg' implicitly has an 'any' type.
 src/features/embarques/components/secciones/rutas.tsx: error TS7006: Parameter 'leg' implicitly has an 'any' type.
 src/features/embarques/components/secciones/rutas.tsx: error TS7006: Parameter 'leg' implicitly has an 'any' type.
-src/features/embarques/components/secciones/seguimiento.tsx: error TS2307: Cannot find module '@/features/actividades' or its corresponding type declarations.
-src/features/embarques/components/secciones/seguimiento.tsx: error TS7006: Parameter 'a' implicitly has an 'any' type.
 src/features/embarques/components/secciones/shipper.tsx: error TS2307: Cannot find module '@/features/carta-instrucciones' or its corresponding type declarations.
 src/features/embarques/components/secciones/shipper.tsx: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
-src/features/embarques/components/tablas/tabla-actividades-cts.tsx: error TS2307: Cannot find module '@/features/actividades' or its corresponding type declarations.
-src/features/embarques/components/tablas/tabla-actividades-cts.tsx: error TS7006: Parameter 'actividad' implicitly has an 'any' type.
 src/features/embarques/components/tablas/tabla-gastos-criterio.tsx: error TS2307: Cannot find module '@/features/gastos' or its corresponding type declarations.
 src/features/embarques/components/tablas/tabla-gastos-criterio.tsx: error TS7006: Parameter 'c' implicitly has an 'any' type.
 src/features/embarques/components/tracking/tracking-embarques-table.tsx: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
