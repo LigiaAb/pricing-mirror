@@ -25,6 +25,9 @@ shared/
    ├─ ficha-resumen.tsx  ← FichaResumen (lee sus propios catálogos; funciona dentro o fuera de cualquier provider)
    ├─ panel-dashboard.tsx ← Panel (contenedor con borde y sombra), SectionHeader (ícono, título, subtítulo y
    │                        acción) y MensajeVacio. Copia propia de wms-hn (mismo markup); hoy los usa Reportes
+   ├─ tabla-double.tsx   ← TablaDouble (tabla de árbol con totales): copia propia de pricing de
+   │                        `@/shared/components/tabla-double` para darle su diseño; con variantes `dark:`
+   │                        (tema oscuro). Hoy la usa Reportes (Resumen agrupado)
    └─ resumen-item.tsx
 └─ calculadora-embarque/  ← CALCULADORA DE EMBARQUES (corporativa, ver abajo)
    ├─ constantes.ts       ← TIPO_TRANSPORTE (49/50/51), NOMBRE_TRANSPORTE, NOMBRE_UNIDAD, UNIDAD_DEFAULT (165/162)

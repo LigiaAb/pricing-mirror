@@ -2,6 +2,7 @@
 
 import { Download, Loader2 } from "lucide-react";
 import { useMemo } from "react";
+import { TablaDouble } from "@/features/pricing/shared";
 import NivelesBuilder from "@/shared/components/tabla-double/niveles-builder";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -20,7 +21,6 @@ import {
   type CampoKpi,
   construirTablaKpi,
 } from "../lib/tabla-kpi";
-import TablaDouble from "./tabla-double";
 
 /** El Select de Radix no acepta "" como valor: "sin columnas" se guarda como "". */
 const SIN_COLUMNA = "__ninguna__";

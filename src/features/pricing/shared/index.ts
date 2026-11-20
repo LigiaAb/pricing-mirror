@@ -8,7 +8,8 @@
  *                lectura de rangos de tarifa.
  *   components/  FichaResumen (resumen de un servicio/método de tarifa),
  *                ComboboxOpcion (select buscable en memoria con valor objeto) y
- *                Panel / SectionHeader / MensajeVacio (panel con encabezado).
+ *                Panel / SectionHeader / MensajeVacio (panel con encabezado) y
+ *                TablaDouble (tabla de árbol de pricing, con tema oscuro).
  *   hooks/       usePermisosPricing (permisos por opción de cada pantalla).
  *   calculadora-embarque/  CalculadoraMedidas + cálculos de volumen, peso y
  *                CW por transporte (corporativos, sin datos de cotización).
@@ -104,6 +105,11 @@ export {
 } from "./components/ficha-resumen";
 export { MensajeVacio, Panel, SectionHeader } from "./components/panel-dashboard";
 export { ResumenItem } from "./components/resumen-item";
+export {
+  type ColumnaTabla,
+  default as TablaDouble,
+  type TreeNode,
+} from "./components/tabla-double";
 export {
   type CatalogosPricing,
   type CentroCostoCatalog,
