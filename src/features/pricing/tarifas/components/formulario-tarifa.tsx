@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronsUpDown, CircleAlert, Loader2, TriangleAlert, X } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, TriangleAlert, X } from "lucide-react";
 import React from "react";
 
 import { useFetchEntidades } from "@/features/entidades";

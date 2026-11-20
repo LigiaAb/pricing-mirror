@@ -28,9 +28,8 @@ import { crearScallingColumns } from "./scalling-columns";
 import { ScallingForm } from "./scalling-form";
 
 const TIPO_PUNTO_SEGUN_TRANSPORTE: Record<string, string> = {
+  // Solo AEREO usa scalling (marítimo y terrestre no).
   AEREO: "AEROPUERTO",
-  MARITIMO: "PUERTO",
-  TERRESTRE: "ADUANA",
 };
 
 type Props = {
@@ -126,10 +125,7 @@ export function ScallingTable({ codMetodo, codTipoTransporte }: Props) {
    * =========================================================
    * TIPO DE PUNTO DE ENLACE POR DEFECTO
    *
-   * Viejo:
-   * AEREO     -> AEROPUERTO
-   * MARITIMO  -> PUERTO
-   * TERRESTRE -> ADUANA
+   * AEREO -> AEROPUERTO (marítimo y terrestre no usan scalling)
    * =========================================================
    */
 

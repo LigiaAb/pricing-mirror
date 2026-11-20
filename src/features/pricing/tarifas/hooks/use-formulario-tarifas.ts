@@ -2,6 +2,7 @@
 
 import { isBefore, isEqual } from "date-fns";
 import * as React from "react";
+import { NOMBRE_TRANSPORTE } from "@/features/pricing/shared";
 import { useContextoOperativoStore } from "@/features/shell";
 import { useAuthStore } from "@/shared/stores/auth-store";
 import { fieldRules } from "../lib//tarifa-field-rules";
@@ -121,6 +122,16 @@ const tipoCalculoPermitido = (tipoCalculo: unknown, metodoCalculo: unknown): boo
 
   return metodoRequerido === undefined || tieneNombre(metodoCalculo, metodoRequerido);
 };
+
+// Scalling solo es aéreo: en este centro de costo no se crean tarifas SCALLING terrestres ni
+// marítimas (#140).
+const COD_CC_SCALLING_SOLO_AEREO = 16;
+const METODO_SCALLING = "SCALLING";
+const TRANSPORTES_SIN_SCALLING = [NOMBRE_TRANSPORTE.TERRESTRE, NOMBRE_TRANSPORTE.MARITIMO];
+
+const scallingPermitido = (centroCosto: unknown, tipoTransporte: unknown): boolean =>
+  Number(getPlainValue(centroCosto)) !== COD_CC_SCALLING_SOLO_AEREO ||
+  !TRANSPORTES_SIN_SCALLING.some((nombre) => tieneNombre(tipoTransporte, nombre));
 
 const CAMPOS_SIEMPRE_LECTURA = [
   "usuario",
@@ -407,7 +418,21 @@ export function useFormulario({
 
         if (metodoFijo !== undefined) return metodos.filter((td) => tieneNombre(td, metodoFijo));
 
-        return metodos.filter((td) => td.value !== 342);
+        const sinScalling = !scallingPermitido(
+          values_inter.centroCosto,
+          values_inter.tipoTransporte,
+        );
+
+        // Si una tarifa guardada ya tiene SCALLING, se sigue mostrando su método.
+        return metodos.filter(
+          (td) =>
+            td.value !== 342 &&
+            !(
+              sinScalling &&
+              tieneNombre(td, METODO_SCALLING) &&
+              getPlainValue(values_inter.metodoCalculo) !== td.value
+            ),
+        );
       }
 
       return catalogosProcesados?.[catalogoId] ?? [];
@@ -603,6 +628,15 @@ export function useFormulario({
             next.metodoCalculo = metodoCalculoFijo;
             next.cod_tipo = getPlainValue(metodoCalculoFijo);
           }
+        }
+
+        if (
+          id === "tipoTransporte" &&
+          tieneNombre(prev.metodoCalculo, METODO_SCALLING) &&
+          !scallingPermitido(prev.centroCosto, val)
+        ) {
+          next.metodoCalculo = null;
+          next.cod_tipo = null;
         }
 
         if (id === "aplicaTodosClientes") {

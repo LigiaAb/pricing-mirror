@@ -4,6 +4,7 @@ import * as React from "react";
 import type { CalculoCotizacionProps } from "../lib/calculo-cotizacion-tipos";
 import { RUBRO, TIPO_CALCULO } from "../lib/constantes";
 import { esMetodoCostoPorcentaje } from "../lib/rubros-manuales";
+import { transporteUsaScalling } from "../lib/scalling";
 import type { EntidadCatalogo, Id } from "../lib/tipos";
 import { useCalculoCotizacion } from "./use-calculo-cotizacion";
 import { useCarrierFlete } from "./use-carrier-flete";
@@ -392,7 +393,7 @@ export function useDetalleCalculoSecciones({
       return true;
     }
 
-    if (entidadEfectivaId == null) {
+    if (entidadEfectivaId == null || !transporteUsaScalling(cotizacion.cod_tipo_transporte)) {
       return false;
     }
 
@@ -401,7 +402,12 @@ export function useDetalleCalculoSecciones({
         String(servicio.entidad_id) === String(entidadEfectivaId) &&
         Number(servicio.cod_rubro) === RUBRO.SCALLING,
     );
-  }, [rubros.rubrosScalling, entidadEfectivaId, catalogos.servicios]);
+  }, [
+    rubros.rubrosScalling,
+    entidadEfectivaId,
+    cotizacion.cod_tipo_transporte,
+    catalogos.servicios,
+  ]);
 
   const calcularScalling = React.useCallback(
     ({ lista_paises }: { lista_paises: string[] }) =>

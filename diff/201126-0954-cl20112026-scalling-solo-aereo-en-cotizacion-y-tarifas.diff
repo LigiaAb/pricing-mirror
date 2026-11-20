@@ -1,0 +1,191 @@
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-detalle-calculo-secciones.ts b/src/features/pricing/cotizacion/calculo/hooks/use-detalle-calculo-secciones.ts
+index 41a55aa..fb78e02 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-detalle-calculo-secciones.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-detalle-calculo-secciones.ts
+@@ -4,6 +4,7 @@ import * as React from "react";
+ import type { CalculoCotizacionProps } from "../lib/calculo-cotizacion-tipos";
+ import { RUBRO, TIPO_CALCULO } from "../lib/constantes";
+ import { esMetodoCostoPorcentaje } from "../lib/rubros-manuales";
++import { transporteUsaScalling } from "../lib/scalling";
+ import type { EntidadCatalogo, Id } from "../lib/tipos";
+ import { useCalculoCotizacion } from "./use-calculo-cotizacion";
+ import { useCarrierFlete } from "./use-carrier-flete";
+@@ -392,7 +393,7 @@ export function useDetalleCalculoSecciones({
+       return true;
+     }
+ 
+-    if (entidadEfectivaId == null) {
++    if (entidadEfectivaId == null || !transporteUsaScalling(cotizacion.cod_tipo_transporte)) {
+       return false;
+     }
+ 
+@@ -401,7 +402,12 @@ export function useDetalleCalculoSecciones({
+         String(servicio.entidad_id) === String(entidadEfectivaId) &&
+         Number(servicio.cod_rubro) === RUBRO.SCALLING,
+     );
+-  }, [rubros.rubrosScalling, entidadEfectivaId, catalogos.servicios]);
++  }, [
++    rubros.rubrosScalling,
++    entidadEfectivaId,
++    cotizacion.cod_tipo_transporte,
++    catalogos.servicios,
++  ]);
+ 
+   const calcularScalling = React.useCallback(
+     ({ lista_paises }: { lista_paises: string[] }) =>
+diff --git a/src/features/pricing/cotizacion/calculo/hooks/use-rubros-scalling.ts b/src/features/pricing/cotizacion/calculo/hooks/use-rubros-scalling.ts
+index 1f09bf4..3454f90 100644
+--- a/src/features/pricing/cotizacion/calculo/hooks/use-rubros-scalling.ts
++++ b/src/features/pricing/cotizacion/calculo/hooks/use-rubros-scalling.ts
+@@ -71,7 +71,11 @@ function resolverTipoTransporte({
+     return normalizado as TipoTransporteScalling;
+   }
+ 
+-  return TIPOS_TRANSPORTE[Number(codTipoTransporte) as keyof typeof TIPOS_TRANSPORTE] ?? null;
++  const nombre = TIPOS_TRANSPORTE[Number(codTipoTransporte) as keyof typeof TIPOS_TRANSPORTE];
++
++  return nombre != null && nombre in TIPO_PUNTO_POR_TRANSPORTE
++    ? (nombre as TipoTransporteScalling)
++    : null;
+ }
+ 
+ function sonPuntosIguales(a: PuntoEnlaceScalling[], b: PuntoEnlaceScalling[]) {
+diff --git a/src/features/pricing/cotizacion/calculo/lib/scalling.ts b/src/features/pricing/cotizacion/calculo/lib/scalling.ts
+index 5c1c5c9..546df60 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/scalling.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/scalling.ts
+@@ -1,16 +1,24 @@
++import { TIPOS_TRANSPORTE } from "@/features/pricing/shared";
++
+ import type { RutaScalling } from "../api/scalling";
+ 
++import { NOMBRE_TRANSPORTE } from "./constantes";
+ import type { Id, MonedaCatalogo, PuntoEnlaceCatalogo } from "./tipos";
+ import { buscarMoneda } from "./utils";
+ 
++/** Solo AEREO usa scalling (marítimo y terrestre no). */
+ export const TIPO_PUNTO_POR_TRANSPORTE = {
+-  AEREO: "AEROPUERTO",
+-  MARITIMO: "PUERTO",
+-  TERRESTRE: "ADUANA",
++  [NOMBRE_TRANSPORTE.AEREO]: "AEROPUERTO",
+ } as const;
+ 
+ export type TipoTransporteScalling = keyof typeof TIPO_PUNTO_POR_TRANSPORTE;
+ 
++export function transporteUsaScalling(codTipoTransporte?: Id | null) {
++  const nombre = TIPOS_TRANSPORTE[Number(codTipoTransporte) as keyof typeof TIPOS_TRANSPORTE];
++
++  return nombre != null && nombre in TIPO_PUNTO_POR_TRANSPORTE;
++}
++
+ export type PuntoEnlaceScalling = PuntoEnlaceCatalogo;
+ 
+ export type MonedaScalling = MonedaCatalogo;
+diff --git a/src/features/pricing/tarifas/components/formulario-tarifa.tsx b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
+index 90d81fc..7e6f58c 100644
+--- a/src/features/pricing/tarifas/components/formulario-tarifa.tsx
++++ b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { Check, ChevronsUpDown, CircleAlert, Loader2, TriangleAlert, X } from "lucide-react";
++import { Check, ChevronsUpDown, Loader2, TriangleAlert, X } from "lucide-react";
+ import React from "react";
+ 
+ import { useFetchEntidades } from "@/features/entidades";
+diff --git a/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx b/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx
+index 759ab98..92796d9 100644
+--- a/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx
++++ b/src/features/pricing/tarifas/components/metodos/scalling/scalling-table.tsx
+@@ -28,9 +28,8 @@ import { crearScallingColumns } from "./scalling-columns";
+ import { ScallingForm } from "./scalling-form";
+ 
+ const TIPO_PUNTO_SEGUN_TRANSPORTE: Record<string, string> = {
++  // Solo AEREO usa scalling (marítimo y terrestre no).
+   AEREO: "AEROPUERTO",
+-  MARITIMO: "PUERTO",
+-  TERRESTRE: "ADUANA",
+ };
+ 
+ type Props = {
+@@ -126,10 +125,7 @@ export function ScallingTable({ codMetodo, codTipoTransporte }: Props) {
+    * =========================================================
+    * TIPO DE PUNTO DE ENLACE POR DEFECTO
+    *
+-   * Viejo:
+-   * AEREO     -> AEROPUERTO
+-   * MARITIMO  -> PUERTO
+-   * TERRESTRE -> ADUANA
++   * AEREO -> AEROPUERTO (marítimo y terrestre no usan scalling)
+    * =========================================================
+    */
+ 
+diff --git a/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts b/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
+index 5d73deb..0cdb209 100644
+--- a/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
++++ b/src/features/pricing/tarifas/hooks/use-formulario-tarifas.ts
+@@ -2,6 +2,7 @@
+ 
+ import { isBefore, isEqual } from "date-fns";
+ import * as React from "react";
++import { NOMBRE_TRANSPORTE } from "@/features/pricing/shared";
+ import { useContextoOperativoStore } from "@/features/shell";
+ import { useAuthStore } from "@/shared/stores/auth-store";
+ import { fieldRules } from "../lib//tarifa-field-rules";
+@@ -122,6 +123,16 @@ const tipoCalculoPermitido = (tipoCalculo: unknown, metodoCalculo: unknown): boo
+   return metodoRequerido === undefined || tieneNombre(metodoCalculo, metodoRequerido);
+ };
+ 
++// Scalling solo es aéreo: en este centro de costo no se crean tarifas SCALLING terrestres ni
++// marítimas (#140).
++const COD_CC_SCALLING_SOLO_AEREO = 16;
++const METODO_SCALLING = "SCALLING";
++const TRANSPORTES_SIN_SCALLING = [NOMBRE_TRANSPORTE.TERRESTRE, NOMBRE_TRANSPORTE.MARITIMO];
++
++const scallingPermitido = (centroCosto: unknown, tipoTransporte: unknown): boolean =>
++  Number(getPlainValue(centroCosto)) !== COD_CC_SCALLING_SOLO_AEREO ||
++  !TRANSPORTES_SIN_SCALLING.some((nombre) => tieneNombre(tipoTransporte, nombre));
++
+ const CAMPOS_SIEMPRE_LECTURA = [
+   "usuario",
+   "empresa",
+@@ -407,7 +418,21 @@ export function useFormulario({
+ 
+         if (metodoFijo !== undefined) return metodos.filter((td) => tieneNombre(td, metodoFijo));
+ 
+-        return metodos.filter((td) => td.value !== 342);
++        const sinScalling = !scallingPermitido(
++          values_inter.centroCosto,
++          values_inter.tipoTransporte,
++        );
++
++        // Si una tarifa guardada ya tiene SCALLING, se sigue mostrando su método.
++        return metodos.filter(
++          (td) =>
++            td.value !== 342 &&
++            !(
++              sinScalling &&
++              tieneNombre(td, METODO_SCALLING) &&
++              getPlainValue(values_inter.metodoCalculo) !== td.value
++            ),
++        );
+       }
+ 
+       return catalogosProcesados?.[catalogoId] ?? [];
+@@ -605,6 +630,15 @@ export function useFormulario({
+           }
+         }
+ 
++        if (
++          id === "tipoTransporte" &&
++          tieneNombre(prev.metodoCalculo, METODO_SCALLING) &&
++          !scallingPermitido(prev.centroCosto, val)
++        ) {
++          next.metodoCalculo = null;
++          next.cod_tipo = null;
++        }
++
+         if (id === "aplicaTodosClientes") {
+           const tipoTarifa = obtenerTipoTarifaSegunClientes(val === true);
+ 
