@@ -3,7 +3,7 @@ import { autoTable, type CellInput } from "jspdf-autotable";
 import { capturarGrafica } from "./capturar-grafica";
 
 // Recurso público insertado directamente por jsPDF; no se importa ni se carga con Promise.
-const LOGO_URL = "/images/logo-cropa-dsv-1024x205.png";
+export const LOGO_URL = "/images/logo-cropa-dsv-1024x205.png";
 // Con una ruta, addImage hace un XHR síncrono en cada llamada (cada página) antes de
 // revisar el alias. Se descarga una sola vez y se reutiliza en todos los PDF.
 let logo: string | undefined;
