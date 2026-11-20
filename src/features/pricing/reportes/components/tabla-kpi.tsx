@@ -1,11 +1,9 @@
 "use client";
 
 import { format } from "date-fns";
-import { Download, Loader2 } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { TablaDouble } from "@/features/pricing/shared";
 import NivelesBuilder from "@/shared/components/tabla-double/niveles-builder";
-import { Button } from "@/shared/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -98,9 +96,19 @@ export function TablaKpi({
   reporte,
   niveles,
   campoColumna,
-}: ConfiguracionKpi & { filtros: Filtros; reporte: ReporteKpi }) {
+  exportar = 0,
+  onExportando,
+  onError,
+}: ConfiguracionKpi & {
+  filtros: Filtros;
+  reporte: ReporteKpi;
+  /** Contador del botón "Excel" (en Filtros requeridos): cada cambio genera el archivo. */
+  exportar?: number;
+  onExportando?: (exportando: boolean) => void;
+  onError?: (mensaje: string) => void;
+}) {
   const consulta = useKpiCotizaciones(filtros, reporte);
-  const { loadExcelJS, isLoading: cargandoExcel } = useExcelJS();
+  const { loadExcelJS } = useExcelJS();
 
   // Servicio se filtra aquí: la API no recibe transporte (no cambian sus parámetros).
   const servicio = filtros.cod_servicio?.label?.trim().toUpperCase();
@@ -113,6 +121,8 @@ export function TablaKpi({
   }, [consulta.data, servicio, reporte, niveles, campoColumna]);
 
   const exportarExcel = async () => {
+    if (consulta.isLoading) throw new Error("Espera a que termine la consulta antes de descargar.");
+    if (tabla.data.length === 0) throw new Error("No hay datos para exportar a Excel.");
     const { ExcelJS, saveAs } = await loadExcelJS();
     const libro = new ExcelJS.Workbook();
 
@@ -173,25 +183,24 @@ export function TablaKpi({
     );
   };
 
+  // El botón vive en ListaReportes (junto al PDF); aquí solo se genera al cambiar `exportar`.
+  const exportarActual = useRef(exportarExcel);
+  exportarActual.current = exportarExcel;
+  const ultimaExportacion = useRef(exportar);
+  useEffect(() => {
+    if (exportar === ultimaExportacion.current) return;
+    ultimaExportacion.current = exportar;
+    onExportando?.(true);
+    exportarActual
+      .current()
+      .catch((e: unknown) =>
+        onError?.(e instanceof Error ? e.message : "No se pudo generar el Excel."),
+      )
+      .finally(() => onExportando?.(false));
+  }, [exportar, onError, onExportando]);
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => void exportarExcel()}
-          disabled={tabla.data.length === 0 || cargandoExcel}
-          className="gap-1.5"
-        >
-          {cargandoExcel ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Download className="h-3.5 w-3.5" />
-          )}
-          Exportar Excel
-        </Button>
-      </div>
-
       {consulta.isLoading ? (
         <p className="p-8 text-center text-sm text-muted-foreground">Cargando…</p>
       ) : consulta.isError ? (

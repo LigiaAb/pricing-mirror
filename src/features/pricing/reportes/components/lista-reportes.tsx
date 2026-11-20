@@ -6,7 +6,10 @@ import {
   CalendarIcon,
   ChartColumnBig,
   ChevronDown,
+  FileSpreadsheet,
+  FileText,
   Filter,
+  Loader2,
   Settings2,
   Table2Icon,
   X,
@@ -193,6 +196,8 @@ export function ListaReportes() {
   const [descargar, setDescargar] = React.useState(0);
   const [errorPdf, setErrorPdf] = React.useState<string | null>(null);
   const [generandoPdf, setGenerandoPdf] = React.useState(false);
+  const [exportarExcel, setExportarExcel] = React.useState(0);
+  const [generandoExcel, setGenerandoExcel] = React.useState(false);
   // Configuración de la tabla dinámica ("Personaliza tu reporte")
   const [nivelesKpi, setNivelesKpi] = React.useState<CampoKpi[]>(NIVELES_DEFECTO_KPI);
   const [campoColumnaKpi, setCampoColumnaKpi] = React.useState("");
@@ -426,15 +431,42 @@ export function ListaReportes() {
           </div>
 
           <div className="w-full sm:w-1/3">
-            <Button
-              disabled={generandoPdf || reporte === "seleccione"}
-              onClick={() => {
-                setErrorPdf(null);
-                setDescargar((p) => p + 1);
-              }}
-            >
-              {generandoPdf ? "Generando PDF..." : "Descargar"}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                className="gap-1.5 bg-red-600 text-white hover:bg-red-700"
+                disabled={generandoPdf || reporte === "seleccione"}
+                onClick={() => {
+                  setErrorPdf(null);
+                  setDescargar((p) => p + 1);
+                }}
+              >
+                {generandoPdf ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="h-4 w-4" />
+                )}
+                {generandoPdf ? "Generando PDF..." : "PDF"}
+              </Button>
+              {(reporte === "hit-rate" || reporte === "realizacion-de-precio") && (
+                <Button
+                  type="button"
+                  className="gap-1.5 bg-green-600 text-white hover:bg-green-700"
+                  disabled={generandoExcel}
+                  onClick={() => {
+                    setErrorPdf(null);
+                    setExportarExcel((p) => p + 1);
+                  }}
+                >
+                  {generandoExcel ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="h-4 w-4" />
+                  )}
+                  {generandoExcel ? "Generando Excel..." : "Excel"}
+                </Button>
+              )}
+            </div>
             {errorPdf ? (
               <p role="alert" className="text-sm text-destructive">
                 {errorPdf}
@@ -594,6 +626,9 @@ export function ListaReportes() {
               reporte={reporte === "hit-rate" ? "hit_rate" : "realizacion_de_precio"}
               niveles={nivelesKpi}
               campoColumna={campoColumnaKpi}
+              exportar={exportarExcel}
+              onExportando={setGenerandoExcel}
+              onError={setErrorPdf}
             />
           </div>
         </Panel>
