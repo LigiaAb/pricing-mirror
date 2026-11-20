@@ -261,7 +261,7 @@ export const fieldRules: Record<string, FieldRule> = {
 };
 
 /**
- * Campos obligatorios al CREAR una tarifa (id → etiqueta para el mensaje).
+ * Campos obligatorios al CREAR y al EDITAR una tarifa (id → etiqueta para el mensaje).
  * Regla: todos, menos los que tienen "TODOS" en el catálogo (CATALOGOS_AGREGAR_TODOS),
  * las fechas, los checkboxes y los que llena el sistema (usuario, mínimo de Scale).
  */

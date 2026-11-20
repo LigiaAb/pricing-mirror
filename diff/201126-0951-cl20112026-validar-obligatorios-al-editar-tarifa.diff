@@ -1,0 +1,73 @@
+diff --git a/src/features/pricing/tarifas/components/formulario-tarifa.tsx b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
+index 90d81fc..293e3d2 100644
+--- a/src/features/pricing/tarifas/components/formulario-tarifa.tsx
++++ b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { Check, ChevronsUpDown, CircleAlert, Loader2, TriangleAlert, X } from "lucide-react";
++import { Check, ChevronsUpDown, Loader2, TriangleAlert, X } from "lucide-react";
+ import React from "react";
+ 
+ import { useFetchEntidades } from "@/features/entidades";
+@@ -379,13 +379,18 @@ export const FormularioTarifa = ({
+     tipoFormulario === "filtro" ||
+     (tipoFormulario === "ingreso" ? permisos.puedeAgregar : permisos.puedeEditar);
+ 
+-  /** Al crear se exigen CAMPOS_OBLIGATORIOS_INGRESO (como el legacy); editar no valida. */
++  /**
++   * Al crear y al editar se exigen CAMPOS_OBLIGATORIOS_INGRESO. No aplica si la edición
++   * se muestra como lectura (vencida o sin permiso).
++   */
++  const validaObligatorios =
++    tipoFormulario === "ingreso" || (tipoFormulario === "edicion" && !vencido && !sinPermisoEditar);
+   const obligatoriosFormulario = React.useMemo(
+     () =>
+-      tipoFormulario === "ingreso"
++      validaObligatorios
+         ? [...new Set([...Object.keys(CAMPOS_OBLIGATORIOS_INGRESO), ...obligatorios])]
+         : obligatorios,
+-    [tipoFormulario, obligatorios],
++    [validaObligatorios, obligatorios],
+   );
+   const [faltantes, setFaltantes] = React.useState<string[]>([]);
+ 
+@@ -601,7 +606,7 @@ export const FormularioTarifa = ({
+       return;
+     }
+ 
+-    if (tipoFormulario === "ingreso") {
++    if (validaObligatorios) {
+       const vacios = obligatoriosFormulario.filter(
+         (id) => verificarSiEsVisible(id) && estaVacio(values[id]),
+       );
+@@ -622,6 +627,7 @@ export const FormularioTarifa = ({
+     onGuardar,
+     valoresSoloCodigos,
+     values,
++    validaObligatorios,
+     obligatoriosFormulario,
+     verificarSiEsVisible,
+   ]);
+@@ -632,7 +638,7 @@ export const FormularioTarifa = ({
+ 
+   return (
+     <div className="space-y-4 w-full">
+-      {tipoFormulario === "ingreso" && faltantes.length > 0 && (
++      {validaObligatorios && faltantes.length > 0 && (
+         <Alert variant="destructive">
+           <TriangleAlert className="size-4" aria-hidden="true" color="red" />
+           <AlertTitle>Hay campos obligatorios vacíos</AlertTitle>
+diff --git a/src/features/pricing/tarifas/lib/tarifa-field-rules.ts b/src/features/pricing/tarifas/lib/tarifa-field-rules.ts
+index 7348beb..0c6ceb9 100644
+--- a/src/features/pricing/tarifas/lib/tarifa-field-rules.ts
++++ b/src/features/pricing/tarifas/lib/tarifa-field-rules.ts
+@@ -261,7 +261,7 @@ export const fieldRules: Record<string, FieldRule> = {
+ };
+ 
+ /**
+- * Campos obligatorios al CREAR una tarifa (id → etiqueta para el mensaje).
++ * Campos obligatorios al CREAR y al EDITAR una tarifa (id → etiqueta para el mensaje).
+  * Regla: todos, menos los que tienen "TODOS" en el catálogo (CATALOGOS_AGREGAR_TODOS),
+  * las fechas, los checkboxes y los que llena el sistema (usuario, mínimo de Scale).
+  */
