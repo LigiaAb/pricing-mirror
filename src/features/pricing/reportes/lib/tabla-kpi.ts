@@ -185,6 +185,8 @@ function aportesDeFila(fila: FilaKpi): Aporte[] {
 type NodoConteo = {
   id: string;
   label: string;
+  /** Solo en los nodos del nivel "Cotización": su número (abre la ficha). */
+  cotizacion?: number | undefined;
   conteos: Map<string, Conteo>;
   hijos: Map<string, NodoConteo>;
 };
@@ -238,6 +240,7 @@ export function construirTablaKpi(
         let hijo = nodo.hijos.get(valor);
         if (!hijo) {
           hijo = nuevoNodo(`${nodo.id}|${nivel.campo}:${valor}`, valor);
+          if (nivel.campo === "cotizacion") hijo.cotizacion = Number(fila.cotizacion);
           nodo.hijos.set(valor, hijo);
         }
         nodo = hijo;
@@ -274,6 +277,7 @@ export function construirTablaKpi(
     return {
       id: nodo.id,
       label: nodo.label,
+      ...(nodo.cotizacion == null ? {} : { cotizacion: nodo.cotizacion }),
       values,
       children: [...nodo.hijos.values()]
         .sort((a, b) => a.label.localeCompare(b.label))

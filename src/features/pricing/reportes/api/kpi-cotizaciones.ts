@@ -31,6 +31,9 @@ export const filaKpiSchema = z
     transporte: texto,
     tipo_pago: texto,
     cliente: texto,
+    /** Para buscar la cabecera completa en la ficha (filtros de lista-cotizacion-cabecera). */
+    cod_cliente: zId.nullable().optional(),
+    cod_empresa: zId.nullable().optional(),
     estado: texto,
     /**
      * Origen y destino de la cabecera: nombre y código del punto de enlace o, si no hay

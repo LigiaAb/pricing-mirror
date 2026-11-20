@@ -24,3 +24,7 @@ También son obsoletos 181126-0815-cl18112026-pricing-toasts-de-exito-con-meta-e
 181126-0818-cl18112026-pricing-mutaciones-usan-exigirexitodemutacion-rea.diff (nunca se aplicaron en el
 proyecto, ver SYNC `23d2551`). Su contenido, junto con los permisos de botones (181126-0902), está en el
 diff único 181126-0911-cl18112026-sync-diff-unico-con-toasts-y-permisos-pendientes.diff.
+
+También es obsoleto 201126-1544-cl20112026-ficha-de-cotizacion-en-sheet-desde-reportes.diff (nunca se
+aplicó: no llegó a `main`). La ficha de cotización de Reportes se rehízo con toda la información de la
+cotización; usar el diff único 201126-1551-cl20112026-ficha-completa-de-cotizacion-en-reportes.diff.
