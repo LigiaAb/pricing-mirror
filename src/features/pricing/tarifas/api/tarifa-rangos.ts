@@ -17,7 +17,6 @@ export {
 // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
 export {
   type MonedaOperativa as MonedaRango,
-  monedaOperativaSchema as monedaRangoSchema,
   monedasOperativasOptions as monedasRangoOptions,
   useMonedasOperativas as useMonedasRango,
 } from "./monedas";

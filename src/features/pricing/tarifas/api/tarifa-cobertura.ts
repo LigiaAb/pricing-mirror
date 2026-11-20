@@ -15,7 +15,6 @@ export type FiltrosTarifaCobertura = FiltrosMetodo;
 // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
 export {
   type MonedaOperativa as MonedaCobertura,
-  monedaOperativaSchema as monedaCoberturaSchema,
   monedasOperativasOptions as monedasCoberturaOptions,
   useMonedasOperativas as useMonedasCobertura,
 } from "./monedas";

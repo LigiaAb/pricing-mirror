@@ -38,8 +38,6 @@ export {
 export {
   MONEDAS_OPERATIVAS_QUERY_KEY,
   type MonedaOperativa,
-  monedaOperativaSchema,
-  monedasOperativas,
   monedasOperativasOptions,
   useMonedasOperativas,
 } from "./api/monedas";
@@ -60,7 +58,6 @@ export {
 export {
   type FiltrosTarifaCobertura,
   type MonedaCobertura,
-  monedaCoberturaSchema,
   monedasCoberturaOptions,
   TARIFA_COBERTURA_QUERY_KEY,
   type TarifaCobertura,
@@ -75,7 +72,6 @@ export {
 export {
   type FiltrosTarifaCostoVenta,
   type MonedaCostoVenta,
-  monedaCostoVentaSchema,
   monedasCostoVentaOptions,
   TARIFA_COSTOVENTA_QUERY_KEY,
   type TarifaCostoVenta,
@@ -115,7 +111,6 @@ export {
 export {
   type FiltrosTarifaEquipo,
   type MonedaEquipo,
-  monedaEquipoSchema,
   monedasEquipoOptions,
   TARIFA_EQUIPO_QUERY_KEY,
   type TarifaEquipo,
@@ -130,7 +125,6 @@ export {
 export {
   type FiltrosTarifaPorcentaje,
   type MonedaPorcentaje,
-  monedaPorcentajeSchema,
   monedasPorcentajeOptions,
   TARIFA_PORCENTAJE_QUERY_KEY,
   type TarifaPorcentaje,
@@ -146,7 +140,6 @@ export {
   type FiltrosTarifaRango,
   guardarTarifaRangosOptions,
   type MonedaRango,
-  monedaRangoSchema,
   monedasRangoOptions,
   TARIFA_RANGOS_QUERY_KEY,
   type TarifaRango,
@@ -172,7 +165,6 @@ export {
 export {
   type FiltrosTarifaScalling,
   type MonedaScalling,
-  monedaScallingSchema,
   monedasScallingOptions,
   TARIFA_SCALLING_QUERY_KEY,
   type TarifaScalling,

@@ -1,0 +1,227 @@
+diff --git a/src/features/pricing/tarifas/ARQUITECTURA.md b/src/features/pricing/tarifas/ARQUITECTURA.md
+index 0b056bd..4bd94a2 100644
+--- a/src/features/pricing/tarifas/ARQUITECTURA.md
++++ b/src/features/pricing/tarifas/ARQUITECTURA.md
+@@ -6,7 +6,7 @@
+ tarifas/
+ ├─ api/
+ │  ├─ catalogo-metodo.ts    ← ADAPTADOR de métodos sobre createCatalogo (@/features/catalogos)
+-│  ├─ monedas.ts            ← consulta ÚNICA de monedas operativas (createCatalogo)
++│  ├─ monedas.ts            ← consulta ÚNICA de monedas operativas (catálogo `monedas` de @/features/catalogos)
+ │  ├─ tarifa-*.ts           ← cada método: sus endpoints (esquema y payload salen de lib/metodos/)
+ │  └─ ...                   ← servicios, métodos, clientes, proveedores, incoterms
+ ├─ hooks/
+@@ -64,7 +64,7 @@ export const TARIFA_MI_METODO_QUERY_KEY = api.keys.all;
+ export const { listaOptions: ..., useLista: ..., useInsertar: ..., useActualizar: ..., useEliminar: ... } = api;
+ ```
+ 
+-Si un catálogo no necesita esas adaptaciones, usa `createCatalogo` directamente (ver `pricing/shared/api/metodos.ts`, `api/monedas.ts`).
++Si un catálogo no necesita esas adaptaciones, usa `createCatalogo` directamente (ver `pricing/shared/api/metodos.ts`). Si el catálogo ya existe en `@/features/catalogos`, se reutiliza (ver `api/monedas.ts`).
+ 
+ Comportamiento heredado de `createCatalogo`: las mutaciones validan la respuesta con `exigirExitoDeMutacion`,
+ refrescan la lista al terminar (`onSettled`) y los toasts se controlan con `meta`.
+diff --git a/src/features/pricing/tarifas/api/monedas.ts b/src/features/pricing/tarifas/api/monedas.ts
+index 23a8884..2c7ebff 100644
+--- a/src/features/pricing/tarifas/api/monedas.ts
++++ b/src/features/pricing/tarifas/api/monedas.ts
+@@ -1,46 +1,22 @@
+-import { z } from "zod";
+-import { createCatalogo } from "@/features/catalogos";
+-import { CACHE_DYNAMIC } from "@/shared/api/cache";
+-import { zId } from "@/shared/lib/zod-scalars";
++import { type Moneda, monedas } from "@/features/catalogos";
+ 
+ /* ==========================================================================
+  * MONEDAS OPERATIVAS
+  *
+- * Única consulta de monedas de Tarifas (antes había una copia por método).
+- * Los nombres viejos (useMonedasPorcentaje, useMonedasEquipo, ...) se
+- * conservan como alias en cada archivo tarifa-*.ts.
++ * Única consulta de monedas de Tarifas: catálogo `monedas` de
++ * @/features/catalogos filtrado por `es_operativa`. Los nombres viejos
++ * (useMonedasPorcentaje, useMonedasEquipo, ...) se conservan como alias en
++ * cada archivo tarifa-*.ts.
+  * ========================================================================== */
+ 
+-/** Texto que puede venir como número o null; siempre se entrega como string. */
+-const texto = z
+-  .union([z.string(), z.number()])
+-  .nullable()
+-  .optional()
+-  .transform((valor) => (valor == null ? "" : String(valor)));
+-
+-export const monedaOperativaSchema = z
+-  .object({
+-    cod_moneda: zId,
+-    simbolo_moneda: texto,
+-    nom_moneda: texto,
+-  })
+-  .passthrough();
+-
+-export type MonedaOperativa = z.infer<typeof monedaOperativaSchema>;
+-
+-export const monedasOperativas = createCatalogo({
+-  nombre: "tarifas-monedas-operativas",
+-  schema: monedaOperativaSchema,
+-  endpoints: { lista: "/api/appweb/lista-moneda" },
+-  cache: CACHE_DYNAMIC,
+-});
++export type MonedaOperativa = Moneda;
+ 
+ const FILTROS_OPERATIVAS = { es_operativa: true };
+ 
+-export const MONEDAS_OPERATIVAS_QUERY_KEY = monedasOperativas.keys.all;
++export const MONEDAS_OPERATIVAS_QUERY_KEY = monedas.keys.all;
+ 
+-export const monedasOperativasOptions = () => monedasOperativas.listaOptions(FILTROS_OPERATIVAS);
++export const monedasOperativasOptions = () => monedas.listaOptions(FILTROS_OPERATIVAS);
+ 
+ export function useMonedasOperativas() {
+-  return monedasOperativas.useLista(FILTROS_OPERATIVAS);
++  return monedas.useLista(FILTROS_OPERATIVAS);
+ }
+diff --git a/src/features/pricing/tarifas/api/tarifa-cobertura.ts b/src/features/pricing/tarifas/api/tarifa-cobertura.ts
+index 77a6677..1e939d4 100644
+--- a/src/features/pricing/tarifas/api/tarifa-cobertura.ts
++++ b/src/features/pricing/tarifas/api/tarifa-cobertura.ts
+@@ -15,7 +15,6 @@ export type FiltrosTarifaCobertura = FiltrosMetodo;
+ // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
+ export {
+   type MonedaOperativa as MonedaCobertura,
+-  monedaOperativaSchema as monedaCoberturaSchema,
+   monedasOperativasOptions as monedasCoberturaOptions,
+   useMonedasOperativas as useMonedasCobertura,
+ } from "./monedas";
+diff --git a/src/features/pricing/tarifas/api/tarifa-costo-porcentaje.ts b/src/features/pricing/tarifas/api/tarifa-costo-porcentaje.ts
+index df5b9e4..6ed7e32 100644
+--- a/src/features/pricing/tarifas/api/tarifa-costo-porcentaje.ts
++++ b/src/features/pricing/tarifas/api/tarifa-costo-porcentaje.ts
+@@ -18,7 +18,6 @@ export type FiltrosTarifaCostoPorcentaje = FiltrosMetodo;
+ // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
+ export {
+   type MonedaOperativa as MonedaPorcentaje,
+-  monedaOperativaSchema as monedaPorcentajeSchema,
+   monedasOperativasOptions as monedasPorcentajeOptions,
+   useMonedasOperativas as useMonedasPorcentaje,
+ } from "./monedas";
+diff --git a/src/features/pricing/tarifas/api/tarifa-costoventa.ts b/src/features/pricing/tarifas/api/tarifa-costoventa.ts
+index 96d714e..0a170ba 100644
+--- a/src/features/pricing/tarifas/api/tarifa-costoventa.ts
++++ b/src/features/pricing/tarifas/api/tarifa-costoventa.ts
+@@ -15,7 +15,6 @@ export type FiltrosTarifaCostoVenta = FiltrosMetodo;
+ // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
+ export {
+   type MonedaOperativa as MonedaCostoVenta,
+-  monedaOperativaSchema as monedaCostoVentaSchema,
+   monedasOperativasOptions as monedasCostoVentaOptions,
+   useMonedasOperativas as useMonedasCostoVenta,
+ } from "./monedas";
+diff --git a/src/features/pricing/tarifas/api/tarifa-equipo.ts b/src/features/pricing/tarifas/api/tarifa-equipo.ts
+index 3719b12..7f5c063 100644
+--- a/src/features/pricing/tarifas/api/tarifa-equipo.ts
++++ b/src/features/pricing/tarifas/api/tarifa-equipo.ts
+@@ -19,7 +19,6 @@ export type FiltrosTarifaEquipo = FiltrosMetodo;
+ // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
+ export {
+   type MonedaOperativa as MonedaEquipo,
+-  monedaOperativaSchema as monedaEquipoSchema,
+   monedasOperativasOptions as monedasEquipoOptions,
+   useMonedasOperativas as useMonedasEquipo,
+ } from "./monedas";
+diff --git a/src/features/pricing/tarifas/api/tarifa-porcentaje.ts b/src/features/pricing/tarifas/api/tarifa-porcentaje.ts
+index 2459191..1cce077 100644
+--- a/src/features/pricing/tarifas/api/tarifa-porcentaje.ts
++++ b/src/features/pricing/tarifas/api/tarifa-porcentaje.ts
+@@ -15,7 +15,6 @@ export type FiltrosTarifaPorcentaje = FiltrosMetodo;
+ // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
+ export {
+   type MonedaOperativa as MonedaPorcentaje,
+-  monedaOperativaSchema as monedaPorcentajeSchema,
+   monedasOperativasOptions as monedasPorcentajeOptions,
+   useMonedasOperativas as useMonedasPorcentaje,
+ } from "./monedas";
+diff --git a/src/features/pricing/tarifas/api/tarifa-rangos.ts b/src/features/pricing/tarifas/api/tarifa-rangos.ts
+index afad908..27d75bf 100644
+--- a/src/features/pricing/tarifas/api/tarifa-rangos.ts
++++ b/src/features/pricing/tarifas/api/tarifa-rangos.ts
+@@ -17,7 +17,6 @@ export {
+ // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
+ export {
+   type MonedaOperativa as MonedaRango,
+-  monedaOperativaSchema as monedaRangoSchema,
+   monedasOperativasOptions as monedasRangoOptions,
+   useMonedasOperativas as useMonedasRango,
+ } from "./monedas";
+diff --git a/src/features/pricing/tarifas/api/tarifa-scalling.ts b/src/features/pricing/tarifas/api/tarifa-scalling.ts
+index 64c91ba..b1806af 100644
+--- a/src/features/pricing/tarifas/api/tarifa-scalling.ts
++++ b/src/features/pricing/tarifas/api/tarifa-scalling.ts
+@@ -17,7 +17,6 @@ export type FiltrosTarifaScalling = FiltrosMetodo;
+ // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
+ export {
+   type MonedaOperativa as MonedaScalling,
+-  monedaOperativaSchema as monedaScallingSchema,
+   monedasOperativasOptions as monedasScallingOptions,
+   useMonedasOperativas as useMonedasScalling,
+ } from "./monedas";
+diff --git a/src/features/pricing/tarifas/index.ts b/src/features/pricing/tarifas/index.ts
+index 6928375..339e74b 100644
+--- a/src/features/pricing/tarifas/index.ts
++++ b/src/features/pricing/tarifas/index.ts
+@@ -38,8 +38,6 @@ export {
+ export {
+   MONEDAS_OPERATIVAS_QUERY_KEY,
+   type MonedaOperativa,
+-  monedaOperativaSchema,
+-  monedasOperativas,
+   monedasOperativasOptions,
+   useMonedasOperativas,
+ } from "./api/monedas";
+@@ -60,7 +58,6 @@ export {
+ export {
+   type FiltrosTarifaCobertura,
+   type MonedaCobertura,
+-  monedaCoberturaSchema,
+   monedasCoberturaOptions,
+   TARIFA_COBERTURA_QUERY_KEY,
+   type TarifaCobertura,
+@@ -75,7 +72,6 @@ export {
+ export {
+   type FiltrosTarifaCostoVenta,
+   type MonedaCostoVenta,
+-  monedaCostoVentaSchema,
+   monedasCostoVentaOptions,
+   TARIFA_COSTOVENTA_QUERY_KEY,
+   type TarifaCostoVenta,
+@@ -115,7 +111,6 @@ export {
+ export {
+   type FiltrosTarifaEquipo,
+   type MonedaEquipo,
+-  monedaEquipoSchema,
+   monedasEquipoOptions,
+   TARIFA_EQUIPO_QUERY_KEY,
+   type TarifaEquipo,
+@@ -130,7 +125,6 @@ export {
+ export {
+   type FiltrosTarifaPorcentaje,
+   type MonedaPorcentaje,
+-  monedaPorcentajeSchema,
+   monedasPorcentajeOptions,
+   TARIFA_PORCENTAJE_QUERY_KEY,
+   type TarifaPorcentaje,
+@@ -146,7 +140,6 @@ export {
+   type FiltrosTarifaRango,
+   guardarTarifaRangosOptions,
+   type MonedaRango,
+-  monedaRangoSchema,
+   monedasRangoOptions,
+   TARIFA_RANGOS_QUERY_KEY,
+   type TarifaRango,
+@@ -172,7 +165,6 @@ export {
+ export {
+   type FiltrosTarifaScalling,
+   type MonedaScalling,
+-  monedaScallingSchema,
+   monedasScallingOptions,
+   TARIFA_SCALLING_QUERY_KEY,
+   type TarifaScalling,
