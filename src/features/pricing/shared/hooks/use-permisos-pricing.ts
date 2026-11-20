@@ -31,12 +31,16 @@ export const OPCION_PERMISOS = {
 
 export type OpcionPermisosPricing = (typeof OPCION_PERMISOS)[keyof typeof OPCION_PERMISOS];
 
-/** Acciones que usa pricing (las mismas que expone el hook en embarques). */
+/**
+ * Acciones que usa pricing. `puedeAutorizar` = acción "Autorizar" (el hook arma
+ * `puede` + nombre de la acción, como `puedeFiltrarEmpresaCentroCosto` en objetivos).
+ */
 export interface PermisosPricing {
   puedeVer: boolean;
   puedeAgregar: boolean;
   puedeEditar: boolean;
   puedeEliminar: boolean;
+  puedeAutorizar: boolean;
 }
 
 /**
@@ -51,5 +55,6 @@ export function usePermisosPricing(opcion: OpcionPermisosPricing): PermisosPrici
     puedeAgregar: permisos?.puedeAgregar === true,
     puedeEditar: permisos?.puedeEditar === true,
     puedeEliminar: permisos?.puedeEliminar === true,
+    puedeAutorizar: permisos?.puedeAutorizar === true,
   };
 }

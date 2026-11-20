@@ -12,6 +12,7 @@ al proyecto completo. Responder siempre en **español**.
 | `src/features/catalogos/api/**`              | Código real de los catálogos (`createCatalogo` y cada catálogo)  | **No**                           |
 | `src/features/catalogos/index.ts`            | Copia del `index.ts` real **sin** las exportaciones de `./hooks/...` | **No**                       |
 | `src/features/tracking/**`                   | STUB: solo tipos de `TrackingDetalle` (embarques)     | **No**                           |
+| `src/features/shell/**`                      | Código real del shell (SYNC CONTEXT): pricing usa sus tipos (`usePermisosCategoria`, `useContextoOperativoStore`); sus errores de `tsc` (faltan `@/features/permisos`, `auth`, `notificaciones`) están en la línea base | **No** |
 | `src/features/objetivos/**`                  | STUB: copia del catálogo `objetivos` (Hit Rate)       | **No**                           |
 | `src/types/stubs-modulos.d.ts`               | Todo lo demás de `@/shared` / `@/features` como `any` | **No**                           |
 | `tsconfig.json`                              | Copia exacta del proyecto real                        | No (ya existe allá)              |

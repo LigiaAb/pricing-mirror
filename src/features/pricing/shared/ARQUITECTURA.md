@@ -50,12 +50,13 @@ Cotización es otro componente: `EncabezadoColapsable` (`cotizacion/calculo/comp
 Permisos = menú → categoría → opción → acción. La categoría es la pantalla (sale de la ruta) y
 `usePermisosCategoria` (`@/features/shell`) recibe el nombre de la **opción**. `usePermisosPricing` lo envuelve:
 `OPCION_PERMISOS` tiene el nombre de opción de cada pantalla y devuelve `puedeVer / puedeAgregar / puedeEditar /
-puedeEliminar` como booleanos. Solo es interfaz: el backend valida cada request.
+puedeEliminar / puedeAutorizar` como booleanos (`puedeAutorizar` = acción "Autorizar": el hook arma `puede` +
+nombre de la acción, como `puedeFiltrarEmpresaCentroCosto` en objetivos). Solo es interfaz: el backend valida cada request.
 
 | Pantalla          | Categoría             | Opción      | Qué pide cada botón                                                                                                  |
 | ----------------- | --------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------- |
 | Tarifas           | Tarifas               | Servicios   | Agregar: nueva, copiar, alta de método y filas · Editar: actualizar, editar filas · Eliminar: anular, eliminar filas |
-| Cotizaciones      | Cotizaciones          | Información | Agregar: nuevo, nuevo cálculo, guardar versión · Editar: cabecera, activar versión · Autorizar: pendiente (#104)     |
+| Cotizaciones      | Cotizaciones          | Información | Agregar: nuevo, nuevo cálculo, guardar versión · Editar: cabecera, activar versión · Autorizar: confirmar, rechazar  |
 | Autorización SPOT | Manejo de Tarifa SPOT | Información | Editar: autorizar y rechazar (la categoría no tiene acción Autorizar)                                                |
 | Plantillas        | Tarifario de clientes | Lista       | Agregar: nueva · Editar: guardar, rubros · Eliminar: eliminar                                                        |
 | Carga masiva      | Carga Masiva de Flete | Información | Agregar: enviar                                                                                                      |
