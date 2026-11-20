@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronsUpDown, CircleAlert, Loader2, X } from "lucide-react";
+import { Check, ChevronsUpDown, CircleAlert, Loader2, TriangleAlert, X } from "lucide-react";
 import React from "react";
 
 import { useFetchEntidades } from "@/features/entidades";
@@ -634,7 +634,7 @@ export const FormularioTarifa = ({
     <div className="space-y-4 w-full">
       {tipoFormulario === "ingreso" && faltantes.length > 0 && (
         <Alert variant="destructive">
-          <CircleAlert className="size-4" aria-hidden="true" />
+          <TriangleAlert className="size-4" aria-hidden="true" color="red" />
           <AlertTitle>Hay campos obligatorios vacíos</AlertTitle>
           <AlertDescription>{faltantes.join(", ")}</AlertDescription>
         </Alert>
