@@ -1,0 +1,538 @@
+diff --git a/src/features/pricing/reportes/api/kpi-cotizaciones.ts b/src/features/pricing/reportes/api/kpi-cotizaciones.ts
+new file mode 100644
+index 0000000..85400f9
+--- /dev/null
++++ b/src/features/pricing/reportes/api/kpi-cotizaciones.ts
+@@ -0,0 +1,78 @@
++import { queryOptions, useQuery } from "@tanstack/react-query";
++import { z } from "zod";
++
++import { CACHE_DYNAMIC } from "@/shared/api/cache";
++import { http } from "@/shared/api/client";
++import { zId } from "@/shared/lib/zod-scalars";
++import type { Filtros } from "../lib/filtros-types";
++import { paramsReporte, validarRespuestaReporte } from "./params-reporte";
++
++/** Reportes que atiende `report_kpi_cotizaciones` (parámetro `reporte`). */
++export type ReporteKpi = "hit_rate" | "realizacion_de_precio";
++
++const texto = z.string().nullable().optional();
++const bandera = z.coerce.number().catch(0);
++
++/**
++ * Una cotización (cabecera) del detalle; keys en minúsculas, como las entrega el cliente de API.
++ * `realizada`: creada en el rango (primera versión). `cerrada`: confirmada con aprobación en el rango.
++ * El dueño (`usuario`) es el creador de la primera versión.
++ */
++export const filaKpiSchema = z
++  .object({
++    cotizacion: zId,
++    fecha_creacion: texto,
++    fecha_aprobacion: texto,
++    usuario: zId,
++    nombres: texto,
++    apellidos: texto,
++    cc: zId.nullable().optional(),
++    cc_nombre: texto,
++    transporte: texto,
++    tipo_pago: texto,
++    cliente: texto,
++    estado: texto,
++    realizada: bandera,
++    cerrada: bandera,
++    /** Solo Realización de Precio, en las cerradas. */
++    tipo_precio: z.enum(["SOBRE_TARIFA", "SPOT", "TARIFA_PUBLICADA"]).nullable().optional(),
++  })
++  .passthrough();
++
++export const respuestaKpiSchema = z
++  .object({
++    status: z.number(),
++    message: z.string(),
++    data: z.object({ reporte: z.string(), filas: z.array(filaKpiSchema) }).passthrough(),
++  })
++  .passthrough();
++
++export type FilaKpi = z.infer<typeof filaKpiSchema>;
++
++export const KPI_COTIZACIONES_QUERY_KEY = ["reportes", "kpi-cotizaciones"] as const;
++
++/** Consulta el detalle del reporte: una fila por cotización. */
++export async function consultarKpiCotizaciones(
++  filtros: Filtros,
++  reporte: ReporteKpi,
++): Promise<FilaKpi[]> {
++  const respuesta = await http.get<unknown>("/api/appweb/report_kpi_cotizaciones", {
++    params: { ...paramsReporte(filtros), reporte },
++  });
++
++  validarRespuestaReporte(respuesta);
++
++  return respuestaKpiSchema.parse(respuesta).data.filas;
++}
++
++export const kpiCotizacionesOptions = (filtros: Filtros, reporte: ReporteKpi) =>
++  queryOptions({
++    ...CACHE_DYNAMIC,
++    queryKey: [...KPI_COTIZACIONES_QUERY_KEY, reporte, paramsReporte(filtros)],
++    queryFn: () => consultarKpiCotizaciones(filtros, reporte),
++    enabled: Boolean(filtros.fecha_inicio && filtros.fecha_fin),
++  });
++
++export function useKpiCotizaciones(filtros: Filtros, reporte: ReporteKpi) {
++  return useQuery(kpiCotizacionesOptions(filtros, reporte));
++}
+diff --git a/src/features/pricing/reportes/components/lista-reportes.tsx b/src/features/pricing/reportes/components/lista-reportes.tsx
+index fb98810..b12ce65 100644
+--- a/src/features/pricing/reportes/components/lista-reportes.tsx
++++ b/src/features/pricing/reportes/components/lista-reportes.tsx
+@@ -30,6 +30,7 @@ import { cn } from "@/shared/lib/utils";
+ import type { ConfiguracionReporte, Filtros, SelectOption } from "../lib/filtros-types";
+ import { HitRate } from "./hit-rate";
+ import RealizacionDePrecio from "./realizacion-de-precio";
++import { TablaKpi } from "./tabla-kpi";
+ 
+ const hoy = new Date();
+ 
+@@ -475,6 +476,21 @@ export function ListaReportes() {
+           onGenerandoPdf={setGenerandoPdf}
+         />
+       )}
++      {(reporte === "hit-rate" || reporte === "realizacion-de-precio") && (
++        <Panel key={`resumen-agrupado-${reporte}`}>
++          <SectionHeader
++            icon={<Table2Icon className="w-4 h-4" />}
++            title="Resumen agrupado"
++            subtitle="Elija y ordene los niveles de filas y el campo de columnas"
++          />
++          <div className="p-4">
++            <TablaKpi
++              filtros={filtros}
++              reporte={reporte === "hit-rate" ? "hit_rate" : "realizacion_de_precio"}
++            />
++          </div>
++        </Panel>
++      )}
+       {reporteSeleccionado?.tabla && (
+         <Panel key={`tabla-${reporte}`}>
+           <SectionHeader
+diff --git a/src/features/pricing/reportes/components/tabla-kpi.tsx b/src/features/pricing/reportes/components/tabla-kpi.tsx
+new file mode 100644
+index 0000000..d078423
+--- /dev/null
++++ b/src/features/pricing/reportes/components/tabla-kpi.tsx
+@@ -0,0 +1,159 @@
++"use client";
++
++import { Download, Loader2 } from "lucide-react";
++import { useMemo, useState } from "react";
++import NivelesBuilder from "@/shared/components/tabla-double/niveles-builder";
++import TablaDouble from "@/shared/components/tabla-double/tabla-double";
++import { Button } from "@/shared/components/ui/button";
++import {
++  Select,
++  SelectContent,
++  SelectItem,
++  SelectTrigger,
++  SelectValue,
++} from "@/shared/components/ui/select";
++import { useExcelJS } from "@/shared/hooks/use-dynamic-libraries";
++import { type ReporteKpi, useKpiCotizaciones } from "../api/kpi-cotizaciones";
++import type { Filtros } from "../lib/filtros-types";
++import {
++  CAMPOS_COLUMNA_KPI,
++  CAMPOS_NIVELES_KPI,
++  type CampoKpi,
++  construirTablaKpi,
++  NIVELES_DEFECTO_KPI,
++} from "../lib/tabla-kpi";
++
++/** El Select de Radix no acepta "" como valor: "sin columnas" se guarda como "". */
++const SIN_COLUMNA = "__ninguna__";
++
++const NOMBRE_ARCHIVO: Record<ReporteKpi, string> = {
++  hit_rate: "hit-rate",
++  realizacion_de_precio: "realizacion-de-precio",
++};
++
++/**
++ * Tabla dinámica de Hit Rate o Realización de Precio: el usuario elige los niveles de filas
++ * (y su orden) y el campo de columnas. Lee `report_kpi_cotizaciones`.
++ */
++export function TablaKpi({ filtros, reporte }: { filtros: Filtros; reporte: ReporteKpi }) {
++  const consulta = useKpiCotizaciones(filtros, reporte);
++  const [niveles, setNiveles] = useState<CampoKpi[]>(NIVELES_DEFECTO_KPI);
++  const [campoColumna, setCampoColumna] = useState("");
++  const { loadExcelJS, isLoading: cargandoExcel } = useExcelJS();
++
++  const tabla = useMemo(
++    () => construirTablaKpi(consulta.data ?? [], reporte, niveles, campoColumna),
++    [consulta.data, reporte, niveles, campoColumna],
++  );
++
++  const exportarExcel = async () => {
++    const { ExcelJS, saveAs } = await loadExcelJS();
++    const libro = new ExcelJS.Workbook();
++    const hoja = libro.addWorksheet("Reporte");
++
++    const encabezado = hoja.addRow(["Concepto", ...tabla.columnas.map((c) => c.label)]);
++    encabezado.font = { bold: true };
++
++    const agregar = (nodos: typeof tabla.data, profundidad: number) => {
++      for (const nodo of nodos) {
++        const fila = hoja.addRow([
++          nodo.label,
++          ...tabla.columnas.map((c) => {
++            const valor = nodo.values?.[c.key];
++            return valor === "" || valor == null ? null : Number(valor);
++          }),
++        ]);
++        fila.getCell(1).alignment = { indent: profundidad };
++        if (nodo.children?.length) fila.font = { bold: true };
++        agregar(nodo.children ?? [], profundidad + 1);
++      }
++    };
++    agregar(tabla.data, 0);
++    hoja.getColumn(1).width = 40;
++
++    const buffer = await libro.xlsx.writeBuffer();
++    saveAs(
++      new Blob([buffer], {
++        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
++      }),
++      `${NOMBRE_ARCHIVO[reporte]}-${filtros.fecha_inicio}-${filtros.fecha_fin}.xlsx`,
++    );
++  };
++
++  return (
++    <div className="space-y-4">
++      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
++        <div className="lg:col-span-8">
++          <NivelesBuilder
++            camposDisponibles={CAMPOS_NIVELES_KPI}
++            nivelesActivos={niveles}
++            onChange={setNiveles}
++          />
++        </div>
++        <div className="space-y-3 lg:col-span-4">
++          <div>
++            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
++              Columnas (qué se desglosa en columnas)
++            </p>
++            <Select
++              value={campoColumna || SIN_COLUMNA}
++              onValueChange={(valor) => setCampoColumna(valor === SIN_COLUMNA ? "" : valor)}
++            >
++              <SelectTrigger className="h-9 text-sm">
++                <SelectValue placeholder="Seleccione el campo de columnas" />
++              </SelectTrigger>
++              <SelectContent>
++                {CAMPOS_COLUMNA_KPI.map((c) => (
++                  <SelectItem key={c.campo || SIN_COLUMNA} value={c.campo || SIN_COLUMNA}>
++                    {c.etiqueta}
++                  </SelectItem>
++                ))}
++              </SelectContent>
++            </Select>
++          </div>
++          <Button
++            type="button"
++            size="sm"
++            onClick={() => void exportarExcel()}
++            disabled={tabla.data.length === 0 || cargandoExcel}
++            className="gap-1.5"
++          >
++            {cargandoExcel ? (
++              <Loader2 className="h-3.5 w-3.5 animate-spin" />
++            ) : (
++              <Download className="h-3.5 w-3.5" />
++            )}
++            Exportar Excel
++          </Button>
++        </div>
++      </div>
++
++      {consulta.isLoading ? (
++        <p className="p-8 text-center text-sm text-muted-foreground">Cargando…</p>
++      ) : consulta.isError ? (
++        <p className="p-8 text-center text-sm text-destructive">
++          {consulta.error instanceof Error
++            ? consulta.error.message
++            : "No se pudo consultar el reporte"}
++        </p>
++      ) : tabla.data.length === 0 ? (
++        <p className="p-8 text-center text-sm text-muted-foreground">
++          No hay cotizaciones en el periodo.
++        </p>
++      ) : (
++        <TablaDouble
++          // Se vuelve a montar al cambiar datos o agrupación para expandir el total general.
++          key={`${reporte}-${consulta.dataUpdatedAt}-${campoColumna}-${niveles.map((n) => n.campo).join(",")}`}
++          data={tabla.data}
++          columns={tabla.columnas}
++          rowKey="id"
++          showTotals={false}
++          mostrarColumnaTotal={false}
++          mostrarTotalesPie={false}
++          firstColumnWidth={280}
++          nivelExpandidoInicial={1}
++        />
++      )}
++    </div>
++  );
++}
+diff --git a/src/features/pricing/reportes/lib/tabla-kpi.ts b/src/features/pricing/reportes/lib/tabla-kpi.ts
+new file mode 100644
+index 0000000..c5b3c85
+--- /dev/null
++++ b/src/features/pricing/reportes/lib/tabla-kpi.ts
+@@ -0,0 +1,249 @@
++/**
++ * TABLA DINÁMICA DE KPI (Hit Rate y Realización de Precio)
++ *
++ * Arma el árbol que dibuja `TablaDouble` a partir del detalle de `report_kpi_cotizaciones`
++ * (una fila por cotización): filas agrupadas por los niveles que elige el usuario y columnas
++ * por un campo (o ninguna). Los porcentajes se calculan en cada nivel con sus propios
++ * conteos; nunca se suman.
++ *
++ * Cada cotización aporta por separado:
++ *  - "realizada" con los datos de su creación (año/mes de la primera versión);
++ *  - "cerrada" con los datos de su aprobación (año/mes de aprobación).
++ * Así, por año o mes, una cotización creada en junio y aprobada en julio suma la
++ * realizada en junio y la cerrada en julio, igual que report_hit_rate.
++ */
++
++import type { ColumnaTabla, TreeNode } from "@/shared/components/tabla-double/tabla-double";
++import type { FilaKpi, ReporteKpi } from "../api/kpi-cotizaciones";
++
++export type CampoKpi = { campo: string; etiqueta: string };
++
++type Momento = "creacion" | "aprobacion";
++
++const SIN_DATO = "SIN DATO";
++
++const textoONulo = (valor: string | null | undefined) => {
++  const limpio = valor?.trim();
++  return limpio ? limpio : SIN_DATO;
++};
++
++/** Fecha "2026-07-15T…" → "2026-07" o "2026". */
++const parteFecha = (fecha: string | null | undefined, largo: 4 | 7) =>
++  fecha && fecha.length >= largo ? fecha.slice(0, largo) : SIN_DATO;
++
++const LECTORES: Record<string, (fila: FilaKpi, momento: Momento) => string> = {
++  usuario: (fila) => {
++    const nombre = textoONulo(`${fila.nombres ?? ""} ${fila.apellidos ?? ""}`);
++    return nombre === SIN_DATO ? `USUARIO ${fila.usuario}` : nombre;
++  },
++  cc_nombre: (fila) => textoONulo(fila.cc_nombre),
++  transporte: (fila) => textoONulo(fila.transporte),
++  cliente: (fila) => textoONulo(fila.cliente),
++  tipo_pago: (fila) => textoONulo(fila.tipo_pago),
++  estado: (fila) => textoONulo(fila.estado),
++  anio: (fila, momento) =>
++    parteFecha(momento === "creacion" ? fila.fecha_creacion : fila.fecha_aprobacion, 4),
++  mes: (fila, momento) =>
++    parteFecha(momento === "creacion" ? fila.fecha_creacion : fila.fecha_aprobacion, 7),
++};
++
++/** Campos que se pueden usar como niveles de filas. "Departamento" = centro de costo. */
++export const CAMPOS_NIVELES_KPI: CampoKpi[] = [
++  { campo: "usuario", etiqueta: "Usuario" },
++  { campo: "cc_nombre", etiqueta: "Departamento (centro de costo)" },
++  { campo: "transporte", etiqueta: "Servicio (transporte)" },
++  { campo: "cliente", etiqueta: "Cliente" },
++  { campo: "tipo_pago", etiqueta: "Tipo de pago" },
++  { campo: "anio", etiqueta: "Año" },
++  { campo: "mes", etiqueta: "Mes" },
++];
++
++export const NIVELES_DEFECTO_KPI: CampoKpi[] = [{ campo: "usuario", etiqueta: "Usuario" }];
++
++/** Campo de columnas; "" = sin columnas (solo el total). */
++export const CAMPOS_COLUMNA_KPI: CampoKpi[] = [
++  { campo: "", etiqueta: "Ninguna (solo total)" },
++  { campo: "anio", etiqueta: "Año" },
++  { campo: "mes", etiqueta: "Mes" },
++  { campo: "transporte", etiqueta: "Servicio (transporte)" },
++  { campo: "cc_nombre", etiqueta: "Departamento (centro de costo)" },
++  { campo: "tipo_pago", etiqueta: "Tipo de pago" },
++];
++
++export function valorCampoKpi(fila: FilaKpi, campo: string, momento: Momento): string {
++  return LECTORES[campo]?.(fila, momento) ?? SIN_DATO;
++}
++
++type Conteo = {
++  realizadas: number;
++  cerradas: number;
++  sobreTarifa: number;
++  spot: number;
++  tarifaPublicada: number;
++};
++
++const conteoVacio = (): Conteo => ({
++  realizadas: 0,
++  cerradas: 0,
++  sobreTarifa: 0,
++  spot: 0,
++  tarifaPublicada: 0,
++});
++
++/** Porcentaje con 2 decimales; "" si no hay realizadas (no se puede dividir). */
++const porcentaje = (parte: number, total: number): number | "" =>
++  total > 0 ? Math.round((parte / total) * 10000) / 100 : "";
++
++type Medida = { key: string; etiqueta: string; valor: (c: Conteo) => number | "" };
++
++export const MEDIDAS_KPI: Record<ReporteKpi, Medida[]> = {
++  hit_rate: [
++    { key: "realizadas", etiqueta: "Realizadas", valor: (c) => c.realizadas },
++    { key: "cerradas", etiqueta: "Cerradas", valor: (c) => c.cerradas },
++    { key: "hr", etiqueta: "HR %", valor: (c) => porcentaje(c.cerradas, c.realizadas) },
++  ],
++  realizacion_de_precio: [
++    { key: "realizadas", etiqueta: "Realizadas", valor: (c) => c.realizadas },
++    { key: "sobre", etiqueta: "Sobre tarifa", valor: (c) => c.sobreTarifa },
++    { key: "sobre_pct", etiqueta: "RdPs %", valor: (c) => porcentaje(c.sobreTarifa, c.realizadas) },
++    { key: "spot", etiqueta: "Spot", valor: (c) => c.spot },
++    { key: "spot_pct", etiqueta: "RdPd %", valor: (c) => porcentaje(c.spot, c.realizadas) },
++    { key: "publicada", etiqueta: "Tarifa publicada", valor: (c) => c.tarifaPublicada },
++    {
++      key: "publicada_pct",
++      etiqueta: "RdPp %",
++      valor: (c) => porcentaje(c.tarifaPublicada, c.realizadas),
++    },
++  ],
++};
++
++/** Grupo de columnas del total (siempre al final). */
++const CLAVE_TOTAL = "__total__";
++
++type Aporte = { momento: Momento; sumar: (c: Conteo) => void };
++
++/** Lo que aporta una cotización: su realizada y/o su cerrada (con el grupo de precio). */
++function aportesDeFila(fila: FilaKpi): Aporte[] {
++  const aportes: Aporte[] = [];
++  if (fila.realizada === 1) {
++    aportes.push({
++      momento: "creacion",
++      sumar: (c) => {
++        c.realizadas += 1;
++      },
++    });
++  }
++  if (fila.cerrada === 1) {
++    aportes.push({
++      momento: "aprobacion",
++      sumar: (c) => {
++        c.cerradas += 1;
++        if (fila.tipo_precio === "SOBRE_TARIFA") c.sobreTarifa += 1;
++        else if (fila.tipo_precio === "SPOT") c.spot += 1;
++        else c.tarifaPublicada += 1;
++      },
++    });
++  }
++  return aportes;
++}
++
++type NodoConteo = {
++  id: string;
++  label: string;
++  conteos: Map<string, Conteo>;
++  hijos: Map<string, NodoConteo>;
++};
++
++const nuevoNodo = (id: string, label: string): NodoConteo => ({
++  id,
++  label,
++  conteos: new Map(),
++  hijos: new Map(),
++});
++
++function sumarEn(nodo: NodoConteo, columna: string, aporte: Aporte) {
++  for (const clave of columna === CLAVE_TOTAL ? [CLAVE_TOTAL] : [columna, CLAVE_TOTAL]) {
++    const conteo = nodo.conteos.get(clave) ?? conteoVacio();
++    aporte.sumar(conteo);
++    nodo.conteos.set(clave, conteo);
++  }
++}
++
++export type TablaKpi = {
++  /** Un nodo raíz "TOTAL GENERAL" con los niveles debajo. */
++  data: TreeNode[];
++  columnas: ColumnaTabla[];
++};
++
++/**
++ * Árbol + columnas para `TablaDouble`.
++ * Columnas: por cada valor del campo de columna, las medidas del reporte; al final, el total.
++ */
++export function construirTablaKpi(
++  filas: FilaKpi[],
++  reporte: ReporteKpi,
++  niveles: CampoKpi[],
++  campoColumna: string,
++): TablaKpi {
++  const raiz = nuevoNodo("total", "TOTAL GENERAL");
++  const valoresColumna = new Set<string>();
++
++  for (const fila of filas) {
++    for (const aporte of aportesDeFila(fila)) {
++      const columna = campoColumna
++        ? valorCampoKpi(fila, campoColumna, aporte.momento)
++        : CLAVE_TOTAL;
++      if (columna !== CLAVE_TOTAL) valoresColumna.add(columna);
++
++      let nodo = raiz;
++      sumarEn(nodo, columna, aporte);
++      for (const nivel of niveles) {
++        const valor = valorCampoKpi(fila, nivel.campo, aporte.momento);
++        let hijo = nodo.hijos.get(valor);
++        if (!hijo) {
++          hijo = nuevoNodo(`${nodo.id}|${nivel.campo}:${valor}`, valor);
++          nodo.hijos.set(valor, hijo);
++        }
++        nodo = hijo;
++        sumarEn(nodo, columna, aporte);
++      }
++    }
++  }
++
++  const medidas = MEDIDAS_KPI[reporte];
++  const grupos = [...[...valoresColumna].sort(), CLAVE_TOTAL];
++  const etiquetaCampo =
++    CAMPOS_COLUMNA_KPI.find((c) => c.campo === campoColumna)?.etiqueta ?? campoColumna;
++
++  const columnas: ColumnaTabla[] = grupos.flatMap((grupo) =>
++    medidas.map((medida) => ({
++      key: `${grupo}__${medida.key}`,
++      label:
++        grupo === CLAVE_TOTAL
++          ? campoColumna
++            ? `Total · ${medida.etiqueta}`
++            : medida.etiqueta
++          : `${etiquetaCampo} ${grupo} · ${medida.etiqueta}`,
++      entero: true,
++      excluirTotal: true,
++    })),
++  );
++
++  const aTreeNode = (nodo: NodoConteo): TreeNode => {
++    const values: Record<string, number | string> = {};
++    for (const grupo of grupos) {
++      const conteo = nodo.conteos.get(grupo) ?? conteoVacio();
++      for (const medida of medidas) values[`${grupo}__${medida.key}`] = medida.valor(conteo);
++    }
++    return {
++      id: nodo.id,
++      label: nodo.label,
++      values,
++      children: [...nodo.hijos.values()]
++        .sort((a, b) => a.label.localeCompare(b.label))
++        .map(aTreeNode),
++    };
++  };
++
++  return { data: filas.length ? [aTreeNode(raiz)] : [], columnas };
++}
