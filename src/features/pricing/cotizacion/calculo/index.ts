@@ -26,4 +26,5 @@ export type {
 export { CAMPOS_CABECERA, construirFiltrosCalculo } from "./lib/cabecera";
 export { filtrarPorTipoTabla, normalizarOpciones } from "./lib/catalogos";
 export { esRubroDueAgent } from "./lib/clasificacion-rubros";
+export { unirDetallesGuardados } from "./lib/rubros-guardados";
 export { formatFecha, formatNumero, getSimboloMoneda } from "./lib/utils";

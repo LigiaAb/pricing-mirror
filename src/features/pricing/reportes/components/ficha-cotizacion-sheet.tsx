@@ -25,10 +25,12 @@ import {
   formatFecha,
   formatNumero,
   getSimboloMoneda,
+  unirDetallesGuardados,
   useCatalogosCotizacion,
   type VersionCotizacion,
 } from "@/features/pricing/cotizacion/calculo";
 import { Button } from "@/shared/components/ui/button";
+import { Loader } from "@/shared/components/ui/loader";
 import {
   Sheet,
   SheetContent,
@@ -156,7 +158,7 @@ type Opcion = { value?: unknown; label?: unknown };
 
 function ContenidoFicha({ fila }: { fila: FilaKpi }) {
   const ficha = useFichaCotizacion(fila);
-  const { formulario, calculo } = useCatalogosCotizacion();
+  const { formulario, calculo, isLoading: cargandoCatalogos } = useCatalogosCotizacion();
 
   /** Texto de un código buscándolo en un catálogo `{ value, label }`. */
   const etiquetaDe = (catalogo: readonly Opcion[] | undefined, valor: unknown) => {
@@ -199,15 +201,17 @@ function ContenidoFicha({ fila }: { fila: FilaKpi }) {
   const cw = criterios.find((c) => c.campo === "valor_cw" || c.cod === COD_CRITERIO_CW)?.valor;
   const rubros = (detalle?.rubros ?? []) as Registro[];
 
+  // Espera datos y catálogos para que las cards no aparezcan a medias ni con códigos.
+  if (ficha.cargando || cargandoCatalogos) {
+    return <Loader texto="CARGANDO LA COTIZACIÓN" className="min-h-[50vh]" />;
+  }
+
   return (
     <div className="space-y-4 p-4 sm:p-6">
       {ficha.error ? (
         <p className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
           {ficha.error instanceof Error ? ficha.error.message : "No se pudo cargar la cotización."}
         </p>
-      ) : null}
-      {ficha.cargando ? (
-        <p className="text-sm text-muted-foreground">Cargando la información de la cotización…</p>
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -258,6 +262,16 @@ function ContenidoFicha({ fila }: { fila: FilaKpi }) {
           </Datos>
         </CardInfo>
 
+        <CardInfo titulo="Datos complementarios" icono={FileText}>
+          <Datos>
+            {DATOS_COMPLEMENTARIOS.map(([campo, label]) => (
+              <Fila key={campo} label={label}>
+                {textoLibre(versionActiva?.[campo]) ?? VACIO}
+              </Fila>
+            ))}
+          </Datos>
+        </CardInfo>
+
         <CardInfo titulo="En el periodo del reporte" icono={Target}>
           <Datos>
             <Fila label="Creación">{formatFecha(fila.fecha_creacion ?? null)}</Fila>
@@ -300,8 +314,8 @@ function ContenidoFicha({ fila }: { fila: FilaKpi }) {
             <SinDatos texto="Sin rubros guardados." />
           ) : (
             <Tabla
-              columnas={["Grupo", "Rubro", "Proveedor", "Costo", "Venta"]}
-              numericas={[3, 4]}
+              columnas={["Grupo", "Rubro", "Servicio", "Proveedor", "Detalle", "Costo", "Venta"]}
+              numericas={[5, 6]}
               filas={rubros.map((r, i) => ({
                 clave: String(r.cod_detallerubro ?? `${String(r.cod_rubro)}-${i}`),
                 celdas: [
@@ -315,7 +329,18 @@ function ContenidoFicha({ fila }: { fila: FilaKpi }) {
                       r.cod_rubro,
                     ) ??
                     VACIO,
+                  texto(r.nombre_servicio as string) ??
+                    texto(r.siglas_servicio as string) ??
+                    etiquetaDe(
+                      calculo.servicios.map((x) => ({
+                        value: x.cod_servicio,
+                        label: x.nombre_servicio ?? x.nombre,
+                      })),
+                      r.cod_servicio,
+                    ) ??
+                    VACIO,
                   etiquetaDe(formulario.proveedores, r.entidad_id ?? r.cod_entidad) ?? VACIO,
+                  detalleRubro(r) ?? VACIO,
                   monto(
                     r.costo ?? r.costo_rubro ?? r.precio_costo,
                     getSimboloMoneda(
@@ -435,6 +460,15 @@ const COD_CRITERIO_CW = "15";
  * Realización de Precio (solo en ese reporte, cotizaciones cerradas): compara la venta Spot
  * con la venta original del flete en la versión activa.
  */
+/** Datos complementarios de la versión (los de `DatosComplementariosCotizacion`). */
+const DATOS_COMPLEMENTARIOS = [
+  ["tipo_servicio", "Tipo de servicio"],
+  ["tipo_transito", "Tiempo de tránsito"],
+  ["salida", "Salida"],
+  ["tipo_producto", "Tipo de producto"],
+  ["opcionales", "Opcionales"],
+] as const;
+
 const TIPO_PRECIO: Record<NonNullable<FilaKpi["tipo_precio"]>, string> = {
   SOBRE_TARIFA: "Sobre tarifa (venta Spot mayor que la tarifa publicada)",
   SPOT: "Spot (venta Spot menor que la tarifa publicada)",
@@ -442,6 +476,27 @@ const TIPO_PRECIO: Record<NonNullable<FilaKpi["tipo_precio"]>, string> = {
 };
 
 const texto = (valor: string | null | undefined) => valor?.trim() || undefined;
+
+/** Texto de un campo libre (string o número); vacío si no hay. */
+const textoLibre = (valor: unknown) =>
+  typeof valor === "string" || typeof valor === "number" ? texto(String(valor)) : undefined;
+
+/** Detalles guardados del rubro ("Tipo: descripción valor"), como los lee el cálculo. */
+const detalleRubro = (rubro: Registro) =>
+  unirDetallesGuardados(
+    rubro.detalles,
+    rubro.metodo_detalle,
+    rubro.metodo_detalles,
+    typeof rubro.detalle === "string" ? rubro.detalle.trim() : rubro.detalle,
+  )
+    .map((d) => {
+      const descripcion = [d.tarifadetalle_descripcion, d.tarifadetalle_valor]
+        .filter((v) => v != null && v !== "")
+        .join(" ");
+      return [d.tipo_desc, descripcion].filter(Boolean).join(": ");
+    })
+    .filter(Boolean)
+    .join(", ") || undefined;
 
 const nombreUsuario = (fila: FilaKpi) =>
   texto(`${fila.nombres ?? ""} ${fila.apellidos ?? ""}`) ?? `Usuario ${fila.usuario}`;
