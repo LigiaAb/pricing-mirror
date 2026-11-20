@@ -208,6 +208,9 @@ const consultaKpiHitRate = (campos) => {
       "TT.TIPO_DESCRIPCION AS TRANSPORTE",
       "TP.TIPO_DESCRIPCION AS TIPO_PAGO",
       "C.ENTIDAD_NOMBRE AS CLIENTE",
+      // Para que la ficha del reporte busque la cabecera completa (lista-cotizacion-cabecera).
+      "CC.ENTIDAD_ID AS COD_CLIENTE",
+      "CC.EMPRESA_ID AS COD_EMPRESA",
       "E.ESTADO_DESCRIPCION AS ESTADO",
       "CAR.CARRIER AS CARRIER",
     )

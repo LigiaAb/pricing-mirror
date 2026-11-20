@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { TablaDouble } from "@/features/pricing/shared";
 import NivelesBuilder from "@/shared/components/tabla-double/niveles-builder";
 import {
@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { useExcelJS } from "@/shared/hooks/use-dynamic-libraries";
-import { type ReporteKpi, useKpiCotizaciones } from "../api/kpi-cotizaciones";
+import { type FilaKpi, type ReporteKpi, useKpiCotizaciones } from "../api/kpi-cotizaciones";
 import { agregarHojaReporte, type FilaExcel } from "../lib/excel-reporte";
 import type { Filtros } from "../lib/filtros-types";
 import {
@@ -21,6 +21,7 @@ import {
   type CampoKpi,
   construirTablaKpi,
 } from "../lib/tabla-kpi";
+import { FichaCotizacionSheet } from "./ficha-cotizacion-sheet";
 
 /** El Select de Radix no acepta "" como valor: "sin columnas" se guarda como "". */
 const SIN_COLUMNA = "__ninguna__";
@@ -108,6 +109,7 @@ export function TablaKpi({
   onError?: (mensaje: string) => void;
 }) {
   const consulta = useKpiCotizaciones(filtros, reporte);
+  const [fichaAbierta, setFichaAbierta] = useState<FilaKpi | null>(null);
   const { loadExcelJS } = useExcelJS();
 
   // Servicio se filtra aquí: la API no recibe transporte (no cambian sus parámetros).
@@ -226,8 +228,27 @@ export function TablaKpi({
           mostrarTotalesPie={false}
           firstColumnWidth={280}
           nivelExpandidoInicial={1}
+          // Nivel "Cotización": botón para ver su ficha.
+          acciones={[
+            {
+              id: "ver-cotizacion",
+              tooltip: "Ver cotización",
+              mostrarSi: (nodo) => typeof nodo.cotizacion === "number",
+              onClick: (nodo) =>
+                setFichaAbierta(
+                  consulta.data?.find((f) => Number(f.cotizacion) === nodo.cotizacion) ?? null,
+                ),
+            },
+          ]}
+          accionesEnColumnaNombre
         />
       )}
+      <FichaCotizacionSheet
+        fila={fichaAbierta}
+        onOpenChange={(abierta) => {
+          if (!abierta) setFichaAbierta(null);
+        }}
+      />
     </div>
   );
 }
