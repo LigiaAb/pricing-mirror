@@ -62,7 +62,7 @@ export async function agregarHojaReporte(
   libro: Workbook,
   opciones: ReporteExcel,
 ): Promise<Worksheet> {
-  const total = Math.max(1, opciones.columnas.length);
+  const total = Math.max(2, opciones.columnas.length + 1);
   const hoja = libro.addWorksheet((opciones.hoja ?? "Reporte").slice(0, 31), {
     pageSetup: {
       orientation: "landscape",
@@ -85,28 +85,28 @@ export async function agregarHojaReporte(
   const logo = await logoBase64();
   if (logo) {
     const id = libro.addImage({ base64: logo, extension: "png" });
-    hoja.addImage(id, { tl: { col: 0, row: 0 }, ext: { width: 260, height: 52 } });
+    hoja.addImage(id, { tl: { col: 1, row: 0 }, ext: { width: 260, height: 52 } });
   }
   for (const numero of [1, 2, 3]) hoja.getRow(numero).height = 15;
 
   // Fila 4: título con la línea inferior del PDF.
   const filaTitulo = hoja.getRow(4);
-  filaTitulo.getCell(1).value = opciones.titulo;
-  filaTitulo.getCell(1).font = { bold: true, size: 15 };
+  filaTitulo.getCell(2).value = opciones.titulo;
+  filaTitulo.getCell(2).font = { bold: true, size: 15 };
   filaTitulo.height = 22;
-  if (total > 1) hoja.mergeCells(4, 1, 4, total);
-  filaTitulo.getCell(1).border = { bottom: BORDE };
+  if (total > 1) hoja.mergeCells(4, 2, 4, total);
+  filaTitulo.getCell(2).border = { bottom: BORDE };
 
   // Campos del encabezado: etiqueta en la primera columna, valor en el resto.
   let numero = 6;
   for (const [campo, valor] of Object.entries(opciones.header ?? {})) {
     if (valor == null || valor === "") continue;
     const fila = hoja.getRow(numero);
-    fila.getCell(1).value = campo.toUpperCase();
-    fila.getCell(1).font = { bold: true, size: 10 };
-    fila.getCell(2).value = valor;
-    fila.getCell(2).font = { size: 10 };
-    if (total > 2) hoja.mergeCells(numero, 2, numero, total);
+    fila.getCell(2).value = campo.toUpperCase();
+    fila.getCell(2).font = { bold: true, size: 10 };
+    fila.getCell(3).value = valor;
+    fila.getCell(3).font = { size: 10 };
+    if (total > 2) hoja.mergeCells(numero, 3, numero, total);
     numero += 1;
   }
   numero += 1;
@@ -114,7 +114,7 @@ export async function agregarHojaReporte(
   // Encabezado de la tabla: gris del PDF, negrita, con bordes.
   const filaEncabezado = hoja.getRow(numero);
   opciones.columnas.forEach((columna, i) => {
-    const celda = filaEncabezado.getCell(i + 1);
+    const celda = filaEncabezado.getCell(i + 2);
     celda.value = columna;
     celda.font = { bold: true, size: 9, color: { argb: NEGRO } };
     celda.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GRIS_ENCABEZADO } };
@@ -123,13 +123,14 @@ export async function agregarHojaReporte(
   });
   hoja.views = [{ /* state: "frozen", */ ySplit: numero }];
   hoja.pageSetup.printTitlesRow = `${numero}:${numero}`;
+  hoja.autoFilter = `${filaEncabezado.getCell(2).address}:${filaEncabezado.getCell(total).address}`;
   numero += 1;
 
   // Cuerpo: cuadrícula como el tema "grid" del PDF.
   for (const { celdas, negrita } of opciones.filas) {
     const fila = hoja.getRow(numero);
     celdas.forEach((valor, i) => {
-      const celda = fila.getCell(i + 1);
+      const celda = fila.getCell(i + 2);
       celda.value = valor;
       celda.font = { size: 9, bold: negrita === true };
       celda.border = BORDES;
@@ -142,6 +143,23 @@ export async function agregarHojaReporte(
     });
     numero += 1;
   }
+
+  const celda = hoja.getColumn(1);
+  celda.width = 5;
+
+  // Source - https://stackoverflow.com/a/64097746
+  // Posted by Ashish S, modified by community. See post 'Timeline' for change history
+  // Retrieved 2026-11-20, License - CC BY-SA 4.0
+
+  hoja.columns.forEach((column) => {
+    let maxLength = 0;
+    column.eachCell?.({ includeEmpty: true }, (cell) => {
+      if (cell.isMerged) return;
+      var columnLength = cell.value ? cell.value.toString().length : 10;
+      if (columnLength > maxLength) maxLength = columnLength;
+    });
+    column.width = Math.max(maxLength, 10);
+  });
 
   // pie altera visualizacion de formato
   // // Pie azul del PDF.
