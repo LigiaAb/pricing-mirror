@@ -13,7 +13,7 @@ al proyecto completo. Responder siempre en **español**.
 | `src/features/catalogos/index.ts`            | Copia del `index.ts` real **sin** las exportaciones de `./hooks/...` | **No**                       |
 | `src/features/tracking/**`                   | STUB: solo tipos de `TrackingDetalle` (embarques)     | **No**                           |
 | `src/features/objetivos/**`                  | STUB: copia del catálogo `objetivos` (Hit Rate)       | **No**                           |
-| `src/types/stubs-modulos.d.ts`               | Todo lo demás de `@/shared` / `@/features` como `any` | **No**                           |
+| `src/types/stubs-modulos.d.ts`               | Todo lo demás de `@/shared` / `@/features` como `any` (`usePermisosCategoria` de `@/features/shell` con su tipo real) | **No**                           |
 | `tsconfig.json`                              | Copia exacta del proyecto real                        | No (ya existe allá)              |
 
 - `src/features/catalogos/api/create-catalogo.ts` contiene el **código real** de `createCatalogo` del proyecto; todo
