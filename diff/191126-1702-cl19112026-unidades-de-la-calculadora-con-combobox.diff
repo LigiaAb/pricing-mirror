@@ -1,0 +1,163 @@
+diff --git a/src/features/pricing/shared/calculadora-embarque/components/calculadora-medidas.tsx b/src/features/pricing/shared/calculadora-embarque/components/calculadora-medidas.tsx
+index 658ab77..9d83397 100644
+--- a/src/features/pricing/shared/calculadora-embarque/components/calculadora-medidas.tsx
++++ b/src/features/pricing/shared/calculadora-embarque/components/calculadora-medidas.tsx
+@@ -22,6 +22,7 @@ import {
+   TableHeader,
+   TableRow,
+ } from "@/shared/components/ui/table";
++import { ComboboxOpcion } from "../../components/combobox-opcion";
+ import { useNombreTransporte } from "../hooks/use-nombre-transporte";
+ import { useUnidadesEmbarque } from "../hooks/use-unidades-embarque";
+ import {
+@@ -134,6 +135,53 @@ function mostrarNumero(value: unknown) {
+   return String(redondearArriba(result));
+ }
+ 
++/** Nombre visible de una unidad (el mismo que mostraba el select nativo). */
++function textoUnidad(unidad: Unidad) {
++  return String(unidad.tipo_desc ?? unidad.label ?? unidad.value);
++}
++
++/*
++ * Select buscable de unidades (#165): `ComboboxOpcion`, el estándar para opciones
++ * en memoria. Muestra el mismo texto que el select nativo y devuelve la unidad
++ * original del catálogo, así que el formulario y las filas no cambian.
++ */
++function SelectUnidad({
++  id,
++  label,
++  value,
++  unidades,
++  onChange,
++}: {
++  id: string;
++  label: string;
++  value: Unidad | null;
++  unidades: Unidad[];
++  onChange: (unidad: Unidad | null) => void;
++}) {
++  const opciones = React.useMemo(
++    () => unidades.map((unidad) => ({ value: unidad.value, label: textoUnidad(unidad) })),
++    [unidades],
++  );
++
++  return (
++    <ComboboxOpcion
++      id={id}
++      label={label}
++      value={value == null ? null : { value: value.value, label: textoUnidad(value) }}
++      onChange={(opcion) =>
++        onChange(
++          opcion == null
++            ? null
++            : (unidades.find((unidad) => String(unidad.value) === String(opcion.value)) ?? null),
++        )
++      }
++      options={opciones}
++      clearable={false}
++      portalled={false}
++    />
++  );
++}
++
+ /* ==========================================================================
+  * COMPONENTE
+  * ========================================================================== */
+@@ -556,7 +604,7 @@ export function CalculadoraMedidas({
+               <div className="grid gap-3 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_auto]">
+                 {/* VOLUMEN */}
+ 
+-                <div className="grid grid-cols-[minmax(9rem,1fr)_minmax(0,2fr)] gap-2">
++                <div className="grid grid-cols-[minmax(10.5rem,1fr)_minmax(0,2fr)] gap-2">
+                   <p className="col-span-2 text-sm font-medium">Volumen</p>
+ 
+                   <div className="space-y-1">
+@@ -564,31 +612,19 @@ export function CalculadoraMedidas({
+                       Unidad de medida
+                     </label>
+ 
+-                    <select
++                    <SelectUnidad
+                       id={ids.unidadMedida}
+-                      className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+-                      value={form.unidadMedida?.value ?? ""}
+-                      onChange={(event) => {
+-                        const unidad =
+-                          unidadesMedida.find(
+-                            (item) => String(item.value) === event.target.value,
+-                          ) ?? null;
+-
++                      label="Unidad de medida"
++                      value={form.unidadMedida}
++                      unidades={unidadesMedida}
++                      onChange={(unidad) =>
+                         setForm((prev) => ({
+                           ...prev,
+ 
+                           unidadMedida: unidad,
+-                        }));
+-                      }}
+-                    >
+-                      <option value="">Seleccione</option>
+-
+-                      {unidadesMedida.map((unidad) => (
+-                        <option key={String(unidad.value)} value={String(unidad.value)}>
+-                          {unidad.tipo_desc ?? unidad.label ?? unidad.value}
+-                        </option>
+-                      ))}
+-                    </select>
++                        }))
++                      }
++                    />
+                   </div>
+ 
+                   <div className="grid grid-cols-3 gap-2">
+@@ -665,7 +701,7 @@ export function CalculadoraMedidas({
+ 
+                 {/* PESO */}
+ 
+-                <div className="grid grid-cols-[minmax(9rem,1fr)_minmax(0,1fr)] gap-2">
++                <div className="grid grid-cols-[minmax(10.5rem,1fr)_minmax(0,1fr)] gap-2">
+                   <p className="col-span-2 text-sm font-medium">Peso</p>
+ 
+                   <div className="space-y-1">
+@@ -673,30 +709,19 @@ export function CalculadoraMedidas({
+                       Unidad de peso
+                     </label>
+ 
+-                    <select
++                    <SelectUnidad
+                       id={ids.unidadPeso}
+-                      className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+-                      value={form.unidadPeso?.value ?? ""}
+-                      onChange={(event) => {
+-                        const unidad =
+-                          unidadesPeso.find((item) => String(item.value) === event.target.value) ??
+-                          null;
+-
++                      label="Unidad de peso"
++                      value={form.unidadPeso}
++                      unidades={unidadesPeso}
++                      onChange={(unidad) =>
+                         setForm((prev) => ({
+                           ...prev,
+ 
+                           unidadPeso: unidad,
+-                        }));
+-                      }}
+-                    >
+-                      <option value="">Seleccione</option>
+-
+-                      {unidadesPeso.map((unidad) => (
+-                        <option key={String(unidad.value)} value={String(unidad.value)}>
+-                          {unidad.tipo_desc ?? unidad.label ?? unidad.value}
+-                        </option>
+-                      ))}
+-                    </select>
++                        }))
++                      }
++                    />
+                   </div>
+ 
+                   <div className="space-y-1">
