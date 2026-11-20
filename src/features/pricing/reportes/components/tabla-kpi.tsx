@@ -117,7 +117,8 @@ export function TablaKpi({
     const filtradas = servicio
       ? filas.filter((f) => f.transporte?.trim().toUpperCase() === servicio)
       : filas;
-    return construirTablaKpi(filtradas, reporte, niveles, campoColumna);
+    // Con servicio, origen/destino muestran ciudad o punto de enlace; sin él, el país.
+    return construirTablaKpi(filtradas, reporte, niveles, campoColumna, Boolean(servicio));
   }, [consulta.data, servicio, reporte, niveles, campoColumna]);
 
   const exportarExcel = async () => {

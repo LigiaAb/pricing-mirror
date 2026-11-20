@@ -25,11 +25,87 @@
  * de la venta Spot contra la suma de la venta original de la versión activa (el Spot solo
  * se registra en fletes): mayor → SOBRE_TARIFA; menor → SPOT; igual o sin Spot →
  * TARIFA_PUBLICADA. Así cada cerrada cae en un solo grupo y los tres suman las cerradas.
+ *
+ * Origen y destino (los dos reportes), de la cabecera: nombre = punto de enlace o, si no
+ * hay (terrestre), ciudad; código = identificación del punto (TIPO_ID 78 o 79) o siglas de
+ * la ciudad; país = el del punto de enlace o, si no hay, el de la ciudad.
+ * Carrier: proveedores (ENTIDAD_ID) de los rubros de flete (RUBRO.ES_FLETE) de la versión
+ * activa, sin repetir y separados por " / ".
  */
 
 // ── INICIO ───────────────────────────────────────────────────────────────────
 
 const REPORTES_KPI_COTIZACIONES = ["hit_rate", "realizacion_de_precio"];
+
+/** Tipos de PUNTO_ENLACE_IDENTIFICACION que son el código del punto de enlace. */
+const TIPOS_CODIGO_PUNTO = [78, 79];
+
+/**
+ * Un código por punto de enlace. El filtro de tipo va aquí y no en el WHERE para no perder
+ * cotizaciones sin identificación; si un punto tiene los dos tipos, se toma el menor.
+ */
+const codigoPorPunto = (alias) =>
+  azureSqlClient("PUNTO_ENLACE_IDENTIFICACION")
+    .whereIn("TIPO_ID", TIPOS_CODIGO_PUNTO)
+    .select("PUNTOENLACE_ID")
+    .min({ CODIGO: "PEIDENTFICACION_CODIGO" })
+    .groupBy("PUNTOENLACE_ID")
+    .as(alias);
+
+/** Joins de un extremo (origen o destino): punto de enlace + su código y país, ciudad + su país. */
+const unirLugar = (consulta, extremo, prefijo) => {
+  const pe = `${prefijo}PE`;
+  const pi = `${prefijo}PI`;
+  const ci = `${prefijo}CI`;
+  const pp = `${prefijo}PP`;
+  const pc = `${prefijo}PC`;
+  return consulta
+    .leftJoin({ [pe]: "PUNTO_ENLACE" }, `${pe}.PUNTOENLACE_ID`, `CC.PUNTOENLACE_${extremo}_ID`)
+    .leftJoin(codigoPorPunto(pi), `${pi}.PUNTOENLACE_ID`, `${pe}.PUNTOENLACE_ID`)
+    .leftJoin({ [pp]: "PAIS" }, `${pp}.PAIS_ID`, `${pe}.PAIS_ID`)
+    .leftJoin({ [ci]: "CIUDAD" }, `${ci}.CIUDAD_ID`, `CC.CIUDAD_${extremo}_ID`)
+    .leftJoin({ [pc]: "PAIS" }, `${pc}.PAIS_ID`, `${ci}.PAIS_ID`)
+    .select(
+      azureSqlClient.raw("COALESCE(??, ??) AS ??", [
+        `${pp}.PAIS_NOMBRE`,
+        `${pc}.PAIS_NOMBRE`,
+        `${extremo}_PAIS`,
+      ]),
+      azureSqlClient.raw("COALESCE(??, ??) AS ??", [
+        `${pe}.PUNTOENLACE_NOMBRE`,
+        `${ci}.CIUDAD_NOMBRE`,
+        extremo,
+      ]),
+      azureSqlClient.raw("COALESCE(??, ??) AS ??", [
+        `${pi}.CODIGO`,
+        `${ci}.CIUDAD_SIGLAS`,
+        `${extremo}_CODIGO`,
+      ]),
+    );
+};
+
+/** Carrier por cotización: proveedores de los rubros de flete de la versión activa. */
+const carrierPorCotizacion = () => {
+  const proveedores = azureSqlClient({ CDR: "COTIZACION_DETALLE_RUBRO" })
+    .join({ CD: "COTIZACION_DETALLE" }, "CD.COTIZACIONDETALLE_ID", "CDR.COTIZACIONDETALLE_ID")
+    .join({ R: "RUBRO" }, "R.RUBRO_ID", "CDR.RUBRO_ID")
+    .join({ EN: "ENTIDAD" }, "EN.ENTIDAD_ID", "CDR.ENTIDAD_ID")
+    .where("CD.ESTADO_ID", 1)
+    .where("R.ES_FLETE", 1)
+    .distinct("CD.COTIZACIONCABECERA_ID", "EN.ENTIDAD_NOMBRE")
+    .as("PRV");
+
+  return azureSqlClient
+    .from(proveedores)
+    .select("PRV.COTIZACIONCABECERA_ID")
+    .select(
+      azureSqlClient.raw(
+        "STRING_AGG(PRV.ENTIDAD_NOMBRE, ' / ') WITHIN GROUP (ORDER BY PRV.ENTIDAD_NOMBRE) AS CARRIER",
+      ),
+    )
+    .groupBy("PRV.COTIZACIONCABECERA_ID")
+    .as("CAR");
+};
 
 const validarCamposKpiCotizaciones = (campos) => {
   if (!campos?.fecha_inicio || !campos?.fecha_fin || !campos?.reporte)
@@ -113,6 +189,7 @@ const consultaKpiHitRate = (campos) => {
     .leftJoin({ TT: "TIPO" }, "TT.TIPO_ID", "CC.TIPO_TRANSPORTE_ID")
     .leftJoin({ TP: "TIPO" }, "TP.TIPO_ID", "CC.TIPO_PAGO_ID")
     .leftJoin({ C: "ENTIDAD" }, "C.ENTIDAD_ID", "CC.ENTIDAD_ID")
+    .leftJoin(carrierPorCotizacion(), "CAR.COTIZACIONCABECERA_ID", "CC.COTIZACIONCABECERA_ID")
     .whereNotNull("PV.USUARIO_ID")
     .where(function () {
       this.whereRaw(creada).orWhere(function () {
@@ -132,6 +209,7 @@ const consultaKpiHitRate = (campos) => {
       "TP.TIPO_DESCRIPCION AS TIPO_PAGO",
       "C.ENTIDAD_NOMBRE AS CLIENTE",
       "E.ESTADO_DESCRIPCION AS ESTADO",
+      "CAR.CARRIER AS CARRIER",
     )
     .select(azureSqlClient.raw("CASE WHEN ? THEN 1 ELSE 0 END AS REALIZADA", [creada]))
     .select(
@@ -140,6 +218,9 @@ const consultaKpiHitRate = (campos) => {
         [aprobada],
       ),
     );
+
+  unirLugar(consulta, "ORIGEN", "O");
+  unirLugar(consulta, "DESTINO", "D");
 
   // Mismos filtros que report_hit_rate (el de usuario aplica al creador de la primera versión)
   const tiene = (campo) => campos[campo] != null && campos[campo] !== "";

@@ -32,6 +32,18 @@ export const filaKpiSchema = z
     tipo_pago: texto,
     cliente: texto,
     estado: texto,
+    /**
+     * Origen y destino de la cabecera: nombre y código del punto de enlace o, si no hay
+     * (terrestre), de la ciudad; el país, del punto de enlace o de la ciudad.
+     */
+    origen: texto,
+    origen_codigo: texto,
+    origen_pais: texto,
+    destino: texto,
+    destino_codigo: texto,
+    destino_pais: texto,
+    /** Proveedores de los rubros de flete de la versión activa ("A / B" si hay varios). */
+    carrier: texto,
     realizada: bandera,
     cerrada: bandera,
     /** Solo Realización de Precio, en las cerradas. */
