@@ -154,6 +154,5 @@ Rango y scalling conservan `-columns`, `-form` y `-table` (`RangoTable`, `Scalli
 
 ## Pendiente (no es centralización)
 
-- `api/crear-api-metodo.ts` no se usa en ningún lado (se puede borrar).
 - `porcentaje-form.tsx` inicializa `minimo: 0` en lugar de `minimo_costo` / `minimo_venta`
   (solo afecta si el input aparece vacío o en 0 al crear; lo enviado es igual).
