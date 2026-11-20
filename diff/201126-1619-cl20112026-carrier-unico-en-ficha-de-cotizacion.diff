@@ -1,0 +1,26 @@
+diff --git a/src/features/pricing/reportes/components/ficha-cotizacion-sheet.tsx b/src/features/pricing/reportes/components/ficha-cotizacion-sheet.tsx
+index 7485b0b..6d9fc38 100644
+--- a/src/features/pricing/reportes/components/ficha-cotizacion-sheet.tsx
++++ b/src/features/pricing/reportes/components/ficha-cotizacion-sheet.tsx
+@@ -136,7 +136,6 @@ const CAMPOS_SERVICIO: readonly (readonly [IdCampo, string?])[] = [
+   ["clasificacionCarga"],
+   ["incoterm"],
+   ["tipoPago"],
+-  ["carrier"],
+ ];
+ const CAMPOS_ORIGEN: readonly (readonly [IdCampo, string?])[] = [
+   ["paisOrigen", "País"],
+@@ -228,7 +227,12 @@ function ContenidoFicha({ fila }: { fila: FilaKpi }) {
+         <CardInfo titulo="Servicio" icono={Truck}>
+           <Datos>
+             {cabecera ? filasCampos(cabecera, CAMPOS_SERVICIO) : null}
+-            <Fila label="Proveedores del flete">{texto(fila.carrier) ?? VACIO}</Fila>
++            {/* Carrier = proveedor de los rubros de flete (el del reporte); si no hay, el de la cabecera. */}
++            <Fila label="Carrier">
++              {texto(fila.carrier) ??
++                (cabecera ? valorCampo(cabecera, "carrier") : undefined) ??
++                VACIO}
++            </Fila>
+           </Datos>
+         </CardInfo>
+ 
