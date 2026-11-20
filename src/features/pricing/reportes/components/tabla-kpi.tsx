@@ -158,7 +158,6 @@ export function TablaKpi({
       },
       columnas: [...columnasNivel, ...tabla.columnas.map((c) => c.label)],
       filas,
-      anchos: [...columnasNivel.map(() => 28), ...tabla.columnas.map(() => 14)],
       formatos: [
         ...columnasNivel.map(() => undefined),
         ...tabla.columnas.map((c) => (c.label.includes("%") ? '0.00"%"' : "#,##0")),

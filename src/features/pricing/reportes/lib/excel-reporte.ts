@@ -40,6 +40,18 @@ export type ReporteExcel = {
 const BORDE = { style: "thin" as const, color: { argb: NEGRO } };
 const BORDES = { top: BORDE, left: BORDE, bottom: BORDE, right: BORDE };
 
+/** Texto de la celda como se ve en Excel (aplica `#,##0`, `0.00"%"`, etc.). */
+function textoVisible(valor: unknown, formato: string | undefined): string {
+  if (typeof valor !== "number") return String(valor);
+  const decimales = formato?.match(/0\.(0+)/)?.[1]?.length ?? (formato ? 0 : 2);
+  const texto = valor.toLocaleString("en-US", {
+    minimumFractionDigits: formato ? decimales : 0,
+    maximumFractionDigits: decimales,
+    useGrouping: formato?.includes(",") ?? false,
+  });
+  return formato?.includes("%") ? `${texto}%` : texto;
+}
+
 /** Descarga el logo como data URL; si falla, el Excel se genera sin logo. */
 async function logoBase64(): Promise<string | null> {
   try {
@@ -151,14 +163,20 @@ export async function agregarHojaReporte(
   // Posted by Ashish S, modified by community. See post 'Timeline' for change history
   // Retrieved 2026-11-20, License - CC BY-SA 4.0
 
+  // Ancho según el texto que se ve: números con su formato (66.67%, no 66.666…), sin contar
+  // celdas vacías ni combinadas; la columna 1 (margen) queda en 5. Excel mide en caracteres
+  // de fuente 11: el texto se escala por el tamaño de su fuente (tabla en 9).
   hoja.columns.forEach((column) => {
+    if (column.number === 1) return;
     let maxLength = 0;
-    column.eachCell?.({ includeEmpty: true }, (cell) => {
-      if (cell.isMerged) return;
-      var columnLength = cell.value ? cell.value.toString().length : 10;
-      if (columnLength > maxLength) maxLength = columnLength;
+    column.eachCell?.({ includeEmpty: false }, (cell) => {
+      if (cell.isMerged || cell.value == null || cell.value === "") return;
+      const texto = textoVisible(cell.value, cell.numFmt);
+      const lineas = cell.alignment?.wrapText ? texto.split(/\s+/) : [texto];
+      const largo = Math.max(...lineas.map((l) => l.length)) * ((cell.font?.size ?? 11) / 11);
+      if (largo > maxLength) maxLength = largo;
     });
-    column.width = Math.max(maxLength, 10);
+    column.width = Math.max(Math.ceil(maxLength) + 2, 8);
   });
 
   // pie altera visualizacion de formato
