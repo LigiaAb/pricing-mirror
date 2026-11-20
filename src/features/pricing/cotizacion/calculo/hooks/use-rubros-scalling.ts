@@ -71,7 +71,11 @@ function resolverTipoTransporte({
     return normalizado as TipoTransporteScalling;
   }
 
-  return TIPOS_TRANSPORTE[Number(codTipoTransporte) as keyof typeof TIPOS_TRANSPORTE] ?? null;
+  const nombre = TIPOS_TRANSPORTE[Number(codTipoTransporte) as keyof typeof TIPOS_TRANSPORTE];
+
+  return nombre != null && nombre in TIPO_PUNTO_POR_TRANSPORTE
+    ? (nombre as TipoTransporteScalling)
+    : null;
 }
 
 function sonPuntosIguales(a: PuntoEnlaceScalling[], b: PuntoEnlaceScalling[]) {
