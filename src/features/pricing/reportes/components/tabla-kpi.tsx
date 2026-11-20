@@ -94,10 +94,15 @@ export function TablaKpi({
   const consulta = useKpiCotizaciones(filtros, reporte);
   const { loadExcelJS, isLoading: cargandoExcel } = useExcelJS();
 
-  const tabla = useMemo(
-    () => construirTablaKpi(consulta.data ?? [], reporte, niveles, campoColumna),
-    [consulta.data, reporte, niveles, campoColumna],
-  );
+  // Servicio se filtra aquí: la API no recibe transporte (no cambian sus parámetros).
+  const servicio = filtros.cod_servicio?.label?.trim().toUpperCase();
+  const tabla = useMemo(() => {
+    const filas = consulta.data ?? [];
+    const filtradas = servicio
+      ? filas.filter((f) => f.transporte?.trim().toUpperCase() === servicio)
+      : filas;
+    return construirTablaKpi(filtradas, reporte, niveles, campoColumna);
+  }, [consulta.data, servicio, reporte, niveles, campoColumna]);
 
   const exportarExcel = async () => {
     const { ExcelJS, saveAs } = await loadExcelJS();

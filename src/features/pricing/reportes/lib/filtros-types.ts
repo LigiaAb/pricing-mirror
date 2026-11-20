@@ -7,6 +7,10 @@ export type CamposReporte = {
   fechas?: "opcionales" | "requeridas";
   tipoTransporte?: boolean;
   tipoPago?: boolean;
+  /** Departamento = centro de costo (`cod_cc`). */
+  departamento?: boolean;
+  /** Servicio = tipo de transporte; filtra en pantalla (la API no recibe transporte). */
+  servicio?: boolean;
 };
 
 export type ConfiguracionReporte = {
@@ -34,6 +38,8 @@ export type Filtros = {
   cod_usuario?: SelectOption | null | undefined;
   cod_cliente?: SelectOption | null | undefined;
   cod_tipo_pago?: SelectOption | null | undefined;
+  /** Servicio (tipo de transporte) de la sección Filtros; no se envía a la API. */
+  cod_servicio?: SelectOption | null | undefined;
 };
 
 export type filtrosNoLocales = Omit<

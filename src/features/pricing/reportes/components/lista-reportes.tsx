@@ -12,9 +12,17 @@ import {
   X,
 } from "lucide-react";
 import React from "react";
-import { type EmpleadoUsuario, empleadosUsuarios, type Tipo, tipos } from "@/features/catalogos";
+import {
+  centrosCosto,
+  type EmpleadoUsuario,
+  empleadosUsuarios,
+  type Tipo,
+  tipos,
+} from "@/features/catalogos";
 import { Panel, SectionHeader } from "@/features/pricing/shared";
+import { buscarClientesTarifa } from "@/features/pricing/tarifas";
 import { useContextoOperativoStore } from "@/features/shell";
+import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
 import {
   Accordion,
   AccordionContent,
@@ -59,7 +67,14 @@ export const REPORTES_CRM: readonly ConfiguracionReporte[] = [
     label: "HIT RATE (HR)",
     vista: "hit-rate",
     descripcion: "Reporte de hit rate, con filtros de fechas y estado de cotización",
-    campos: { tipoTransporte: true, usuario: true, tipoPago: true, fechas: "opcionales" },
+    campos: {
+      tipoTransporte: true,
+      usuario: true,
+      tipoPago: true,
+      fechas: "opcionales",
+      departamento: true,
+      servicio: true,
+    },
     graficas: true,
   },
   {
@@ -67,7 +82,14 @@ export const REPORTES_CRM: readonly ConfiguracionReporte[] = [
     label: "Realizacion de Precio (RdP)",
     vista: "realizacion-de-precio",
     descripcion: "Reporte de realización de precio, con filtros de fechas y estado de cotización",
-    campos: { fechas: "opcionales", cliente: true, tipoPago: true, usuario: true },
+    campos: {
+      fechas: "opcionales",
+      cliente: true,
+      tipoPago: true,
+      usuario: true,
+      departamento: true,
+      servicio: true,
+    },
     tabla: true,
     graficas: true,
   },
@@ -87,12 +109,22 @@ const formatearUsuarios = (array: EmpleadoUsuario[]): SelectOption[] => {
   return usuarios;
 };
 
+/** Cliente por nombre (mín. 2 letras), con la búsqueda de Tarifas; `value` = ENTIDAD_ID. */
+const buscarClientes = async (busqueda: string): Promise<SelectOption[]> =>
+  (await buscarClientesTarifa(busqueda)).map((c) => ({
+    value: c.entidad_id,
+    label: c.entidad_nombre,
+  }));
+
+/** Valor del Combobox de departamento cuando no hay centro de costo (todos). */
+const TODOS_LOS_DEPARTAMENTOS = "__todos__";
+
 export function ListaReportes() {
   const currentCentroCosto = useContextoOperativoStore((state) => state.currentCentroCosto);
   const currentEmpresa = useContextoOperativoStore((state) => state.currentEmpresa);
   const tiposTransporteFetch = tipos.useLista({ tipo_tabla: "TRANSPORTE" });
   const tiposPagoFetch = tipos.useLista({ tipo_tabla: "PAGO" });
-  const usuariosFetch = empleadosUsuarios.useLista({ cod_cc: currentCentroCosto?.cod_cc });
+  const centrosCostoFetch = centrosCosto.useLista();
 
   const transportes: SelectOption[] = React.useMemo(
     () => formatearTipos(tiposTransporteFetch.data ?? []),
@@ -102,11 +134,6 @@ export function ListaReportes() {
     () => formatearTipos(tiposPagoFetch.data ?? []),
     [tiposPagoFetch.data],
   );
-  const usuarios: SelectOption[] = React.useMemo(
-    () => formatearUsuarios(usuariosFetch.data ?? []),
-    [usuariosFetch.data],
-  );
-
   const codEmpresa = React.useMemo(
     () =>
       (currentEmpresa && {
@@ -143,6 +170,24 @@ export function ListaReportes() {
     fecha_inicio: inicioDeSemana,
     fecha_fin: finDeSemana,
   } as Filtros);
+
+  // Usuarios del departamento elegido (sin departamento: todos).
+  const usuariosFetch = empleadosUsuarios.useLista({ cod_cc: filtros.cod_cc?.codigo });
+  const usuarios: SelectOption[] = React.useMemo(
+    () => formatearUsuarios(usuariosFetch.data ?? []),
+    [usuariosFetch.data],
+  );
+
+  // Departamentos (centros de costo) de la empresa actual.
+  const departamentos: ComboboxOption[] = React.useMemo(
+    () => [
+      { value: TODOS_LOS_DEPARTAMENTOS, label: "Todos" },
+      ...(centrosCostoFetch.data ?? [])
+        .filter((cc) => String(cc.codEmpresaCc) === String(currentEmpresa?.cod_empresa))
+        .map((cc) => ({ value: String(cc.codCc), label: cc.nombreCc })),
+    ],
+    [centrosCostoFetch.data, currentEmpresa?.cod_empresa],
+  );
 
   const [calendarioAbierto, setCalendarioAbierto] = React.useState<string | null>(null);
   const [descargar, setDescargar] = React.useState(0);
@@ -448,8 +493,50 @@ export function ListaReportes() {
                   subtitle={"Acota el universo de seguimientos a analizar"}
                 />
                 <div className="p-2">
-                  {reporteSeleccionado?.campos.cliente &&
-                    renderSelectCatalogo({ id: "cod_cliente", label: "Cliente", options: [] })}
+                  {reporteSeleccionado?.campos.departamento && (
+                    <Field className="flex flex-col">
+                      <FieldLabel htmlFor="filtro-departamento">Departamento</FieldLabel>
+                      <Combobox
+                        value={
+                          filtros.cod_cc ? String(filtros.cod_cc.codigo) : TODOS_LOS_DEPARTAMENTOS
+                        }
+                        onChange={(valor) => {
+                          const cc = departamentos.find((d) => d.value === valor);
+                          // Al cambiar de departamento, el usuario elegido puede no pertenecer a él.
+                          setFiltros((f) => ({
+                            ...f,
+                            cod_usuario: null,
+                            cod_cc:
+                              !cc || cc.value === TODOS_LOS_DEPARTAMENTOS
+                                ? undefined
+                                : { nombre: String(cc.label), codigo: Number(cc.value) },
+                          }));
+                        }}
+                        options={departamentos}
+                        placeholder="Seleccione..."
+                        popoverClassName="z-[9999]"
+                      />
+                    </Field>
+                  )}
+                  {reporteSeleccionado?.campos.cliente && (
+                    <Field className="flex flex-col">
+                      <FieldLabel htmlFor="filtro-cliente">Cliente</FieldLabel>
+                      <AsyncComboboxInput<SelectOption>
+                        id="filtro-cliente"
+                        value={filtros.cod_cliente ?? null}
+                        onChange={(valor) => onInput({ id: "cod_cliente", val: valor })}
+                        fetchOptions={buscarClientes}
+                        minSearchLength={2}
+                        fetchOnEmpty={false}
+                        getOptionValue={(opcion) => opcion.value}
+                        getOptionLabel={(opcion) => String(opcion.label)}
+                        placeholder="Todos"
+                        searchPlaceholder="Buscar cliente..."
+                        contentClassName="z-[9999]"
+                        clearable
+                      />
+                    </Field>
+                  )}
                   {reporteSeleccionado?.campos.usuario &&
                     renderSelectCatalogo({
                       id: "cod_usuario",
@@ -461,6 +548,12 @@ export function ListaReportes() {
                       id: "cod_tipo_pago",
                       label: "Tipo de Pago",
                       options: tiposPago,
+                    })}
+                  {reporteSeleccionado?.campos.servicio &&
+                    renderSelectCatalogo({
+                      id: "cod_servicio",
+                      label: "Servicio (solo resumen agrupado)",
+                      options: transportes,
                     })}
                 </div>
               </Panel>
