@@ -9,6 +9,23 @@ export const TIPO_PUNTO_POR_TRANSPORTE: Record<string, string> = {
   MARITIMO: "PUERTO",
 };
 
+/**
+ * Origen y destino que dependen del transporte (#142). Se limpian (objeto y código) al cambiar
+ * de transporte; luego se asigna el default del nuevo (GUA aéreo, ciudad GUA terrestre).
+ */
+export const CAMPOS_UBICACION_POR_TRANSPORTE = [
+  "puntoEnlaceOrigen",
+  "cod_puntoenlace_origen",
+  "puntoEnlaceDestino",
+  "cod_puntoenlace_destino",
+  "ciudadOrigen",
+  "cod_ciudad_origen",
+  "ciudadDestino",
+  "cod_ciudad_destino",
+  "direccion_origen",
+  "direccion_destino",
+] as const;
+
 export function getValue(value: unknown) {
   if (!esRegistro(value)) return value ?? null;
   return value.value ?? null;
