@@ -14,6 +14,7 @@ import {
 import {
   buscarPorLabel,
   buscarPorValue,
+  CAMPOS_UBICACION_POR_TRANSPORTE,
   getLabel,
   getValue,
   TIPO_PUNTO_POR_TRANSPORTE,
@@ -278,6 +279,13 @@ export function useFormularioCotizacion({
             ? buscarPorLabel(catalogos.tiposPuntoEnlace, nombreTipoPunto)
             : null;
 
+          // Lo elegido para el transporte anterior ya no aplica (#142).
+          if (!mismoId(getValue(prev.tipoTransporte), getValue(valorFinal))) {
+            for (const key of CAMPOS_UBICACION_POR_TRANSPORTE) {
+              next[key] = null;
+            }
+          }
+
           next.tipoPuntoEnlaceOrigen = tipoPunto;
           next.cod_tipo_puntoenlace_origen = tipoPunto?.value ?? null;
 
@@ -404,13 +412,10 @@ export function useFormularioCotizacion({
       defaultValues?.cod_tarifaplantilla ??
       null;
 
-    resultado.direccion_destino = (values.direccion_destino ??
-      defaultValues?.direccion_destino ??
-      null) as string | null;
+    // `values` ya trae las de `defaultValues`; sin respaldo, para que una dirección limpiada no vuelva (#142).
+    resultado.direccion_destino = (values.direccion_destino ?? null) as string | null;
 
-    resultado.direccion_origen = (values.direccion_origen ??
-      defaultValues?.direccion_origen ??
-      null) as string | null;
+    resultado.direccion_origen = (values.direccion_origen ?? null) as string | null;
 
     resultado.descripcion =
       typeof values.descripcion === "string"
