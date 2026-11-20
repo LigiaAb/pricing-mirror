@@ -1,0 +1,49 @@
+diff --git a/src/features/pricing/tarifas/components/formulario-tarifa.tsx b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
+index a94b42b..f8cad06 100644
+--- a/src/features/pricing/tarifas/components/formulario-tarifa.tsx
++++ b/src/features/pricing/tarifas/components/formulario-tarifa.tsx
+@@ -1,11 +1,12 @@
+ "use client";
+ 
+-import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
++import { Check, ChevronsUpDown, CircleAlert, Loader2, X } from "lucide-react";
+ import React from "react";
+ 
+ import { useFetchEntidades } from "@/features/entidades";
+ import { ComboboxOpcion } from "@/features/pricing/shared";
+ import { DynamicIcon } from "@/shared/components/dynamic-icon";
++import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
+ import { Button } from "@/shared/components/ui/button";
+ import { Checkbox } from "@/shared/components/ui/checkbox";
+ import {
+@@ -631,6 +632,13 @@ export const FormularioTarifa = ({
+ 
+   return (
+     <div className="space-y-4 w-full">
++      {tipoFormulario === "ingreso" && faltantes.length > 0 && (
++        <Alert variant="destructive">
++          <CircleAlert className="size-4" aria-hidden="true" />
++          <AlertTitle>Hay campos obligatorios vacíos</AlertTitle>
++          <AlertDescription>{faltantes.join(", ")}</AlertDescription>
++        </Alert>
++      )}
+       <div
+         className={cn(
+           tipoFormulario === "filtro" ? "grid-cols-1" : "md:grid-cols-2 grid-cols-1",
+@@ -837,16 +845,6 @@ export const FormularioTarifa = ({
+             </Button>
+           </div>
+         )}
+-      {tipoFormulario === "ingreso" && faltantes.length > 0 && (
+-        <div role="alert" className="text-sm text-destructive">
+-          <p>Hay campos obligatorios vacíos:</p>
+-          <ul className="list-disc pl-6">
+-            {faltantes.map((label) => (
+-              <li key={label}>{label}</li>
+-            ))}
+-          </ul>
+-        </div>
+-      )}
+       {(tipoFormulario !== "lectura" || defaultValues?.fecha_final) && (
+         <div className="flex flex-row space-x-3 justify-end">
+           {tipoFormulario !== "lectura" && puedeGuardar && (
