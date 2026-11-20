@@ -11,7 +11,7 @@
  * Se conserva del código viejo:
  *   - Los montos se envían tal cual (sin Number) y `inicio || 0`; `final` siempre null.
  *   - Un campo requerido falta si es falso (`!valor`): 0 cuenta como vacío.
- *   - El formulario (grilla de 7 columnas, "" en lugar de null) se escribe a mano.
+ *   - El formulario usa <CampoMetodo>; la grilla de 7 columnas y la lista de faltantes, a mano.
  * ========================================================================== */
 
 import { zId } from "@/shared/lib/zod-scalars";

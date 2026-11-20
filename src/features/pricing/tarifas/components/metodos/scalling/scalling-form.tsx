@@ -9,7 +9,7 @@ import { Button } from "@/shared/components/ui/button";
 
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 
-import { InputGroup, InputGroupInput } from "@/shared/components/ui/input-group";
+import { InputGroup } from "@/shared/components/ui/input-group";
 import {
   type FilaMetodoScalling,
   METODO_SCALLING,
@@ -17,6 +17,7 @@ import {
   type PuntoEnlaceScallingOption,
   type TipoPuntoEnlaceScallingOption,
 } from "../../../lib/metodos/scalling";
+import { CampoMetodo } from "../campo-metodo";
 
 type Props = {
   value?: FilaMetodoScalling | null;
@@ -73,6 +74,19 @@ export function ScallingForm({
       (punto) => String(punto.cod_tipo) === String(row.tipo_puntoenlace?.cod_tipo),
     );
   }, [puntosEnlace, row.tipo_puntoenlace]);
+
+  const cambiar = React.useCallback((cambio: Partial<FilaMetodoScalling>) => {
+    setRow((prev) => ({ ...prev, ...cambio }));
+  }, []);
+
+  // Moneda y Valor: de la definición (lib/metodos/scalling.ts). Tipo y punto, a mano por la cascada.
+  const campo = {
+    metodo: METODO_SCALLING,
+    fila: row,
+    onChange: cambiar,
+    monedas,
+    comboEnvuelto: true,
+  };
 
   const esEdicion = value?.cod_tarifa_scalling != null && Number(value.cod_tarifa_scalling) !== 0;
 
@@ -157,44 +171,9 @@ export function ScallingForm({
         </InputGroup>
       </Field>
 
-      <Field>
-        <FieldLabel>Moneda</FieldLabel>
+      <CampoMetodo {...campo} campo="cod_moneda" />
 
-        <InputGroup>
-          <div className="w-full">
-            <ComboboxOpcion<MonedaScallingOption>
-              value={row.moneda ?? null}
-              onChange={(moneda) =>
-                setRow((prev) => ({
-                  ...prev,
-                  moneda,
-                }))
-              }
-              options={monedas}
-              placeholder="Seleccione..."
-              searchPlaceholder="Buscar moneda..."
-            />
-          </div>
-        </InputGroup>
-      </Field>
-
-      <Field>
-        <FieldLabel>Valor</FieldLabel>
-
-        <InputGroup>
-          <InputGroupInput
-            type="number"
-            value={row.costo ?? ""}
-            onChange={(event) =>
-              setRow((prev) => ({
-                ...prev,
-
-                costo: event.target.value === "" ? null : Number(event.target.value),
-              }))
-            }
-          />
-        </InputGroup>
-      </Field>
+      <CampoMetodo {...campo} campo="costo" />
 
       <div className="flex gap-2">
         <Button type="button" onClick={guardar} disabled={!puedeGuardar || isPending}>
