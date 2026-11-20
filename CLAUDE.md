@@ -1,13 +1,13 @@
 # pricing-mirror
 
-Espejo del módulo **pricing** del proyecto `erp-web` (Next.js). Se usa para trabajar con Claude sin dar acceso
+Espejo de los módulos **pricing**, **embarques** y **actividades** (CRM) del proyecto `erp-web` (Next.js). Se usa para trabajar con Claude sin dar acceso
 al proyecto completo. Responder siempre en **español**.
 
 ## Qué es real y qué no
 
 | Ruta                                         | Qué es                                                | ¿Se copia al proyecto real?      |
 | -------------------------------------------- | ----------------------------------------------------- | -------------------------------- |
-| `src/features/pricing/`, `src/features/embarques/` | Código real de los módulos                      | **Sí**, es lo único que se copia |
+| `src/features/pricing/`, `src/features/embarques/`, `src/features/actividades/` | Código real de los módulos (actividades = CRM: calendario, lista, detalle) | **Sí**, es lo único que se copia |
 | `src/shared/**`                              | STUBS: solo tipos de lo que pricing usa (salvo `async-combobox-input.tsx`, real) | **No** (salvo ese archivo) |
 | `src/features/catalogos/api/**`              | Código real de los catálogos (`createCatalogo` y cada catálogo)  | **No**                           |
 | `src/features/catalogos/index.ts`            | Copia del `index.ts` real **sin** las exportaciones de `./hooks/...` | **No**                       |
@@ -23,8 +23,8 @@ al proyecto completo. Responder siempre en **español**.
 - `src/shared/components/form/fields/async-combobox-input.tsx` contiene el **código real** de `AsyncComboboxInput`,
   idéntico al proyecto (para tipar `onOpenChange` hay stub en `src/shared/components/ui/popover.tsx`). Es la única
   ruta de `src/shared` que **sí** sale en los `diff/` (`RUTAS_CODIGO` de `scripts/guardar-diff.mjs`), junto con
-  `src/shared/components/data-table/data-table-pagination.tsx` (real, del SYNC; en CRLF, por eso no lo revisa
-  `check:biome`: Biome pide LF en todo el archivo).
+  `src/shared/components/data-table/data-table-pagination.tsx` (real, del SYNC; en CRLF: `check:biome` revisa cada
+  archivo con su propio final de línea, `--line-ending=crlf|lf`).
   Consulta solo con el listado abierto. Caché de 30 s, pero al abrir vuelve a pedir las opciones si `fetchOptions`
   cambió desde la última consulta; las búsquedas en servidor memoizadas no consultan de nuevo al reabrir. Dibuja
   máximo `maxOptions` (100) opciones.
@@ -60,7 +60,7 @@ el rango de producción (no stubs).
 ```bash
 npm install
 npm run check:nuevos            # tsc (SOLO errores nuevos vs .tsc-baseline.txt) + check:biome + check:finales (usar este)
-npm run check:biome             # Biome (biome.json = copia del proyecto real) sobre pricing, embarques/v2 y async-combobox-input
+npm run check:biome             # Biome (biome.json = copia del proyecto real) sobre pricing, embarques/v2, actividades y los 2 reales de shared
 npm run biome:arreglar          # aplica formato, orden de imports y arreglos seguros de Biome
 npm run check:finales           # falla si un archivo cambió CRLF<->LF o si uno nuevo no está en LF
 npm run check                   # tsc completo (incluye ~326 errores previos: stubs any + código existente)
@@ -76,7 +76,8 @@ Regla: **ningún cambio debe dejar errores nuevos** en `check:nuevos`. Si se res
 en el espejo `check:biome` no acepta **ningún error** (no hay línea base): formato (2 espacios, ancho 100, comillas dobles,
 `;`, trailing commas), imports ordenados y con `import type`, nombres de archivo en **kebab-case**, sin `any`, sin `!`,
 sin `console`, sin `key` por índice, dependencias de hooks exhaustivas, `type` en `<button>`, etc.
-El resto de `src/features/embarques/` (referencia) no se revisa.
+El resto de `src/features/embarques/` (referencia) no se revisa. Los archivos CRLF se revisan con `--line-ending=crlf`
+(el formato no marca error por CRLF y el archivo no se convierte).
 
 ## Finales de línea
 
@@ -143,8 +144,8 @@ no lo ha aplicado.
 2. `npm run check:nuevos` antes de cada commit.
 3. Verificación proporcional al cambio: cambio chico → solo `check:nuevos`; cambio de lógica → además una prueba
    rápida en ejecución (esbuild + node) comparando contra el comportamiento anterior.
-4. **Después de cada commit que cambie `src/features/pricing` o `src/features/embarques`: `npm run diff:guardar`.** Genera
-   `diff/[DDMMYY-HHmm]-[nombre-del-commit].diff` (hora de Guatemala, solo `src/features/pricing` y `src/features/embarques`, texto en LF)
+4. **Después de cada commit que cambie `src/features/pricing`, `src/features/embarques` o `src/features/actividades`: `npm run diff:guardar`.** Genera
+   `diff/[DDMMYY-HHmm]-[nombre-del-commit].diff` (hora de Guatemala, solo `RUTAS_CODIGO` de `scripts/guardar-diff.mjs`, texto en LF)
    y lo agrega al mismo commit (amend). Hacerlo antes del push.
 5. El usuario lo aplica con `scripts/aplicar-diff.mjs`, siguiendo *Aplicar diffs* (formato fijo del comando
    y del bloque de cierre).
@@ -227,7 +228,7 @@ Etiquetas (una de cada grupo; GitHub las crea al asignarlas, colores en *Issues 
 
 | Grupo  | Etiquetas |
 | ------ | --------- |
-| Módulo | `pricing:cotizacion`, `pricing:tarifas`, `pricing:autorizacion-spot`, `pricing:plantillas`, `pricing:reportes`, `pricing:carga-masiva`, `pricing:shared`, `embarques:general`, `embarques:operaciones`, `embarques:bodegas`, `embarques:combex`, `reglas` (espejo, scripts, `CLAUDE.md`) |
+| Módulo | `pricing:cotizacion`, `pricing:tarifas`, `pricing:autorizacion-spot`, `pricing:plantillas`, `pricing:reportes`, `pricing:carga-masiva`, `pricing:shared`, `embarques:general`, `embarques:operaciones`, `embarques:bodegas`, `embarques:combex`, `crm:actividades`, `crm:calendario`, `crm:reportes`, `reglas` (espejo, scripts, `CLAUDE.md`) |
 | Tipo   | `mejora`, `bug`, `refactor` (sin cambio de lógica), `sync` (validar un SYNC), `calidad` (Biome, `tsc`, finales de línea) |
 | Estado | `en-progreso`, `listo-para-pr`, `bloqueado` (falta algo del usuario), `backlog` (no urgente, sin empezar) |
 
