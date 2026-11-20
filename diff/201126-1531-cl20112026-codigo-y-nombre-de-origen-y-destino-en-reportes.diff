@@ -1,0 +1,67 @@
+diff --git a/src/features/pricing/reportes/api/kpi-cotizaciones.ts b/src/features/pricing/reportes/api/kpi-cotizaciones.ts
+index 0e8d5a0..e520d01 100644
+--- a/src/features/pricing/reportes/api/kpi-cotizaciones.ts
++++ b/src/features/pricing/reportes/api/kpi-cotizaciones.ts
+@@ -32,13 +32,16 @@ export const filaKpiSchema = z
+     tipo_pago: texto,
+     cliente: texto,
+     estado: texto,
+-    /** Origen y destino de la cabecera; el país sale del punto de enlace (o de la ciudad). */
++    /**
++     * Origen y destino de la cabecera: nombre y código del punto de enlace o, si no hay
++     * (terrestre), de la ciudad; el país, del punto de enlace o de la ciudad.
++     */
++    origen: texto,
++    origen_codigo: texto,
+     origen_pais: texto,
+-    origen_punto: texto,
+-    origen_ciudad: texto,
++    destino: texto,
++    destino_codigo: texto,
+     destino_pais: texto,
+-    destino_punto: texto,
+-    destino_ciudad: texto,
+     /** Proveedores de los rubros de flete de la versión activa ("A / B" si hay varios). */
+     carrier: texto,
+     realizada: bandera,
+diff --git a/src/features/pricing/reportes/lib/tabla-kpi.ts b/src/features/pricing/reportes/lib/tabla-kpi.ts
+index 9f06683..e7686e1 100644
+--- a/src/features/pricing/reportes/lib/tabla-kpi.ts
++++ b/src/features/pricing/reportes/lib/tabla-kpi.ts
+@@ -13,12 +13,7 @@
+  * realizada en junio y la cerrada en julio, igual que report_hit_rate.
+  */
+ 
+-import {
+-  type ColumnaTabla,
+-  esNombre,
+-  NOMBRE_TRANSPORTE,
+-  type TreeNode,
+-} from "@/features/pricing/shared";
++import type { ColumnaTabla, TreeNode } from "@/features/pricing/shared";
+ import type { FilaKpi, ReporteKpi } from "../api/kpi-cotizaciones";
+ 
+ export type CampoKpi = { campo: string; etiqueta: string };
+@@ -37,17 +32,15 @@ const parteFecha = (fecha: string | null | undefined, largo: 4 | 7) =>
+   fecha && fecha.length >= largo ? fecha.slice(0, largo) : SIN_DATO;
+ 
+ /**
+- * Origen o destino. Con un servicio seleccionado: ciudad (terrestre) o punto de enlace (los
+- * demás); sin servicio, el país, para que se puedan juntar transportes distintos.
++ * Origen o destino. Con un servicio seleccionado: "CÓDIGO - NOMBRE" del punto de enlace o de
++ * la ciudad (terrestre); sin servicio, el país, para que se puedan juntar transportes distintos.
+  */
+ const lugar = (fila: FilaKpi, extremo: "origen" | "destino", porTransporte: boolean): string => {
+   const pais = fila[`${extremo}_pais`];
+   if (!porTransporte) return textoONulo(pais);
+-  const ciudad = fila[`${extremo}_ciudad`];
+-  const punto = fila[`${extremo}_punto`];
+-  return esNombre(fila.transporte, NOMBRE_TRANSPORTE.TERRESTRE)
+-    ? textoONulo(ciudad || punto)
+-    : textoONulo(punto || ciudad);
++  const nombre = textoONulo(fila[extremo]);
++  const codigo = fila[`${extremo}_codigo`]?.trim();
++  return codigo && nombre !== SIN_DATO ? `${codigo} - ${nombre}` : nombre;
+ };
+ 
+ const LECTORES: Record<

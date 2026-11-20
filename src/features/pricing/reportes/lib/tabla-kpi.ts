@@ -13,12 +13,7 @@
  * realizada en junio y la cerrada en julio, igual que report_hit_rate.
  */
 
-import {
-  type ColumnaTabla,
-  esNombre,
-  NOMBRE_TRANSPORTE,
-  type TreeNode,
-} from "@/features/pricing/shared";
+import type { ColumnaTabla, TreeNode } from "@/features/pricing/shared";
 import type { FilaKpi, ReporteKpi } from "../api/kpi-cotizaciones";
 
 export type CampoKpi = { campo: string; etiqueta: string };
@@ -37,17 +32,15 @@ const parteFecha = (fecha: string | null | undefined, largo: 4 | 7) =>
   fecha && fecha.length >= largo ? fecha.slice(0, largo) : SIN_DATO;
 
 /**
- * Origen o destino. Con un servicio seleccionado: ciudad (terrestre) o punto de enlace (los
- * demás); sin servicio, el país, para que se puedan juntar transportes distintos.
+ * Origen o destino. Con un servicio seleccionado: "CÓDIGO - NOMBRE" del punto de enlace o de
+ * la ciudad (terrestre); sin servicio, el país, para que se puedan juntar transportes distintos.
  */
 const lugar = (fila: FilaKpi, extremo: "origen" | "destino", porTransporte: boolean): string => {
   const pais = fila[`${extremo}_pais`];
   if (!porTransporte) return textoONulo(pais);
-  const ciudad = fila[`${extremo}_ciudad`];
-  const punto = fila[`${extremo}_punto`];
-  return esNombre(fila.transporte, NOMBRE_TRANSPORTE.TERRESTRE)
-    ? textoONulo(ciudad || punto)
-    : textoONulo(punto || ciudad);
+  const nombre = textoONulo(fila[extremo]);
+  const codigo = fila[`${extremo}_codigo`]?.trim();
+  return codigo && nombre !== SIN_DATO ? `${codigo} - ${nombre}` : nombre;
 };
 
 const LECTORES: Record<
