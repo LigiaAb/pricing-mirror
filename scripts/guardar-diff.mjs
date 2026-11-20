@@ -6,8 +6,8 @@
  * src/features/pricing y src/features/embarques de un commit (por defecto HEAD), listo para aplicarse
  * en el proyecto real con scripts/aplicar-diff.mjs (ver ese archivo).
  *
- * - Solo incluye RUTAS_CODIGO (los stubs nunca salen del mirror). De src/shared solo sale
- *   async-combobox-input.tsx, que en el espejo es el código real del proyecto.
+ * - Solo incluye RUTAS_CODIGO (los stubs nunca salen del mirror). De src/shared solo salen
+ *   async-combobox-input.tsx y data-table-pagination.tsx, código real del proyecto.
  * - Diff de TEXTO con todas las líneas en LF: no depende de los finales de
  *   línea. aplicar-diff.mjs lo adapta a CRLF o LF según cada archivo destino.
  * - Fecha/hora: la del autor del commit, en hora de Guatemala.
@@ -25,6 +25,7 @@ const RUTAS_CODIGO = [
   "src/features/pricing",
   "src/features/embarques",
   "src/shared/components/form/fields/async-combobox-input.tsx",
+  "src/shared/components/data-table/data-table-pagination.tsx",
 ];
 const CARPETA_DIFF = "diff";
 const ZONA_HORARIA = "America/Guatemala";
