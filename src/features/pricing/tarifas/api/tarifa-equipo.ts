@@ -19,7 +19,6 @@ export type FiltrosTarifaEquipo = FiltrosMetodo;
 // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
 export {
   type MonedaOperativa as MonedaEquipo,
-  monedaOperativaSchema as monedaEquipoSchema,
   monedasOperativasOptions as monedasEquipoOptions,
   useMonedasOperativas as useMonedasEquipo,
 } from "./monedas";

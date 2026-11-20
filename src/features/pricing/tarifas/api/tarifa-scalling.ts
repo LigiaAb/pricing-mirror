@@ -17,7 +17,6 @@ export type FiltrosTarifaScalling = FiltrosMetodo;
 // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
 export {
   type MonedaOperativa as MonedaScalling,
-  monedaOperativaSchema as monedaScallingSchema,
   monedasOperativasOptions as monedasScallingOptions,
   useMonedasOperativas as useMonedasScalling,
 } from "./monedas";

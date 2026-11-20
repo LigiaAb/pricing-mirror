@@ -18,7 +18,6 @@ export type FiltrosTarifaCostoPorcentaje = FiltrosMetodo;
 // Monedas: consulta única en ./monedas.ts (se conservan los nombres de este método).
 export {
   type MonedaOperativa as MonedaPorcentaje,
-  monedaOperativaSchema as monedaPorcentajeSchema,
   monedasOperativasOptions as monedasPorcentajeOptions,
   useMonedasOperativas as useMonedasPorcentaje,
 } from "./monedas";

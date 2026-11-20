@@ -6,7 +6,7 @@
 tarifas/
 ├─ api/
 │  ├─ catalogo-metodo.ts    ← ADAPTADOR de métodos sobre createCatalogo (@/features/catalogos)
-│  ├─ monedas.ts            ← consulta ÚNICA de monedas operativas (createCatalogo)
+│  ├─ monedas.ts            ← consulta ÚNICA de monedas operativas (catálogo `monedas` de @/features/catalogos)
 │  ├─ tarifa-*.ts           ← cada método: sus endpoints (esquema y payload salen de lib/metodos/)
 │  └─ ...                   ← servicios, métodos, clientes, proveedores, incoterms
 ├─ hooks/
@@ -64,7 +64,7 @@ export const TARIFA_MI_METODO_QUERY_KEY = api.keys.all;
 export const { listaOptions: ..., useLista: ..., useInsertar: ..., useActualizar: ..., useEliminar: ... } = api;
 ```
 
-Si un catálogo no necesita esas adaptaciones, usa `createCatalogo` directamente (ver `pricing/shared/api/metodos.ts`, `api/monedas.ts`).
+Si un catálogo no necesita esas adaptaciones, usa `createCatalogo` directamente (ver `pricing/shared/api/metodos.ts`). Si el catálogo ya existe en `@/features/catalogos`, se reutiliza (ver `api/monedas.ts`).
 
 Comportamiento heredado de `createCatalogo`: las mutaciones validan la respuesta con `exigirExitoDeMutacion`,
 refrescan la lista al terminar (`onSettled`) y los toasts se controlan con `meta`.
