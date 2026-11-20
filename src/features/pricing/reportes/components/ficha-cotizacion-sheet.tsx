@@ -136,7 +136,6 @@ const CAMPOS_SERVICIO: readonly (readonly [IdCampo, string?])[] = [
   ["clasificacionCarga"],
   ["incoterm"],
   ["tipoPago"],
-  ["carrier"],
 ];
 const CAMPOS_ORIGEN: readonly (readonly [IdCampo, string?])[] = [
   ["paisOrigen", "País"],
@@ -228,7 +227,12 @@ function ContenidoFicha({ fila }: { fila: FilaKpi }) {
         <CardInfo titulo="Servicio" icono={Truck}>
           <Datos>
             {cabecera ? filasCampos(cabecera, CAMPOS_SERVICIO) : null}
-            <Fila label="Proveedores del flete">{texto(fila.carrier) ?? VACIO}</Fila>
+            {/* Carrier = proveedor de los rubros de flete (el del reporte); si no hay, el de la cabecera. */}
+            <Fila label="Carrier">
+              {texto(fila.carrier) ??
+                (cabecera ? valorCampo(cabecera, "carrier") : undefined) ??
+                VACIO}
+            </Fila>
           </Datos>
         </CardInfo>
 
