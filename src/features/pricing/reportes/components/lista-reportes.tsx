@@ -30,6 +30,7 @@ import { cn } from "@/shared/lib/utils";
 import type { ConfiguracionReporte, Filtros, SelectOption } from "../lib/filtros-types";
 import { HitRate } from "./hit-rate";
 import RealizacionDePrecio from "./realizacion-de-precio";
+import { TablaKpi } from "./tabla-kpi";
 
 const hoy = new Date();
 
@@ -474,6 +475,21 @@ export function ListaReportes() {
           onErrorPdf={setErrorPdf}
           onGenerandoPdf={setGenerandoPdf}
         />
+      )}
+      {(reporte === "hit-rate" || reporte === "realizacion-de-precio") && (
+        <Panel key={`resumen-agrupado-${reporte}`}>
+          <SectionHeader
+            icon={<Table2Icon className="w-4 h-4" />}
+            title="Resumen agrupado"
+            subtitle="Elija y ordene los niveles de filas y el campo de columnas"
+          />
+          <div className="p-4">
+            <TablaKpi
+              filtros={filtros}
+              reporte={reporte === "hit-rate" ? "hit_rate" : "realizacion_de_precio"}
+            />
+          </div>
+        </Panel>
       )}
       {reporteSeleccionado?.tabla && (
         <Panel key={`tabla-${reporte}`}>

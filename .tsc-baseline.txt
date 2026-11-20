@@ -1,3 +1,5 @@
+src/app/(protected)/cxc/estadoscuenta/dashcxc/dashcxc-client.tsx: error TS2307: Cannot find module '@/features/cxc' or its corresponding type declarations.
+src/app/(protected)/cxc/estadoscuenta/dashcxc/dashcxc-client.tsx: error TS2307: Cannot find module '@/features/reportesbi' or its corresponding type declarations.
 src/features/embarques/components/asignacion-cts/asignacion-cts-form.tsx: error TS7006: Parameter 'cliente' implicitly has an 'any' type.
 src/features/embarques/components/cca/utils.ts: error TS2307: Cannot find module '@/features/gastos' or its corresponding type declarations.
 src/features/embarques/components/cts-detalle/use-datos-carta-privada.ts: error TS2307: Cannot find module '@/features/carta-instrucciones' or its corresponding type declarations.
