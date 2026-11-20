@@ -1,0 +1,12 @@
+diff --git a/src/features/pricing/reportes/components/tabla-kpi.tsx b/src/features/pricing/reportes/components/tabla-kpi.tsx
+index 7a0563a..bd2ef5b 100644
+--- a/src/features/pricing/reportes/components/tabla-kpi.tsx
++++ b/src/features/pricing/reportes/components/tabla-kpi.tsx
+@@ -158,7 +158,6 @@ export function TablaKpi({
+       },
+       columnas: [...columnasNivel, ...tabla.columnas.map((c) => c.label)],
+       filas,
+-      anchos: [...columnasNivel.map(() => 28), ...tabla.columnas.map(() => 14)],
+       formatos: [
+         ...columnasNivel.map(() => undefined),
+         ...tabla.columnas.map((c) => (c.label.includes("%") ? '0.00"%"' : "#,##0")),
