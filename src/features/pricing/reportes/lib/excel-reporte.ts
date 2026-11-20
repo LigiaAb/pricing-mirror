@@ -12,8 +12,8 @@ import { LOGO_URL } from "./pdf-reporte";
 
 /** Colores del PDF (ARGB). */
 const GRIS_ENCABEZADO = "FFAAAAAA";
-const AZUL_PIE = "FF00205B";
-const BLANCO = "FFFFFFFF";
+// const AZUL_PIE = "FF00205B";
+// const BLANCO = "FFFFFFFF";
 const NEGRO = "FF000000";
 const PIE = "- CROPA DSV 2024 -";
 
@@ -121,7 +121,7 @@ export async function agregarHojaReporte(
     celda.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
     celda.border = BORDES;
   });
-  hoja.views = [{ state: "frozen", ySplit: numero }];
+  hoja.views = [{ /* state: "frozen", */ ySplit: numero }];
   hoja.pageSetup.printTitlesRow = `${numero}:${numero}`;
   numero += 1;
 
@@ -143,15 +143,16 @@ export async function agregarHojaReporte(
     numero += 1;
   }
 
-  // Pie azul del PDF.
-  numero += 1;
-  const filaPie = hoja.getRow(numero);
-  filaPie.getCell(1).value = PIE;
-  if (total > 1) hoja.mergeCells(numero, 1, numero, total);
-  const celdaPie = filaPie.getCell(1);
-  celdaPie.font = { size: 7, color: { argb: BLANCO } };
-  celdaPie.fill = { type: "pattern", pattern: "solid", fgColor: { argb: AZUL_PIE } };
-  celdaPie.alignment = { horizontal: "center", vertical: "middle" };
+  // pie altera visualizacion de formato
+  // // Pie azul del PDF.
+  // numero += 1;
+  // const filaPie = hoja.getRow(numero);
+  // filaPie.getCell(1).value = PIE;
+  // if (total > 1) hoja.mergeCells(numero, 1, numero, total);
+  // const celdaPie = filaPie.getCell(1);
+  // celdaPie.font = { size: 7, color: { argb: BLANCO } };
+  // celdaPie.fill = { type: "pattern", pattern: "solid", fgColor: { argb: AZUL_PIE } };
+  // celdaPie.alignment = { horizontal: "center", vertical: "middle" };
 
   return hoja;
 }
