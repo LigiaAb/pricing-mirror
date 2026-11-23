@@ -7,7 +7,7 @@
  * Cómo instalarlo:
  *  1. Copiar desde "INICIO" hasta "FIN" al final del mismo archivo donde está
  *     `module.exports.report_kpi_cotizaciones` (usa el mismo `azureSqlClient`).
- *  2. Registrar la ruta `/api/appweb/report_icc` igual que `report_kpi_cotizaciones`
+ *  2. Registrar la ruta `/api/appweb/report-icc` igual que `report_kpi_cotizaciones`
  *     (GET, parámetros por query string).
  *
  * Filas: actividades cuyo tipo (TIPO.TIPO_DESCRIPCION de ACTIVIDAD.TIPO_ID) está en
