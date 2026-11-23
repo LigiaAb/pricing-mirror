@@ -6,6 +6,7 @@ import type { FilaIcc } from "../api/reporte-icc";
  * - Realizadas: las finalizadas (estado 24, `finalizada = 1`).
  * - Pendientes: programadas aún no finalizadas.
  * - ICC % = realizadas / programadas × 100 (`null` si no hay programadas).
+ * - Sin resultado: finalizadas con `con_resultado = 0`.
  * Las anuladas no cuentan: se muestran aparte.
  */
 
@@ -20,6 +21,7 @@ export interface ConteoIcc {
   realizadas: number;
   pendientes: number;
   anuladas: number;
+  sinResultado: number;
   icc: number | null;
 }
 
@@ -50,19 +52,23 @@ function contar(filas: FilaIcc[]): ConteoIcc {
   let programadas = 0;
   let realizadas = 0;
   let anuladas = 0;
+  let sinResultado = 0;
   for (const fila of filas) {
     if (esAnulada(fila)) {
       anuladas += 1;
       continue;
     }
     programadas += 1;
-    if (esFinalizada(fila)) realizadas += 1;
+    if (!esFinalizada(fila)) continue;
+    realizadas += 1;
+    if (fila.con_resultado === 0) sinResultado += 1;
   }
   return {
     programadas,
     realizadas,
     pendientes: programadas - realizadas,
     anuladas,
+    sinResultado,
     icc: porcentajeIcc(realizadas, programadas),
   };
 }

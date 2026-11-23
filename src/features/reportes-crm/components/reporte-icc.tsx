@@ -1,57 +1,45 @@
 "use client";
 
-import { format } from "date-fns";
-import { Eye, EyeOff } from "lucide-react";
-import { useMemo, useState } from "react";
-import { DataTable } from "@/shared/components/data-table/data-table";
-import { Button } from "@/shared/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
-import type { ColumnDef } from "@/shared/lib/tanstack-table";
-import { type FilaIcc, type ParamsReporteIcc, useReporteIcc } from "../api/reporte-icc";
+import { useMemo } from "react";
 import {
-  calcularIcc,
-  esAnulada,
-  esFinalizada,
-  type ResumenIcc,
-  TIPOS_ICC,
-  type TipoIcc,
-} from "../lib/reporte-icc";
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { DataTable } from "@/shared/components/data-table/data-table";
+import type { ColumnDef } from "@/shared/lib/tanstack-table";
+import { type ParamsReporteIcc, useReporteIcc } from "../api/reporte-icc";
+import { calcularIcc, type ResumenIcc } from "../lib/reporte-icc";
 
 const formatoPorcentaje = (valor: number | null) => (valor == null ? "—" : `${valor.toFixed(2)}%`);
 
-function formatoFecha(valor: string): string {
-  const fecha = new Date(valor);
-  return Number.isNaN(fecha.getTime()) ? valor : format(fecha, "dd/MM/yyyy HH:mm");
-}
-
 /**
- * Reporte ICC (Índice de Cumplimiento Comercial) de llamadas y visitas (#194): por persona,
- * programadas (sin anuladas), realizadas (finalizadas), pendientes y ICC %, también por tipo.
- * Al elegir una persona se ve el detalle de sus actividades. Los filtros los pone
+ * Reporte ICC (Índice de Cumplimiento Comercial, #194): gráfica de barras ICCa/ICCp por persona
+ * y tabla con porcentajes.
+ * - ICCa = visitas realizadas ÷ visitas programadas.
+ * - ICCp = llamadas realizadas ÷ llamadas programadas.
+ * - Citas sin resultado = visitas finalizadas con `con_resultado = 0`.
+ * ICCc (visitas no programadas) queda pendiente de definir. Los filtros los pone
  * `ReportesCrmClient`; `params = null` hasta que se pulsa Filtrar.
  */
 export function ReporteIcc({ params }: Readonly<{ params: ParamsReporteIcc | null }>) {
-  const [usuarioDetalle, setUsuarioDetalle] = useState<string | null>(null);
   const consulta = useReporteIcc(params ?? { fecha_inicio: "", fecha_fin: "" }, params !== null);
 
   const filas = consulta.data;
   const resumen = useMemo(() => calcularIcc(filas ?? []), [filas]);
-  const detalle = useMemo(
+  const datosGrafica = useMemo(
     () =>
-      usuarioDetalle == null
-        ? []
-        : (filas ?? [])
-            .filter((fila) => String(fila.usuario) === usuarioDetalle)
-            .sort((a, b) => a.fecha_programacion.localeCompare(b.fecha_programacion)),
-    [filas, usuarioDetalle],
-  );
-  const personaDetalle = resumen.personas.find((persona) => persona.usuario === usuarioDetalle);
-  const columnasResumen = useMemo(
-    () =>
-      crearColumnasResumen(usuarioDetalle, (usuario) =>
-        setUsuarioDetalle((actual) => (actual === usuario ? null : usuario)),
-      ),
-    [usuarioDetalle],
+      resumen.personas.map((persona) => ({
+        nombre: persona.nombre,
+        ICCa: persona.porTipo.VISITA.icc,
+        ICCp: persona.porTipo.LLAMADA.icc,
+      })),
+    [resumen],
   );
 
   if (params === null) {
@@ -72,74 +60,49 @@ export function ReporteIcc({ params }: Readonly<{ params: ParamsReporteIcc | nul
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        <Indicador titulo="ICC" valor={formatoPorcentaje(resumen.total.icc)} destacado />
-        <Indicador titulo="Programadas" valor={resumen.total.programadas} />
-        <Indicador titulo="Realizadas" valor={resumen.total.realizadas} />
-        <Indicador titulo="Pendientes" valor={resumen.total.pendientes} />
-        <Indicador titulo="Anuladas (no cuentan)" valor={resumen.total.anuladas} />
-      </div>
-
-      <p className="text-xs text-muted-foreground">
-        ICC = realizadas (finalizadas) ÷ programadas (actividades con fecha programada en el rango,
-        sin anuladas). Elija una persona para ver sus actividades.
-      </p>
+      {datosGrafica.length > 0 && (
+        <div className="h-96 rounded-lg border p-3">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={datosGrafica} margin={{ top: 8, right: 12, left: 40, bottom: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="nombre"
+                interval={0}
+                angle={-45}
+                textAnchor="end"
+                height={130}
+                tick={{ fontSize: 11 }}
+              />
+              <YAxis
+                domain={[0, 100]}
+                ticks={[0, 20, 40, 60, 80, 100]}
+                tickFormatter={(valor: number) => `${valor}%`}
+              />
+              <Tooltip
+                formatter={(valor) => formatoPorcentaje(valor == null ? null : Number(valor))}
+              />
+              <Legend verticalAlign="top" />
+              <Bar dataKey="ICCa" name="ICCa (visitas)" fill="#2563eb" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="ICCp" name="ICCp (llamadas)" fill="#16a34a" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       <DataTable
-        columns={columnasResumen}
+        columns={COLUMNAS}
         data={resumen.personas}
         searchKeys={["nombre"]}
-        searchPlaceholder="Buscar usuario…"
-        numericColumns={COLUMNAS_NUMERICAS_RESUMEN}
+        searchPlaceholder="Buscar persona…"
+        numericColumns={COLUMNAS_NUMERICAS}
         emptyMessage="No hay llamadas ni visitas programadas en el rango."
         footer={resumen.personas.length > 0 && <TotalIcc total={resumen.total} />}
       />
-
-      {personaDetalle && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              Actividades de {personaDetalle.nombre} ({detalle.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <DataTable
-              columns={COLUMNAS_DETALLE}
-              data={detalle}
-              searchKeys={["cliente", "asunto"]}
-              searchPlaceholder="Buscar actividad…"
-              numericColumns={["actividad"]}
-            />
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
 
-function Indicador({
-  titulo,
-  valor,
-  destacado = false,
-}: Readonly<{ titulo: string; valor: string | number; destacado?: boolean }>) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-xs text-muted-foreground">{titulo}</p>
-        <p className={destacado ? "text-2xl font-bold text-primary" : "text-2xl font-semibold"}>
-          {valor}
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function cuentaComo(fila: FilaIcc): string {
-  if (esAnulada(fila)) return "No cuenta";
-  return esFinalizada(fila) ? "Realizada" : "Pendiente";
-}
-
-const columnaConteo = (
+const columna = (
   id: string,
   header: string,
   valor: (resumen: ResumenIcc) => number | null,
@@ -154,88 +117,41 @@ const columnaConteo = (
   },
 });
 
-const columnasTipo = (tipo: TipoIcc, nombre: string): ColumnDef<ResumenIcc>[] => [
-  columnaConteo(`${tipo}_programadas`, `${nombre} prog.`, (r) => r.porTipo[tipo].programadas),
-  columnaConteo(`${tipo}_realizadas`, `${nombre} real.`, (r) => r.porTipo[tipo].realizadas),
-  columnaConteo(`${tipo}_icc`, `ICC ${nombre.toLowerCase()}`, (r) => r.porTipo[tipo].icc, true),
+const COLUMNAS: ColumnDef<ResumenIcc>[] = [
+  { accessorKey: "nombre", header: "Persona" },
+  columna("visitas_programadas", "Visitas prog.", (r) => r.porTipo.VISITA.programadas),
+  columna("visitas_realizadas", "Visitas real.", (r) => r.porTipo.VISITA.realizadas),
+  columna("icca", "ICCa", (r) => r.porTipo.VISITA.icc, true),
+  columna("llamadas_programadas", "Llamadas prog.", (r) => r.porTipo.LLAMADA.programadas),
+  columna("llamadas_realizadas", "Llamadas real.", (r) => r.porTipo.LLAMADA.realizadas),
+  columna("iccp", "ICCp", (r) => r.porTipo.LLAMADA.icc, true),
+  columna("sin_resultado", "Citas sin resultado", (r) => r.porTipo.VISITA.sinResultado),
 ];
 
-const COLUMNAS_NUMERICAS_RESUMEN = [
-  ...TIPOS_ICC.flatMap((tipo) => [`${tipo}_programadas`, `${tipo}_realizadas`, `${tipo}_icc`]),
-  "programadas",
-  "realizadas",
-  "pendientes",
-  "anuladas",
-  "icc",
-];
-
-function crearColumnasResumen(
-  usuarioDetalle: string | null,
-  alternarDetalle: (usuario: string | null) => void,
-): ColumnDef<ResumenIcc>[] {
-  return [
-    { accessorKey: "nombre", header: "Usuario" },
-    ...columnasTipo("LLAMADA", "Llamadas"),
-    ...columnasTipo("VISITA", "Visitas"),
-    columnaConteo("programadas", "Programadas", (r) => r.programadas),
-    columnaConteo("realizadas", "Realizadas", (r) => r.realizadas),
-    columnaConteo("pendientes", "Pendientes", (r) => r.pendientes),
-    columnaConteo("anuladas", "Anuladas", (r) => r.anuladas),
-    columnaConteo("icc", "ICC", (r) => r.icc, true),
-    {
-      id: "acciones",
-      header: "",
-      enableSorting: false,
-      cell: ({ row }) => {
-        const abierto = row.original.usuario === usuarioDetalle;
-        return (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            aria-label={`${abierto ? "Ocultar" : "Ver"} actividades de ${row.original.nombre}`}
-            onClick={() => alternarDetalle(row.original.usuario)}
-          >
-            {abierto ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-            {abierto ? "Ocultar" : "Actividades"}
-          </Button>
-        );
-      },
-    },
-  ];
-}
-
-const COLUMNAS_DETALLE: ColumnDef<FilaIcc>[] = [
-  { accessorKey: "actividad", header: "Actividad" },
-  {
-    accessorKey: "fecha_programacion",
-    header: "Fecha programada",
-    cell: ({ row }) => formatoFecha(row.original.fecha_programacion),
-  },
-  { accessorKey: "tipo", header: "Tipo" },
-  { accessorKey: "cliente", header: "Cliente" },
-  { accessorKey: "asunto", header: "Asunto" },
-  { accessorKey: "estado", header: "Estado" },
-  { id: "cuenta_como", header: "Cuenta como", accessorFn: cuentaComo },
+const COLUMNAS_NUMERICAS = [
+  "visitas_programadas",
+  "visitas_realizadas",
+  "icca",
+  "llamadas_programadas",
+  "llamadas_realizadas",
+  "iccp",
+  "sin_resultado",
 ];
 
 /** Fila de total debajo de la tabla (el DataTable no tiene pie por columnas). */
 function TotalIcc({ total }: Readonly<{ total: ResumenIcc }>) {
-  const porTipo = TIPOS_ICC.map((tipo) => {
-    const conteo = total.porTipo[tipo];
-    const nombre = tipo === "LLAMADA" ? "Llamadas" : "Visitas";
-    return `${nombre}: ${conteo.realizadas}/${conteo.programadas} (${formatoPorcentaje(conteo.icc)})`;
-  });
+  const visitas = total.porTipo.VISITA;
+  const llamadas = total.porTipo.LLAMADA;
   return (
     <div className="flex flex-wrap gap-x-6 gap-y-1 border-t bg-muted/50 px-4 py-2 text-sm font-semibold">
       <span>TOTAL</span>
-      {porTipo.map((texto) => (
-        <span key={texto}>{texto}</span>
-      ))}
       <span>
-        Total: {total.realizadas}/{total.programadas} · pendientes {total.pendientes} · anuladas{" "}
-        {total.anuladas} · ICC {formatoPorcentaje(total.icc)}
+        ICCa: {visitas.realizadas}/{visitas.programadas} ({formatoPorcentaje(visitas.icc)})
       </span>
+      <span>
+        ICCp: {llamadas.realizadas}/{llamadas.programadas} ({formatoPorcentaje(llamadas.icc)})
+      </span>
+      <span>Citas sin resultado: {visitas.sinResultado}</span>
     </div>
   );
 }
