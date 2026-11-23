@@ -13,13 +13,17 @@
  * Filas: actividades cuyo tipo (TIPO.TIPO_DESCRIPCION de ACTIVIDAD.TIPO_ID) está en
  * TIPOS_ICC —por nombre, no por código— y cuya fecha programada cae en el rango.
  *
- * Banderas por actividad (el front decide cuáles usa; cambiar una definición no toca
- * el backend):
- *  - PROGRAMADA    = 1 si se agendó con anticipación: fecha programada (día) posterior al
- *                    día de creación (ACTIVIDAD_FECHA). 0 = registrada el mismo día o después.
+ * Definiciones del usuario (las aplica el front): Realizada = FINALIZADA; Programada = aún
+ * no finalizada. La fecha programada es la que ubica la actividad en el rango.
+ *
+ * Banderas por actividad:
  *  - CON_RESULTADO = 1 si tiene al menos una fila en ACTIVIDAD_RESULTADO. Se usa EXISTS:
  *                    una actividad puede tener varios resultados y un JOIN la duplicaría.
  *  - FINALIZADA    = 1 si ACTIVIDAD.ESTADO_ID es el estado finalizado (24).
+ *
+ * Fechas: la base las guarda en UTC. El rango se toma en días de Guatemala (UTC-6, sin
+ * horario de verano; igual Honduras y El Salvador): una actividad del 31/12 a las 20:57
+ * (01/01 02:57 UTC) cae en el 31/12.
  */
 
 // ── INICIO ───────────────────────────────────────────────────────────────────
@@ -29,6 +33,9 @@ const TIPOS_ICC = ["LLAMADA", "VISITA"];
 
 /** ESTADO_ID de actividad finalizada (el mismo que usa el front al crear actividades). */
 const ESTADO_ACTIVIDAD_FINALIZADA = 24;
+
+/** Horas que la hora local (Guatemala, UTC-6) va detrás de UTC: medianoche local = 06:00 UTC. */
+const HORAS_UTC_LOCAL = 6;
 
 const validarCamposIcc = (campos) => {
   if (!campos?.fecha_inicio || !campos?.fecha_fin)
@@ -66,11 +73,12 @@ const consultaIcc = (campos) => {
     .leftJoin(empleado, "EMP.USUARIO_ID", "A.USUARIO_ID")
     .leftJoin({ CEN: "CENTRO_COSTO" }, "CEN.CENCOS_ID", "A.CENCOS_ID")
     .leftJoin({ C: "ENTIDAD" }, "C.ENTIDAD_ID", "A.ENTIDAD_ID")
+    .leftJoin({ E: "ESTADO" }, "A.ESTADO_ID", "E.ESTADO_ID")
     .whereIn("T.TIPO_DESCRIPCION", TIPOS_ICC)
     .whereNotNull("A.USUARIO_ID")
     .whereRaw(
-      "(A.ACTIVIDAD_FECHA_PROGRAMACION >= CONVERT(date, ?, 23) AND A.ACTIVIDAD_FECHA_PROGRAMACION < DATEADD(DAY, 1, CONVERT(date, ?, 23)))",
-      [campos.fecha_inicio, campos.fecha_fin],
+      "(A.ACTIVIDAD_FECHA_PROGRAMACION >= DATEADD(HOUR, ?, CONVERT(datetime, ?, 23)) AND A.ACTIVIDAD_FECHA_PROGRAMACION < DATEADD(HOUR, ?, DATEADD(DAY, 1, CONVERT(datetime, ?, 23))))",
+      [HORAS_UTC_LOCAL, campos.fecha_inicio, HORAS_UTC_LOCAL, campos.fecha_fin],
     )
     .select(
       "A.ACTIVIDAD_ID AS ACTIVIDAD",
@@ -87,11 +95,9 @@ const consultaIcc = (campos) => {
       "A.ENTIDAD_ID AS COD_CLIENTE",
       "C.ENTIDAD_NOMBRE AS CLIENTE",
       "A.ESTADO_ID AS COD_ESTADO",
+      "E.ESTADO_DESCRIPCION AS ESTADO",
     )
     .select(
-      azureSqlClient.raw(
-        "CASE WHEN CONVERT(date, A.ACTIVIDAD_FECHA_PROGRAMACION) > CONVERT(date, A.ACTIVIDAD_FECHA) THEN 1 ELSE 0 END AS PROGRAMADA",
-      ),
       azureSqlClient.raw(
         "CASE WHEN EXISTS (SELECT 1 FROM ACTIVIDAD_RESULTADO AR WHERE AR.ACTIVIDAD_ID = A.ACTIVIDAD_ID) THEN 1 ELSE 0 END AS CON_RESULTADO",
       ),
@@ -113,8 +119,8 @@ module.exports.report_icc = async (campos) => {
   if (error) return error;
 
   try {
-    const filas = await consultaIcc(campos);
-    return { filas };
+    // Arreglo directo (sin `filas`): el sobre queda { status, message, length, data: [...] }
+    return await consultaIcc(campos);
   } catch (error) {
     return { success: false, error: error.toString() };
   }

@@ -12,6 +12,7 @@ export {
 export { ActividadDetalle } from "./components/detalle/actividad-detalle";
 export { ActividadForm } from "./components/formulario/actividad-form";
 export { ActividadesTabsClient } from "./components/lista/actividades-tabs-client";
+export { ReporteIccClient } from "./components/reportes/reporte-icc-client";
 export { colorActividad } from "./lib/actividad-colores";
 export { iconoActividad } from "./lib/actividad-iconos";
 export {
