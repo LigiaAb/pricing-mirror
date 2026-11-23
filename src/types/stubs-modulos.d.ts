@@ -15,3 +15,5 @@ declare module "@/features/entidades/api/use-busqueda-entidad-criterio" {
 }
 declare module "@/features/wms-hn/*";
 declare module "@/features/accesos/*";
+// Imágenes del proyecto real (next/image-types): no están en el espejo.
+declare module "@/assets/*";

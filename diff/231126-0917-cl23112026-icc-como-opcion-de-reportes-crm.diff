@@ -1,0 +1,1158 @@
+diff --git a/src/features/actividades/api/reporte-icc.ts b/src/features/actividades/api/reporte-icc.ts
+deleted file mode 100644
+index 311089f..0000000
+--- a/src/features/actividades/api/reporte-icc.ts
++++ /dev/null
+@@ -1,64 +0,0 @@
+-import { queryOptions, useQuery } from "@tanstack/react-query";
+-import { z } from "zod";
+-import { CACHE_DYNAMIC } from "@/shared/api/cache";
+-import { http } from "@/shared/api/client";
+-import { parseEnvelope } from "@/shared/api/envelope";
+-import { zId } from "@/shared/lib/zod-scalars";
+-
+-const texto = z
+-  .string()
+-  .nullable()
+-  .optional()
+-  .transform((value) => value ?? "");
+-const bandera = z.coerce.number().catch(0);
+-
+-/**
+- * Una actividad (LLAMADA o VISITA) de `report_icc`, con la fecha programada en el rango.
+- * Keys en minúsculas, como las entrega el cliente HTTP. Fechas en UTC (ISO).
+- */
+-export const filaIccSchema = z.looseObject({
+-  actividad: zId,
+-  asunto: texto,
+-  fecha_creacion: texto,
+-  fecha_programacion: texto,
+-  tipo: texto,
+-  usuario: zId,
+-  nombres: texto,
+-  apellidos: texto,
+-  cod_empresa: zId.nullable().optional(),
+-  cc: zId.nullable().optional(),
+-  cc_nombre: texto,
+-  cod_cliente: zId.nullable().optional(),
+-  cliente: texto,
+-  cod_estado: zId.nullable().optional(),
+-  estado: texto,
+-  con_resultado: bandera,
+-  finalizada: bandera,
+-});
+-
+-export type FilaIcc = z.infer<typeof filaIccSchema>;
+-
+-/** Parámetros de `report_icc`: fechas `YYYY-MM-DD` (requeridas) y filtros opcionales. */
+-export type ParamsReporteIcc = {
+-  fecha_inicio: string;
+-  fecha_fin: string;
+-  cod_empresa?: number | undefined;
+-  cod_cc?: number | undefined;
+-  cod_usuario?: number | undefined;
+-};
+-
+-export const reporteIccOptions = (params: ParamsReporteIcc) =>
+-  queryOptions({
+-    ...CACHE_DYNAMIC,
+-    queryKey: ["actividades", "reporte-icc", params] as const,
+-    queryFn: async () =>
+-      parseEnvelope(
+-        await http.get<unknown>("/api/appweb/report_icc", { params }),
+-        filaIccSchema,
+-        "report_icc",
+-      ),
+-  });
+-
+-export function useReporteIcc(params: ParamsReporteIcc, enabled = true) {
+-  return useQuery({ ...reporteIccOptions(params), enabled });
+-}
+diff --git a/src/features/actividades/components/lista/filtros-actividades.tsx b/src/features/actividades/components/lista/filtros-actividades.tsx
+index 06439c1..fea0409 100644
+--- a/src/features/actividades/components/lista/filtros-actividades.tsx
++++ b/src/features/actividades/components/lista/filtros-actividades.tsx
+@@ -131,7 +131,7 @@ export function FiltrosActividades({
+   );
+ }
+ 
+-export function CampoSelect({
++function CampoSelect({
+   id,
+   label,
+   value,
+@@ -165,7 +165,7 @@ export function CampoSelect({
+   );
+ }
+ 
+-export function CampoFecha({
++function CampoFecha({
+   id,
+   label,
+   value,
+diff --git a/src/features/actividades/components/reportes/reporte-icc-client.tsx b/src/features/actividades/components/reportes/reporte-icc-client.tsx
+deleted file mode 100644
+index 5d7bdc1..0000000
+--- a/src/features/actividades/components/reportes/reporte-icc-client.tsx
++++ /dev/null
+@@ -1,403 +0,0 @@
+-"use client";
+-
+-import { endOfMonth, format, startOfMonth } from "date-fns";
+-import { useMemo, useState } from "react";
+-import { centrosCosto, empleadosUsuarios, empresas } from "@/features/catalogos";
+-import { useContextoOperativoStore } from "@/features/shell";
+-import { Button } from "@/shared/components/ui/button";
+-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+-import {
+-  Table,
+-  TableBody,
+-  TableCell,
+-  TableFooter,
+-  TableHead,
+-  TableHeader,
+-  TableRow,
+-} from "@/shared/components/ui/table";
+-import { useAuthStore } from "@/shared/stores/auth-store";
+-import { type FilaIcc, type ParamsReporteIcc, useReporteIcc } from "../../api/reporte-icc";
+-import { TODOS } from "../../lib/actividad-filtros";
+-import {
+-  type ConteoIcc,
+-  calcularIcc,
+-  esAnulada,
+-  esFinalizada,
+-  type ResumenIcc,
+-  TIPOS_ICC,
+-} from "../../lib/reporte-icc";
+-import { CampoFecha, CampoSelect } from "../lista/filtros-actividades";
+-
+-interface FiltroIcc {
+-  codEmp: string;
+-  codCc: string;
+-  codUsuario: string;
+-  fechaInicio: string;
+-  fechaFin: string;
+-}
+-
+-interface ReporteIccClientProps {
+-  /** Sin este permiso solo se consulta el usuario de la sesión. */
+-  puedeVerTodo?: boolean;
+-  /** Con este permiso se pueden cambiar empresa y centro de costo (si no, los del contexto). */
+-  puedeFiltrarContexto?: boolean;
+-}
+-
+-const formatoPorcentaje = (valor: number | null) => (valor == null ? "—" : `${valor.toFixed(2)}%`);
+-
+-function formatoFecha(valor: string): string {
+-  const fecha = new Date(valor);
+-  return Number.isNaN(fecha.getTime()) ? valor : format(fecha, "dd/MM/yyyy HH:mm");
+-}
+-
+-/**
+- * Reporte ICC (Índice de Cumplimiento Comercial) de llamadas y visitas (#194): por persona,
+- * programadas (sin anuladas), realizadas (finalizadas), pendientes y ICC %, también por tipo.
+- * Al elegir una persona se ve el detalle de sus actividades.
+- */
+-export function ReporteIccClient({
+-  puedeVerTodo = false,
+-  puedeFiltrarContexto = false,
+-}: Readonly<ReporteIccClientProps>) {
+-  const user = useAuthStore((state) => state.user);
+-  const authHidratado = useAuthStore((state) => state._hasHydrated);
+-  const contextoHidratado = useContextoOperativoStore((state) => state._hasHydrated);
+-  const currentEmpresa = useContextoOperativoStore((state) => state.currentEmpresa);
+-  const currentCentroCosto = useContextoOperativoStore((state) => state.currentCentroCosto);
+-  const codUsuarioRaw = user?.cod_usuario;
+-  const codUsuario =
+-    typeof codUsuarioRaw === "string" || typeof codUsuarioRaw === "number" ? codUsuarioRaw : null;
+-
+-  const [filtroElegido, setFiltroElegido] = useState<FiltroIcc | null>(null);
+-  const [usuarioDetalle, setUsuarioDetalle] = useState<string | null>(null);
+-  const hoy = new Date();
+-  const filtro: FiltroIcc = filtroElegido ?? {
+-    codEmp: currentEmpresa ? String(currentEmpresa.cod_empresa) : TODOS,
+-    codCc: currentCentroCosto ? String(currentCentroCosto.cod_cc) : TODOS,
+-    codUsuario: puedeVerTodo ? TODOS : String(codUsuario ?? TODOS),
+-    fechaInicio: format(startOfMonth(hoy), "yyyy-MM-dd"),
+-    fechaFin: format(endOfMonth(hoy), "yyyy-MM-dd"),
+-  };
+-
+-  const cambiarFiltro = (nuevo: FiltroIcc) => {
+-    setFiltroElegido(nuevo);
+-    setUsuarioDetalle(null);
+-  };
+-
+-  // Sin permiso de filtrar contexto: empresa y CC del contexto. Sin ver todo: el usuario de la sesión.
+-  const codEmp = puedeFiltrarContexto
+-    ? filtro.codEmp
+-    : String(currentEmpresa?.cod_empresa ?? TODOS);
+-  const codCc = puedeFiltrarContexto ? filtro.codCc : String(currentCentroCosto?.cod_cc ?? TODOS);
+-  const codUsuarioFiltro = puedeVerTodo ? filtro.codUsuario : String(codUsuario ?? TODOS);
+-
+-  const params = useMemo<ParamsReporteIcc>(
+-    () => ({
+-      fecha_inicio: filtro.fechaInicio,
+-      fecha_fin: filtro.fechaFin,
+-      ...(codEmp === TODOS ? {} : { cod_empresa: Number(codEmp) }),
+-      ...(codCc === TODOS ? {} : { cod_cc: Number(codCc) }),
+-      ...(codUsuarioFiltro === TODOS ? {} : { cod_usuario: Number(codUsuarioFiltro) }),
+-    }),
+-    [filtro.fechaInicio, filtro.fechaFin, codEmp, codCc, codUsuarioFiltro],
+-  );
+-  const fechasValidas =
+-    Boolean(filtro.fechaInicio && filtro.fechaFin) && filtro.fechaInicio <= filtro.fechaFin;
+-  const consultaHabilitada =
+-    authHidratado && contextoHidratado && fechasValidas && (puedeVerTodo || codUsuario !== null);
+-  const consulta = useReporteIcc(params, consultaHabilitada);
+-
+-  const { data: empresasData = [] } = empresas.useLista();
+-  const { data: centrosData = [] } = centrosCosto.useLista();
+-  const filtrosEmpleados = useMemo(() => {
+-    const filtros: Record<string, unknown> = {};
+-    if (codEmp !== TODOS) filtros.cod_emp = Number(codEmp);
+-    if (codCc !== TODOS) filtros.cod_cc = Number(codCc);
+-    return filtros;
+-  }, [codEmp, codCc]);
+-  const { data: empleadosData = [] } = empleadosUsuarios.useLista(filtrosEmpleados, {
+-    enabled: puedeVerTodo,
+-  });
+-  const empleadosUnicos = useMemo(
+-    () => [...new Map(empleadosData.map((item) => [String(item.codUsuario), item])).values()],
+-    [empleadosData],
+-  );
+-  const centrosFiltrados = centrosData.filter(
+-    (centro) => codEmp === TODOS || String(centro.codEmpresaCc) === codEmp,
+-  );
+-
+-  const filas = consulta.data;
+-  const resumen = useMemo(() => calcularIcc(filas ?? []), [filas]);
+-  const detalle = useMemo(
+-    () =>
+-      usuarioDetalle == null
+-        ? []
+-        : (filas ?? [])
+-            .filter((fila) => String(fila.usuario) === usuarioDetalle)
+-            .sort((a, b) => a.fecha_programacion.localeCompare(b.fecha_programacion)),
+-    [filas, usuarioDetalle],
+-  );
+-  const personaDetalle = resumen.personas.find((persona) => persona.usuario === usuarioDetalle);
+-
+-  if (!authHidratado || !contextoHidratado) return <div>Cargando...</div>;
+-  if (!puedeVerTodo && codUsuario === null) {
+-    return <div>No se pudo identificar el usuario de la sesión.</div>;
+-  }
+-
+-  return (
+-    <div className="space-y-4">
+-      <div className="flex flex-wrap items-end gap-2">
+-        {puedeFiltrarContexto && (
+-          <>
+-            <CampoSelect
+-              id="icc-empresa"
+-              label="Empresa"
+-              value={filtro.codEmp}
+-              onValueChange={(valor) =>
+-                cambiarFiltro({ ...filtro, codEmp: valor, codCc: TODOS, codUsuario: TODOS })
+-              }
+-              opciones={[
+-                { value: TODOS, label: "Todas" },
+-                ...empresasData.map((empresa) => ({
+-                  value: String(empresa.cod_empresa),
+-                  label: empresa.nombre_emp,
+-                })),
+-              ]}
+-            />
+-            <CampoSelect
+-              id="icc-centro-costo"
+-              label="Centro de costo"
+-              value={filtro.codCc}
+-              onValueChange={(valor) =>
+-                cambiarFiltro({ ...filtro, codCc: valor, codUsuario: TODOS })
+-              }
+-              opciones={[
+-                { value: TODOS, label: "Todos" },
+-                ...centrosFiltrados.map((centro) => ({
+-                  value: String(centro.codCc),
+-                  label: centro.nombreCc,
+-                })),
+-              ]}
+-            />
+-          </>
+-        )}
+-        {puedeVerTodo && (
+-          <CampoSelect
+-            id="icc-usuario"
+-            label="Usuario"
+-            value={filtro.codUsuario}
+-            onValueChange={(valor) => cambiarFiltro({ ...filtro, codUsuario: valor })}
+-            opciones={[
+-              { value: TODOS, label: "Todos" },
+-              ...empleadosUnicos.map((empleado) => ({
+-                value: String(empleado.codUsuario),
+-                label: empleado.nombreCompleto || empleado.usuario || String(empleado.codUsuario),
+-              })),
+-            ]}
+-          />
+-        )}
+-        <CampoFecha
+-          id="icc-fecha-inicio"
+-          label="Desde (fecha programada)"
+-          value={filtro.fechaInicio}
+-          onChange={(valor) => cambiarFiltro({ ...filtro, fechaInicio: valor })}
+-        />
+-        <CampoFecha
+-          id="icc-fecha-fin"
+-          label="Hasta"
+-          value={filtro.fechaFin}
+-          onChange={(valor) => cambiarFiltro({ ...filtro, fechaFin: valor })}
+-        />
+-        <Button
+-          type="button"
+-          variant="outline"
+-          size="sm"
+-          disabled={!consultaHabilitada || consulta.isFetching}
+-          onClick={() => consulta.refetch()}
+-        >
+-          {consulta.isFetching ? "Consultando..." : "Actualizar"}
+-        </Button>
+-      </div>
+-
+-      {!fechasValidas && (
+-        <p className="text-sm text-destructive">
+-          Seleccione las dos fechas; la inicial no puede ser mayor que la final.
+-        </p>
+-      )}
+-      {consulta.isError && (
+-        <p className="text-sm text-destructive">
+-          Error al consultar el ICC: {consulta.error.message}
+-        </p>
+-      )}
+-      {consulta.isLoading && <div>Cargando el reporte...</div>}
+-
+-      {filas && (
+-        <>
+-          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+-            <Indicador titulo="ICC" valor={formatoPorcentaje(resumen.total.icc)} destacado />
+-            <Indicador titulo="Programadas" valor={resumen.total.programadas} />
+-            <Indicador titulo="Realizadas" valor={resumen.total.realizadas} />
+-            <Indicador titulo="Pendientes" valor={resumen.total.pendientes} />
+-            <Indicador titulo="Anuladas (no cuentan)" valor={resumen.total.anuladas} />
+-          </div>
+-
+-          <p className="text-xs text-muted-foreground">
+-            ICC = realizadas (finalizadas) ÷ programadas (actividades con fecha programada en el
+-            rango, sin anuladas). Elija una persona para ver sus actividades.
+-          </p>
+-
+-          <div className="rounded-md border">
+-            <Table>
+-              <TableHeader>
+-                <TableRow>
+-                  <TableHead rowSpan={2}>Usuario</TableHead>
+-                  {TIPOS_ICC.map((tipo) => (
+-                    <TableHead key={tipo} colSpan={3} className="text-center">
+-                      {tipo === "LLAMADA" ? "Llamadas" : "Visitas"}
+-                    </TableHead>
+-                  ))}
+-                  <TableHead colSpan={5} className="text-center">
+-                    Total
+-                  </TableHead>
+-                </TableRow>
+-                <TableRow>
+-                  {TIPOS_ICC.flatMap((tipo) => [
+-                    <TableHead key={`${tipo}-p`} className="text-right">
+-                      Prog.
+-                    </TableHead>,
+-                    <TableHead key={`${tipo}-r`} className="text-right">
+-                      Real.
+-                    </TableHead>,
+-                    <TableHead key={`${tipo}-icc`} className="text-right">
+-                      ICC
+-                    </TableHead>,
+-                  ])}
+-                  <TableHead className="text-right">Programadas</TableHead>
+-                  <TableHead className="text-right">Realizadas</TableHead>
+-                  <TableHead className="text-right">Pendientes</TableHead>
+-                  <TableHead className="text-right">Anuladas</TableHead>
+-                  <TableHead className="text-right">ICC</TableHead>
+-                </TableRow>
+-              </TableHeader>
+-              <TableBody>
+-                {resumen.personas.length === 0 && (
+-                  <TableRow>
+-                    <TableCell colSpan={12} className="text-center text-muted-foreground">
+-                      No hay llamadas ni visitas programadas en el rango.
+-                    </TableCell>
+-                  </TableRow>
+-                )}
+-                {resumen.personas.map((persona) => (
+-                  <TableRow
+-                    key={persona.usuario}
+-                    data-state={persona.usuario === usuarioDetalle ? "selected" : undefined}
+-                    className="cursor-pointer"
+-                    onClick={() =>
+-                      setUsuarioDetalle(persona.usuario === usuarioDetalle ? null : persona.usuario)
+-                    }
+-                  >
+-                    <FilaResumen resumen={persona} />
+-                  </TableRow>
+-                ))}
+-              </TableBody>
+-              {resumen.personas.length > 0 && (
+-                <TableFooter>
+-                  <TableRow className="font-semibold">
+-                    <FilaResumen resumen={resumen.total} />
+-                  </TableRow>
+-                </TableFooter>
+-              )}
+-            </Table>
+-          </div>
+-
+-          {personaDetalle && (
+-            <Card>
+-              <CardHeader>
+-                <CardTitle className="text-base">
+-                  Actividades de {personaDetalle.nombre} ({detalle.length})
+-                </CardTitle>
+-              </CardHeader>
+-              <CardContent>
+-                <DetalleActividades filas={detalle} />
+-              </CardContent>
+-            </Card>
+-          )}
+-        </>
+-      )}
+-    </div>
+-  );
+-}
+-
+-function Indicador({
+-  titulo,
+-  valor,
+-  destacado = false,
+-}: Readonly<{ titulo: string; valor: string | number; destacado?: boolean }>) {
+-  return (
+-    <Card>
+-      <CardContent className="p-4">
+-        <p className="text-xs text-muted-foreground">{titulo}</p>
+-        <p className={destacado ? "text-2xl font-bold text-primary" : "text-2xl font-semibold"}>
+-          {valor}
+-        </p>
+-      </CardContent>
+-    </Card>
+-  );
+-}
+-
+-function CeldasConteo({ conteo, completo }: Readonly<{ conteo: ConteoIcc; completo: boolean }>) {
+-  return (
+-    <>
+-      <TableCell className="text-right">{conteo.programadas}</TableCell>
+-      <TableCell className="text-right">{conteo.realizadas}</TableCell>
+-      {completo && <TableCell className="text-right">{conteo.pendientes}</TableCell>}
+-      {completo && <TableCell className="text-right">{conteo.anuladas}</TableCell>}
+-      <TableCell className="text-right">{formatoPorcentaje(conteo.icc)}</TableCell>
+-    </>
+-  );
+-}
+-
+-function FilaResumen({ resumen }: Readonly<{ resumen: ResumenIcc }>) {
+-  return (
+-    <>
+-      <TableCell>{resumen.nombre}</TableCell>
+-      {TIPOS_ICC.map((tipo) => (
+-        <CeldasConteo key={tipo} conteo={resumen.porTipo[tipo]} completo={false} />
+-      ))}
+-      <CeldasConteo conteo={resumen} completo />
+-    </>
+-  );
+-}
+-
+-function DetalleActividades({ filas }: Readonly<{ filas: FilaIcc[] }>) {
+-  return (
+-    <Table>
+-      <TableHeader>
+-        <TableRow>
+-          <TableHead>Actividad</TableHead>
+-          <TableHead>Fecha programada</TableHead>
+-          <TableHead>Tipo</TableHead>
+-          <TableHead>Cliente</TableHead>
+-          <TableHead>Asunto</TableHead>
+-          <TableHead>Estado</TableHead>
+-          <TableHead>Cuenta como</TableHead>
+-        </TableRow>
+-      </TableHeader>
+-      <TableBody>
+-        {filas.map((fila) => (
+-          <TableRow key={fila.actividad}>
+-            <TableCell>{fila.actividad}</TableCell>
+-            <TableCell>{formatoFecha(fila.fecha_programacion)}</TableCell>
+-            <TableCell>{fila.tipo}</TableCell>
+-            <TableCell>{fila.cliente}</TableCell>
+-            <TableCell>{fila.asunto}</TableCell>
+-            <TableCell>{fila.estado}</TableCell>
+-            <TableCell>
+-              {esAnulada(fila) ? "No cuenta" : esFinalizada(fila) ? "Realizada" : "Pendiente"}
+-            </TableCell>
+-          </TableRow>
+-        ))}
+-      </TableBody>
+-    </Table>
+-  );
+-}
+diff --git a/src/features/actividades/index.ts b/src/features/actividades/index.ts
+index 5ec504a..e0b22f6 100644
+--- a/src/features/actividades/index.ts
++++ b/src/features/actividades/index.ts
+@@ -12,7 +12,6 @@ export {
+ export { ActividadDetalle } from "./components/detalle/actividad-detalle";
+ export { ActividadForm } from "./components/formulario/actividad-form";
+ export { ActividadesTabsClient } from "./components/lista/actividades-tabs-client";
+-export { ReporteIccClient } from "./components/reportes/reporte-icc-client";
+ export { colorActividad } from "./lib/actividad-colores";
+ export { iconoActividad } from "./lib/actividad-iconos";
+ export {
+diff --git a/src/features/actividades/lib/reporte-icc.ts b/src/features/actividades/lib/reporte-icc.ts
+deleted file mode 100644
+index 32d4234..0000000
+--- a/src/features/actividades/lib/reporte-icc.ts
++++ /dev/null
+@@ -1,97 +0,0 @@
+-import type { FilaIcc } from "../api/reporte-icc";
+-
+-/**
+- * ICC (Índice de Cumplimiento Comercial), definiciones del usuario (#194):
+- * - Programadas: actividades con fecha programada en el rango, sin las anuladas.
+- * - Realizadas: las finalizadas (estado 24, `finalizada = 1`).
+- * - Pendientes: programadas aún no finalizadas.
+- * - ICC % = realizadas / programadas × 100 (`null` si no hay programadas).
+- * Las anuladas no cuentan: se muestran aparte.
+- */
+-
+-/** Descripción de estado de las anuladas (TIPO/ESTADO por nombre, como el backend). */
+-const ESTADO_ANULADO = "ANULADO";
+-
+-export const TIPOS_ICC = ["LLAMADA", "VISITA"] as const;
+-export type TipoIcc = (typeof TIPOS_ICC)[number];
+-
+-export interface ConteoIcc {
+-  programadas: number;
+-  realizadas: number;
+-  pendientes: number;
+-  anuladas: number;
+-  icc: number | null;
+-}
+-
+-export interface ResumenIcc extends ConteoIcc {
+-  /** `null` en la fila de total. */
+-  usuario: string | null;
+-  nombre: string;
+-  porTipo: Record<TipoIcc, ConteoIcc>;
+-}
+-
+-export function esAnulada(fila: FilaIcc): boolean {
+-  return fila.estado.trim().toUpperCase() === ESTADO_ANULADO;
+-}
+-
+-export function esFinalizada(fila: FilaIcc): boolean {
+-  return fila.finalizada === 1;
+-}
+-
+-export function nombreUsuario(fila: FilaIcc): string {
+-  return `${fila.nombres} ${fila.apellidos}`.trim() || `Usuario ${fila.usuario}`;
+-}
+-
+-export function porcentajeIcc(realizadas: number, programadas: number): number | null {
+-  return programadas > 0 ? (realizadas / programadas) * 100 : null;
+-}
+-
+-function contar(filas: FilaIcc[]): ConteoIcc {
+-  let programadas = 0;
+-  let realizadas = 0;
+-  let anuladas = 0;
+-  for (const fila of filas) {
+-    if (esAnulada(fila)) {
+-      anuladas += 1;
+-      continue;
+-    }
+-    programadas += 1;
+-    if (esFinalizada(fila)) realizadas += 1;
+-  }
+-  return {
+-    programadas,
+-    realizadas,
+-    pendientes: programadas - realizadas,
+-    anuladas,
+-    icc: porcentajeIcc(realizadas, programadas),
+-  };
+-}
+-
+-function resumir(usuario: string | null, nombre: string, filas: FilaIcc[]): ResumenIcc {
+-  const porTipo = Object.fromEntries(
+-    TIPOS_ICC.map((tipo) => [
+-      tipo,
+-      contar(filas.filter((fila) => fila.tipo.trim().toUpperCase() === tipo)),
+-    ]),
+-  ) as Record<TipoIcc, ConteoIcc>;
+-  return { usuario, nombre, ...contar(filas), porTipo };
+-}
+-
+-/** Una fila por usuario (ordenadas por nombre) y la fila de total. */
+-export function calcularIcc(filas: FilaIcc[]): { personas: ResumenIcc[]; total: ResumenIcc } {
+-  const grupos = new Map<string, FilaIcc[]>();
+-  for (const fila of filas) {
+-    const clave = String(fila.usuario);
+-    const grupo = grupos.get(clave);
+-    if (grupo) grupo.push(fila);
+-    else grupos.set(clave, [fila]);
+-  }
+-
+-  const personas = [...grupos.entries()]
+-    .map(([usuario, grupo]) =>
+-      resumir(usuario, grupo[0] ? nombreUsuario(grupo[0]) : usuario, grupo),
+-    )
+-    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+-
+-  return { personas, total: resumir(null, "TOTAL", filas) };
+-}
+diff --git a/src/features/reportes-crm/api/reporte-icc.ts b/src/features/reportes-crm/api/reporte-icc.ts
+new file mode 100644
+index 0000000..311089f
+--- /dev/null
++++ b/src/features/reportes-crm/api/reporte-icc.ts
+@@ -0,0 +1,64 @@
++import { queryOptions, useQuery } from "@tanstack/react-query";
++import { z } from "zod";
++import { CACHE_DYNAMIC } from "@/shared/api/cache";
++import { http } from "@/shared/api/client";
++import { parseEnvelope } from "@/shared/api/envelope";
++import { zId } from "@/shared/lib/zod-scalars";
++
++const texto = z
++  .string()
++  .nullable()
++  .optional()
++  .transform((value) => value ?? "");
++const bandera = z.coerce.number().catch(0);
++
++/**
++ * Una actividad (LLAMADA o VISITA) de `report_icc`, con la fecha programada en el rango.
++ * Keys en minúsculas, como las entrega el cliente HTTP. Fechas en UTC (ISO).
++ */
++export const filaIccSchema = z.looseObject({
++  actividad: zId,
++  asunto: texto,
++  fecha_creacion: texto,
++  fecha_programacion: texto,
++  tipo: texto,
++  usuario: zId,
++  nombres: texto,
++  apellidos: texto,
++  cod_empresa: zId.nullable().optional(),
++  cc: zId.nullable().optional(),
++  cc_nombre: texto,
++  cod_cliente: zId.nullable().optional(),
++  cliente: texto,
++  cod_estado: zId.nullable().optional(),
++  estado: texto,
++  con_resultado: bandera,
++  finalizada: bandera,
++});
++
++export type FilaIcc = z.infer<typeof filaIccSchema>;
++
++/** Parámetros de `report_icc`: fechas `YYYY-MM-DD` (requeridas) y filtros opcionales. */
++export type ParamsReporteIcc = {
++  fecha_inicio: string;
++  fecha_fin: string;
++  cod_empresa?: number | undefined;
++  cod_cc?: number | undefined;
++  cod_usuario?: number | undefined;
++};
++
++export const reporteIccOptions = (params: ParamsReporteIcc) =>
++  queryOptions({
++    ...CACHE_DYNAMIC,
++    queryKey: ["actividades", "reporte-icc", params] as const,
++    queryFn: async () =>
++      parseEnvelope(
++        await http.get<unknown>("/api/appweb/report_icc", { params }),
++        filaIccSchema,
++        "report_icc",
++      ),
++  });
++
++export function useReporteIcc(params: ParamsReporteIcc, enabled = true) {
++  return useQuery({ ...reporteIccOptions(params), enabled });
++}
+diff --git a/src/features/reportes-crm/components/reporte-icc.tsx b/src/features/reportes-crm/components/reporte-icc.tsx
+new file mode 100644
+index 0000000..bcf41bd
+--- /dev/null
++++ b/src/features/reportes-crm/components/reporte-icc.tsx
+@@ -0,0 +1,238 @@
++"use client";
++
++import { format } from "date-fns";
++import { useMemo, useState } from "react";
++import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
++import {
++  Table,
++  TableBody,
++  TableCell,
++  TableFooter,
++  TableHead,
++  TableHeader,
++  TableRow,
++} from "@/shared/components/ui/table";
++import { type FilaIcc, type ParamsReporteIcc, useReporteIcc } from "../api/reporte-icc";
++import {
++  type ConteoIcc,
++  calcularIcc,
++  esAnulada,
++  esFinalizada,
++  type ResumenIcc,
++  TIPOS_ICC,
++} from "../lib/reporte-icc";
++
++const formatoPorcentaje = (valor: number | null) => (valor == null ? "—" : `${valor.toFixed(2)}%`);
++
++function formatoFecha(valor: string): string {
++  const fecha = new Date(valor);
++  return Number.isNaN(fecha.getTime()) ? valor : format(fecha, "dd/MM/yyyy HH:mm");
++}
++
++/**
++ * Reporte ICC (Índice de Cumplimiento Comercial) de llamadas y visitas (#194): por persona,
++ * programadas (sin anuladas), realizadas (finalizadas), pendientes y ICC %, también por tipo.
++ * Al elegir una persona se ve el detalle de sus actividades. Los filtros los pone
++ * `ReportesCrmClient`; `params = null` hasta que se pulsa Filtrar.
++ */
++export function ReporteIcc({ params }: Readonly<{ params: ParamsReporteIcc | null }>) {
++  const [usuarioDetalle, setUsuarioDetalle] = useState<string | null>(null);
++  const consulta = useReporteIcc(params ?? { fecha_inicio: "", fecha_fin: "" }, params !== null);
++
++  const filas = consulta.data;
++  const resumen = useMemo(() => calcularIcc(filas ?? []), [filas]);
++  const detalle = useMemo(
++    () =>
++      usuarioDetalle == null
++        ? []
++        : (filas ?? [])
++            .filter((fila) => String(fila.usuario) === usuarioDetalle)
++            .sort((a, b) => a.fecha_programacion.localeCompare(b.fecha_programacion)),
++    [filas, usuarioDetalle],
++  );
++  const personaDetalle = resumen.personas.find((persona) => persona.usuario === usuarioDetalle);
++
++  if (params === null) {
++    return (
++      <p className="text-sm text-muted-foreground">
++        Selecciona las fechas (por fecha programada) y pulsa Filtrar para consultar el ICC.
++      </p>
++    );
++  }
++  if (consulta.isError) {
++    return (
++      <p className="text-sm text-destructive">
++        Error al consultar el ICC: {consulta.error.message}
++      </p>
++    );
++  }
++  if (consulta.isLoading || !filas) return <div>Cargando el reporte...</div>;
++
++  return (
++    <div className="space-y-4">
++      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
++        <Indicador titulo="ICC" valor={formatoPorcentaje(resumen.total.icc)} destacado />
++        <Indicador titulo="Programadas" valor={resumen.total.programadas} />
++        <Indicador titulo="Realizadas" valor={resumen.total.realizadas} />
++        <Indicador titulo="Pendientes" valor={resumen.total.pendientes} />
++        <Indicador titulo="Anuladas (no cuentan)" valor={resumen.total.anuladas} />
++      </div>
++
++      <p className="text-xs text-muted-foreground">
++        ICC = realizadas (finalizadas) ÷ programadas (actividades con fecha programada en el rango,
++        sin anuladas). Elija una persona para ver sus actividades.
++      </p>
++
++      <div className="rounded-md border">
++        <Table>
++          <TableHeader>
++            <TableRow>
++              <TableHead rowSpan={2}>Usuario</TableHead>
++              {TIPOS_ICC.map((tipo) => (
++                <TableHead key={tipo} colSpan={3} className="text-center">
++                  {tipo === "LLAMADA" ? "Llamadas" : "Visitas"}
++                </TableHead>
++              ))}
++              <TableHead colSpan={5} className="text-center">
++                Total
++              </TableHead>
++            </TableRow>
++            <TableRow>
++              {TIPOS_ICC.flatMap((tipo) => [
++                <TableHead key={`${tipo}-p`} className="text-right">
++                  Prog.
++                </TableHead>,
++                <TableHead key={`${tipo}-r`} className="text-right">
++                  Real.
++                </TableHead>,
++                <TableHead key={`${tipo}-icc`} className="text-right">
++                  ICC
++                </TableHead>,
++              ])}
++              <TableHead className="text-right">Programadas</TableHead>
++              <TableHead className="text-right">Realizadas</TableHead>
++              <TableHead className="text-right">Pendientes</TableHead>
++              <TableHead className="text-right">Anuladas</TableHead>
++              <TableHead className="text-right">ICC</TableHead>
++            </TableRow>
++          </TableHeader>
++          <TableBody>
++            {resumen.personas.length === 0 && (
++              <TableRow>
++                <TableCell colSpan={12} className="text-center text-muted-foreground">
++                  No hay llamadas ni visitas programadas en el rango.
++                </TableCell>
++              </TableRow>
++            )}
++            {resumen.personas.map((persona) => (
++              <TableRow
++                key={persona.usuario}
++                data-state={persona.usuario === usuarioDetalle ? "selected" : undefined}
++                className="cursor-pointer"
++                onClick={() =>
++                  setUsuarioDetalle(persona.usuario === usuarioDetalle ? null : persona.usuario)
++                }
++              >
++                <FilaResumen resumen={persona} />
++              </TableRow>
++            ))}
++          </TableBody>
++          {resumen.personas.length > 0 && (
++            <TableFooter>
++              <TableRow className="font-semibold">
++                <FilaResumen resumen={resumen.total} />
++              </TableRow>
++            </TableFooter>
++          )}
++        </Table>
++      </div>
++
++      {personaDetalle && (
++        <Card>
++          <CardHeader>
++            <CardTitle className="text-base">
++              Actividades de {personaDetalle.nombre} ({detalle.length})
++            </CardTitle>
++          </CardHeader>
++          <CardContent>
++            <DetalleActividades filas={detalle} />
++          </CardContent>
++        </Card>
++      )}
++    </div>
++  );
++}
++
++function Indicador({
++  titulo,
++  valor,
++  destacado = false,
++}: Readonly<{ titulo: string; valor: string | number; destacado?: boolean }>) {
++  return (
++    <Card>
++      <CardContent className="p-4">
++        <p className="text-xs text-muted-foreground">{titulo}</p>
++        <p className={destacado ? "text-2xl font-bold text-primary" : "text-2xl font-semibold"}>
++          {valor}
++        </p>
++      </CardContent>
++    </Card>
++  );
++}
++
++function CeldasConteo({ conteo, completo }: Readonly<{ conteo: ConteoIcc; completo: boolean }>) {
++  return (
++    <>
++      <TableCell className="text-right">{conteo.programadas}</TableCell>
++      <TableCell className="text-right">{conteo.realizadas}</TableCell>
++      {completo && <TableCell className="text-right">{conteo.pendientes}</TableCell>}
++      {completo && <TableCell className="text-right">{conteo.anuladas}</TableCell>}
++      <TableCell className="text-right">{formatoPorcentaje(conteo.icc)}</TableCell>
++    </>
++  );
++}
++
++function FilaResumen({ resumen }: Readonly<{ resumen: ResumenIcc }>) {
++  return (
++    <>
++      <TableCell>{resumen.nombre}</TableCell>
++      {TIPOS_ICC.map((tipo) => (
++        <CeldasConteo key={tipo} conteo={resumen.porTipo[tipo]} completo={false} />
++      ))}
++      <CeldasConteo conteo={resumen} completo />
++    </>
++  );
++}
++
++function DetalleActividades({ filas }: Readonly<{ filas: FilaIcc[] }>) {
++  return (
++    <Table>
++      <TableHeader>
++        <TableRow>
++          <TableHead>Actividad</TableHead>
++          <TableHead>Fecha programada</TableHead>
++          <TableHead>Tipo</TableHead>
++          <TableHead>Cliente</TableHead>
++          <TableHead>Asunto</TableHead>
++          <TableHead>Estado</TableHead>
++          <TableHead>Cuenta como</TableHead>
++        </TableRow>
++      </TableHeader>
++      <TableBody>
++        {filas.map((fila) => (
++          <TableRow key={fila.actividad}>
++            <TableCell>{fila.actividad}</TableCell>
++            <TableCell>{formatoFecha(fila.fecha_programacion)}</TableCell>
++            <TableCell>{fila.tipo}</TableCell>
++            <TableCell>{fila.cliente}</TableCell>
++            <TableCell>{fila.asunto}</TableCell>
++            <TableCell>{fila.estado}</TableCell>
++            <TableCell>
++              {esAnulada(fila) ? "No cuenta" : esFinalizada(fila) ? "Realizada" : "Pendiente"}
++            </TableCell>
++          </TableRow>
++        ))}
++      </TableBody>
++    </Table>
++  );
++}
+diff --git a/src/features/reportes-crm/components/reportes-crm-client.tsx b/src/features/reportes-crm/components/reportes-crm-client.tsx
+index e4b31b7..baed442 100644
+--- a/src/features/reportes-crm/components/reportes-crm-client.tsx
++++ b/src/features/reportes-crm/components/reportes-crm-client.tsx
+@@ -21,6 +21,7 @@ import { asText } from "@/shared/lib/text";
+ import { useAuthStore } from "@/shared/stores/auth-store";
+ import { useActividadesReporte } from "../api/actividades-reporte";
+ import { useObjetivosReporte } from "../api/objetivos-reporte";
++import type { ParamsReporteIcc } from "../api/reporte-icc";
+ import { actividadesEnRango } from "../lib/actividades-vista";
+ import { estadosReporteActividad, tiposReporteActividad } from "../lib/filtros-actividades";
+ import type { AgenteCalendario } from "../lib/pdf-calendario-actividades";
+@@ -29,6 +30,7 @@ import {
+   REPORTES_CRM,
+   type ReporteCrmId,
+ } from "../lib/reportes-crm-registro";
++import { ReporteIcc } from "./reporte-icc";
+ import { ReporteObjetivos } from "./reporte-objetivos-empleado";
+ import { ReporteSeguimientoCliente } from "./reporte-seguimiento-cliente";
+ import { ReporteActividades } from "./reporte-visitas";
+@@ -70,6 +72,7 @@ export function ReportesCrmClient() {
+     cod_asesor?: string;
+     cod_estado?: string;
+   } | null>(null);
++  const [consultaIcc, setConsultaIcc] = useState<ParamsReporteIcc | null>(null);
+   const [consultaObjetivosManual, setConsultaObjetivosManual] = useState<{
+     cod_emp: string;
+     cod_cc: string;
+@@ -193,11 +196,13 @@ export function ReportesCrmClient() {
+   const puedeConsultarVisitas = Boolean(empresaId && ccId);
+   const puedeConsultarObjetivos = Boolean(empresaId && ccId && tipoAsignacion && inicio && fin);
+   const puedeGenerarGrafica = Boolean(empresaId && ccId && asesorGrafica && tipoAsignacionGrafica);
++  const puedeConsultarIcc = Boolean(inicio && fin && inicio <= fin);
+   const cambiarReporte = (id: ReporteCrmId) => {
+     setReporte(id);
+     setConsultaVisitas(null);
+     setConsultaObjetivosManual(null);
+     setConsultaObjetivosGrafica(null);
++    setConsultaIcc(null);
+     setAsesor("");
+     setEstado("");
+     setTiposActividad([]);
+@@ -235,6 +240,15 @@ export function ReportesCrmClient() {
+         fecha_final: semanaActual.fin,
+       });
+     }
++    if (vista === "icc" && puedeConsultarIcc) {
++      setConsultaIcc({
++        fecha_inicio: inicio,
++        fecha_fin: fin,
++        ...(empresaId ? { cod_empresa: Number(empresaId) } : {}),
++        ...(ccId ? { cod_cc: Number(ccId) } : {}),
++        ...(asesor ? { cod_usuario: Number(asesor) } : {}),
++      });
++    }
+   };
+ 
+   return (
+@@ -400,7 +414,10 @@ export function ReportesCrmClient() {
+             </label>
+           </>
+         )}
+-        {(vista === "visitas" || vista === "objetivos" || vista === "graficas") && (
++        {(vista === "visitas" ||
++          vista === "objetivos" ||
++          vista === "graficas" ||
++          vista === "icc") && (
+           <div className="flex items-end">
+             <Button
+               onClick={filtrar}
+@@ -409,7 +426,9 @@ export function ReportesCrmClient() {
+                   ? !puedeConsultarVisitas
+                   : vista === "objetivos"
+                     ? !puedeConsultarObjetivos
+-                    : !puedeGenerarGrafica
++                    : vista === "icc"
++                      ? !puedeConsultarIcc
++                      : !puedeGenerarGrafica
+               }
+             >
+               {vista === "graficas" ? "Generar gráfica" : "Filtrar"}
+@@ -485,6 +504,7 @@ export function ReportesCrmClient() {
+             actual.
+           </p>
+         ))}
++      {vista === "icc" && <ReporteIcc key={JSON.stringify(consultaIcc)} params={consultaIcc} />}
+       {vista === "seguimiento" && (
+         <ReporteSeguimientoCliente
+           clientes={clientes.data ?? []}
+diff --git a/src/features/reportes-crm/lib/reporte-icc.ts b/src/features/reportes-crm/lib/reporte-icc.ts
+new file mode 100644
+index 0000000..32d4234
+--- /dev/null
++++ b/src/features/reportes-crm/lib/reporte-icc.ts
+@@ -0,0 +1,97 @@
++import type { FilaIcc } from "../api/reporte-icc";
++
++/**
++ * ICC (Índice de Cumplimiento Comercial), definiciones del usuario (#194):
++ * - Programadas: actividades con fecha programada en el rango, sin las anuladas.
++ * - Realizadas: las finalizadas (estado 24, `finalizada = 1`).
++ * - Pendientes: programadas aún no finalizadas.
++ * - ICC % = realizadas / programadas × 100 (`null` si no hay programadas).
++ * Las anuladas no cuentan: se muestran aparte.
++ */
++
++/** Descripción de estado de las anuladas (TIPO/ESTADO por nombre, como el backend). */
++const ESTADO_ANULADO = "ANULADO";
++
++export const TIPOS_ICC = ["LLAMADA", "VISITA"] as const;
++export type TipoIcc = (typeof TIPOS_ICC)[number];
++
++export interface ConteoIcc {
++  programadas: number;
++  realizadas: number;
++  pendientes: number;
++  anuladas: number;
++  icc: number | null;
++}
++
++export interface ResumenIcc extends ConteoIcc {
++  /** `null` en la fila de total. */
++  usuario: string | null;
++  nombre: string;
++  porTipo: Record<TipoIcc, ConteoIcc>;
++}
++
++export function esAnulada(fila: FilaIcc): boolean {
++  return fila.estado.trim().toUpperCase() === ESTADO_ANULADO;
++}
++
++export function esFinalizada(fila: FilaIcc): boolean {
++  return fila.finalizada === 1;
++}
++
++export function nombreUsuario(fila: FilaIcc): string {
++  return `${fila.nombres} ${fila.apellidos}`.trim() || `Usuario ${fila.usuario}`;
++}
++
++export function porcentajeIcc(realizadas: number, programadas: number): number | null {
++  return programadas > 0 ? (realizadas / programadas) * 100 : null;
++}
++
++function contar(filas: FilaIcc[]): ConteoIcc {
++  let programadas = 0;
++  let realizadas = 0;
++  let anuladas = 0;
++  for (const fila of filas) {
++    if (esAnulada(fila)) {
++      anuladas += 1;
++      continue;
++    }
++    programadas += 1;
++    if (esFinalizada(fila)) realizadas += 1;
++  }
++  return {
++    programadas,
++    realizadas,
++    pendientes: programadas - realizadas,
++    anuladas,
++    icc: porcentajeIcc(realizadas, programadas),
++  };
++}
++
++function resumir(usuario: string | null, nombre: string, filas: FilaIcc[]): ResumenIcc {
++  const porTipo = Object.fromEntries(
++    TIPOS_ICC.map((tipo) => [
++      tipo,
++      contar(filas.filter((fila) => fila.tipo.trim().toUpperCase() === tipo)),
++    ]),
++  ) as Record<TipoIcc, ConteoIcc>;
++  return { usuario, nombre, ...contar(filas), porTipo };
++}
++
++/** Una fila por usuario (ordenadas por nombre) y la fila de total. */
++export function calcularIcc(filas: FilaIcc[]): { personas: ResumenIcc[]; total: ResumenIcc } {
++  const grupos = new Map<string, FilaIcc[]>();
++  for (const fila of filas) {
++    const clave = String(fila.usuario);
++    const grupo = grupos.get(clave);
++    if (grupo) grupo.push(fila);
++    else grupos.set(clave, [fila]);
++  }
++
++  const personas = [...grupos.entries()]
++    .map(([usuario, grupo]) =>
++      resumir(usuario, grupo[0] ? nombreUsuario(grupo[0]) : usuario, grupo),
++    )
++    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
++
++  return { personas, total: resumir(null, "TOTAL", filas) };
++}
+diff --git a/src/features/reportes-crm/lib/reportes-crm-registro.ts b/src/features/reportes-crm/lib/reportes-crm-registro.ts
+index de2299c..f67ed65 100644
+--- a/src/features/reportes-crm/lib/reportes-crm-registro.ts
++++ b/src/features/reportes-crm/lib/reportes-crm-registro.ts
+@@ -4,7 +4,8 @@ export type ReporteCrmId =
+   | "actividades-pdf"
+   | "objetivos"
+   | "graficas"
+-  | "seguimiento";
++  | "seguimiento"
++  | "icc";
+ 
+ type CamposReporte = {
+   empresaCentroCosto?: boolean;
+@@ -19,7 +20,7 @@ type CamposReporte = {
+ type ConfiguracionReporte = {
+   id: ReporteCrmId;
+   label: string;
+-  vista: "visitas" | "calendario" | "objetivos" | "graficas" | "seguimiento";
++  vista: "visitas" | "calendario" | "objetivos" | "graficas" | "seguimiento" | "icc";
+   campos: CamposReporte;
+ };
+ 
+@@ -79,6 +80,12 @@ export const REPORTES_CRM: readonly ConfiguracionReporte[] = [
+     vista: "seguimiento",
+     campos: { empresaCentroCosto: true, cliente: true },
+   },
++  {
++    id: "icc",
++    label: "ICC — Índice de Cumplimiento Comercial",
++    vista: "icc",
++    campos: { empresaCentroCosto: true, asesor: true, fechas: "requeridas" },
++  },
+ ];
+ 
+ export function obtenerConfiguracionReporte(id: ReporteCrmId): ConfiguracionReporte {
