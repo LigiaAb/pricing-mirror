@@ -160,12 +160,6 @@ export function ReporteActividades({
   };
   return (
     <div className="space-y-3">
-      <h2 className="text-lg font-semibold">{pdf ? "Actividades" : "Visitas"}</h2>
-      {pdf && (
-        <p className="text-sm text-muted-foreground">
-          Se incluyen las actividades del usuario actual dentro del rango indicado.
-        </p>
-      )}
       {cargando ? (
         <p>Cargando…</p>
       ) : (
