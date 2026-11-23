@@ -131,7 +131,7 @@ export function FiltrosActividades({
   );
 }
 
-export function CampoSelect({
+function CampoSelect({
   id,
   label,
   value,
@@ -165,7 +165,7 @@ export function CampoSelect({
   );
 }
 
-export function CampoFecha({
+function CampoFecha({
   id,
   label,
   value,

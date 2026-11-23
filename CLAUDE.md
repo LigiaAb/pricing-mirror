@@ -1,13 +1,13 @@
 # pricing-mirror
 
-Espejo de los módulos **pricing**, **embarques** y **actividades** (CRM) del proyecto `erp-web` (Next.js). Se usa para trabajar con Claude sin dar acceso
+Espejo de los módulos **pricing**, **embarques**, **actividades** y **reportes-crm** (CRM) del proyecto `erp-web` (Next.js). Se usa para trabajar con Claude sin dar acceso
 al proyecto completo. Responder siempre en **español**.
 
 ## Qué es real y qué no
 
 | Ruta                                         | Qué es                                                | ¿Se copia al proyecto real?      |
 | -------------------------------------------- | ----------------------------------------------------- | -------------------------------- |
-| `src/features/pricing/`, `src/features/embarques/`, `src/features/actividades/` | Código real de los módulos (actividades = CRM: calendario, lista, detalle) | **Sí**, es lo único que se copia |
+| `src/features/pricing/`, `src/features/embarques/`, `src/features/actividades/`, `src/features/reportes-crm/` | Código real de los módulos (actividades = CRM: calendario, lista, detalle; reportes-crm = reportes del CRM, con el ICC) | **Sí**, es lo único que se copia |
 | `src/shared/**`                              | STUBS: solo tipos de lo que pricing usa (salvo `async-combobox-input.tsx`, real) | **No** (salvo ese archivo) |
 | `src/features/catalogos/api/**`              | Código real de los catálogos (`createCatalogo` y cada catálogo)  | **No**                           |
 | `src/features/catalogos/index.ts`            | Copia del `index.ts` real **sin** las exportaciones de `./hooks/...` | **No**                       |
@@ -60,7 +60,7 @@ el rango de producción (no stubs).
 ```bash
 npm install
 npm run check:nuevos            # tsc (SOLO errores nuevos vs .tsc-baseline.txt) + check:biome + check:finales (usar este)
-npm run check:biome             # Biome (biome.json = copia del proyecto real) sobre pricing, embarques/v2, actividades y los 2 reales de shared
+npm run check:biome             # Biome (biome.json = copia del proyecto real) sobre pricing, embarques/v2, actividades, reportes-crm y los 2 reales de shared
 npm run biome:arreglar          # aplica formato, orden de imports y arreglos seguros de Biome
 npm run check:finales           # falla si un archivo cambió CRLF<->LF o si uno nuevo no está en LF
 npm run check                   # tsc completo (incluye ~326 errores previos: stubs any + código existente)
@@ -144,7 +144,7 @@ no lo ha aplicado.
 2. `npm run check:nuevos` antes de cada commit.
 3. Verificación proporcional al cambio: cambio chico → solo `check:nuevos`; cambio de lógica → además una prueba
    rápida en ejecución (esbuild + node) comparando contra el comportamiento anterior.
-4. **Después de cada commit que cambie `src/features/pricing`, `src/features/embarques` o `src/features/actividades`: `npm run diff:guardar`.** Genera
+4. **Después de cada commit que cambie `src/features/pricing`, `src/features/embarques`, `src/features/actividades` o `src/features/reportes-crm`: `npm run diff:guardar`.** Genera
    `diff/[DDMMYY-HHmm]-[nombre-del-commit].diff` (hora de Guatemala, solo `RUTAS_CODIGO` de `scripts/guardar-diff.mjs`, texto en LF)
    y lo agrega al mismo commit (amend). Hacerlo antes del push.
 5. El usuario lo aplica con `scripts/aplicar-diff.mjs`, siguiendo *Aplicar diffs* (formato fijo del comando

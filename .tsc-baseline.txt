@@ -140,7 +140,6 @@ src/features/embarques/hooks/use-pdf-embarque.ts: error TS7006: Parameter 'r' im
 src/features/embarques/lib/cargas-calculos.ts: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
 src/features/embarques/lib/carta-privada.ts: error TS2307: Cannot find module '@/features/coordinaciones' or its corresponding type declarations.
 src/features/embarques/lib/gastos-due.ts: error TS2307: Cannot find module '@/features/gastos' or its corresponding type declarations.
-src/features/embarques/lib/pdf-cca.ts: error TS2307: Cannot find module '@/assets/logos/logo-cropa-dsv.png' or its corresponding type declarations.
 src/features/embarques/lib/pdf-generator-embarques.ts: error TS2345: Argument of type '(doc: jsPDF, barcodeValue: string, options?: Options | undefined) => jsPDF' is not assignable to parameter of type '(doc: jsPDF, value: string, options: Record<string, unknown>) => void'.
 src/features/embarques/lib/pdf-informacion-embarque/items-table.ts: error TS2339: Property 'lastAutoTable' does not exist on type 'jsPDF'.
 src/features/embarques/lib/pdf-informacion-embarque/items-table.ts: error TS2339: Property 'lastAutoTable' does not exist on type 'jsPDF'.

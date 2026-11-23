@@ -21,6 +21,7 @@ import { asText } from "@/shared/lib/text";
 import { useAuthStore } from "@/shared/stores/auth-store";
 import { useActividadesReporte } from "../api/actividades-reporte";
 import { useObjetivosReporte } from "../api/objetivos-reporte";
+import type { ParamsReporteIcc } from "../api/reporte-icc";
 import { actividadesEnRango } from "../lib/actividades-vista";
 import { estadosReporteActividad, tiposReporteActividad } from "../lib/filtros-actividades";
 import type { AgenteCalendario } from "../lib/pdf-calendario-actividades";
@@ -29,6 +30,7 @@ import {
   REPORTES_CRM,
   type ReporteCrmId,
 } from "../lib/reportes-crm-registro";
+import { ReporteIcc } from "./reporte-icc";
 import { ReporteObjetivos } from "./reporte-objetivos-empleado";
 import { ReporteSeguimientoCliente } from "./reporte-seguimiento-cliente";
 import { ReporteActividades } from "./reporte-visitas";
@@ -70,6 +72,7 @@ export function ReportesCrmClient() {
     cod_asesor?: string;
     cod_estado?: string;
   } | null>(null);
+  const [consultaIcc, setConsultaIcc] = useState<ParamsReporteIcc | null>(null);
   const [consultaObjetivosManual, setConsultaObjetivosManual] = useState<{
     cod_emp: string;
     cod_cc: string;
@@ -193,11 +196,13 @@ export function ReportesCrmClient() {
   const puedeConsultarVisitas = Boolean(empresaId && ccId);
   const puedeConsultarObjetivos = Boolean(empresaId && ccId && tipoAsignacion && inicio && fin);
   const puedeGenerarGrafica = Boolean(empresaId && ccId && asesorGrafica && tipoAsignacionGrafica);
+  const puedeConsultarIcc = Boolean(inicio && fin && inicio <= fin);
   const cambiarReporte = (id: ReporteCrmId) => {
     setReporte(id);
     setConsultaVisitas(null);
     setConsultaObjetivosManual(null);
     setConsultaObjetivosGrafica(null);
+    setConsultaIcc(null);
     setAsesor("");
     setEstado("");
     setTiposActividad([]);
@@ -233,6 +238,15 @@ export function ReportesCrmClient() {
         cod_tipo_asignacion: tipoAsignacionGrafica,
         fecha_inicial: semanaActual.inicio,
         fecha_final: semanaActual.fin,
+      });
+    }
+    if (vista === "icc" && puedeConsultarIcc) {
+      setConsultaIcc({
+        fecha_inicio: inicio,
+        fecha_fin: fin,
+        ...(empresaId ? { cod_empresa: Number(empresaId) } : {}),
+        ...(ccId ? { cod_cc: Number(ccId) } : {}),
+        ...(asesor ? { cod_usuario: Number(asesor) } : {}),
       });
     }
   };
@@ -400,7 +414,10 @@ export function ReportesCrmClient() {
             </label>
           </>
         )}
-        {(vista === "visitas" || vista === "objetivos" || vista === "graficas") && (
+        {(vista === "visitas" ||
+          vista === "objetivos" ||
+          vista === "graficas" ||
+          vista === "icc") && (
           <div className="flex items-end">
             <Button
               onClick={filtrar}
@@ -409,7 +426,9 @@ export function ReportesCrmClient() {
                   ? !puedeConsultarVisitas
                   : vista === "objetivos"
                     ? !puedeConsultarObjetivos
-                    : !puedeGenerarGrafica
+                    : vista === "icc"
+                      ? !puedeConsultarIcc
+                      : !puedeGenerarGrafica
               }
             >
               {vista === "graficas" ? "Generar gráfica" : "Filtrar"}
@@ -485,6 +504,7 @@ export function ReportesCrmClient() {
             actual.
           </p>
         ))}
+      {vista === "icc" && <ReporteIcc key={JSON.stringify(consultaIcc)} params={consultaIcc} />}
       {vista === "seguimiento" && (
         <ReporteSeguimientoCliente
           clientes={clientes.data ?? []}

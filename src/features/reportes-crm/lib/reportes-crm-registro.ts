@@ -4,7 +4,8 @@ export type ReporteCrmId =
   | "actividades-pdf"
   | "objetivos"
   | "graficas"
-  | "seguimiento";
+  | "seguimiento"
+  | "icc";
 
 type CamposReporte = {
   empresaCentroCosto?: boolean;
@@ -19,7 +20,7 @@ type CamposReporte = {
 type ConfiguracionReporte = {
   id: ReporteCrmId;
   label: string;
-  vista: "visitas" | "calendario" | "objetivos" | "graficas" | "seguimiento";
+  vista: "visitas" | "calendario" | "objetivos" | "graficas" | "seguimiento" | "icc";
   campos: CamposReporte;
 };
 
@@ -78,6 +79,12 @@ export const REPORTES_CRM: readonly ConfiguracionReporte[] = [
     label: "Seguimiento",
     vista: "seguimiento",
     campos: { empresaCentroCosto: true, cliente: true },
+  },
+  {
+    id: "icc",
+    label: "ICC — Índice de Cumplimiento Comercial",
+    vista: "icc",
+    campos: { empresaCentroCosto: true, asesor: true, fechas: "requeridas" },
   },
 ];
 

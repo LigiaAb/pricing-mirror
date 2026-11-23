@@ -11,6 +11,7 @@ const RUTAS = [
   "src/features/pricing",
   "src/features/embarques/v2", // el resto de embarques es solo referencia
   "src/features/actividades",
+  "src/features/reportes-crm",
   "src/shared/components/form/fields/async-combobox-input.tsx",
   "src/shared/components/data-table/data-table-pagination.tsx",
 ];
