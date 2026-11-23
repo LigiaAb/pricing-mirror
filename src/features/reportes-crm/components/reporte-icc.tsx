@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { format } from "date-fns";
+import { FileDown, Loader2 } from "lucide-react";
+import { useMemo, useRef } from "react";
 import {
   Bar,
   BarChart,
@@ -11,7 +13,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { type BloquePdf, usePdfReporte } from "@/features/pricing/reportes";
 import { DataTable } from "@/shared/components/data-table/data-table";
+import { Button } from "@/shared/components/ui/button";
 import type { ColumnDef } from "@/shared/lib/tanstack-table";
 import { type ParamsReporteIcc, useReporteIcc } from "../api/reporte-icc";
 import { calcularIcc, type ResumenIcc } from "../lib/reporte-icc";
@@ -25,14 +29,21 @@ const formatoPorcentaje = (valor: number | null) => (valor == null ? "—" : `${
  * - ICCp = llamadas realizadas ÷ llamadas programadas.
  * - Citas sin resultado = visitas finalizadas con `con_resultado = 0`.
  * ICCc (visitas no programadas) queda pendiente de definir. Los filtros los pone
- * `ReportesCrmClient`; `params = null` hasta que se pulsa Filtrar.
+ * `ReportesCrmClient`; `params = null` hasta que se pulsa Filtrar. El PDF se arma como el de
+ * Hit Rate (`usePdfReporte`): gráfica oculta sin animación + tabla; `encabezado` son los
+ * filtros con nombre (empresa, centro de costo, asesor).
  */
-export function ReporteIcc({ params }: Readonly<{ params: ParamsReporteIcc | null }>) {
+export function ReporteIcc({
+  params,
+  encabezado = {},
+}: Readonly<{ params: ParamsReporteIcc | null; encabezado?: Record<string, string> | undefined }>) {
+  const graficaPdf = useRef<HTMLDivElement>(null);
+  const pdf = usePdfReporte();
   const consulta = useReporteIcc(params ?? { fecha_inicio: "", fecha_fin: "" }, params !== null);
 
   const filas = consulta.data;
   const resumen = useMemo(() => calcularIcc(filas ?? []), [filas]);
-  const datosGrafica = useMemo(
+  const datosGrafica = useMemo<DatoGrafica[]>(
     () =>
       resumen.personas.map((persona) => ({
         nombre: persona.nombre,
@@ -58,34 +69,56 @@ export function ReporteIcc({ params }: Readonly<{ params: ParamsReporteIcc | nul
   }
   if (consulta.isLoading || !filas) return <div>Cargando el reporte...</div>;
 
+  const generarPdf = () => {
+    const fecha = (valor: string) => valor.split("-").reverse().join("-");
+    const contenido: BloquePdf[] = [
+      { tipo: "titulo", texto: "ICCa / ICCp por persona" },
+      { tipo: "grafica", elemento: graficaPdf.current },
+      {
+        tipo: "leyenda",
+        entradas: [
+          { texto: "ICCa (visitas)", color: COLOR_ICCA },
+          { texto: "ICCp (llamadas)", color: COLOR_ICCP },
+        ],
+      },
+      { tipo: "pagina" },
+      { tipo: "titulo", texto: "Detalle por persona" },
+      { tipo: "tabla", datos: filasPdf(resumen) },
+    ];
+    pdf.generar({
+      titulo: "ICC — Índice de Cumplimiento Comercial",
+      archivo: `icc-${format(new Date(), "ddMMyyyyHHmmss")}.pdf`,
+      horizontal: true,
+      header: {
+        Período: `${fecha(params.fecha_inicio)} al ${fecha(params.fecha_fin)}`,
+        ...encabezado,
+      },
+      contenido,
+    });
+  };
+
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        {pdf.error && <p className="text-sm text-destructive">{pdf.error}</p>}
+        <Button
+          type="button"
+          variant="outline"
+          disabled={pdf.generando || resumen.personas.length === 0}
+          onClick={generarPdf}
+        >
+          {pdf.generando ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <FileDown className="size-4" />
+          )}
+          Descargar PDF
+        </Button>
+      </div>
+
       {datosGrafica.length > 0 && (
         <div className="h-96 rounded-lg border p-3">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={datosGrafica} margin={{ top: 8, right: 12, left: 40, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="nombre"
-                interval={0}
-                angle={-45}
-                textAnchor="end"
-                height={130}
-                tick={{ fontSize: 11 }}
-              />
-              <YAxis
-                domain={[0, 100]}
-                ticks={[0, 20, 40, 60, 80, 100]}
-                tickFormatter={(valor: number) => `${valor}%`}
-              />
-              <Tooltip
-                formatter={(valor) => formatoPorcentaje(valor == null ? null : Number(valor))}
-              />
-              <Legend verticalAlign="top" />
-              <Bar dataKey="ICCa" name="ICCa (visitas)" fill="#2563eb" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="ICCp" name="ICCp (llamadas)" fill="#16a34a" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <GraficaIcc datos={datosGrafica} />
         </div>
       )}
 
@@ -98,8 +131,85 @@ export function ReporteIcc({ params }: Readonly<{ params: ParamsReporteIcc | nul
         emptyMessage="No hay llamadas ni visitas programadas en el rango."
         footer={resumen.personas.length > 0 && <TotalIcc total={resumen.total} />}
       />
+
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          left: "-100000px",
+          top: 0,
+          width: "1200px",
+          height: "420px",
+          pointerEvents: "none",
+        }}
+        ref={graficaPdf}
+      >
+        <GraficaIcc datos={datosGrafica} animar={false} />
+      </div>
     </div>
   );
+}
+
+const COLOR_ICCA = "#2563eb";
+const COLOR_ICCP = "#16a34a";
+
+type DatoGrafica = { nombre: string; ICCa: number | null; ICCp: number | null };
+
+function GraficaIcc({
+  datos,
+  animar = true,
+}: Readonly<{ datos: DatoGrafica[]; animar?: boolean }>) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={datos} margin={{ top: 8, right: 12, left: 40, bottom: 8 }}>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+        <XAxis
+          dataKey="nombre"
+          interval={0}
+          angle={-45}
+          textAnchor="end"
+          height={130}
+          tick={{ fontSize: 11 }}
+        />
+        <YAxis
+          domain={[0, 100]}
+          ticks={[0, 20, 40, 60, 80, 100]}
+          tickFormatter={(valor: number) => `${valor}%`}
+        />
+        <Tooltip formatter={(valor) => formatoPorcentaje(valor == null ? null : Number(valor))} />
+        <Legend verticalAlign="top" />
+        <Bar
+          dataKey="ICCa"
+          name="ICCa (visitas)"
+          fill={COLOR_ICCA}
+          radius={[4, 4, 0, 0]}
+          isAnimationActive={animar}
+        />
+        <Bar
+          dataKey="ICCp"
+          name="ICCp (llamadas)"
+          fill={COLOR_ICCP}
+          radius={[4, 4, 0, 0]}
+          isAnimationActive={animar}
+        />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+/** Filas de la tabla del PDF (mismas columnas que la pantalla) con el TOTAL al final. */
+function filasPdf(resumen: { personas: ResumenIcc[]; total: ResumenIcc }) {
+  const derecha = { horizontal: "right" } as const;
+  return [...resumen.personas, resumen.total].map((r) => ({
+    Persona: { dato: r.nombre },
+    "Visitas prog.": { dato: r.porTipo.VISITA.programadas, alignFormat: derecha },
+    "Visitas real.": { dato: r.porTipo.VISITA.realizadas, alignFormat: derecha },
+    ICCa: { dato: formatoPorcentaje(r.porTipo.VISITA.icc), alignFormat: derecha },
+    "Llamadas prog.": { dato: r.porTipo.LLAMADA.programadas, alignFormat: derecha },
+    "Llamadas real.": { dato: r.porTipo.LLAMADA.realizadas, alignFormat: derecha },
+    ICCp: { dato: formatoPorcentaje(r.porTipo.LLAMADA.icc), alignFormat: derecha },
+    "Citas sin resultado": { dato: r.porTipo.VISITA.sinResultado, alignFormat: derecha },
+  }));
 }
 
 const columna = (

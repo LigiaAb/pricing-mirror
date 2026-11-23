@@ -197,6 +197,23 @@ export function ReportesCrmClient() {
   const puedeConsultarObjetivos = Boolean(empresaId && ccId && tipoAsignacion && inicio && fin);
   const puedeGenerarGrafica = Boolean(empresaId && ccId && asesorGrafica && tipoAsignacionGrafica);
   const puedeConsultarIcc = Boolean(inicio && fin && inicio <= fin);
+  // Filtros con nombre para el encabezado del PDF del ICC (los de la consulta, no los del formulario).
+  const encabezadoIcc = useMemo(() => {
+    const empresa = (catalogoEmpresas.data ?? []).find(
+      (i) => String(i.cod_empresa) === String(consultaIcc?.cod_empresa),
+    )?.nombre_emp;
+    const centro = (catalogoCentros.data ?? []).find(
+      (i) => String(i.codCc) === String(consultaIcc?.cod_cc),
+    )?.nombreCc;
+    const empleado = (catalogoEmpleados.data ?? []).find(
+      (i) => String(i.codUsuario) === String(consultaIcc?.cod_usuario),
+    )?.nombreCompleto;
+    return {
+      ...(empresa ? { Empresa: String(empresa) } : {}),
+      ...(centro ? { "Centro de Costo": String(centro) } : {}),
+      ...(empleado ? { Asesor: String(empleado) } : {}),
+    };
+  }, [catalogoCentros.data, catalogoEmpleados.data, catalogoEmpresas.data, consultaIcc]);
   const cambiarReporte = (id: ReporteCrmId) => {
     setReporte(id);
     setConsultaVisitas(null);
@@ -504,7 +521,13 @@ export function ReportesCrmClient() {
             actual.
           </p>
         ))}
-      {vista === "icc" && <ReporteIcc key={JSON.stringify(consultaIcc)} params={consultaIcc} />}
+      {vista === "icc" && (
+        <ReporteIcc
+          key={JSON.stringify(consultaIcc)}
+          params={consultaIcc}
+          encabezado={encabezadoIcc}
+        />
+      )}
       {vista === "seguimiento" && (
         <ReporteSeguimientoCliente
           clientes={clientes.data ?? []}
