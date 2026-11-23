@@ -282,8 +282,12 @@ function ContenidoFicha({ fila }: { fila: FilaKpi }) {
             <Fila label="Aprobación">{formatFecha(fila.fecha_aprobacion ?? null)}</Fila>
             <Fila label="Realizada">{fila.realizada === 1 ? "Sí" : "No"}</Fila>
             <Fila label="Cerrada">{fila.cerrada === 1 ? "Sí" : "No"}</Fila>
-            {fila.tipo_precio ? (
-              <Fila label="Realización de precio">{TIPO_PRECIO[fila.tipo_precio]}</Fila>
+            {fila.sin_spot || fila.spot_bajo || fila.spot_alto ? (
+              <Fila label="Realización de precio">
+                {TIPOS_PRECIO.filter((tipo) => fila[tipo.campo] === 1)
+                  .map((tipo) => tipo.etiqueta)
+                  .join(" · ")}
+              </Fila>
             ) : null}
           </Datos>
         </CardInfo>
@@ -473,11 +477,12 @@ const DATOS_COMPLEMENTARIOS = [
   ["opcionales", "Opcionales"],
 ] as const;
 
-const TIPO_PRECIO: Record<NonNullable<FilaKpi["tipo_precio"]>, string> = {
-  SOBRE_TARIFA: "Sobre tarifa (venta Spot mayor que la tarifa publicada)",
-  SPOT: "Spot (venta Spot menor que la tarifa publicada)",
-  TARIFA_PUBLICADA: "Tarifa publicada (sin Spot o igual a la tarifa)",
-};
+/** Una cotización puede tener Spot mayor y menor a la vez (igual que el reporte). */
+const TIPOS_PRECIO: { campo: "spot_alto" | "spot_bajo" | "sin_spot"; etiqueta: string }[] = [
+  { campo: "spot_alto", etiqueta: "Sobre tarifa (algún Spot con venta mayor a la original)" },
+  { campo: "spot_bajo", etiqueta: "Spot (algún Spot con venta menor a la original)" },
+  { campo: "sin_spot", etiqueta: "Tarifa publicada (sin Spot)" },
+];
 
 const texto = (valor: string | null | undefined) => valor?.trim() || undefined;
 

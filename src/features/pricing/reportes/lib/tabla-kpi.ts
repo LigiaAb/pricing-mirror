@@ -11,6 +11,8 @@
  *  - "cerrada" con los datos de su aprobación (año/mes de aprobación).
  * Así, por año o mes, una cotización creada en junio y aprobada en julio suma la
  * realizada en junio y la cerrada en julio, igual que report_hit_rate.
+ * Realización de Precio no usa la aprobación: todo va con la creación de la versión activa,
+ * igual que report_realizacion_de_precio.
  */
 
 import type { ColumnaTabla, TreeNode } from "@/features/pricing/shared";
@@ -158,7 +160,7 @@ const CLAVE_TOTAL = "__total__";
 type Aporte = { momento: Momento; sumar: (c: Conteo) => void };
 
 /** Lo que aporta una cotización: su realizada y/o su cerrada (con el grupo de precio). */
-function aportesDeFila(fila: FilaKpi): Aporte[] {
+function aportesDeFila(fila: FilaKpi, reporte: ReporteKpi): Aporte[] {
   const aportes: Aporte[] = [];
   if (fila.realizada === 1) {
     aportes.push({
@@ -170,12 +172,13 @@ function aportesDeFila(fila: FilaKpi): Aporte[] {
   }
   if (fila.cerrada === 1) {
     aportes.push({
-      momento: "aprobacion",
+      momento: reporte === "realizacion_de_precio" ? "creacion" : "aprobacion",
       sumar: (c) => {
         c.cerradas += 1;
-        if (fila.tipo_precio === "SOBRE_TARIFA") c.sobreTarifa += 1;
-        else if (fila.tipo_precio === "SPOT") c.spot += 1;
-        else c.tarifaPublicada += 1;
+        // Como report_realizacion_de_precio: una cotización puede sumar en Spot y en sobre tarifa
+        c.sobreTarifa += fila.spot_alto;
+        c.spot += fila.spot_bajo;
+        c.tarifaPublicada += fila.sin_spot;
       },
     });
   }
@@ -227,7 +230,7 @@ export function construirTablaKpi(
   const valoresColumna = new Set<string>();
 
   for (const fila of filas) {
-    for (const aporte of aportesDeFila(fila)) {
+    for (const aporte of aportesDeFila(fila, reporte)) {
       const columna = campoColumna
         ? valorCampoKpi(fila, campoColumna, aporte.momento, porTransporte)
         : CLAVE_TOTAL;
