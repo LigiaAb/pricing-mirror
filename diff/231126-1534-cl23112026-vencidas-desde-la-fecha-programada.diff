@@ -1,0 +1,34 @@
+diff --git a/src/features/reportes-crm/lib/reporte-icc.ts b/src/features/reportes-crm/lib/reporte-icc.ts
+index a8f4048..a4ab206 100644
+--- a/src/features/reportes-crm/lib/reporte-icc.ts
++++ b/src/features/reportes-crm/lib/reporte-icc.ts
+@@ -12,9 +12,8 @@ import type { FilaIcc } from "../api/reporte-icc";
+  * - ICC % = programadas realizadas / programadas × 100 (`null` si no hay programadas).
+  * - ICCc % = no programadas realizadas / total (sin anuladas) × 100.
+  * - Sin resultado: finalizadas con `con_resultado = 0`.
+- * - Vencida: sigue abierta y sin resultado más de 7 días después del día en que debía
+- *   registrarse (el mayor entre creación y programación): si es sábado, tiene hasta el sábado
+- *   siguiente; el domingo ya está vencida.
++ * - Vencida: sigue abierta y sin resultado más de 7 días después del día programado: si es
++ *   sábado, tiene hasta el sábado siguiente; el domingo ya está vencida.
+  */
+ 
+ /** Descripción de estado de las anuladas (TIPO/ESTADO por nombre, como el backend). */
+@@ -81,14 +80,13 @@ export function clasificarProgramacion(fila: FilaIcc): "programada" | "no-progra
+   return dias >= -MAX_DIAS_ATRAS_NO_PROGRAMADA ? "no-programada" : null;
+ }
+ 
+-/** Abierta, sin resultado y con más de 7 días desde el día en que debía registrarse. */
++/** Abierta, sin resultado y con más de 7 días desde el día programado. */
+ export function esVencida(fila: FilaIcc, ahora: number): boolean {
+   if (esAnulada(fila) || esFinalizada(fila) || fila.con_resultado !== 0) return false;
+-  const creacion = diaLocal(fila.fecha_creacion);
+   const programacion = diaLocal(fila.fecha_programacion);
+   const hoy = diaLocal(new Date(ahora).toISOString());
+-  if (hoy == null || (creacion == null && programacion == null)) return false;
+-  return hoy - Math.max(creacion ?? -Infinity, programacion ?? -Infinity) > DIAS_PARA_VENCER;
++  if (hoy == null || programacion == null) return false;
++  return hoy - programacion > DIAS_PARA_VENCER;
+ }
+ 
+ export function porcentajeIcc(realizadas: number, programadas: number): number | null {
