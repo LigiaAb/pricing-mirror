@@ -15,8 +15,10 @@ const bandera = z.coerce.number().catch(0);
 
 /**
  * Una cotización (cabecera) del detalle; keys en minúsculas, como las entrega el cliente de API.
- * `realizada`: creada en el rango (primera versión). `cerrada`: confirmada con aprobación en el rango.
- * El dueño (`usuario`) es el creador de la primera versión.
+ * Hit Rate: `realizada` = creada en el rango (primera versión); `cerrada` = confirmada con
+ * aprobación en el rango; el dueño (`usuario`) es el creador de la primera versión.
+ * Realización de Precio (igual que report_realizacion_de_precio): versión activa creada en el
+ * rango; `realizada` siempre 1; `cerrada` = confirmada; el dueño es el creador de la versión activa.
  */
 export const filaKpiSchema = z
   .object({
@@ -49,8 +51,14 @@ export const filaKpiSchema = z
     carrier: texto,
     realizada: bandera,
     cerrada: bandera,
-    /** Solo Realización de Precio, en las cerradas. */
-    tipo_precio: z.enum(["SOBRE_TARIFA", "SPOT", "TARIFA_PUBLICADA"]).nullable().optional(),
+    /**
+     * Solo Realización de Precio, en las cerradas (igual que report_realizacion_de_precio):
+     * sin Spot activo; con algún Spot de venta menor a la original; con alguno mayor.
+     * Una cotización puede tener `spot_bajo` y `spot_alto` a la vez.
+     */
+    sin_spot: bandera,
+    spot_bajo: bandera,
+    spot_alto: bandera,
   })
   .passthrough();
 

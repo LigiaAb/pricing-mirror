@@ -631,6 +631,9 @@ const consultaKpiHitRate = (campos) => {
       "TT.TIPO_DESCRIPCION AS TRANSPORTE",
       "TP.TIPO_DESCRIPCION AS TIPO_PAGO",
       "C.ENTIDAD_NOMBRE AS CLIENTE",
+      // Para que la ficha del reporte busque la cabecera completa (lista-cotizacion-cabecera).
+      "CC.ENTIDAD_ID AS COD_CLIENTE",
+      "CC.EMPRESA_ID AS COD_EMPRESA",
       "E.ESTADO_DESCRIPCION AS ESTADO",
       "CAR.CARRIER AS CARRIER",
     )
@@ -656,34 +659,96 @@ const consultaKpiHitRate = (campos) => {
   return consulta;
 };
 
-/** Realización de Precio: las mismas filas de Hit Rate + el grupo de precio de las cerradas. */
+/**
+ * Realización de Precio: mismos criterios que report_realizacion_de_precio.
+ *  - Una fila por cotización cuya versión activa (ESTADO_ID 1) se creó en el rango.
+ *  - Dueño = usuario de la versión activa (no el de la primera versión).
+ *  - REALIZADA = 1 en todas (global_by_user); CERRADA = 1 si la cabecera está CONFIRMADO
+ *    (sin revisar la fecha de aprobación).
+ *  - En las cerradas, con los Spot activos (ESTADO_ID 81) de la versión activa:
+ *    SIN_SPOT (by_user_original) = no tiene Spot; SPOT_BAJO (by_user_bajo) = algún Spot con
+ *    venta menor a la original; SPOT_ALTO (by_user_alto) = alguno con venta mayor.
+ *    Una cotización puede tener SPOT_BAJO y SPOT_ALTO a la vez, igual que el reporte.
+ */
 const consultaKpiRealizacionDePrecio = (campos) => {
-  // Spot activo de la versión activa, sumado por cotización
-  const spot = azureSqlClient({ TS: "TARIFA_SPOT" })
-    .join({ CD: "COTIZACION_DETALLE" }, "CD.COTIZACIONDETALLE_ID", "TS.COTIZACIONDETALLE_ID")
-    .where("CD.ESTADO_ID", 1)
-    .where("TS.ESTADO_ID", 81)
-    .select("CD.COTIZACIONCABECERA_ID")
-    .sum({ VENTA: "TS.TARIFASPOT_VENTA" })
-    .sum({ VENTA_ORIGINAL: "TS.TARIFASPOT_VENTA_ORIGINAL" })
-    .groupBy("CD.COTIZACIONCABECERA_ID")
-    .as("SP");
+  // Un nombre por usuario: USUARIO_EMPLEADO_PUESTO puede tener varios registros por usuario
+  const empleado = azureSqlClient({ UEP: "USUARIO_EMPLEADO_PUESTO" })
+    .join({ EM: "EMPLEADO" }, "EM.EMPLEADO_ID", "UEP.EMPLEADO_ID")
+    .select("UEP.USUARIO_ID")
+    .max({ NOMBRES: "EM.EMPLEADO_NOMBRES" })
+    .max({ APELLIDOS: "EM.EMPLEADO_APELLIDOS" })
+    .groupBy("UEP.USUARIO_ID")
+    .as("EMP");
 
-  const aprobada = enRangoKpi("CC.COTCAB_FECHA_APROBACION", campos);
+  const confirmada = "E.ESTADO_DESCRIPCION = 'CONFIRMADO'";
+  const spotActivo = (condicion) =>
+    `EXISTS (SELECT 1 FROM TARIFA_SPOT TS WHERE TS.COTIZACIONDETALLE_ID = CD.COTIZACIONDETALLE_ID AND TS.ESTADO_ID = 81${condicion})`;
 
-  return consultaKpiHitRate(campos)
-    .leftJoin(spot, "SP.COTIZACIONCABECERA_ID", "CC.COTIZACIONCABECERA_ID")
+  const consulta = azureSqlClient({ CC: "COTIZACION_CABECERA" })
+    .join({ CD: "COTIZACION_DETALLE" }, function () {
+      this.on("CD.COTIZACIONCABECERA_ID", "=", "CC.COTIZACIONCABECERA_ID").andOnVal(
+        "CD.ESTADO_ID",
+        "=",
+        1,
+      );
+    })
+    .leftJoin(empleado, "EMP.USUARIO_ID", "CD.USUARIO_ID")
+    .leftJoin({ U: "USUARIO" }, "U.USUARIO_ID", "CD.USUARIO_ID")
+    .leftJoin({ E: "ESTADO" }, "E.ESTADO_ID", "CC.ESTADO_ID")
+    .leftJoin({ CEN: "CENTRO_COSTO" }, "CEN.CENCOS_ID", "CC.CENCO_ID")
+    .leftJoin({ TT: "TIPO" }, "TT.TIPO_ID", "CC.TIPO_TRANSPORTE_ID")
+    .leftJoin({ TP: "TIPO" }, "TP.TIPO_ID", "CC.TIPO_PAGO_ID")
+    .leftJoin({ C: "ENTIDAD" }, "C.ENTIDAD_ID", "CC.ENTIDAD_ID")
+    .leftJoin(carrierPorCotizacion(), "CAR.COTIZACIONCABECERA_ID", "CC.COTIZACIONCABECERA_ID")
+    .whereNotNull("CD.USUARIO_ID")
+    .whereRaw(enRangoKpi("CD.COTIZACIONDETALLE_FECHA_CREACION", campos))
+    .select(
+      "CC.COTIZACIONCABECERA_ID AS COTIZACION",
+      "CD.COTIZACIONDETALLE_FECHA_CREACION AS FECHA_CREACION",
+      "CC.COTCAB_FECHA_APROBACION AS FECHA_APROBACION",
+      "CD.USUARIO_ID AS USUARIO",
+      "EMP.NOMBRES AS NOMBRES",
+      "EMP.APELLIDOS AS APELLIDOS",
+      "CC.CENCO_ID AS CC",
+      "CEN.CENCOD_NOMBRE AS CC_NOMBRE",
+      "TT.TIPO_DESCRIPCION AS TRANSPORTE",
+      "TP.TIPO_DESCRIPCION AS TIPO_PAGO",
+      "C.ENTIDAD_NOMBRE AS CLIENTE",
+      "CC.ENTIDAD_ID AS COD_CLIENTE",
+      "CC.EMPRESA_ID AS COD_EMPRESA",
+      "E.ESTADO_DESCRIPCION AS ESTADO",
+      "CAR.CARRIER AS CARRIER",
+    )
+    .select(azureSqlClient.raw("1 AS REALIZADA"))
+    .select(azureSqlClient.raw(`CASE WHEN ${confirmada} THEN 1 ELSE 0 END AS CERRADA`))
     .select(
       azureSqlClient.raw(
-        `CASE
-          WHEN NOT (E.ESTADO_DESCRIPCION = 'CONFIRMADO' AND ?) THEN NULL
-          WHEN SP.VENTA > SP.VENTA_ORIGINAL THEN 'SOBRE_TARIFA'
-          WHEN SP.VENTA < SP.VENTA_ORIGINAL THEN 'SPOT'
-          ELSE 'TARIFA_PUBLICADA'
-        END AS TIPO_PRECIO`,
-        [aprobada],
+        `CASE WHEN ${confirmada} AND NOT ${spotActivo("")} THEN 1 ELSE 0 END AS SIN_SPOT`,
+      ),
+      azureSqlClient.raw(
+        `CASE WHEN ${confirmada} AND ${spotActivo(
+          " AND TS.TARIFASPOT_VENTA < TS.TARIFASPOT_VENTA_ORIGINAL",
+        )} THEN 1 ELSE 0 END AS SPOT_BAJO`,
+      ),
+      azureSqlClient.raw(
+        `CASE WHEN ${confirmada} AND ${spotActivo(
+          " AND TS.TARIFASPOT_VENTA > TS.TARIFASPOT_VENTA_ORIGINAL",
+        )} THEN 1 ELSE 0 END AS SPOT_ALTO`,
       ),
     );
+
+  unirLugar(consulta, "ORIGEN", "O");
+  unirLugar(consulta, "DESTINO", "D");
+
+  // Mismos filtros que report_realizacion_de_precio (el de usuario aplica a la versión activa)
+  const tiene = (campo) => campos[campo] != null && campos[campo] !== "";
+  if (tiene("cod_empresa")) consulta.where("CC.EMPRESA_ID", `${campos.cod_empresa}`);
+  if (tiene("cod_cc")) consulta.where("CC.CENCO_ID", `${campos.cod_cc}`);
+  if (tiene("cod_cliente")) consulta.where("CC.ENTIDAD_ID", `${campos.cod_cliente}`);
+  if (tiene("cod_usuario")) consulta.where("CD.USUARIO_ID", `${campos.cod_usuario}`);
+  if (tiene("cod_tipo_pago")) consulta.where("CC.TIPO_PAGO_ID", `${campos.cod_tipo_pago}`);
+
+  return consulta;
 };
 
 const CONSULTAS_KPI_COTIZACIONES = {

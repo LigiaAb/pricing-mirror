@@ -366,7 +366,12 @@ function barrasPorUsuario(
   confirmadas: HitRateUsuario[],
 ): BarCharObj[] {
   const confirmadasPorUsuario = indexar(confirmadas, (registro) => registro.usuario);
-  return generadas.map((registro) => {
+  const generadasPorUsuario = indexar(generadas, (registro) => registro.usuario);
+  // Quien solo tiene confirmadas en el rango (creadas antes) también sale, con 0 generadas
+  const soloConfirmadas = [...confirmadasPorUsuario.values()]
+    .filter((registro) => !generadasPorUsuario.has(registro.usuario))
+    .map((registro) => ({ ...registro, total: 0 }));
+  return [...generadas, ...soloConfirmadas].map((registro) => {
     const totalConfirmadas = confirmadasPorUsuario.get(registro.usuario)?.total ?? 0;
     const alcance = alcanceRedondeado(registro.total, totalConfirmadas);
     return {
@@ -386,7 +391,11 @@ function seccionesPorCentroCosto(
   confirmadas: HitRateCentroCosto[],
 ): SeccionCentroCosto[] {
   const confirmadasPorCc = indexar(confirmadas, (registro) => registro.cc);
-  return generadas.map((registro) => {
+  const generadasPorCc = indexar(generadas, (registro) => registro.cc);
+  const soloConfirmadas = [...confirmadasPorCc.values()]
+    .filter((registro) => !generadasPorCc.has(registro.cc))
+    .map((registro) => ({ ...registro, total: 0 }));
+  return [...generadas, ...soloConfirmadas].map((registro) => {
     const totalConfirmadas = confirmadasPorCc.get(registro.cc)?.total ?? 0;
     const alcance = alcanceRedondeado(registro.total, totalConfirmadas);
     return {
