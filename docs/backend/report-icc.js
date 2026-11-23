@@ -119,8 +119,8 @@ module.exports.report_icc = async (campos) => {
   if (error) return error;
 
   try {
-    const filas = await consultaIcc(campos);
-    return { filas };
+    // Arreglo directo (sin `filas`): el sobre queda { status, message, length, data: [...] }
+    return await consultaIcc(campos);
   } catch (error) {
     return { success: false, error: error.toString() };
   }
