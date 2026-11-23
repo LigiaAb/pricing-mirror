@@ -1,6 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  CalendarDays,
+  ChartColumnBig,
+  ChevronDown,
+  Filter,
+  Search,
+  Settings2,
+  Table2Icon,
+  Target,
+  Users,
+} from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
   actividades as actividadesCatalogo,
   useHistorialActividades,
@@ -14,8 +25,17 @@ import {
   tipos,
 } from "@/features/catalogos";
 import { useFetchEntidades } from "@/features/entidades";
+import { MensajeVacio, Panel, SectionHeader } from "@/features/pricing/shared";
 import { useContextoOperativoStore, usePermisosCategoria } from "@/features/shell";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/shared/components/ui/accordion";
 import { Button } from "@/shared/components/ui/button";
+import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
+import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { MultiSelect } from "@/shared/components/ui/multi-select";
 import { asText } from "@/shared/lib/text";
 import { useAuthStore } from "@/shared/stores/auth-store";
@@ -268,282 +288,362 @@ export function ReportesCrmClient() {
     }
   };
 
+  const hayFiltrosOpcionales = Boolean(
+    (campos.empresaCentroCosto && puedeFiltrarEmpresaCc) ||
+      campos.asesor ||
+      campos.estado ||
+      campos.tipoActividad ||
+      campos.tipoAsignacion === "seleccion",
+  );
+  const filtrarDeshabilitado =
+    vista === "visitas"
+      ? !puedeConsultarVisitas
+      : vista === "objetivos"
+        ? !puedeConsultarObjetivos
+        : vista === "icc"
+          ? !puedeConsultarIcc
+          : !puedeGenerarGrafica;
+
   return (
-    <section className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Reportes CRM</h1>
-        <p className="text-sm text-muted-foreground">
-          Consulta de actividades, objetivos y seguimiento de clientes.
-        </p>
-      </div>
-      <div className="grid gap-3 rounded-lg border p-4 md:grid-cols-3">
-        <label className="text-sm font-medium">
-          Reporte
-          <select
-            className="mt-1 h-9 w-full rounded-md border bg-card px-2"
-            value={reporte}
-            onChange={(event) => cambiarReporte(event.target.value as ReporteCrmId)}
-          >
-            {REPORTES_CRM.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        {campos.empresaCentroCosto && puedeFiltrarEmpresaCc && (
-          <label className="text-sm font-medium">
-            Empresa
-            <select
-              className="mt-1 h-9 w-full rounded-md border bg-card px-2"
-              value={empresaId}
-              onChange={(event) => {
-                setEmpresaId(event.target.value);
-                setCcId("");
-                setAsesor("");
-                setConsultaObjetivosGrafica(null);
+    <section className="w-full space-y-5 bg-surface-1 p-4 md:p-6">
+      <Panel>
+        <SectionHeader
+          icon={<Filter className="h-4 w-4" />}
+          title="Filtros requeridos"
+          subtitle="Consulta de actividades, objetivos y seguimiento de clientes."
+        />
+        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-end">
+          <Field className="w-full sm:w-1/3">
+            <FieldLabel htmlFor="reportes-crm-reporte">Reporte</FieldLabel>
+            <Combobox
+              id="reportes-crm-reporte"
+              value={reporte}
+              onChange={(valor) => {
+                if (valor) cambiarReporte(valor as ReporteCrmId);
               }}
-            >
-              <option value="">Selecciona una empresa</option>
-              {(catalogoEmpresas.data ?? []).map((item) => (
-                <option key={item.cod_empresa} value={item.cod_empresa}>
-                  {item.nombre_emp}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {campos.empresaCentroCosto && puedeFiltrarEmpresaCc && (
-          <label className="text-sm font-medium">
-            Centro de costo
-            <select
-              className="mt-1 h-9 w-full rounded-md border bg-card px-2"
-              value={ccId}
-              onChange={(event) => {
-                setCcId(event.target.value);
-                setAsesor("");
-                setConsultaObjetivosGrafica(null);
-              }}
-            >
-              <option value="">Selecciona un centro de costo</option>
-              {centrosFiltrados.map((item) => (
-                <option key={item.codCc} value={item.codCc}>
-                  {item.nombreCc}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {campos.asesor && (
-          <label className="text-sm font-medium">
-            {vista === "graficas" ? "Asesor" : "Asesor (opcional)"}
-            <select
-              className="mt-1 h-9 w-full rounded-md border bg-card px-2"
-              value={asesor}
-              onChange={(event) => {
-                setAsesor(event.target.value);
-                setConsultaObjetivosGrafica(null);
-              }}
-            >
-              <option value="">
-                {vista === "graficas" ? "Usuario actual" : "Todos los asesores"}
-              </option>
-              {asesores.map((item) => (
-                <option key={item.codUsuario} value={item.codUsuario}>
-                  {item.nombreCompleto}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {campos.estado && (
-          <label className="text-sm font-medium">
-            Estado (opcional)
-            <select
-              className="mt-1 h-9 w-full rounded-md border bg-card px-2"
-              value={estado}
-              onChange={(event) => setEstado(event.target.value)}
-            >
-              <option value="">Todos los estados</option>
-              {estadosActividad.map((item) => (
-                <option key={item.cod_estado} value={item.cod_estado}>
-                  {item.estado_desc}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {campos.tipoActividad && (
-          <div>
-            <label className="text-sm font-medium" htmlFor="reportes-crm-tipo">
-              Tipo (opcional)
-            </label>
-            <MultiSelect
-              id="reportes-crm-tipo"
-              className="mt-1"
-              value={tiposActividad}
-              onChange={setTiposActividad}
-              placeholder="Todos los tipos"
-              searchPlaceholder="Buscar tipo…"
-              options={tiposActividadReporte.map((item) => ({
-                value: String(item.codTipo),
-                label: item.nomTipo,
-              }))}
+              options={OPCIONES_REPORTE}
+              placeholder="Seleccione..."
+              popoverClassName="z-[9999]"
             />
-          </div>
-        )}
-        {campos.tipoAsignacion === "seleccion" && (
-          <label className="text-sm font-medium">
-            Tipo de asignación
-            <select
-              className="mt-1 h-9 w-full rounded-md border bg-card px-2"
-              value={tipoAsignacion}
-              onChange={(event) => setTipoAsignacion(event.target.value)}
-            >
-              <option value="">Selecciona un tipo</option>
-              {(catalogoTiposAsignacion.data ?? []).map((item) => (
-                <option key={item.codTipo} value={item.codTipo}>
-                  {item.nomTipo}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {campos.fechas && (
-          <>
-            <label className="text-sm font-medium">
-              Fecha inicial{campos.fechas === "requeridas" ? " *" : ""}
-              <input
-                type="date"
-                className="mt-1 h-9 w-full rounded-md border bg-card px-2"
-                value={inicio}
-                onChange={(event) => setInicio(event.target.value)}
-              />
-            </label>
-            <label className="text-sm font-medium">
-              Fecha final{campos.fechas === "requeridas" ? " *" : ""}
-              <input
-                type="date"
-                className="mt-1 h-9 w-full rounded-md border bg-card px-2"
-                value={fin}
-                onChange={(event) => setFin(event.target.value)}
-              />
-            </label>
-          </>
-        )}
-        {(vista === "visitas" ||
-          vista === "objetivos" ||
-          vista === "graficas" ||
-          vista === "icc") && (
-          <div className="flex items-end">
+          </Field>
+          {campos.fechas && (
+            <>
+              <label className="w-full text-sm font-medium sm:w-1/4">
+                Fecha inicial{campos.fechas === "requeridas" ? " *" : ""}
+                <input
+                  type="date"
+                  className="mt-1 h-9 w-full rounded-md border bg-card px-2"
+                  value={inicio}
+                  onChange={(event) => setInicio(event.target.value)}
+                />
+              </label>
+              <label className="w-full text-sm font-medium sm:w-1/4">
+                Fecha final{campos.fechas === "requeridas" ? " *" : ""}
+                <input
+                  type="date"
+                  className="mt-1 h-9 w-full rounded-md border bg-card px-2"
+                  value={fin}
+                  onChange={(event) => setFin(event.target.value)}
+                />
+              </label>
+            </>
+          )}
+          {(vista === "visitas" ||
+            vista === "objetivos" ||
+            vista === "graficas" ||
+            vista === "icc") && (
             <Button
+              type="button"
+              className="gap-1.5"
               onClick={filtrar}
-              disabled={
-                vista === "visitas"
-                  ? !puedeConsultarVisitas
-                  : vista === "objetivos"
-                    ? !puedeConsultarObjetivos
-                    : vista === "icc"
-                      ? !puedeConsultarIcc
-                      : !puedeGenerarGrafica
-              }
+              disabled={filtrarDeshabilitado}
             >
+              {vista === "graficas" ? (
+                <ChartColumnBig className="h-4 w-4" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
               {vista === "graficas" ? "Generar gráfica" : "Filtrar"}
             </Button>
-          </div>
-        )}
-      </div>
-      {vista === "visitas" && (
-        <ReporteActividades
-          filas={filas}
-          cargando={actividades.isFetching}
-          pdf={false}
-          historico={reporte === "visitas-historico"}
-          agente={agente}
-          inicio={inicio}
-          fin={fin}
-          empleados={catalogoEmpleados.data ?? []}
-          empresa={
-            (catalogoEmpresas.data ?? [])?.find((i) => String(i.cod_empresa) === String(empresaId))
-              ?.nombre_emp ?? ""
-          }
-          centroCosto={
-            (catalogoCentros.data ?? [])?.find((i) => String(i.codCc) === String(ccId))?.nombreCc ??
-            ""
-          }
-          estado={
-            estadosActividad.find((i) => String(i.cod_estado) === String(estado))?.estado_desc ?? ""
-          }
-          tipos={tiposActividadReporte
-            .filter((i) => tiposActividad.includes(String(i.codTipo)))
-            ?.map((i) => i.nomTipo)}
+          )}
+        </div>
+      </Panel>
+
+      {hayFiltrosOpcionales && (
+        <Panel>
+          <Accordion type="single" collapsible defaultValue="filtros">
+            <AccordionItem value="filtros" className="border-none">
+              <AccordionTrigger className="bg-brand-50 p-0 hover:no-underline [&>svg]:hidden">
+                <div className="flex w-full items-center justify-between pr-5">
+                  <SectionHeader
+                    icon={<Settings2 className="h-4 w-4" />}
+                    title="Filtros"
+                    subtitle="Acota el universo de actividades a analizar"
+                  />
+                  <ChevronDown className="h-4 w-4 shrink-0 text-primary transition-transform duration-200" />
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="grid gap-4 px-5 pt-4 pb-5 md:grid-cols-3">
+                {campos.empresaCentroCosto && puedeFiltrarEmpresaCc && (
+                  <FiltroCombobox
+                    id="reportes-crm-empresa"
+                    label="Empresa"
+                    value={empresaId}
+                    placeholder="Selecciona una empresa"
+                    options={(catalogoEmpresas.data ?? []).map((item) => ({
+                      value: String(item.cod_empresa),
+                      label: String(item.nombre_emp ?? ""),
+                    }))}
+                    onChange={(valor) => {
+                      setEmpresaId(valor);
+                      setCcId("");
+                      setAsesor("");
+                      setConsultaObjetivosGrafica(null);
+                    }}
+                  />
+                )}
+                {campos.empresaCentroCosto && puedeFiltrarEmpresaCc && (
+                  <FiltroCombobox
+                    id="reportes-crm-centro-costo"
+                    label="Centro de costo"
+                    value={ccId}
+                    placeholder="Selecciona un centro de costo"
+                    options={centrosFiltrados.map((item) => ({
+                      value: String(item.codCc),
+                      label: item.nombreCc,
+                    }))}
+                    onChange={(valor) => {
+                      setCcId(valor);
+                      setAsesor("");
+                      setConsultaObjetivosGrafica(null);
+                    }}
+                  />
+                )}
+                {campos.asesor && (
+                  <FiltroCombobox
+                    id="reportes-crm-asesor"
+                    label={vista === "graficas" ? "Asesor" : "Asesor (opcional)"}
+                    value={asesor}
+                    placeholder={vista === "graficas" ? "Usuario actual" : "Todos los asesores"}
+                    options={asesores.map((item) => ({
+                      value: String(item.codUsuario),
+                      label: item.nombreCompleto,
+                    }))}
+                    onChange={(valor) => {
+                      setAsesor(valor);
+                      setConsultaObjetivosGrafica(null);
+                    }}
+                  />
+                )}
+                {campos.estado && (
+                  <FiltroCombobox
+                    id="reportes-crm-estado"
+                    label="Estado (opcional)"
+                    value={estado}
+                    placeholder="Todos los estados"
+                    options={estadosActividad.map((item) => ({
+                      value: String(item.cod_estado),
+                      label: String(item.estado_desc ?? ""),
+                    }))}
+                    onChange={setEstado}
+                  />
+                )}
+                {campos.tipoActividad && (
+                  <Field>
+                    <FieldLabel htmlFor="reportes-crm-tipo">Tipo (opcional)</FieldLabel>
+                    <MultiSelect
+                      id="reportes-crm-tipo"
+                      value={tiposActividad}
+                      onChange={setTiposActividad}
+                      placeholder="Todos los tipos"
+                      searchPlaceholder="Buscar tipo…"
+                      options={tiposActividadReporte.map((item) => ({
+                        value: String(item.codTipo),
+                        label: item.nomTipo,
+                      }))}
+                    />
+                  </Field>
+                )}
+                {campos.tipoAsignacion === "seleccion" && (
+                  <FiltroCombobox
+                    id="reportes-crm-tipo-asignacion"
+                    label="Tipo de asignación"
+                    value={tipoAsignacion}
+                    placeholder="Selecciona un tipo"
+                    options={(catalogoTiposAsignacion.data ?? []).map((item) => ({
+                      value: String(item.codTipo),
+                      label: item.nomTipo,
+                    }))}
+                    onChange={setTipoAsignacion}
+                  />
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </Panel>
+      )}
+
+      <Panel key={`resultado-${reporte}`}>
+        <SectionHeader
+          icon={ICONOS_VISTA[vista]}
+          title={configuracion.label}
+          subtitle={SUBTITULOS_VISTA[vista]}
         />
-      )}
-      {vista === "calendario" && (
-        <ReporteActividades
-          filas={filas}
-          cargando={actividades.isFetching}
-          pdf
-          historico={false}
-          agente={agente}
-          inicio={inicio}
-          fin={fin}
-          empleados={catalogoEmpleados.data ?? []}
-          empresa={
-            (catalogoEmpresas.data ?? [])?.find((i) => String(i.cod_empresa) === String(empresaId))
-              ?.nombre_emp ?? ""
-          }
-          centroCosto={
-            (catalogoCentros.data ?? [])?.find((i) => String(i.codCc) === String(ccId))?.nombreCc ??
-            ""
-          }
-          estado={
-            estadosActividad.find((i) => String(i.cod_estado) === String(estado))?.estado_desc ?? ""
-          }
-          tipos={tiposActividadReporte
-            .filter((i) => tiposActividad.includes(String(i.codTipo)))
-            ?.map((i) => i.nomTipo)}
-        />
-      )}
-      {vista === "objetivos" && (
-        <ReporteObjetivos actividadesGrafica={[]} datos={objetivos.data} grafica={false} />
-      )}
-      {vista === "graficas" &&
-        (consultaObjetivosGrafica ? (
-          <ReporteObjetivos
-            actividadesGrafica={actividadesGrafica.data ?? []}
-            datos={objetivos.data}
-            grafica
-          />
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Selecciona el asesor y genera la gráfica para consultar sus objetivos de la semana
-            actual.
-          </p>
-        ))}
-      {vista === "icc" && (
-        <ReporteIcc
-          key={JSON.stringify(consultaIcc)}
-          params={consultaIcc}
-          encabezado={encabezadoIcc}
-        />
-      )}
-      {vista === "seguimiento" && (
-        <ReporteSeguimientoCliente
-          clientes={clientes.data ?? []}
-          clienteId={clienteId}
-          setClienteId={(cliente) => {
-            setClienteId(cliente);
-            setConsultaSeguimientoClienteId(null);
-          }}
-          onGenerar={() => setConsultaSeguimientoClienteId(clienteId || null)}
-          consultado={consultaSeguimientoClienteId !== null}
-          filas={historial.data ?? []}
-          cargando={historial.isFetching}
-          empresaId={empresaId}
-          ccId={ccId}
-        />
-      )}
+        <div className="p-4">
+          {vista === "visitas" && (
+            <ReporteActividades
+              filas={filas}
+              cargando={actividades.isFetching}
+              pdf={false}
+              historico={reporte === "visitas-historico"}
+              agente={agente}
+              inicio={inicio}
+              fin={fin}
+              empleados={catalogoEmpleados.data ?? []}
+              empresa={
+                (catalogoEmpresas.data ?? [])?.find(
+                  (i) => String(i.cod_empresa) === String(empresaId),
+                )?.nombre_emp ?? ""
+              }
+              centroCosto={
+                (catalogoCentros.data ?? [])?.find((i) => String(i.codCc) === String(ccId))
+                  ?.nombreCc ?? ""
+              }
+              estado={
+                estadosActividad.find((i) => String(i.cod_estado) === String(estado))
+                  ?.estado_desc ?? ""
+              }
+              tipos={tiposActividadReporte
+                .filter((i) => tiposActividad.includes(String(i.codTipo)))
+                ?.map((i) => i.nomTipo)}
+            />
+          )}
+          {vista === "calendario" && (
+            <ReporteActividades
+              filas={filas}
+              cargando={actividades.isFetching}
+              pdf
+              historico={false}
+              agente={agente}
+              inicio={inicio}
+              fin={fin}
+              empleados={catalogoEmpleados.data ?? []}
+              empresa={
+                (catalogoEmpresas.data ?? [])?.find(
+                  (i) => String(i.cod_empresa) === String(empresaId),
+                )?.nombre_emp ?? ""
+              }
+              centroCosto={
+                (catalogoCentros.data ?? [])?.find((i) => String(i.codCc) === String(ccId))
+                  ?.nombreCc ?? ""
+              }
+              estado={
+                estadosActividad.find((i) => String(i.cod_estado) === String(estado))
+                  ?.estado_desc ?? ""
+              }
+              tipos={tiposActividadReporte
+                .filter((i) => tiposActividad.includes(String(i.codTipo)))
+                ?.map((i) => i.nomTipo)}
+            />
+          )}
+          {vista === "objetivos" && (
+            <ReporteObjetivos actividadesGrafica={[]} datos={objetivos.data} grafica={false} />
+          )}
+          {vista === "graficas" &&
+            (consultaObjetivosGrafica ? (
+              <ReporteObjetivos
+                actividadesGrafica={actividadesGrafica.data ?? []}
+                datos={objetivos.data}
+                grafica
+              />
+            ) : (
+              <MensajeVacio>
+                Selecciona el asesor y genera la gráfica para consultar sus objetivos de la semana
+                actual.
+              </MensajeVacio>
+            ))}
+          {vista === "icc" && (
+            <ReporteIcc
+              key={JSON.stringify(consultaIcc)}
+              params={consultaIcc}
+              encabezado={encabezadoIcc}
+            />
+          )}
+          {vista === "seguimiento" && (
+            <ReporteSeguimientoCliente
+              clientes={clientes.data ?? []}
+              clienteId={clienteId}
+              setClienteId={(cliente) => {
+                setClienteId(cliente);
+                setConsultaSeguimientoClienteId(null);
+              }}
+              onGenerar={() => setConsultaSeguimientoClienteId(clienteId || null)}
+              consultado={consultaSeguimientoClienteId !== null}
+              filas={historial.data ?? []}
+              cargando={historial.isFetching}
+              empresaId={empresaId}
+              ccId={ccId}
+            />
+          )}
+        </div>
+      </Panel>
     </section>
+  );
+}
+
+const OPCIONES_REPORTE: ComboboxOption[] = REPORTES_CRM.map((item) => ({
+  value: item.id,
+  label: item.label,
+}));
+
+type VistaReporte = ReturnType<typeof obtenerConfiguracionReporte>["vista"];
+
+const ICONOS_VISTA: Record<VistaReporte, ReactNode> = {
+  visitas: <Table2Icon className="h-4 w-4" />,
+  calendario: <CalendarDays className="h-4 w-4" />,
+  objetivos: <Target className="h-4 w-4" />,
+  graficas: <ChartColumnBig className="h-4 w-4" />,
+  seguimiento: <Users className="h-4 w-4" />,
+  icc: <ChartColumnBig className="h-4 w-4" />,
+};
+
+const SUBTITULOS_VISTA: Record<VistaReporte, string> = {
+  visitas: "Actividades de la empresa y el centro de costo, exportables a Excel",
+  calendario: "Actividades del usuario actual dentro del rango indicado, en PDF",
+  objetivos: "Cumplimiento de objetivos por empleado y periodo",
+  graficas: "Objetivos y actividades del asesor en la semana actual",
+  seguimiento: "Historial de seguimientos del cliente",
+  icc: "Gráfica y detalle por persona (por fecha programada)",
+};
+
+/** Select buscable de un filtro opcional; vacío ("") = sin filtro (muestra el `placeholder`). */
+function FiltroCombobox({
+  id,
+  label,
+  value,
+  placeholder,
+  options,
+  onChange,
+}: Readonly<{
+  id: string;
+  label: string;
+  value: string;
+  placeholder: string;
+  options: ComboboxOption[];
+  onChange: (valor: string) => void;
+}>) {
+  return (
+    <Field>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Combobox
+        id={id}
+        value={value}
+        onChange={onChange}
+        options={options}
+        placeholder={placeholder}
+        popoverClassName="z-[9999]"
+        clearable
+      />
+    </Field>
   );
 }
