@@ -53,7 +53,7 @@ export const reporteIccOptions = (params: ParamsReporteIcc) =>
     queryKey: ["actividades", "reporte-icc", params] as const,
     queryFn: async () =>
       parseEnvelope(
-        await http.get<unknown>("/api/appweb/report_icc", { params }),
+        await http.get<unknown>("/api/appweb/report-icc", { params }),
         filaIccSchema,
         "report_icc",
       ),

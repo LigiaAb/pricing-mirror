@@ -1,0 +1,314 @@
+diff --git a/src/features/reportes-crm/api/reporte-icc.ts b/src/features/reportes-crm/api/reporte-icc.ts
+index 311089f..89a89c7 100644
+--- a/src/features/reportes-crm/api/reporte-icc.ts
++++ b/src/features/reportes-crm/api/reporte-icc.ts
+@@ -53,7 +53,7 @@ export const reporteIccOptions = (params: ParamsReporteIcc) =>
+     queryKey: ["actividades", "reporte-icc", params] as const,
+     queryFn: async () =>
+       parseEnvelope(
+-        await http.get<unknown>("/api/appweb/report_icc", { params }),
++        await http.get<unknown>("/api/appweb/report-icc", { params }),
+         filaIccSchema,
+         "report_icc",
+       ),
+diff --git a/src/features/reportes-crm/components/reporte-icc.tsx b/src/features/reportes-crm/components/reporte-icc.tsx
+index bcf41bd..573e81c 100644
+--- a/src/features/reportes-crm/components/reporte-icc.tsx
++++ b/src/features/reportes-crm/components/reporte-icc.tsx
+@@ -1,25 +1,20 @@
+ "use client";
+ 
+ import { format } from "date-fns";
++import { Eye, EyeOff } from "lucide-react";
+ import { useMemo, useState } from "react";
++import { DataTable } from "@/shared/components/data-table/data-table";
++import { Button } from "@/shared/components/ui/button";
+ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+-import {
+-  Table,
+-  TableBody,
+-  TableCell,
+-  TableFooter,
+-  TableHead,
+-  TableHeader,
+-  TableRow,
+-} from "@/shared/components/ui/table";
++import type { ColumnDef } from "@/shared/lib/tanstack-table";
+ import { type FilaIcc, type ParamsReporteIcc, useReporteIcc } from "../api/reporte-icc";
+ import {
+-  type ConteoIcc,
+   calcularIcc,
+   esAnulada,
+   esFinalizada,
+   type ResumenIcc,
+   TIPOS_ICC,
++  type TipoIcc,
+ } from "../lib/reporte-icc";
+ 
+ const formatoPorcentaje = (valor: number | null) => (valor == null ? "—" : `${valor.toFixed(2)}%`);
+@@ -51,6 +46,13 @@ export function ReporteIcc({ params }: Readonly<{ params: ParamsReporteIcc | nul
+     [filas, usuarioDetalle],
+   );
+   const personaDetalle = resumen.personas.find((persona) => persona.usuario === usuarioDetalle);
++  const columnasResumen = useMemo(
++    () =>
++      crearColumnasResumen(usuarioDetalle, (usuario) =>
++        setUsuarioDetalle((actual) => (actual === usuario ? null : usuario)),
++      ),
++    [usuarioDetalle],
++  );
+ 
+   if (params === null) {
+     return (
+@@ -83,69 +85,15 @@ export function ReporteIcc({ params }: Readonly<{ params: ParamsReporteIcc | nul
+         sin anuladas). Elija una persona para ver sus actividades.
+       </p>
+ 
+-      <div className="rounded-md border">
+-        <Table>
+-          <TableHeader>
+-            <TableRow>
+-              <TableHead rowSpan={2}>Usuario</TableHead>
+-              {TIPOS_ICC.map((tipo) => (
+-                <TableHead key={tipo} colSpan={3} className="text-center">
+-                  {tipo === "LLAMADA" ? "Llamadas" : "Visitas"}
+-                </TableHead>
+-              ))}
+-              <TableHead colSpan={5} className="text-center">
+-                Total
+-              </TableHead>
+-            </TableRow>
+-            <TableRow>
+-              {TIPOS_ICC.flatMap((tipo) => [
+-                <TableHead key={`${tipo}-p`} className="text-right">
+-                  Prog.
+-                </TableHead>,
+-                <TableHead key={`${tipo}-r`} className="text-right">
+-                  Real.
+-                </TableHead>,
+-                <TableHead key={`${tipo}-icc`} className="text-right">
+-                  ICC
+-                </TableHead>,
+-              ])}
+-              <TableHead className="text-right">Programadas</TableHead>
+-              <TableHead className="text-right">Realizadas</TableHead>
+-              <TableHead className="text-right">Pendientes</TableHead>
+-              <TableHead className="text-right">Anuladas</TableHead>
+-              <TableHead className="text-right">ICC</TableHead>
+-            </TableRow>
+-          </TableHeader>
+-          <TableBody>
+-            {resumen.personas.length === 0 && (
+-              <TableRow>
+-                <TableCell colSpan={12} className="text-center text-muted-foreground">
+-                  No hay llamadas ni visitas programadas en el rango.
+-                </TableCell>
+-              </TableRow>
+-            )}
+-            {resumen.personas.map((persona) => (
+-              <TableRow
+-                key={persona.usuario}
+-                data-state={persona.usuario === usuarioDetalle ? "selected" : undefined}
+-                className="cursor-pointer"
+-                onClick={() =>
+-                  setUsuarioDetalle(persona.usuario === usuarioDetalle ? null : persona.usuario)
+-                }
+-              >
+-                <FilaResumen resumen={persona} />
+-              </TableRow>
+-            ))}
+-          </TableBody>
+-          {resumen.personas.length > 0 && (
+-            <TableFooter>
+-              <TableRow className="font-semibold">
+-                <FilaResumen resumen={resumen.total} />
+-              </TableRow>
+-            </TableFooter>
+-          )}
+-        </Table>
+-      </div>
++      <DataTable
++        columns={columnasResumen}
++        data={resumen.personas}
++        searchKeys={["nombre"]}
++        searchPlaceholder="Buscar usuario…"
++        numericColumns={COLUMNAS_NUMERICAS_RESUMEN}
++        emptyMessage="No hay llamadas ni visitas programadas en el rango."
++        footer={resumen.personas.length > 0 && <TotalIcc total={resumen.total} />}
++      />
+ 
+       {personaDetalle && (
+         <Card>
+@@ -155,7 +103,13 @@ export function ReporteIcc({ params }: Readonly<{ params: ParamsReporteIcc | nul
+             </CardTitle>
+           </CardHeader>
+           <CardContent>
+-            <DetalleActividades filas={detalle} />
++            <DataTable
++              columns={COLUMNAS_DETALLE}
++              data={detalle}
++              searchKeys={["cliente", "asunto"]}
++              searchPlaceholder="Buscar actividad…"
++              numericColumns={["actividad"]}
++            />
+           </CardContent>
+         </Card>
+       )}
+@@ -180,59 +134,108 @@ function Indicador({
+   );
+ }
+ 
+-function CeldasConteo({ conteo, completo }: Readonly<{ conteo: ConteoIcc; completo: boolean }>) {
+-  return (
+-    <>
+-      <TableCell className="text-right">{conteo.programadas}</TableCell>
+-      <TableCell className="text-right">{conteo.realizadas}</TableCell>
+-      {completo && <TableCell className="text-right">{conteo.pendientes}</TableCell>}
+-      {completo && <TableCell className="text-right">{conteo.anuladas}</TableCell>}
+-      <TableCell className="text-right">{formatoPorcentaje(conteo.icc)}</TableCell>
+-    </>
+-  );
++function cuentaComo(fila: FilaIcc): string {
++  if (esAnulada(fila)) return "No cuenta";
++  return esFinalizada(fila) ? "Realizada" : "Pendiente";
+ }
+ 
+-function FilaResumen({ resumen }: Readonly<{ resumen: ResumenIcc }>) {
+-  return (
+-    <>
+-      <TableCell>{resumen.nombre}</TableCell>
+-      {TIPOS_ICC.map((tipo) => (
+-        <CeldasConteo key={tipo} conteo={resumen.porTipo[tipo]} completo={false} />
+-      ))}
+-      <CeldasConteo conteo={resumen} completo />
+-    </>
+-  );
++const columnaConteo = (
++  id: string,
++  header: string,
++  valor: (resumen: ResumenIcc) => number | null,
++  porcentaje = false,
++): ColumnDef<ResumenIcc> => ({
++  id,
++  header,
++  accessorFn: valor,
++  cell: ({ row }) => {
++    const dato = valor(row.original);
++    return porcentaje ? formatoPorcentaje(dato) : (dato ?? 0);
++  },
++});
++
++const columnasTipo = (tipo: TipoIcc, nombre: string): ColumnDef<ResumenIcc>[] => [
++  columnaConteo(`${tipo}_programadas`, `${nombre} prog.`, (r) => r.porTipo[tipo].programadas),
++  columnaConteo(`${tipo}_realizadas`, `${nombre} real.`, (r) => r.porTipo[tipo].realizadas),
++  columnaConteo(`${tipo}_icc`, `ICC ${nombre.toLowerCase()}`, (r) => r.porTipo[tipo].icc, true),
++];
++
++const COLUMNAS_NUMERICAS_RESUMEN = [
++  ...TIPOS_ICC.flatMap((tipo) => [`${tipo}_programadas`, `${tipo}_realizadas`, `${tipo}_icc`]),
++  "programadas",
++  "realizadas",
++  "pendientes",
++  "anuladas",
++  "icc",
++];
++
++function crearColumnasResumen(
++  usuarioDetalle: string | null,
++  alternarDetalle: (usuario: string | null) => void,
++): ColumnDef<ResumenIcc>[] {
++  return [
++    { accessorKey: "nombre", header: "Usuario" },
++    ...columnasTipo("LLAMADA", "Llamadas"),
++    ...columnasTipo("VISITA", "Visitas"),
++    columnaConteo("programadas", "Programadas", (r) => r.programadas),
++    columnaConteo("realizadas", "Realizadas", (r) => r.realizadas),
++    columnaConteo("pendientes", "Pendientes", (r) => r.pendientes),
++    columnaConteo("anuladas", "Anuladas", (r) => r.anuladas),
++    columnaConteo("icc", "ICC", (r) => r.icc, true),
++    {
++      id: "acciones",
++      header: "",
++      enableSorting: false,
++      cell: ({ row }) => {
++        const abierto = row.original.usuario === usuarioDetalle;
++        return (
++          <Button
++            type="button"
++            variant="ghost"
++            size="sm"
++            aria-label={`${abierto ? "Ocultar" : "Ver"} actividades de ${row.original.nombre}`}
++            onClick={() => alternarDetalle(row.original.usuario)}
++          >
++            {abierto ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
++            {abierto ? "Ocultar" : "Actividades"}
++          </Button>
++        );
++      },
++    },
++  ];
+ }
+ 
+-function DetalleActividades({ filas }: Readonly<{ filas: FilaIcc[] }>) {
++const COLUMNAS_DETALLE: ColumnDef<FilaIcc>[] = [
++  { accessorKey: "actividad", header: "Actividad" },
++  {
++    accessorKey: "fecha_programacion",
++    header: "Fecha programada",
++    cell: ({ row }) => formatoFecha(row.original.fecha_programacion),
++  },
++  { accessorKey: "tipo", header: "Tipo" },
++  { accessorKey: "cliente", header: "Cliente" },
++  { accessorKey: "asunto", header: "Asunto" },
++  { accessorKey: "estado", header: "Estado" },
++  { id: "cuenta_como", header: "Cuenta como", accessorFn: cuentaComo },
++];
++
++/** Fila de total debajo de la tabla (el DataTable no tiene pie por columnas). */
++function TotalIcc({ total }: Readonly<{ total: ResumenIcc }>) {
++  const porTipo = TIPOS_ICC.map((tipo) => {
++    const conteo = total.porTipo[tipo];
++    const nombre = tipo === "LLAMADA" ? "Llamadas" : "Visitas";
++    return `${nombre}: ${conteo.realizadas}/${conteo.programadas} (${formatoPorcentaje(conteo.icc)})`;
++  });
+   return (
+-    <Table>
+-      <TableHeader>
+-        <TableRow>
+-          <TableHead>Actividad</TableHead>
+-          <TableHead>Fecha programada</TableHead>
+-          <TableHead>Tipo</TableHead>
+-          <TableHead>Cliente</TableHead>
+-          <TableHead>Asunto</TableHead>
+-          <TableHead>Estado</TableHead>
+-          <TableHead>Cuenta como</TableHead>
+-        </TableRow>
+-      </TableHeader>
+-      <TableBody>
+-        {filas.map((fila) => (
+-          <TableRow key={fila.actividad}>
+-            <TableCell>{fila.actividad}</TableCell>
+-            <TableCell>{formatoFecha(fila.fecha_programacion)}</TableCell>
+-            <TableCell>{fila.tipo}</TableCell>
+-            <TableCell>{fila.cliente}</TableCell>
+-            <TableCell>{fila.asunto}</TableCell>
+-            <TableCell>{fila.estado}</TableCell>
+-            <TableCell>
+-              {esAnulada(fila) ? "No cuenta" : esFinalizada(fila) ? "Realizada" : "Pendiente"}
+-            </TableCell>
+-          </TableRow>
+-        ))}
+-      </TableBody>
+-    </Table>
++    <div className="flex flex-wrap gap-x-6 gap-y-1 border-t bg-muted/50 px-4 py-2 text-sm font-semibold">
++      <span>TOTAL</span>
++      {porTipo.map((texto) => (
++        <span key={texto}>{texto}</span>
++      ))}
++      <span>
++        Total: {total.realizadas}/{total.programadas} · pendientes {total.pendientes} · anuladas{" "}
++        {total.anuladas} · ICC {formatoPorcentaje(total.icc)}
++      </span>
++    </div>
+   );
+ }
