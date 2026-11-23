@@ -1,0 +1,166 @@
+diff --git a/src/features/pricing/reportes/components/lista-reportes.tsx b/src/features/pricing/reportes/components/lista-reportes.tsx
+index 2736837..15b2a85 100644
+--- a/src/features/pricing/reportes/components/lista-reportes.tsx
++++ b/src/features/pricing/reportes/components/lista-reportes.tsx
+@@ -1,9 +1,7 @@
+ "use client";
+ 
+-import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
+-import { es } from "date-fns/locale";
++import { endOfMonth, format, startOfMonth } from "date-fns";
+ import {
+-  CalendarIcon,
+   ChartColumnBig,
+   ChevronDown,
+   FileSpreadsheet,
+@@ -33,10 +31,8 @@ import {
+   AccordionTrigger,
+ } from "@/shared/components/ui/accordion";
+ import { Button } from "@/shared/components/ui/button";
+-import { Calendar } from "@/shared/components/ui/calendar";
+ import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
+ import { Field, FieldLabel } from "@/shared/components/ui/field";
+-import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/popover";
+ import { cn } from "@/shared/lib/utils";
+ import type { ConfiguracionReporte, Filtros, SelectOption } from "../lib/filtros-types";
+ import { type CampoKpi, NIVELES_DEFECTO_KPI } from "../lib/tabla-kpi";
+@@ -49,14 +45,6 @@ const hoy = new Date();
+ const inicioDeSemana = format(startOfMonth(hoy), "yyyy-MM-dd");
+ const finDeSemana = format(endOfMonth(hoy), "yyyy-MM-dd");
+ 
+-const obtenerFecha = (valor: Date | string | null | undefined): Date | undefined => {
+-  if (!valor) return undefined;
+-
+-  const fecha = valor instanceof Date ? valor : parseISO(valor);
+-
+-  return Number.isNaN(fecha.getTime()) ? undefined : fecha;
+-};
+-
+ export const REPORTES_CRM: readonly ConfiguracionReporte[] = [
+   {
+     value: "seleccione",
+@@ -192,7 +180,6 @@ export function ListaReportes() {
+     [centrosCostoFetch.data, currentEmpresa?.cod_empresa],
+   );
+ 
+-  const [calendarioAbierto, setCalendarioAbierto] = React.useState<string | null>(null);
+   const [descargar, setDescargar] = React.useState(0);
+   const [errorPdf, setErrorPdf] = React.useState<string | null>(null);
+   const [generandoPdf, setGenerandoPdf] = React.useState(false);
+@@ -294,96 +281,28 @@ export function ListaReportes() {
+     min,
+     max,
+   }: {
+-    id: keyof Filtros;
++    id: "fecha_inicio" | "fecha_fin";
+     label: string;
+     className?: string;
+-    min?: Date | string;
+-    max?: Date | string;
+-  }) => {
+-    const valor = filtros[id] as Date | string | null | undefined;
+-    const fecha = obtenerFecha(valor);
+-    const fechaMin = obtenerFecha(min);
+-    const fechaMax = obtenerFecha(max);
+-    const hoy = new Date();
+-
+-    const fechaPermitida = (date: Date) => {
+-      const valorFecha = format(date, "yyyy-MM-dd");
+-
+-      return (
+-        (!fechaMin || valorFecha >= format(fechaMin, "yyyy-MM-dd")) &&
+-        (!fechaMax || valorFecha <= format(fechaMax, "yyyy-MM-dd"))
+-      );
+-    };
+-
+-    return (
+-      <Field className={cn("w-full", className)}>
+-        <FieldLabel htmlFor={id}>{label} *</FieldLabel>
+-
+-        <Popover
+-          open={calendarioAbierto === id}
+-          onOpenChange={(open) => setCalendarioAbierto(open ? id : null)}
+-        >
+-          <PopoverTrigger asChild>
+-            <Button
+-              id={id}
+-              type="button"
+-              variant="outline"
+-              data-empty={!fecha}
+-              className="justify-start text-left font-normal data-[empty=true]:text-muted-foreground w-full"
+-            >
+-              <span className="w-full">{fecha ? format(fecha, "dd-MM-yyyy") : "Pick a date"}</span>
+-              <CalendarIcon />
+-            </Button>
+-          </PopoverTrigger>
+-
+-          <PopoverContent className="w-auto p-0" align="end">
+-            <Calendar
+-              mode="single"
+-              selected={fecha}
+-              {...(fecha ? { defaultMonth: fecha } : {})}
+-              disabled={[
+-                ...(fechaMin ? [{ before: fechaMin }] : []),
+-                ...(fechaMax ? [{ after: fechaMax }] : []),
+-              ]}
+-              locale={es}
+-              onSelect={(date) => {
+-                if (!date || !fechaPermitida(date)) return;
+-
+-                onInput({
+-                  id,
+-                  val: format(date, "yyyy-MM-dd"),
+-                });
+-
+-                setCalendarioAbierto(null);
+-              }}
+-            />
+-
+-            <div className="border-t p-2">
+-              <Button
+-                type="button"
+-                variant="outline"
+-                size="sm"
+-                className="w-full"
+-                disabled={!fechaPermitida(hoy)}
+-                onClick={() => {
+-                  if (!fechaPermitida(hoy)) return;
+-
+-                  onInput({
+-                    id,
+-                    val: format(hoy, "yyyy-MM-dd"),
+-                  });
+-
+-                  setCalendarioAbierto(null);
+-                }}
+-              >
+-                Hoy
+-              </Button>
+-            </div>
+-          </PopoverContent>
+-        </Popover>
+-      </Field>
+-    );
+-  };
++    min?: string;
++    max?: string;
++  }) => (
++    <Field className={cn("w-full", className)}>
++      <FieldLabel htmlFor={id}>{label} *</FieldLabel>
++      <input
++        id={id}
++        type="date"
++        className="h-9 w-full rounded-md border bg-card px-2"
++        value={filtros[id]}
++        min={min}
++        max={max}
++        onChange={(event) => {
++          // Fechas requeridas: no se deja vaciar.
++          if (event.target.value) onInput({ id, val: event.target.value });
++        }}
++      />
++    </Field>
++  );
+ 
+   React.useEffect(() => {
+     setFiltros((filtros) => ({
