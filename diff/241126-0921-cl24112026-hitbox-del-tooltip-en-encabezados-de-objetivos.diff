@@ -1,0 +1,31 @@
+diff --git a/src/features/reportes-crm/components/reporte-objetivos-empleado.tsx b/src/features/reportes-crm/components/reporte-objetivos-empleado.tsx
+index fec18ac..8672fdf 100644
+--- a/src/features/reportes-crm/components/reporte-objetivos-empleado.tsx
++++ b/src/features/reportes-crm/components/reporte-objetivos-empleado.tsx
+@@ -105,9 +105,9 @@ export function ReporteObjetivos({
+             <table className="w-full text-sm">
+               <thead>
+                 <tr>
+-                  <th className="text-left">Empleado</th>
++                  <th className="py-2 text-left">Empleado</th>
+                   {indicesPeriodo(objetivo).map((numero) => (
+-                    <th className="px-2 text-left" key={numero}>
++                    <th className="p-0 text-left" key={numero}>
+                       <EncabezadoPeriodo numero={numero} objetivo={objetivo} />
+                     </th>
+                   ))}
+@@ -159,12 +159,12 @@ function EncabezadoPeriodo({
+ }: Readonly<{ objetivo: ObjetivoReporte; numero: number }>) {
+   const periodo = periodoDeColumna(objetivo, numero);
+   const etiqueta = etiquetaPeriodo(objetivo.periodicidad_unidad, periodo?.numero || numero);
+-  if (!periodo) return etiqueta;
++  if (!periodo) return <span className="block px-3 py-2">{etiqueta}</span>;
+   return (
+     <TooltipProvider>
+       <Tooltip>
+         <TooltipTrigger asChild>
+-          <span className="cursor-default whitespace-nowrap">{etiqueta}</span>
++          <span className="block cursor-default whitespace-nowrap px-3 py-2">{etiqueta}</span>
+         </TooltipTrigger>
+         <TooltipContent>
+           {formatearFecha(periodo.fecha_inicial)} - {formatearFecha(periodo.fecha_final)}
