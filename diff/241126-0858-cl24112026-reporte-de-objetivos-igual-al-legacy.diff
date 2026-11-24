@@ -1,0 +1,388 @@
+diff --git a/src/features/reportes-crm/api/objetivos-reporte.ts b/src/features/reportes-crm/api/objetivos-reporte.ts
+index 97b3285..404fdf8 100644
+--- a/src/features/reportes-crm/api/objetivos-reporte.ts
++++ b/src/features/reportes-crm/api/objetivos-reporte.ts
+@@ -2,7 +2,7 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
+ import { z } from "zod";
+ import { http } from "@/shared/api/client";
+ import { parseEnvelope } from "@/shared/api/envelope";
+-import { zIdSafe } from "@/shared/lib/zod-scalars";
++import { zIdSafe, zIdSafeNull } from "@/shared/lib/zod-scalars";
+ 
+ const texto = z
+   .string()
+@@ -18,6 +18,9 @@ const actividad = z.looseObject({
+   fecha_programada: texto,
+   cod_estado: zIdSafe.optional(),
+   cod_asesor: zIdSafe.optional(),
++  // Cliente de la actividad: el legacy lo lee de `entidad_id`.
++  entidad_id: zIdSafeNull.optional(),
++  cod_cliente: zIdSafeNull.optional(),
+ });
+ const periodo = z.looseObject({
+   fecha_inicial: texto,
+@@ -45,6 +48,7 @@ export const objetivoReporteSchema = z.looseObject({
+   empleados: z.array(empleado).catch([]),
+ });
+ export type ObjetivoReporte = z.infer<typeof objetivoReporteSchema>;
++export type ActividadObjetivo = z.infer<typeof actividad>;
+ export interface FiltrosObjetivosReporte {
+   cod_emp: string | number;
+   cod_cc: string | number;
+diff --git a/src/features/reportes-crm/components/modal-actividades-objetivo.tsx b/src/features/reportes-crm/components/modal-actividades-objetivo.tsx
+new file mode 100644
+index 0000000..e626caf
+--- /dev/null
++++ b/src/features/reportes-crm/components/modal-actividades-objetivo.tsx
+@@ -0,0 +1,111 @@
++"use client";
++
++import { Eye } from "lucide-react";
++import Link from "next/link";
++import { useMemo } from "react";
++import { empleadosUsuarios, estados, tipos } from "@/features/catalogos";
++import { useFetchEntidades } from "@/features/entidades";
++import { DataTable } from "@/shared/components/data-table/data-table";
++import { Button } from "@/shared/components/ui/button";
++import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
++import { formatearFechaHora } from "@/shared/lib/date";
++import { encodeId } from "@/shared/lib/sqids";
++import type { ColumnDef } from "@/shared/lib/tanstack-table";
++import type { ActividadObjetivo } from "../api/objetivos-reporte";
++import {
++  type ClienteActividadObjetivo,
++  type FilaActividadObjetivo,
++  filasActividadesObjetivo,
++} from "../lib/objetivos-reporte-vista";
++
++/** Columnas del legacy `tabla_actividades` (Código, Tipo, Asunto, Asesor, Cliente, Estado, Fecha). */
++const columnas: ColumnDef<FilaActividadObjetivo>[] = [
++  { accessorKey: "cod_actividad", header: "Código" },
++  { accessorKey: "tipo", header: "Tipo" },
++  { accessorKey: "asunto", header: "Asunto" },
++  { accessorKey: "asesor", header: "Asesor" },
++  { accessorKey: "cliente", header: "Cliente" },
++  { accessorKey: "estado", header: "Estado" },
++  {
++    accessorKey: "fecha_programada",
++    header: "Fecha programada",
++    cell: ({ getValue }) => formatearFechaHora(getValue<string>()),
++  },
++  {
++    id: "ver",
++    header: "",
++    cell: ({ row }) => (
++      <Button asChild size="icon" variant="ghost">
++        <Link
++          aria-label="Ver actividad"
++          href={`/crm/calendario/actividad/${encodeId(Number(row.original.cod_actividad))}`}
++        >
++          <Eye className="size-4" />
++        </Link>
++      </Button>
++    ),
++  },
++];
++
++/** Modal del reporte de objetivos: actividades de un empleado en un periodo. */
++export function ModalActividadesObjetivo({
++  actividades,
++  onClose,
++}: Readonly<{ actividades: ActividadObjetivo[]; onClose: () => void }>) {
++  const abierto = actividades.length > 0;
++  // Los catálogos se piden solo al abrir el modal, como en el legacy.
++  const catalogoTipos = tipos.useLista({ tipo_tabla: "ACTIVIDAD" }, { enabled: abierto });
++  const catalogoEmpleados = empleadosUsuarios.useLista({}, { enabled: abierto });
++  const catalogoEstados = estados.useLista({}, { enabled: abierto });
++  const clientes = useFetchEntidades(
++    { tipo_entidad: "CLIENTE", cod_estado: 1 },
++    { enabled: abierto },
++  );
++  const preClientes = useFetchEntidades(
++    { tipo_entidad: "PRE-CLIENTE", cod_estado: 1 },
++    { enabled: abierto },
++  );
++
++  const filas = useMemo(
++    () =>
++      filasActividadesObjetivo(actividades, {
++        tipos: catalogoTipos.data ?? [],
++        empleados: catalogoEmpleados.data ?? [],
++        estados: catalogoEstados.data ?? [],
++        clientes: [
++          ...((clientes.data ?? []) as ClienteActividadObjetivo[]),
++          ...((preClientes.data ?? []) as ClienteActividadObjetivo[]),
++        ],
++      }),
++    [
++      actividades,
++      catalogoEmpleados.data,
++      catalogoEstados.data,
++      catalogoTipos.data,
++      clientes.data,
++      preClientes.data,
++    ],
++  );
++
++  return (
++    <Dialog
++      open={abierto}
++      onOpenChange={(estaAbierto) => {
++        if (!estaAbierto) onClose();
++      }}
++    >
++      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[80vw]">
++        <DialogHeader>
++          <DialogTitle>Actividades del periodo</DialogTitle>
++        </DialogHeader>
++        <DataTable
++          columns={columnas}
++          data={filas}
++          isLoading={catalogoTipos.isLoading || catalogoEmpleados.isLoading}
++          searchKeys={["asunto"]}
++          searchPlaceholder="Buscar actividad…"
++        />
++      </DialogContent>
++    </Dialog>
++  );
++}
+diff --git a/src/features/reportes-crm/components/reporte-objetivos-empleado.tsx b/src/features/reportes-crm/components/reporte-objetivos-empleado.tsx
+index 8e17043..fec18ac 100644
+--- a/src/features/reportes-crm/components/reporte-objetivos-empleado.tsx
++++ b/src/features/reportes-crm/components/reporte-objetivos-empleado.tsx
+@@ -1,16 +1,28 @@
+ "use client";
+ 
++import { CalendarDays, Clock, Hash } from "lucide-react";
+ import dynamic from "next/dynamic";
+ import { useState } from "react";
+ import type { Actividad } from "@/features/actividades";
+-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+-import { formatearFechaHora } from "@/shared/lib/date";
+-import type { useObjetivosReporte } from "../api/objetivos-reporte";
++import { Badge } from "@/shared/components/ui/badge";
++import {
++  Tooltip,
++  TooltipContent,
++  TooltipProvider,
++  TooltipTrigger,
++} from "@/shared/components/ui/tooltip";
++import { formatearFecha } from "@/shared/lib/date";
++import type {
++  ActividadObjetivo,
++  ObjetivoReporte,
++  useObjetivosReporte,
++} from "../api/objetivos-reporte";
+ import {
+   cumpleMeta,
+   etiquetaPeriodo,
+   indicesPeriodo,
+   maxPeriodos,
++  periodoDeColumna,
+ } from "../lib/objetivos-reporte-vista";
+ import {
+   type ActividadParaSerie,
+@@ -18,6 +30,7 @@ import {
+   medidoresObjetivosPeriodoActual,
+   serieSemanalPorTipo,
+ } from "../lib/series-actividades";
++import { ModalActividadesObjetivo } from "./modal-actividades-objetivo";
+ 
+ // Recharts vía next/dynamic (2.8): el skeleton reserva la misma altura que el
+ // gráfico real (`h-80` en graficas-objetivos.tsx) para no mover el layout.
+@@ -39,9 +52,7 @@ export function ReporteObjetivos({
+   grafica: boolean;
+   actividadesGrafica?: Actividad[];
+ }>) {
+-  const [detalle, setDetalle] = useState<
+-    Array<{ asunto: string; descripcion: string; fecha_programada: string }>
+-  >([]);
++  const [detalle, setDetalle] = useState<ActividadObjetivo[]>([]);
+   const objetivos = datos ?? [];
+   if (!objetivos.length && !grafica)
+     return (
+@@ -72,10 +83,24 @@ export function ReporteObjetivos({
+           className="rounded-lg border p-4"
+           key={`${objetivo.cod_tipo_actividad}-${objetivo.descripcion}-${objetivo.fecha_inicial}`}
+         >
+-          <h2 className="font-semibold">{objetivo.descripcion}</h2>
+-          <p className="text-sm text-muted-foreground">
+-            Meta: {objetivo.cantidad} · {maxPeriodos(objetivo)} periodos
+-          </p>
++          <div className="flex flex-wrap items-center gap-2">
++            {objetivo.tipo_descripcion && <Badge>{objetivo.tipo_descripcion}</Badge>}
++            <h2 className="font-semibold">{objetivo.descripcion}</h2>
++          </div>
++          <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
++            <span className="flex items-center gap-1.5">
++              <CalendarDays className="size-4" />
++              {formatearFecha(objetivo.fecha_inicial)} - {formatearFecha(objetivo.fecha_final)}
++            </span>
++            <span className="flex items-center gap-1.5">
++              <Clock className="size-4" />
++              Periodicidad: {objetivo.periodicidad_descripcion || "—"}
++            </span>
++            <span className="flex items-center gap-1.5">
++              <Hash className="size-4" />
++              Cantidad: {objetivo.cantidad} · {maxPeriodos(objetivo)} periodos
++            </span>
++          </div>
+           <div className="mt-3 overflow-x-auto">
+             <table className="w-full text-sm">
+               <thead>
+@@ -83,7 +108,7 @@ export function ReporteObjetivos({
+                   <th className="text-left">Empleado</th>
+                   {indicesPeriodo(objetivo).map((numero) => (
+                     <th className="px-2 text-left" key={numero}>
+-                      {etiquetaPeriodo(objetivo.periodicidad_unidad, numero)}
++                      <EncabezadoPeriodo numero={numero} objetivo={objetivo} />
+                     </th>
+                   ))}
+                 </tr>
+@@ -122,34 +147,29 @@ export function ReporteObjetivos({
+           </div>
+         </div>
+       ))}
+-      <Dialog
+-        open={detalle.length > 0}
+-        onOpenChange={(abierto) => {
+-          if (!abierto) setDetalle([]);
+-        }}
+-      >
+-        <DialogContent>
+-          <DialogHeader>
+-            <DialogTitle>Actividades del periodo</DialogTitle>
+-          </DialogHeader>
+-          <ul className="max-h-72 space-y-2 overflow-y-auto text-sm">
+-            {detalle.map((actividad) => (
+-              <li
+-                className="rounded border p-2"
+-                key={actividad.asunto + actividad.fecha_programada}
+-              >
+-                <strong>{actividad.asunto}</strong>
+-                <br />
+-                {actividad.descripcion}
+-                <br />
+-                <span className="text-muted-foreground">
+-                  {formatearFechaHora(actividad.fecha_programada)}
+-                </span>
+-              </li>
+-            ))}
+-          </ul>
+-        </DialogContent>
+-      </Dialog>
++      <ModalActividadesObjetivo actividades={detalle} onClose={() => setDetalle([])} />
+     </div>
+   );
+ }
++
++/** Columna de periodo: `numero` del backend y, en el tooltip, sus fechas (legacy). */
++function EncabezadoPeriodo({
++  objetivo,
++  numero,
++}: Readonly<{ objetivo: ObjetivoReporte; numero: number }>) {
++  const periodo = periodoDeColumna(objetivo, numero);
++  const etiqueta = etiquetaPeriodo(objetivo.periodicidad_unidad, periodo?.numero || numero);
++  if (!periodo) return etiqueta;
++  return (
++    <TooltipProvider>
++      <Tooltip>
++        <TooltipTrigger asChild>
++          <span className="cursor-default whitespace-nowrap">{etiqueta}</span>
++        </TooltipTrigger>
++        <TooltipContent>
++          {formatearFecha(periodo.fecha_inicial)} - {formatearFecha(periodo.fecha_final)}
++        </TooltipContent>
++      </Tooltip>
++    </TooltipProvider>
++  );
++}
+diff --git a/src/features/reportes-crm/components/reportes-crm-client.tsx b/src/features/reportes-crm/components/reportes-crm-client.tsx
+index 47980cc..af37d49 100644
+--- a/src/features/reportes-crm/components/reportes-crm-client.tsx
++++ b/src/features/reportes-crm/components/reportes-crm-client.tsx
+@@ -1,5 +1,6 @@
+ "use client";
+ 
++import { format } from "date-fns";
+ import {
+   CalendarDays,
+   ChartColumnBig,
+@@ -245,7 +246,10 @@ export function ReportesCrmClient() {
+     setTiposActividad([]);
+     setTipoAsignacion("");
+     setInicio("");
+-    setFin("");
++    // Objetivos: como en el legacy, la fecha final arranca en hoy.
++    setFin(
++      obtenerConfiguracionReporte(id).vista === "objetivos" ? format(new Date(), "yyyy-MM-dd") : "",
++    );
+     setClienteId("");
+     setConsultaSeguimientoClienteId(null);
+   };
+diff --git a/src/features/reportes-crm/lib/objetivos-reporte-vista.ts b/src/features/reportes-crm/lib/objetivos-reporte-vista.ts
+index 373871a..17901a6 100644
+--- a/src/features/reportes-crm/lib/objetivos-reporte-vista.ts
++++ b/src/features/reportes-crm/lib/objetivos-reporte-vista.ts
+@@ -1,4 +1,4 @@
+-import type { ObjetivoReporte } from "../api/objetivos-reporte";
++import type { ActividadObjetivo, ObjetivoReporte } from "../api/objetivos-reporte";
+ export function etiquetaPeriodo(unidad: string, numero: number): string {
+   const etiqueta =
+     (
+@@ -22,3 +22,55 @@ export function indicesPeriodo(objetivo: ObjetivoReporte): number[] {
+ export function cumpleMeta(valor: number, meta: number): boolean {
+   return valor >= meta;
+ }
++/** Periodo de una columna (`numero` y fechas): del primer empleado que lo tenga. */
++export function periodoDeColumna(objetivo: ObjetivoReporte, numero: number) {
++  return objetivo.empleados
++    .map((empleado) => empleado.datos[numero - 1])
++    .find((periodo) => periodo !== undefined);
++}
++export interface ClienteActividadObjetivo {
++  entidad_id: string | number;
++  entidad_nombre: string;
++}
++export interface FilaActividadObjetivo {
++  cod_actividad: ActividadObjetivo["cod_actividad"];
++  tipo: string;
++  asunto: string;
++  asesor: string;
++  cliente: string;
++  estado: string;
++  fecha_programada: string;
++}
++/**
++ * Filas del modal de actividades (legacy `ModalActividades`). A diferencia del
++ * legacy, si un código no está en su catálogo la celda queda vacía (no se cae).
++ */
++export function filasActividadesObjetivo(
++  actividades: ActividadObjetivo[],
++  catalogos: {
++    tipos: Array<{ codTipo: string | number; nomTipo: string }>;
++    empleados: Array<{ codUsuario: string | number; nombreCompleto: string }>;
++    estados: Array<{ cod_estado: string | number; estado_desc: string }>;
++    clientes: ClienteActividadObjetivo[];
++  },
++): FilaActividadObjetivo[] {
++  const tipos = new Map(catalogos.tipos.map((tipo) => [String(tipo.codTipo), tipo.nomTipo]));
++  const empleados = new Map(
++    catalogos.empleados.map((empleado) => [String(empleado.codUsuario), empleado.nombreCompleto]),
++  );
++  const estados = new Map(
++    catalogos.estados.map((estado) => [String(estado.cod_estado), estado.estado_desc]),
++  );
++  const clientes = new Map(
++    catalogos.clientes.map((cliente) => [String(cliente.entidad_id), cliente.entidad_nombre]),
++  );
++  return actividades.map((actividad) => ({
++    cod_actividad: actividad.cod_actividad,
++    tipo: tipos.get(String(actividad.cod_tipo)) ?? "",
++    asunto: actividad.asunto,
++    asesor: empleados.get(String(actividad.cod_asesor)) ?? "",
++    cliente: clientes.get(String(actividad.entidad_id ?? actividad.cod_cliente)) ?? "",
++    estado: estados.get(String(actividad.cod_estado)) ?? "",
++    fecha_programada: actividad.fecha_programada,
++  }));
++}

@@ -2,7 +2,7 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { http } from "@/shared/api/client";
 import { parseEnvelope } from "@/shared/api/envelope";
-import { zIdSafe } from "@/shared/lib/zod-scalars";
+import { zIdSafe, zIdSafeNull } from "@/shared/lib/zod-scalars";
 
 const texto = z
   .string()
@@ -18,6 +18,9 @@ const actividad = z.looseObject({
   fecha_programada: texto,
   cod_estado: zIdSafe.optional(),
   cod_asesor: zIdSafe.optional(),
+  // Cliente de la actividad: el legacy lo lee de `entidad_id`.
+  entidad_id: zIdSafeNull.optional(),
+  cod_cliente: zIdSafeNull.optional(),
 });
 const periodo = z.looseObject({
   fecha_inicial: texto,
@@ -45,6 +48,7 @@ export const objetivoReporteSchema = z.looseObject({
   empleados: z.array(empleado).catch([]),
 });
 export type ObjetivoReporte = z.infer<typeof objetivoReporteSchema>;
+export type ActividadObjetivo = z.infer<typeof actividad>;
 export interface FiltrosObjetivosReporte {
   cod_emp: string | number;
   cod_cc: string | number;

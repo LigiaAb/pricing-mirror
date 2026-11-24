@@ -3,6 +3,10 @@
 Registro para dar seguimiento a lo hecho en el módulo **pricing**. Entradas nuevas **arriba**, agrupadas por fecha.
 Cada entrada: rama · módulo/submódulo · qué y por qué · diff generado (si aplica).
 
+## 24/11/2026
+
+- **CRM / Reportes / Objetivos** (`claude/24112026-work-crm-reportes`) (#217): **mejora**: el reporte "Objetivos de actividades" se completa contra el legacy `ReporteObjetivosActividadesPorEmpleados` (SYNC `fae81e4` y `898234d`). (1) El encabezado de cada objetivo muestra un chip con el tipo, la descripción, el rango de fechas, la periodicidad y la cantidad. (2) Las columnas usan el `numero` de periodo del backend y llevan un tooltip con sus fechas (`periodoDeColumna` y `EncabezadoPeriodo`). (3) El modal pasa a un componente nuevo, `components/modal-actividades-objetivo.tsx`: una `DataTable` con código, tipo, asesor, cliente (CLIENTE y PRE-CLIENTE), estado, fecha y un botón para abrir el detalle de la actividad. Los nombres se arman con `filasActividadesObjetivo`; si falta un código en el catálogo, la celda queda vacía (el legacy se caía). El schema de actividad suma `entidad_id` y `cod_cliente`. (4) Al elegir el reporte de objetivos, la fecha final arranca en hoy. (6) Las filas del modal se identifican por `cod_actividad`. Sin paginación (punto 5, no pedido). Probado con esbuild + node. `check:nuevos`: 0 errores nuevos, Biome 0, finales OK. Diff: `241126-0858-cl24112026-reporte-de-objetivos-igual-al-legacy.diff`.
+
 ## 23/11/2026
 
 - **Reportes / Filtros** (`claude/23112026-work-crm-reportes`) (#215): **mejora**: las fechas de Reportes de pricing (`pricing/reportes/components/lista-reportes.tsx`, `renderizarDate`) usan el input de fecha nativo de Reportes CRM en lugar del Popover + Calendar (pedido del usuario). Inicio ≤ final con `min`/`max`, siguen requeridas (no se dejan vaciar) y en `yyyy-MM-dd`. Se quitan `obtenerFecha`, `calendarioAbierto` y los imports que ya no se usan. Diff: `231126-1542-cl23112026-input-de-fechas-de-crm-en-reportes-de-pricing.diff`.
