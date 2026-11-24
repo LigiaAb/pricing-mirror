@@ -1,0 +1,328 @@
+diff --git a/src/features/pricing/cotizacion/calculo/components/totales-rubros.tsx b/src/features/pricing/cotizacion/calculo/components/totales-rubros.tsx
+index aad6c7c..7d2a24c 100644
+--- a/src/features/pricing/cotizacion/calculo/components/totales-rubros.tsx
++++ b/src/features/pricing/cotizacion/calculo/components/totales-rubros.tsx
+@@ -5,6 +5,7 @@ import React from "react";
+ import type { useTotalesRubros } from "../hooks/use-totales-rubros";
+ import {
+   construirDetalleMetodo,
++  getCodMonedaVenta,
+   getMetodo,
+   type MetodoTotal,
+   type RubroTotal,
+@@ -97,11 +98,7 @@ export function TotalesRubros({ controller, lectura = false }: Props) {
+    */
+   const getSimboloMoneda = React.useCallback(
+     (item: RubroTotal) => {
+-      const metodo = getMetodo(item);
+-
+-      const codMoneda = metodo?.cod_moneda_venta ?? 2;
+-
+-      const moneda = totalPorMoneda[String(codMoneda)]?.moneda;
++      const moneda = totalPorMoneda[String(getCodMonedaVenta(item))]?.moneda;
+ 
+       return moneda?.simbolo_moneda ?? moneda?.SIMBOLO_MONEDA ?? "";
+     },
+diff --git a/src/features/pricing/cotizacion/calculo/lib/due-agent.ts b/src/features/pricing/cotizacion/calculo/lib/due-agent.ts
+index 4586648..2cfe181 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/due-agent.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/due-agent.ts
+@@ -275,18 +275,18 @@ export function aplicarValoresManualDueAgent({
+       return item;
+     }
+ 
+-    if (esMetodoCostoPorcentaje(item)) {
+-      return aplicarCostoPorcentaje(item, valores[item.value]);
+-    }
+-
+-    const venta = Number(valores[item.value] ?? 0) || 0;
+-
+     const codMoneda = obtenerCodMonedaEfectiva({
+       item,
+       codMonedaPadre: codMonedaPadre ?? null,
+       codMonedaDefault,
+     });
+ 
++    if (esMetodoCostoPorcentaje(item)) {
++      return aplicarCostoPorcentaje(item, valores[item.value], codMoneda);
++    }
++
++    const venta = Number(valores[item.value] ?? 0) || 0;
++
+     const servicio = {
+       ...(item.servicio ?? {}),
+ 
+diff --git a/src/features/pricing/cotizacion/calculo/lib/due-carrier.ts b/src/features/pricing/cotizacion/calculo/lib/due-carrier.ts
+index b57014a..5ba3474 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/due-carrier.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/due-carrier.ts
+@@ -198,17 +198,17 @@ export function aplicarValoresManualDueCarrier({
+       return item;
+     }
+ 
+-    if (esMetodoCostoPorcentaje(item)) {
+-      return aplicarCostoPorcentaje(item, valores[String(item.value)]);
+-    }
+-
+-    const valor = Number(valores[String(item.value)]) || 0;
+-
+     const codMoneda = obtenerCodMonedaEfectivaDueCarrier({
+       item,
+       codMonedaDefault,
+     });
+ 
++    if (esMetodoCostoPorcentaje(item)) {
++      return aplicarCostoPorcentaje(item, valores[String(item.value)], codMoneda);
++    }
++
++    const valor = Number(valores[String(item.value)]) || 0;
++
+     const resultado = {
+       ...item,
+ 
+diff --git a/src/features/pricing/cotizacion/calculo/lib/rubros-guardados.ts b/src/features/pricing/cotizacion/calculo/lib/rubros-guardados.ts
+index 366bfd6..f856f04 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/rubros-guardados.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/rubros-guardados.ts
+@@ -322,10 +322,11 @@ export function normalizarRubrosGuardados({
+       entidad?.nombre ??
+       null;
+ 
+-    const codMonedaVenta = item.cod_moneda_venta ?? item.metodo_cod_moneda_venta ?? null;
+-
+     const codMonedaCosto = item.cod_moneda_costo ?? item.metodo_cod_moneda_costo ?? null;
+ 
++    // Sin moneda de venta guardada, se usa la de costo.
++    const codMonedaVenta = item.cod_moneda_venta ?? item.metodo_cod_moneda_venta ?? codMonedaCosto;
++
+     const monedaVenta = codMonedaVenta == null ? null : idxMonedas.get(String(codMonedaVenta));
+ 
+     const monedaCosto = codMonedaCosto == null ? null : idxMonedas.get(String(codMonedaCosto));
+diff --git a/src/features/pricing/cotizacion/calculo/lib/rubros-manuales.ts b/src/features/pricing/cotizacion/calculo/lib/rubros-manuales.ts
+index 3258925..eb75e31 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/rubros-manuales.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/rubros-manuales.ts
+@@ -21,10 +21,11 @@ export type RubroConMetodo = {
+   [key: string]: unknown;
+ };
+ 
+-/** cod_moneda_venta del rubro: método del servicio → servicio → rubro. */
++/** cod_moneda_venta del rubro: método del servicio (venta, si no costo) → servicio → rubro. */
+ export function getCodMonedaVenta(item: RubroConMetodo): Id | null {
+   return (
+     (item.servicio?.metodo?.cod_moneda_venta as Id | null | undefined) ??
++    (item.servicio?.metodo?.cod_moneda_costo as Id | null | undefined) ??
+     (item.servicio?.cod_moneda_venta as Id | null | undefined) ??
+     item.cod_moneda_venta ??
+     null
+@@ -92,12 +93,25 @@ export function calcularVentaCostoPorcentaje(item: Registro, valorCosto: string
+ export function aplicarCostoPorcentaje<T extends RubroConMetodo>(
+   item: T,
+   valorCosto: string | number | null | undefined,
++  codMoneda: Id | null = null,
+ ): T {
+   const { costo, venta } =
+     valorCosto == null || valorCosto === ""
+       ? { costo: 0, venta: 0 }
+       : calcularVentaCostoPorcentaje(item, valorCosto);
+-  const metodo = { ...(item.servicio?.metodo ?? item.metodo ?? {}), costo, venta };
++  const base = item.servicio?.metodo ?? item.metodo ?? {};
++  // Sin moneda en el método, el rubro perdía la moneda al agruparse y se guardaba sin ella.
++  const monedaVenta =
++    (base.cod_moneda_venta as Id | null | undefined) ??
++    (base.cod_moneda_costo as Id | null | undefined) ??
++    codMoneda;
++  const metodo = {
++    ...base,
++    costo,
++    venta,
++    cod_moneda_venta: monedaVenta,
++    cod_moneda_costo: (base.cod_moneda_costo as Id | null | undefined) ?? monedaVenta,
++  };
+ 
+   return {
+     ...item,
+diff --git a/src/features/pricing/cotizacion/calculo/lib/totales-rubros-calculo.ts b/src/features/pricing/cotizacion/calculo/lib/totales-rubros-calculo.ts
+index 5a4324f..9ea5ce8 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/totales-rubros-calculo.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/totales-rubros-calculo.ts
+@@ -1,5 +1,10 @@
+ import type { Id } from "./tipos";
+-import { esTipoPagoPrepaid, getLetraTipoPago, getMetodo } from "./totales-rubros-helpers";
++import {
++  esTipoPagoPrepaid,
++  getCodMonedaVenta,
++  getLetraTipoPago,
++  getMetodo,
++} from "./totales-rubros-helpers";
+ import {
+   type ElementoAgrupado,
+   type GruposPorRubro,
+@@ -54,13 +59,7 @@ export function calcularTotalesPorMoneda({
+         (acc, item) => {
+           const metodo = getMetodo(item);
+ 
+-          const codMoneda = metodo?.cod_moneda_venta;
+-
+-          if (!codMoneda) {
+-            return acc;
+-          }
+-
+-          const key = String(codMoneda);
++          const key = String(getCodMonedaVenta(item));
+ 
+           acc[key] = Number(acc[key] ?? 0) + Number(metodo?.venta ?? 0);
+ 
+@@ -76,13 +75,11 @@ export function calcularTotalesPorMoneda({
+   const acumulado = listaElementos.reduce((resultado, item) => {
+     const metodo = getMetodo(item);
+ 
+-    /*
+-     * Se conserva fallback 2
+-     * del código actual.
+-     */
+-    const codMoneda = metodo?.cod_moneda_venta ?? 2;
++    const codMoneda = getCodMonedaVenta(item);
+ 
+-    const moneda = monedas.find((itemMoneda) => itemMoneda.cod_moneda === codMoneda);
++    const moneda = monedas.find(
++      (itemMoneda) => String(itemMoneda.cod_moneda) === String(codMoneda),
++    );
+ 
+     if (!moneda) {
+       return resultado;
+@@ -124,9 +121,11 @@ export function calcularTotalesPorMoneda({
+       (resultado, item) => {
+         const metodo = getMetodo(item);
+ 
+-        const codMoneda = metodo?.cod_moneda_venta ?? 2;
++        const codMoneda = getCodMonedaVenta(item);
+ 
+-        const moneda = monedas.find((itemMoneda) => itemMoneda.cod_moneda === codMoneda);
++        const moneda = monedas.find(
++          (itemMoneda) => String(itemMoneda.cod_moneda) === String(codMoneda),
++        );
+ 
+         if (!moneda) {
+           return resultado;
+@@ -196,7 +195,7 @@ export function construirElementosAgrupados({
+ 
+     const metodo = getMetodo(item);
+ 
+-    const codMoneda = metodo?.cod_moneda_venta ?? "SIN_MONEDA";
++    const codMoneda = getCodMonedaVenta(item);
+ 
+     const venta = Number(metodo?.venta ?? 0);
+ 
+diff --git a/src/features/pricing/cotizacion/calculo/lib/totales-rubros-helpers.ts b/src/features/pricing/cotizacion/calculo/lib/totales-rubros-helpers.ts
+index d025769..2c7021c 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/totales-rubros-helpers.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/totales-rubros-helpers.ts
+@@ -21,6 +21,36 @@ export function getMetodo(item?: RubroTotal | null): MetodoTotal | undefined {
+   return item?.servicio?.metodo ?? item?.metodo ?? undefined;
+ }
+ 
++/* ==========================================================================
++ * MONEDA
++ * ========================================================================== */
++
++/** Moneda que se asume cuando el rubro no trae ninguna (fallback del código actual). */
++export const COD_MONEDA_DEFAULT = 2;
++
++/**
++ * Moneda de venta del rubro, igual al mostrarlo, sumarlo, agruparlo y guardarlo:
++ * venta del método → costo del método → servicio → rubro → COD_MONEDA_DEFAULT.
++ * Antes, un rubro sin `cod_moneda_venta` se veía con la moneda por defecto,
++ * pero al agruparlo quedaba "SIN_MONEDA" y se guardaba sin moneda.
++ */
++export function getCodMonedaVenta(item?: RubroTotal | null): Id {
++  const metodo = getMetodo(item);
++
++  return (
++    metodo?.cod_moneda_venta ??
++    metodo?.cod_moneda_costo ??
++    (item?.servicio?.cod_moneda_venta as Id | null | undefined) ??
++    (item?.cod_moneda_venta as Id | null | undefined) ??
++    COD_MONEDA_DEFAULT
++  );
++}
++
++/** Moneda de costo del rubro: costo del método → la de venta. */
++export function getCodMonedaCosto(item?: RubroTotal | null): Id {
++  return getMetodo(item)?.cod_moneda_costo ?? getCodMonedaVenta(item);
++}
++
+ /* ==========================================================================
+  * TIPO DE PAGO
+  * ========================================================================== */
+diff --git a/src/features/pricing/cotizacion/calculo/lib/totales-rubros-payload.ts b/src/features/pricing/cotizacion/calculo/lib/totales-rubros-payload.ts
+index ec3ec67..40ce4d7 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/totales-rubros-payload.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/totales-rubros-payload.ts
+@@ -4,6 +4,8 @@ import type { Id } from "./tipos";
+ import {
+   construirDetalleMetodo,
+   esTipoPagoPrepaid,
++  getCodMonedaCosto,
++  getCodMonedaVenta,
+   getLetraTipoPago,
+   getMetodo,
+   letraToCodTipoPago,
+@@ -94,7 +96,7 @@ export function construirPayloadRubrosAgrupados({
+ 
+     const metodo = getMetodo(item);
+ 
+-    const codMoneda = metodo?.cod_moneda_venta ?? "SIN_MONEDA";
++    const codMoneda = getCodMonedaVenta(item);
+ 
+     const letra = tipoPagoSeleccionado[rubroId] ?? item.letra_tipo_pago ?? letraTipoPagoDefault;
+ 
+@@ -148,7 +150,7 @@ export function construirPayloadRubrosAgrupados({
+ 
+     const nombreGrupo = getNombreGrupo(idDeGrupo, item.nombre);
+ 
+-    const codMoneda = metodo?.cod_moneda_venta ?? "SIN_MONEDA";
++    const codMoneda = getCodMonedaVenta(item);
+ 
+     const letra = tipoPagoSeleccionado[rubroId] ?? item.letra_tipo_pago ?? letraTipoPagoDefault;
+ 
+@@ -201,9 +203,9 @@ export function construirPayloadRubrosAgrupados({
+       // Valor original: el del SPOT si lo trae; si no, el propio del rubro.
+       original_venta: metodo?.original_venta ?? metodo?.venta ?? null,
+ 
+-      cod_moneda_costo: metodo?.cod_moneda_costo ?? metodo?.cod_moneda_venta ?? null,
++      cod_moneda_costo: getCodMonedaCosto(item),
+ 
+-      cod_moneda_venta: metodo?.cod_moneda_venta ?? null,
++      cod_moneda_venta: codMoneda,
+ 
+       cod_servicio: item.servicio?.cod_servicio ?? null,
+ 
+@@ -281,9 +283,9 @@ export function construirPayloadRubrosAgrupados({
+ 
+           es_tarifa_spot: false,
+ 
+-          cod_moneda_costo: metodo?.cod_moneda_costo ?? metodo?.cod_moneda_venta ?? null,
++          cod_moneda_costo: getCodMonedaCosto(item),
+ 
+-          cod_moneda_venta: metodo?.cod_moneda_venta ?? null,
++          cod_moneda_venta: getCodMonedaVenta(item),
+ 
+           cod_servicio: null,
+ 
+diff --git a/src/features/pricing/cotizacion/calculo/lib/totales-rubros.ts b/src/features/pricing/cotizacion/calculo/lib/totales-rubros.ts
+index 5a813c2..cc8b10c 100644
+--- a/src/features/pricing/cotizacion/calculo/lib/totales-rubros.ts
++++ b/src/features/pricing/cotizacion/calculo/lib/totales-rubros.ts
+@@ -10,8 +10,11 @@ export {
+   separarRubrosParaTotales,
+ } from "./totales-rubros-estado";
+ export {
++  COD_MONEDA_DEFAULT,
+   construirDetalleMetodo,
+   esTipoPagoPrepaid,
++  getCodMonedaCosto,
++  getCodMonedaVenta,
+   getLetraTipoPago,
+   getMetodo,
+   letraToCodTipoPago,

@@ -4,6 +4,8 @@ import type { Id } from "./tipos";
 import {
   construirDetalleMetodo,
   esTipoPagoPrepaid,
+  getCodMonedaCosto,
+  getCodMonedaVenta,
   getLetraTipoPago,
   getMetodo,
   letraToCodTipoPago,
@@ -94,7 +96,7 @@ export function construirPayloadRubrosAgrupados({
 
     const metodo = getMetodo(item);
 
-    const codMoneda = metodo?.cod_moneda_venta ?? "SIN_MONEDA";
+    const codMoneda = getCodMonedaVenta(item);
 
     const letra = tipoPagoSeleccionado[rubroId] ?? item.letra_tipo_pago ?? letraTipoPagoDefault;
 
@@ -148,7 +150,7 @@ export function construirPayloadRubrosAgrupados({
 
     const nombreGrupo = getNombreGrupo(idDeGrupo, item.nombre);
 
-    const codMoneda = metodo?.cod_moneda_venta ?? "SIN_MONEDA";
+    const codMoneda = getCodMonedaVenta(item);
 
     const letra = tipoPagoSeleccionado[rubroId] ?? item.letra_tipo_pago ?? letraTipoPagoDefault;
 
@@ -201,9 +203,9 @@ export function construirPayloadRubrosAgrupados({
       // Valor original: el del SPOT si lo trae; si no, el propio del rubro.
       original_venta: metodo?.original_venta ?? metodo?.venta ?? null,
 
-      cod_moneda_costo: metodo?.cod_moneda_costo ?? metodo?.cod_moneda_venta ?? null,
+      cod_moneda_costo: getCodMonedaCosto(item),
 
-      cod_moneda_venta: metodo?.cod_moneda_venta ?? null,
+      cod_moneda_venta: codMoneda,
 
       cod_servicio: item.servicio?.cod_servicio ?? null,
 
@@ -281,9 +283,9 @@ export function construirPayloadRubrosAgrupados({
 
           es_tarifa_spot: false,
 
-          cod_moneda_costo: metodo?.cod_moneda_costo ?? metodo?.cod_moneda_venta ?? null,
+          cod_moneda_costo: getCodMonedaCosto(item),
 
-          cod_moneda_venta: metodo?.cod_moneda_venta ?? null,
+          cod_moneda_venta: getCodMonedaVenta(item),
 
           cod_servicio: null,
 

@@ -5,6 +5,7 @@ import React from "react";
 import type { useTotalesRubros } from "../hooks/use-totales-rubros";
 import {
   construirDetalleMetodo,
+  getCodMonedaVenta,
   getMetodo,
   type MetodoTotal,
   type RubroTotal,
@@ -97,11 +98,7 @@ export function TotalesRubros({ controller, lectura = false }: Props) {
    */
   const getSimboloMoneda = React.useCallback(
     (item: RubroTotal) => {
-      const metodo = getMetodo(item);
-
-      const codMoneda = metodo?.cod_moneda_venta ?? 2;
-
-      const moneda = totalPorMoneda[String(codMoneda)]?.moneda;
+      const moneda = totalPorMoneda[String(getCodMonedaVenta(item))]?.moneda;
 
       return moneda?.simbolo_moneda ?? moneda?.SIMBOLO_MONEDA ?? "";
     },

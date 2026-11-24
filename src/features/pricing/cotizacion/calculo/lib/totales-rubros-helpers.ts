@@ -22,6 +22,36 @@ export function getMetodo(item?: RubroTotal | null): MetodoTotal | undefined {
 }
 
 /* ==========================================================================
+ * MONEDA
+ * ========================================================================== */
+
+/** Moneda que se asume cuando el rubro no trae ninguna (fallback del código actual). */
+export const COD_MONEDA_DEFAULT = 2;
+
+/**
+ * Moneda de venta del rubro, igual al mostrarlo, sumarlo, agruparlo y guardarlo:
+ * venta del método → costo del método → servicio → rubro → COD_MONEDA_DEFAULT.
+ * Antes, un rubro sin `cod_moneda_venta` se veía con la moneda por defecto,
+ * pero al agruparlo quedaba "SIN_MONEDA" y se guardaba sin moneda.
+ */
+export function getCodMonedaVenta(item?: RubroTotal | null): Id {
+  const metodo = getMetodo(item);
+
+  return (
+    metodo?.cod_moneda_venta ??
+    metodo?.cod_moneda_costo ??
+    (item?.servicio?.cod_moneda_venta as Id | null | undefined) ??
+    (item?.cod_moneda_venta as Id | null | undefined) ??
+    COD_MONEDA_DEFAULT
+  );
+}
+
+/** Moneda de costo del rubro: costo del método → la de venta. */
+export function getCodMonedaCosto(item?: RubroTotal | null): Id {
+  return getMetodo(item)?.cod_moneda_costo ?? getCodMonedaVenta(item);
+}
+
+/* ==========================================================================
  * TIPO DE PAGO
  * ========================================================================== */
 

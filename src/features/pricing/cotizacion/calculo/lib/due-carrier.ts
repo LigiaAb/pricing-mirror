@@ -198,16 +198,16 @@ export function aplicarValoresManualDueCarrier({
       return item;
     }
 
-    if (esMetodoCostoPorcentaje(item)) {
-      return aplicarCostoPorcentaje(item, valores[String(item.value)]);
-    }
-
-    const valor = Number(valores[String(item.value)]) || 0;
-
     const codMoneda = obtenerCodMonedaEfectivaDueCarrier({
       item,
       codMonedaDefault,
     });
+
+    if (esMetodoCostoPorcentaje(item)) {
+      return aplicarCostoPorcentaje(item, valores[String(item.value)], codMoneda);
+    }
+
+    const valor = Number(valores[String(item.value)]) || 0;
 
     const resultado = {
       ...item,
