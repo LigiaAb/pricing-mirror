@@ -10,8 +10,11 @@ export {
   separarRubrosParaTotales,
 } from "./totales-rubros-estado";
 export {
+  COD_MONEDA_DEFAULT,
   construirDetalleMetodo,
   esTipoPagoPrepaid,
+  getCodMonedaCosto,
+  getCodMonedaVenta,
   getLetraTipoPago,
   getMetodo,
   letraToCodTipoPago,

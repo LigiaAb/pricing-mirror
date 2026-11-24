@@ -322,9 +322,10 @@ export function normalizarRubrosGuardados({
       entidad?.nombre ??
       null;
 
-    const codMonedaVenta = item.cod_moneda_venta ?? item.metodo_cod_moneda_venta ?? null;
-
     const codMonedaCosto = item.cod_moneda_costo ?? item.metodo_cod_moneda_costo ?? null;
+
+    // Sin moneda de venta guardada, se usa la de costo.
+    const codMonedaVenta = item.cod_moneda_venta ?? item.metodo_cod_moneda_venta ?? codMonedaCosto;
 
     const monedaVenta = codMonedaVenta == null ? null : idxMonedas.get(String(codMonedaVenta));
 

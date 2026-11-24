@@ -275,17 +275,17 @@ export function aplicarValoresManualDueAgent({
       return item;
     }
 
-    if (esMetodoCostoPorcentaje(item)) {
-      return aplicarCostoPorcentaje(item, valores[item.value]);
-    }
-
-    const venta = Number(valores[item.value] ?? 0) || 0;
-
     const codMoneda = obtenerCodMonedaEfectiva({
       item,
       codMonedaPadre: codMonedaPadre ?? null,
       codMonedaDefault,
     });
+
+    if (esMetodoCostoPorcentaje(item)) {
+      return aplicarCostoPorcentaje(item, valores[item.value], codMoneda);
+    }
+
+    const venta = Number(valores[item.value] ?? 0) || 0;
 
     const servicio = {
       ...(item.servicio ?? {}),

@@ -1,5 +1,10 @@
 import type { Id } from "./tipos";
-import { esTipoPagoPrepaid, getLetraTipoPago, getMetodo } from "./totales-rubros-helpers";
+import {
+  esTipoPagoPrepaid,
+  getCodMonedaVenta,
+  getLetraTipoPago,
+  getMetodo,
+} from "./totales-rubros-helpers";
 import {
   type ElementoAgrupado,
   type GruposPorRubro,
@@ -54,13 +59,7 @@ export function calcularTotalesPorMoneda({
         (acc, item) => {
           const metodo = getMetodo(item);
 
-          const codMoneda = metodo?.cod_moneda_venta;
-
-          if (!codMoneda) {
-            return acc;
-          }
-
-          const key = String(codMoneda);
+          const key = String(getCodMonedaVenta(item));
 
           acc[key] = Number(acc[key] ?? 0) + Number(metodo?.venta ?? 0);
 
@@ -76,13 +75,11 @@ export function calcularTotalesPorMoneda({
   const acumulado = listaElementos.reduce((resultado, item) => {
     const metodo = getMetodo(item);
 
-    /*
-     * Se conserva fallback 2
-     * del código actual.
-     */
-    const codMoneda = metodo?.cod_moneda_venta ?? 2;
+    const codMoneda = getCodMonedaVenta(item);
 
-    const moneda = monedas.find((itemMoneda) => itemMoneda.cod_moneda === codMoneda);
+    const moneda = monedas.find(
+      (itemMoneda) => String(itemMoneda.cod_moneda) === String(codMoneda),
+    );
 
     if (!moneda) {
       return resultado;
@@ -124,9 +121,11 @@ export function calcularTotalesPorMoneda({
       (resultado, item) => {
         const metodo = getMetodo(item);
 
-        const codMoneda = metodo?.cod_moneda_venta ?? 2;
+        const codMoneda = getCodMonedaVenta(item);
 
-        const moneda = monedas.find((itemMoneda) => itemMoneda.cod_moneda === codMoneda);
+        const moneda = monedas.find(
+          (itemMoneda) => String(itemMoneda.cod_moneda) === String(codMoneda),
+        );
 
         if (!moneda) {
           return resultado;
@@ -196,7 +195,7 @@ export function construirElementosAgrupados({
 
     const metodo = getMetodo(item);
 
-    const codMoneda = metodo?.cod_moneda_venta ?? "SIN_MONEDA";
+    const codMoneda = getCodMonedaVenta(item);
 
     const venta = Number(metodo?.venta ?? 0);
 

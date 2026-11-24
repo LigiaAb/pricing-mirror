@@ -21,10 +21,11 @@ export type RubroConMetodo = {
   [key: string]: unknown;
 };
 
-/** cod_moneda_venta del rubro: método del servicio → servicio → rubro. */
+/** cod_moneda_venta del rubro: método del servicio (venta, si no costo) → servicio → rubro. */
 export function getCodMonedaVenta(item: RubroConMetodo): Id | null {
   return (
     (item.servicio?.metodo?.cod_moneda_venta as Id | null | undefined) ??
+    (item.servicio?.metodo?.cod_moneda_costo as Id | null | undefined) ??
     (item.servicio?.cod_moneda_venta as Id | null | undefined) ??
     item.cod_moneda_venta ??
     null
@@ -92,12 +93,25 @@ export function calcularVentaCostoPorcentaje(item: Registro, valorCosto: string 
 export function aplicarCostoPorcentaje<T extends RubroConMetodo>(
   item: T,
   valorCosto: string | number | null | undefined,
+  codMoneda: Id | null = null,
 ): T {
   const { costo, venta } =
     valorCosto == null || valorCosto === ""
       ? { costo: 0, venta: 0 }
       : calcularVentaCostoPorcentaje(item, valorCosto);
-  const metodo = { ...(item.servicio?.metodo ?? item.metodo ?? {}), costo, venta };
+  const base = item.servicio?.metodo ?? item.metodo ?? {};
+  // Sin moneda en el método, el rubro perdía la moneda al agruparse y se guardaba sin ella.
+  const monedaVenta =
+    (base.cod_moneda_venta as Id | null | undefined) ??
+    (base.cod_moneda_costo as Id | null | undefined) ??
+    codMoneda;
+  const metodo = {
+    ...base,
+    costo,
+    venta,
+    cod_moneda_venta: monedaVenta,
+    cod_moneda_costo: (base.cod_moneda_costo as Id | null | undefined) ?? monedaVenta,
+  };
 
   return {
     ...item,
