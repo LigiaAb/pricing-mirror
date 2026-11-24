@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import logoCropa from "@/assets/logos/logo-cropa-dsv.png";
 import type { ActividadReporte } from "../api/actividades-reporte";
 import { jsonSeguro } from "./actividades-vista";
@@ -90,8 +90,9 @@ function agrupar(actividades: ActividadReporte[]) {
 }
 
 function textoRango(fechaInicio?: string, fechaFin?: string) {
-  const desde = fechaInicio ? new Date(fechaInicio) : null;
-  const hasta = fechaFin ? new Date(fechaFin) : null;
+  // Fechas "yyyy-MM-dd" en día local (`new Date` las toma en UTC y restaba un día).
+  const desde = fechaInicio ? parseISO(fechaInicio) : null;
+  const hasta = fechaFin ? parseISO(fechaFin) : null;
   const partes = [
     desde && !Number.isNaN(desde.getTime()) ? `Del ${format(desde, "dd-MM-yyyy")}` : "",
     hasta && !Number.isNaN(hasta.getTime()) ? `Al ${format(hasta, "dd-MM-yyyy")}` : "",

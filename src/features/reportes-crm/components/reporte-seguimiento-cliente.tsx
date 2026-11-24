@@ -31,6 +31,8 @@ interface ReporteSeguimientoClienteProps {
   filas: HistorialActividad[];
   cargando: boolean;
   empresaId: string;
+  /** Respaldo del legacy: filas sin `cod_empresa` se comparan por nombre de empresa. */
+  empresaNombre: string;
   ccId: string;
 }
 
@@ -43,6 +45,7 @@ export function ReporteSeguimientoCliente({
   filas,
   cargando,
   empresaId,
+  empresaNombre,
   ccId,
 }: Readonly<ReporteSeguimientoClienteProps>) {
   const ordenadas = useMemo(
@@ -50,13 +53,16 @@ export function ReporteSeguimientoCliente({
       filas
         .filter(
           (fila) =>
-            (!empresaId || String(fila.cod_empresa ?? "") === empresaId) &&
+            (!empresaId ||
+              (fila.cod_empresa
+                ? String(fila.cod_empresa) === empresaId
+                : fila.nombre_empresa === empresaNombre)) &&
             (!ccId || String(fila.cod_cenco ?? "") === ccId),
         )
         .sort(
           (a, b) => new Date(b.fecha_programada).getTime() - new Date(a.fecha_programada).getTime(),
         ),
-    [ccId, empresaId, filas],
+    [ccId, empresaId, empresaNombre, filas],
   );
   // Miles de clientes: se memoizan las opciones (el Combobox virtualiza más de 1000).
   const opcionesClientes = useMemo(

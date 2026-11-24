@@ -9,11 +9,11 @@ export function jsonSeguro<T>(valor: string | null | undefined): T[] {
 }
 export function actividadesEnRango(actividades: ActividadReporte[], inicio: string, fin: string) {
   // G-1: el API aún ignora las fechas; se filtra el conjunto ya acotado por empresa y CC.
-  const inicioDate = new Date(`${inicio}T00:00:00.000Z`);
-  const finDate = new Date(`${fin}T23:59:59.999Z`);
-  if (Number.isNaN(inicioDate.getTime()) || Number.isNaN(finDate.getTime())) return [];
-  const desde = inicioDate.getTime();
-  const hasta = finDate.getTime();
+  // Como el legacy: cada fecha filtra sola y se compara por día local (no UTC).
+  if (!inicio && !fin) return actividades;
+  const desde = inicio ? new Date(`${inicio}T00:00:00`).getTime() : Number.NEGATIVE_INFINITY;
+  const hasta = fin ? new Date(`${fin}T23:59:59.999`).getTime() : Number.POSITIVE_INFINITY;
+  if (Number.isNaN(desde) || Number.isNaN(hasta)) return [];
   return actividades.filter((actividad) => {
     const fecha = new Date(actividad.fecha_programada).getTime();
     return Number.isFinite(fecha) && fecha >= desde && fecha <= hasta;
