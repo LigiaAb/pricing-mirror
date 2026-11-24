@@ -39,6 +39,7 @@ import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { MultiSelect } from "@/shared/components/ui/multi-select";
 import { asText } from "@/shared/lib/text";
+import { cn } from "@/shared/lib/utils";
 import { useAuthStore } from "@/shared/stores/auth-store";
 import { useActividadesReporte } from "../api/actividades-reporte";
 import { useObjetivosReporte } from "../api/objetivos-reporte";
@@ -335,21 +336,29 @@ export function ReportesCrmClient() {
             <>
               <label className="w-full text-sm font-medium sm:w-1/4">
                 Fecha inicial{campos.fechas === "requeridas" ? " *" : ""}
-                <input
-                  type="date"
-                  className="mt-1 h-9 w-full rounded-md border bg-card px-2"
-                  value={inicio}
-                  onChange={(event) => setInicio(event.target.value)}
-                />
+                <div className="relative mt-1">
+                  <input
+                    type="date"
+                    className={cn("h-9 w-full rounded-md border bg-card px-2", inicio && "pr-16")}
+                    value={inicio}
+                    onChange={(event) => setInicio(event.target.value)}
+                  />
+                  {inicio ? (
+                    <BotonLimpiar label="Fecha inicial" onClick={() => setInicio("")} />
+                  ) : null}
+                </div>
               </label>
               <label className="w-full text-sm font-medium sm:w-1/4">
                 Fecha final{campos.fechas === "requeridas" ? " *" : ""}
-                <input
-                  type="date"
-                  className="mt-1 h-9 w-full rounded-md border bg-card px-2"
-                  value={fin}
-                  onChange={(event) => setFin(event.target.value)}
-                />
+                <div className="relative mt-1">
+                  <input
+                    type="date"
+                    className={cn("h-9 w-full rounded-md border bg-card px-2", fin && "pr-16")}
+                    value={fin}
+                    onChange={(event) => setFin(event.target.value)}
+                  />
+                  {fin ? <BotonLimpiar label="Fecha final" onClick={() => setFin("")} /> : null}
+                </div>
               </label>
             </>
           )}
@@ -456,17 +465,28 @@ export function ReportesCrmClient() {
                 {campos.tipoActividad && (
                   <Field>
                     <FieldLabel htmlFor="reportes-crm-tipo">Tipo (opcional)</FieldLabel>
-                    <MultiSelect
-                      id="reportes-crm-tipo"
-                      value={tiposActividad}
-                      onChange={setTiposActividad}
-                      placeholder="Todos los tipos"
-                      searchPlaceholder="Buscar tipo…"
-                      options={tiposActividadReporte.map((item) => ({
-                        value: String(item.codTipo),
-                        label: item.nomTipo,
-                      }))}
-                    />
+                    <div className="relative w-full">
+                      <MultiSelect
+                        id="reportes-crm-tipo"
+                        value={tiposActividad}
+                        onChange={setTiposActividad}
+                        placeholder="Todos los tipos"
+                        searchPlaceholder="Buscar tipo…"
+                        {...(tiposActividad.length ? { className: "pr-16" } : {})}
+                        options={tiposActividadReporte.map((item) => ({
+                          value: String(item.codTipo),
+                          label: item.nomTipo,
+                        }))}
+                      />
+                      {tiposActividad.length ? (
+                        // Centrado en el botón (h-9), no en el bloque con las etiquetas.
+                        <BotonLimpiar
+                          label="Tipo"
+                          onClick={() => setTiposActividad([])}
+                          className="top-[1.125rem]"
+                        />
+                      ) : null}
+                    </div>
                   </Field>
                 )}
                 {campos.tipoAsignacion === "seleccion" && (
