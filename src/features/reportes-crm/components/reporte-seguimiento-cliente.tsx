@@ -8,6 +8,7 @@ import { Combobox } from "@/shared/components/ui/combobox";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { formatearFechaHora } from "@/shared/lib/date";
 import type { ColumnDef } from "@/shared/lib/tanstack-table";
+import { BotonLimpiar } from "./boton-limpiar";
 
 const columnasHistorial: ColumnDef<HistorialActividad>[] = [
   { accessorKey: "nombre_cenco", header: "Departamento" },
@@ -78,16 +79,20 @@ export function ReporteSeguimientoCliente({
       <div className="flex max-w-md items-end gap-2">
         <Field className="min-w-0 flex-1">
           <FieldLabel htmlFor="reportes-crm-cliente">Cliente</FieldLabel>
-          <Combobox
-            id="reportes-crm-cliente"
-            value={clienteId}
-            onChange={setClienteId}
-            options={opcionesClientes}
-            placeholder="Selecciona un cliente"
-            searchPlaceholder="Buscar cliente..."
-            popoverClassName="z-[9999]"
-            clearable
-          />
+          <div className="relative w-full">
+            <Combobox
+              id="reportes-crm-cliente"
+              value={clienteId}
+              onChange={setClienteId}
+              options={opcionesClientes}
+              placeholder="Selecciona un cliente"
+              searchPlaceholder="Buscar cliente..."
+              popoverClassName="z-[9999]"
+              className={clienteId ? "pr-16" : undefined}
+              clearable
+            />
+            {clienteId ? <BotonLimpiar label="Cliente" onClick={() => setClienteId("")} /> : null}
+          </div>
         </Field>
         <Button type="button" onClick={onGenerar} disabled={!clienteId}>
           Generar reporte

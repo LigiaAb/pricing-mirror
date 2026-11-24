@@ -51,6 +51,7 @@ import {
   REPORTES_CRM,
   type ReporteCrmId,
 } from "../lib/reportes-crm-registro";
+import { BotonLimpiar } from "./boton-limpiar";
 import { ReporteIcc } from "./reporte-icc";
 import { ReporteObjetivos } from "./reporte-objetivos-empleado";
 import { ReporteSeguimientoCliente } from "./reporte-seguimiento-cliente";
@@ -643,15 +644,19 @@ function FiltroCombobox({
   return (
     <Field>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Combobox
-        id={id}
-        value={value}
-        onChange={onChange}
-        options={options}
-        placeholder={placeholder}
-        popoverClassName="z-[9999]"
-        clearable
-      />
+      <div className="relative w-full">
+        <Combobox
+          id={id}
+          value={value}
+          onChange={onChange}
+          options={options}
+          placeholder={placeholder}
+          popoverClassName="z-[9999]"
+          className={value ? "pr-16" : undefined}
+          clearable
+        />
+        {value ? <BotonLimpiar label={label} onClick={() => onChange("")} /> : null}
+      </div>
     </Field>
   );
 }

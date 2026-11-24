@@ -1,0 +1,113 @@
+diff --git a/src/features/reportes-crm/components/boton-limpiar.tsx b/src/features/reportes-crm/components/boton-limpiar.tsx
+new file mode 100644
+index 0000000..46ddc04
+--- /dev/null
++++ b/src/features/reportes-crm/components/boton-limpiar.tsx
+@@ -0,0 +1,23 @@
++"use client";
++
++import { X } from "lucide-react";
++
++/** "x" al final del input para dejar el filtro vacío (mismo patrón que `ComboboxOpcion`). */
++export function BotonLimpiar({ label, onClick }: Readonly<{ label: string; onClick: () => void }>) {
++  return (
++    <button
++      type="button"
++      aria-label={`Limpiar ${label}`}
++      title="Limpiar"
++      tabIndex={-1}
++      className="absolute right-8 top-1/2 z-10 -translate-y-1/2 rounded-sm text-muted-foreground hover:text-destructive"
++      onClick={(event) => {
++        event.preventDefault();
++        event.stopPropagation();
++        onClick();
++      }}
++    >
++      <X className="size-4" aria-hidden="true" />
++    </button>
++  );
++}
+diff --git a/src/features/reportes-crm/components/reporte-seguimiento-cliente.tsx b/src/features/reportes-crm/components/reporte-seguimiento-cliente.tsx
+index 94d30e3..a5eeff2 100644
+--- a/src/features/reportes-crm/components/reporte-seguimiento-cliente.tsx
++++ b/src/features/reportes-crm/components/reporte-seguimiento-cliente.tsx
+@@ -8,6 +8,7 @@ import { Combobox } from "@/shared/components/ui/combobox";
+ import { Field, FieldLabel } from "@/shared/components/ui/field";
+ import { formatearFechaHora } from "@/shared/lib/date";
+ import type { ColumnDef } from "@/shared/lib/tanstack-table";
++import { BotonLimpiar } from "./boton-limpiar";
+ 
+ const columnasHistorial: ColumnDef<HistorialActividad>[] = [
+   { accessorKey: "nombre_cenco", header: "Departamento" },
+@@ -78,16 +79,20 @@ export function ReporteSeguimientoCliente({
+       <div className="flex max-w-md items-end gap-2">
+         <Field className="min-w-0 flex-1">
+           <FieldLabel htmlFor="reportes-crm-cliente">Cliente</FieldLabel>
+-          <Combobox
+-            id="reportes-crm-cliente"
+-            value={clienteId}
+-            onChange={setClienteId}
+-            options={opcionesClientes}
+-            placeholder="Selecciona un cliente"
+-            searchPlaceholder="Buscar cliente..."
+-            popoverClassName="z-[9999]"
+-            clearable
+-          />
++          <div className="relative w-full">
++            <Combobox
++              id="reportes-crm-cliente"
++              value={clienteId}
++              onChange={setClienteId}
++              options={opcionesClientes}
++              placeholder="Selecciona un cliente"
++              searchPlaceholder="Buscar cliente..."
++              popoverClassName="z-[9999]"
++              className={clienteId ? "pr-16" : undefined}
++              clearable
++            />
++            {clienteId ? <BotonLimpiar label="Cliente" onClick={() => setClienteId("")} /> : null}
++          </div>
+         </Field>
+         <Button type="button" onClick={onGenerar} disabled={!clienteId}>
+           Generar reporte
+diff --git a/src/features/reportes-crm/components/reportes-crm-client.tsx b/src/features/reportes-crm/components/reportes-crm-client.tsx
+index 0b92e34..ca201fb 100644
+--- a/src/features/reportes-crm/components/reportes-crm-client.tsx
++++ b/src/features/reportes-crm/components/reportes-crm-client.tsx
+@@ -51,6 +51,7 @@ import {
+   REPORTES_CRM,
+   type ReporteCrmId,
+ } from "../lib/reportes-crm-registro";
++import { BotonLimpiar } from "./boton-limpiar";
+ import { ReporteIcc } from "./reporte-icc";
+ import { ReporteObjetivos } from "./reporte-objetivos-empleado";
+ import { ReporteSeguimientoCliente } from "./reporte-seguimiento-cliente";
+@@ -643,15 +644,19 @@ function FiltroCombobox({
+   return (
+     <Field>
+       <FieldLabel htmlFor={id}>{label}</FieldLabel>
+-      <Combobox
+-        id={id}
+-        value={value}
+-        onChange={onChange}
+-        options={options}
+-        placeholder={placeholder}
+-        popoverClassName="z-[9999]"
+-        clearable
+-      />
++      <div className="relative w-full">
++        <Combobox
++          id={id}
++          value={value}
++          onChange={onChange}
++          options={options}
++          placeholder={placeholder}
++          popoverClassName="z-[9999]"
++          className={value ? "pr-16" : undefined}
++          clearable
++        />
++        {value ? <BotonLimpiar label={label} onClick={() => onChange("")} /> : null}
++      </div>
+     </Field>
+   );
+ }
