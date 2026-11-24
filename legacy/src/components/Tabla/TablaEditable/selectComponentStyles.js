@@ -1,0 +1,27 @@
+export const placeholder = (input) => `${input?.placeholder || input?.label || ""}${input?.requerido ? " *" : ""}`.toUpperCase();
+export const style = (input) => ({
+  "& .MuiFormControl-root": { width: "100% !important" },
+  "& .MuiFormLabel-root": { display: "none !important" },
+  "& button.MuiButtonBase-root": { visibility: "visible" },
+  "& .MuiAutocomplete-endAdornment": { "& .MuiButtonBase-root": { color: input.color || "black" } },
+  "& .Mui-readOnly": { "& .MuiAutocomplete-popupIndicator *": { opacity: 0.26 } },
+  "& .MuiInputBase-root": {
+    fontSize: "12px",
+    pt: "0px !important",
+    pr: "60px !important",
+    pb: "0px !important",
+    pl: "0px !important",
+    height: "auto",
+    borderBottom: "0px !important",
+    "&.MuiFilledInput-root": { borderBottom: "0px !important", fontSize: "12px", py: "0px !important", minHeight: "24px", height: "auto" },
+    "& .MuiInputBase-root": { borderBottom: "0px !important", fontSize: "12px", py: "0px !important", minHeight: "24px", height: "auto" },
+    "& .MuiInputBase-input": { p: "0px !important", m: 0 },
+    "& .MuiIconButton-root": { p: "auto", color: input.color || "black" },
+    "& .MuiButtonBase-root": { color: "black !important" },
+  },
+  "& .MuiInputLabel-root": { fontSize: "1rem", transform: "translate(10px, 6px) scale(1) !important", "& fieldset": { padding: "2px" } },
+  "& .MuiInputLabel-shrink": { transform: "translate(5px, -10px) scale(1) !important", textTransform: "uppercase" },
+  "& input": { "&::placeholder": { opacity: 0.5 }, lineHeight: 1, bgcolor: "transparent", pr: "5px !important", paddingLeft: "10px !important" },
+  "& .MuiFormHelperText-root": { marginTop: "0px", padding: 0 },
+  "& .MuiOutlinedInput-root": { "& fieldset": { padding: "0px" } },
+});

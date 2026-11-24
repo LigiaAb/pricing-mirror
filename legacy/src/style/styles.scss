@@ -1,0 +1,141 @@
+html {
+  transition: background-color 0.1s ease-in-out;
+}
+
+html,
+body,
+#root,
+#IndexLayout,
+#bodyContent,
+#MenuBasePage,
+#MainLayout {
+  display: flex;
+  width: 100%;
+  align-items: stretch;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+  // height:  calc(var(--vh, 1vh) * 100);
+}
+
+.box-shadow {
+  box-shadow: 0px 5px 5px rgba(0, 0, 0, 0.2);
+}
+
+// *::-webkit-scrollbar {
+//   width: 6px;
+//   height: 6px;
+// }
+
+// *::-webkit-scrollbar-track {
+// }
+// *::-webkit-scrollbar-track {
+//   background: transparent;
+// }
+// *::-webkit-scrollbar-thumb {
+//   background-color: var(--mui-palette-grey-50);
+//   border-radius: 10px;
+// }
+// *::-webkit-scrollbar-thumb:hover {
+//   background-color: transparent;
+// }
+
+.hoverLink:hover {
+  text-decoration: underline;
+}
+
+kbd {
+  font-size: inherit !important;
+  line-height: inherit !important;
+  font-family: inherit !important;
+  padding-left: 2px;
+  padding-right: 2px;
+
+  // box-shadow: 0 1px 2px hsla(0, 0%, 87%, 0.75);
+  box-shadow: inset -5px -4px 7px -4px rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+b {
+  font-size: "inherit";
+}
+
+// @font-face {
+//   font-family: "Arial";
+//   src: url("../fonts/arial/Yu Gothic.woff") format("woff"), url("../fonts/arial/Yu Gothic.woff2") format("woff2"), url("../fonts/arial/Yu Gothic.eot") format("eot"),
+//     url("../fonts/arial/Yu Gothic.ttf") format("ttf");
+// }
+
+// @font-face {
+//   font-family: "Yu Gothic";
+//   src: url("../fonts/yu_gothic/Yu Gothic.woff") format("woff"), url("../fonts/yu_gothic/Yu Gothic.woff2") format("woff2"),
+//     url("../fonts/yu_gothic/Yu Gothic.eot") format("eot"), url("../fonts/yu_gothic/Yu Gothic.ttf") format("ttf");
+// }
+
+@font-face {
+  font-family: "Consolas";
+  src:
+    url("../fonts/consolas/Consolas.woff") format("woff"),
+    url("../fonts/consolas/Consolas.woff2") format("woff2"),
+    url("../fonts/consolas/Consolas.eot") format("eot"),
+    url("../fonts/consolas/Consolas.ttf") format("ttf");
+}
+
+@font-face {
+  font-family: "Courier New";
+  src:
+    url("../fonts/courrier/CourierPrime-Regular.woff") format("woff"),
+    url("../fonts/courrier/CourierPrime-Regular.woff2") format("woff2"),
+    url("../fonts/courrier/CourierPrime-Regular.eot") format("eot"),
+    url("../fonts/courrier/CourierPrime-Regular.ttf") format("ttf");
+}
+
+.tox-statusbar__branding {
+  display: none;
+}
+
+.editorSlateEditable:focus-visible {
+  outline: transparent;
+}
+
+ul,
+li,
+ol {
+  margin-top: 0px;
+  margin-bottom: 0px;
+  padding-top: 0px;
+  padding-bottom: 0px;
+  font-family: inherit;
+}
+#filtros * {
+  transition: all 0.3s ease-in-out;
+}
+
+.reportClass {
+  height: 250px;
+  box-shadow: none;
+}
+
+.input_c,
+.input_c:focus {
+  outline: none;
+  border-radius: 4px;
+  // background-color: blue !important;
+  border-bottom: "2px solid #888888";
+}
+
+.myInputFocus .contenedor_input::after {
+  content: "";
+  border-bottom: 2px solid #0b2967;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  left: 0;
+}
+.myInput .contenedor_input::after {
+  content: "";
+  border-bottom: 2px solid #0b2a676e;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  left: 0;
+}

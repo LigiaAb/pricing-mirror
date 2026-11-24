@@ -1,0 +1,37 @@
+@use "variables" as *;
+
+@font-face {
+  font-family: "#{$icomoon-font-family}";
+  src:
+    url("#{$icomoon-font-path}/CROPA.woff2") format("woff2"),
+    url("#{$icomoon-font-path}/CROPA.woff") format("woff"),
+    url("#{$icomoon-font-path}/CROPA.ttf") format("truetype"),
+    url("#{$icomoon-font-path}/CROPA.otf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+[class^="c-"],
+[class*=" c-"] {
+  /* use !important to prevent issues with browser extensions that change fonts */
+  font-family: "#{$icomoon-font-family}" !important;
+  speak: never;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+
+  /* Better Font Rendering =========== */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@each $name, $value in $icons {
+  .#{$name} {
+    &::before {
+      content: $value;
+    }
+  }
+}

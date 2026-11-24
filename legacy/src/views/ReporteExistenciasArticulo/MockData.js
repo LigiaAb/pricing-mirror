@@ -1,0 +1,62 @@
+export const existencias = [
+    {
+        "artcod": "E-000-100138",
+        "inglin": "2",
+        "ingcor": "206085",
+        "ingdec": "INASO81124",
+        "clicod": "4305",
+        "reales": "9",
+        "disponibles": "9",
+        "tipdes": "ALMACEN SAN SALVADOR",
+        "tipcod": "11",
+        "ingtar": "1",
+        "inguni": "9",
+        "inglot": "221004",
+        "ingflot": "2026-09-30 00:00:00"
+    },
+    {
+        "artcod": "E-000-100138",
+        "inglin": "1",
+        "ingcor": "206085",
+        "ingdec": "INASO81124",
+        "clicod": "4305",
+        "reales": "150",
+        "disponibles": "150",
+        "tipdes": "ALMACEN SAN SALVADOR",
+        "tipcod": "11",
+        "ingtar": "1",
+        "inguni": "50",
+        "inglot": "221004",
+        "ingflot": "2026-09-30 00:00:00"
+    },
+    {
+        "artcod": "E-000-100138",
+        "inglin": "2",
+        "ingcor": "203829",
+        "ingdec": "ASOCI10924",
+        "clicod": "4305",
+        "reales": "0",
+        "disponibles": "0",
+        "tipdes": "ALMACEN SAN SALVADOR",
+        "tipcod": "11",
+        "ingtar": "1",
+        "inguni": "36",
+        "inglot": "221004",
+        "ingflot": "2026-09-30 00:00:00"
+    },
+    {
+        "artcod": "E-000-100138",
+        "inglin": "1",
+        "ingcor": "203829",
+        "ingdec": "ASOCI10924",
+        "clicod": "4305",
+        "reales": "86",
+        "disponibles": "86",
+        "tipdes": "ALMACEN SAN SALVADOR",
+        "tipcod": "11",
+        "ingtar": "1",
+        "inguni": "50",
+        "inglot": "221004",
+        "ingflot": "2026-09-30 00:00:00"
+    }
+]

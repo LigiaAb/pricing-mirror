@@ -1,0 +1,10 @@
+// Importar primero todos los archivos SCSS con `@use`
+@use "./styles.scss" as styles;
+
+// Luego, incluir archivos SCSS/CSS con `@import`
+// @import "../fonts/fonts/style.scss";
+@import "../fonts/cropa/style.css";
+@import "@fontsource/roboto/300.css";
+@import "@fontsource/roboto/400.css";
+@import "@fontsource/roboto/500.css";
+@import "@fontsource/roboto/700.css";

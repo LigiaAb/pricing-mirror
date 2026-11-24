@@ -1,0 +1,866 @@
+@font-face {
+    font-family: "CROPA";
+    src: url("./fonts/CROPA.woff2") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+    font-display: block;
+}
+.c-icon, [class^="c-"], [class*=" c-"] {
+    /* Use !important to prevent extensions from overriding this font. */
+    font-family: "CROPA" !important;
+    font-style: normal;
+    font-weight: normal;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+
+    /* Better Font Rendering =========== */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+:root {
+    --c-abajo: "\e988";
+    --c-abajo-derecha-arriba: "\e98f";
+    --c-abajo-doble: "\e99e";
+    --c-abajo-izquierda-arriba: "\e990";
+    --c-abajo-simple: "\e98e";
+    --c-abecedario: "\e9ab";
+    --c-actualizar: "\e903";
+    --c-alerta: "\e904";
+    --c-arriba: "\e987";
+    --c-arriba-derecha-abajo: "\e993";
+    --c-arriba-doble: "\e99f";
+    --c-arriba-izquierda-abajo: "\e994";
+    --c-arriba-simple: "\e98d";
+    --c-arroba: "\e905";
+    --c-asignacion: "\e982";
+    --c-aterrizar: "\e9ce";
+    --c-autorizar: "\e981";
+    --c-avion: "\e906";
+    --c-ayuda: "\e907";
+    --c-banco: "\e93e";
+    --c-bandera-derecha: "\e9b6";
+    --c-bandera-derecha-doble: "\e9b7";
+    --c-barco: "\e908";
+    --c-bienes: "\e93f";
+    --c-billetera: "\e983";
+    --c-bodega: "\e909";
+    --c-bolsa-dinero: "\e940";
+    --c-buscar-mapa: "\e941";
+    --c-caja: "\e90a";
+    --c-caja-chica: "\e942";
+    --c-caja-registradora: "\e943";
+    --c-calcular: "\e90b";
+    --c-calendario: "\e90c";
+    --c-calendario1: "\e90d";
+    --c-calendario-actividad: "\e90e";
+    --c-calendario-agenda: "\e90f";
+    --c-calendario-anterior: "\e910";
+    --c-calendario-reloj: "\e911";
+    --c-calendario-siguiente: "\e912";
+    --c-camion: "\e913";
+    --c-camion-reparto: "\e944";
+    --c-camion-reparto-lleno: "\e945";
+    --c-camion-vacio: "\e946";
+    --c-campana: "\e914";
+    --c-cancelar: "\e915";
+    --c-candado: "\f001";
+    --c-capas: "\e916";
+    --c-cargar: "\e99b";
+    --c-carpeta: "\e9b8";
+    --c-carpeta-alerta: "\e917";
+    --c-carpeta-buscar: "\e918";
+    --c-carpeta-descargar: "\e919";
+    --c-carpeta-eliminar: "\e91a";
+    --c-carpeta-mas: "\e91b";
+    --c-carpeta-menos: "\e91c";
+    --c-carpetas: "\e9b9";
+    --c-carro: "\e9ba";
+    --c-cerrar-sesion: "\e91d";
+    --c-chat: "\e976";
+    --c-cheque: "\e977";
+    --c-circulo: "\e974";
+    --c-circulo-cheque: "\e9af";
+    --c-circulo-lleno: "\e9b5";
+    --c-circulo-x: "\e9b1";
+    --c-cliente: "\e984";
+    --c-codigo: "\f000";
+    --c-codigo-barras: "\e91e";
+    --c-codigo-qr: "\e91f";
+    --c-compartir: "\e9bd";
+    --c-configuracion: "\e920";
+    --c-contrasena: "\e947";
+    --c-control-trafico: "\e948";
+    --c-copiar: "\e921";
+    --c-cuaderno: "\e9bb";
+    --c-cuadrado: "\e978";
+    --c-cuadrado-cheque: "\e9a5";
+    --c-cuadrado-menos: "\e99d";
+    --c-derecha: "\e989";
+    --c-derecha-abajo-izquierda: "\e991";
+    --c-derecha-arriba-izquierda: "\e992";
+    --c-derecha-doble: "\e9a0";
+    --c-derecha-simple: "\e98b";
+    --c-descargar: "\e9a6";
+    --c-despegar: "\e9cd";
+    --c-dividir: "\e979";
+    --c-dividir-inverso: "\e97a";
+    --c-documentacion: "\e949";
+    --c-documento: "\e9a7";
+    --c-documentos: "\e9a2";
+    --c-eliminar: "\e922";
+    --c-empacar: "\e923";
+    --c-empresa: "\e9a3";
+    --c-entregar: "\e924";
+    --c-error: "\e925";
+    --c-estadisticas: "\e94a";
+    --c-estanteria-llena: "\e9cf";
+    --c-estanteria-vacia: "\e9d0";
+    --c-evaluacion: "\e97b";
+    --c-excel: "\e999";
+    --c-exclamacion: "\e926";
+    --c-factura: "\e94b";
+    --c-femenino: "\e94c";
+    --c-grua: "\e927";
+    --c-grupo: "\e928";
+    --c-guardar: "\e9a4";
+    --c-home: "\e929";
+    --c-id: "\e9ac";
+    --c-impresora: "\e92a";
+    --c-impuestos: "\e94d";
+    --c-informacion: "\e92b";
+    --c-izquierda: "\e98a";
+    --c-izquierda-abajo-derecha: "\e995";
+    --c-izquierda-arriba-derecha: "\e996";
+    --c-izquierda-doble: "\e9a1";
+    --c-izquierda-simple: "\e98c";
+    --c-kanban: "\e92c";
+    --c-kpis: "\e94e";
+    --c-lapiz: "\e92d";
+    --c-lealtad: "\e97c";
+    --c-lealtad1: "\e975";
+    --c-link: "\e997";
+    --c-link-roto: "\e998";
+    --c-lista: "\e92e";
+    --c-lista-checkbox: "\e92f";
+    --c-logistica: "\e94f";
+    --c-luna: "\e9b3";
+    --c-lupa: "\e930";
+    --c-mail: "\e9bc";
+    --c-mapa: "\e931";
+    --c-mapa-ubicacion: "\e99c";
+    --c-maquina-elevadora: "\e932";
+    --c-masculino: "\e950";
+    --c-memos: "\e933";
+    --c-menu: "\e97d";
+    --c-modulo: "\e934";
+    --c-mundo: "\e9b2";
+    --c-no-encontrado: "\e951";
+    --c-no-ver: "\e985";
+    --c-numeros: "\e9ad";
+    --c-pallet: "\e935";
+    --c-pantalla-404: "\e97e";
+    --c-pdf: "\e99a";
+    --c-pegar: "\e936";
+    --c-perfil-usuario: "\e937";
+    --c-peso: "\e9cb";
+    --c-porcentaje: "\e9be";
+    --c-proceedor: "\e952";
+    --c-puerto-derecha: "\e953";
+    --c-puerto-izquierda: "\e954";
+    --c-puesto: "\e9a8";
+    --c-radio-button: "\e938";
+    --c-recursos-humanos: "\e955";
+    --c-reloj: "\e939";
+    --c-reportes: "\e956";
+    --c-restar: "\e97f";
+    --c-rol: "\e9a9";
+    --c-sol: "\e9b4";
+    --c-suma: "\e980";
+    --c-tarifa: "\e957";
+    --c-telefono: "\e9b0";
+    --c-ticket: "\e93a";
+    --c-trabajador-bodega: "\e958";
+    --c-transferir: "\e9ae";
+    --c-ubicacion-paquete: "\e93b";
+    --c-usuario: "\e93c";
+    --c-ver: "\e986";
+    --c-video-llamada: "\e959";
+    --c-volumen: "\e9cc";
+    --c-x1: "\e9aa";
+    --c-0: "\e9c1";
+    --c-1: "\e9c2";
+    --c-2: "\e9c3";
+    --c-3: "\e9c4";
+    --c-4: "\e9c5";
+    --c-5: "\e9c6";
+    --c-6: "\e9c7";
+    --c-7: "\e9c8";
+    --c-8: "\e9c9";
+    --c-9: "\e9ca";
+    --c-a: "\e95a";
+    --c-b: "\e95b";
+    --c-c: "\e95c";
+    --c-d: "\e95d";
+    --c-e: "\e95e";
+    --c-f: "\e95f";
+    --c-g: "\e960";
+    --c-h: "\e961";
+    --c-i: "\e962";
+    --c-j: "\e963";
+    --c-k: "\e964";
+    --c-l: "\e965";
+    --c-m: "\e966";
+    --c-n: "\e967";
+    --c-o: "\e968";
+    --c-p: "\e969";
+    --c-q: "\e96a";
+    --c-r: "\e96b";
+    --c-s: "\e96c";
+    --c-t: "\e96d";
+    --c-u: "\e96e";
+    --c-v: "\e96f";
+    --c-w: "\e970";
+    --c-x: "\e971";
+    --c-y: "\e972";
+    --c-z: "\e973";
+    --c-logo: "\e900";
+    --c-logo-dsv: "\e901";
+    --c-cropa: "\e9bf";
+    --c-cropa-dsv-long: "\e902";
+    --c-cropa-dsv: "\e9c0";
+    --c-grupo-cropa: "\e93d";
+}
+.c-abajo:before {
+    content: var(--c-abajo);
+}
+.c-abajo-derecha-arriba:before {
+    content: var(--c-abajo-derecha-arriba);
+}
+.c-abajo-doble:before {
+    content: var(--c-abajo-doble);
+}
+.c-abajo-izquierda-arriba:before {
+    content: var(--c-abajo-izquierda-arriba);
+}
+.c-abajo-simple:before {
+    content: var(--c-abajo-simple);
+}
+.c-abecedario:before {
+    content: var(--c-abecedario);
+}
+.c-actualizar:before {
+    content: var(--c-actualizar);
+}
+.c-alerta:before {
+    content: var(--c-alerta);
+}
+.c-arriba:before {
+    content: var(--c-arriba);
+}
+.c-arriba-derecha-abajo:before {
+    content: var(--c-arriba-derecha-abajo);
+}
+.c-arriba-doble:before {
+    content: var(--c-arriba-doble);
+}
+.c-arriba-izquierda-abajo:before {
+    content: var(--c-arriba-izquierda-abajo);
+}
+.c-arriba-simple:before {
+    content: var(--c-arriba-simple);
+}
+.c-arroba:before {
+    content: var(--c-arroba);
+}
+.c-asignacion:before {
+    content: var(--c-asignacion);
+}
+.c-aterrizar:before {
+    content: var(--c-aterrizar);
+}
+.c-autorizar:before {
+    content: var(--c-autorizar);
+}
+.c-avion:before {
+    content: var(--c-avion);
+}
+.c-ayuda:before {
+    content: var(--c-ayuda);
+}
+.c-banco:before {
+    content: var(--c-banco);
+}
+.c-bandera-derecha:before {
+    content: var(--c-bandera-derecha);
+}
+.c-bandera-derecha-doble:before {
+    content: var(--c-bandera-derecha-doble);
+}
+.c-barco:before {
+    content: var(--c-barco);
+}
+.c-bienes:before {
+    content: var(--c-bienes);
+}
+.c-billetera:before {
+    content: var(--c-billetera);
+}
+.c-bodega:before {
+    content: var(--c-bodega);
+}
+.c-bolsa-dinero:before {
+    content: var(--c-bolsa-dinero);
+}
+.c-buscar-mapa:before {
+    content: var(--c-buscar-mapa);
+}
+.c-caja:before {
+    content: var(--c-caja);
+}
+.c-caja-chica:before {
+    content: var(--c-caja-chica);
+}
+.c-caja-registradora:before {
+    content: var(--c-caja-registradora);
+}
+.c-calcular:before {
+    content: var(--c-calcular);
+}
+.c-calendario:before {
+    content: var(--c-calendario);
+}
+.c-calendario1:before {
+    content: var(--c-calendario1);
+}
+.c-calendario-actividad:before {
+    content: var(--c-calendario-actividad);
+}
+.c-calendario-agenda:before {
+    content: var(--c-calendario-agenda);
+}
+.c-calendario-anterior:before {
+    content: var(--c-calendario-anterior);
+}
+.c-calendario-reloj:before {
+    content: var(--c-calendario-reloj);
+}
+.c-calendario-siguiente:before {
+    content: var(--c-calendario-siguiente);
+}
+.c-camion:before {
+    content: var(--c-camion);
+}
+.c-camion-reparto:before {
+    content: var(--c-camion-reparto);
+}
+.c-camion-reparto-lleno:before {
+    content: var(--c-camion-reparto-lleno);
+}
+.c-camion-vacio:before {
+    content: var(--c-camion-vacio);
+}
+.c-campana:before {
+    content: var(--c-campana);
+}
+.c-cancelar:before {
+    content: var(--c-cancelar);
+}
+.c-candado:before {
+    content: var(--c-candado);
+}
+.c-capas:before {
+    content: var(--c-capas);
+}
+.c-cargar:before {
+    content: var(--c-cargar);
+}
+.c-carpeta:before {
+    content: var(--c-carpeta);
+}
+.c-carpeta-alerta:before {
+    content: var(--c-carpeta-alerta);
+}
+.c-carpeta-buscar:before {
+    content: var(--c-carpeta-buscar);
+}
+.c-carpeta-descargar:before {
+    content: var(--c-carpeta-descargar);
+}
+.c-carpeta-eliminar:before {
+    content: var(--c-carpeta-eliminar);
+}
+.c-carpeta-mas:before {
+    content: var(--c-carpeta-mas);
+}
+.c-carpeta-menos:before {
+    content: var(--c-carpeta-menos);
+}
+.c-carpetas:before {
+    content: var(--c-carpetas);
+}
+.c-carro:before {
+    content: var(--c-carro);
+}
+.c-cerrar-sesion:before {
+    content: var(--c-cerrar-sesion);
+}
+.c-chat:before {
+    content: var(--c-chat);
+}
+.c-cheque:before {
+    content: var(--c-cheque);
+}
+.c-circulo:before {
+    content: var(--c-circulo);
+}
+.c-circulo-cheque:before {
+    content: var(--c-circulo-cheque);
+}
+.c-circulo-lleno:before {
+    content: var(--c-circulo-lleno);
+}
+.c-circulo-x:before {
+    content: var(--c-circulo-x);
+}
+.c-cliente:before {
+    content: var(--c-cliente);
+}
+.c-codigo:before {
+    content: var(--c-codigo);
+}
+.c-codigo-barras:before {
+    content: var(--c-codigo-barras);
+}
+.c-codigo-qr:before {
+    content: var(--c-codigo-qr);
+}
+.c-compartir:before {
+    content: var(--c-compartir);
+}
+.c-configuracion:before {
+    content: var(--c-configuracion);
+}
+.c-contrasena:before {
+    content: var(--c-contrasena);
+}
+.c-control-trafico:before {
+    content: var(--c-control-trafico);
+}
+.c-copiar:before {
+    content: var(--c-copiar);
+}
+.c-cuaderno:before {
+    content: var(--c-cuaderno);
+}
+.c-cuadrado:before {
+    content: var(--c-cuadrado);
+}
+.c-cuadrado-cheque:before {
+    content: var(--c-cuadrado-cheque);
+}
+.c-cuadrado-menos:before {
+    content: var(--c-cuadrado-menos);
+}
+.c-derecha:before {
+    content: var(--c-derecha);
+}
+.c-derecha-abajo-izquierda:before {
+    content: var(--c-derecha-abajo-izquierda);
+}
+.c-derecha-arriba-izquierda:before {
+    content: var(--c-derecha-arriba-izquierda);
+}
+.c-derecha-doble:before {
+    content: var(--c-derecha-doble);
+}
+.c-derecha-simple:before {
+    content: var(--c-derecha-simple);
+}
+.c-descargar:before {
+    content: var(--c-descargar);
+}
+.c-despegar:before {
+    content: var(--c-despegar);
+}
+.c-dividir:before {
+    content: var(--c-dividir);
+}
+.c-dividir-inverso:before {
+    content: var(--c-dividir-inverso);
+}
+.c-documentacion:before {
+    content: var(--c-documentacion);
+}
+.c-documento:before {
+    content: var(--c-documento);
+}
+.c-documentos:before {
+    content: var(--c-documentos);
+}
+.c-eliminar:before {
+    content: var(--c-eliminar);
+}
+.c-empacar:before {
+    content: var(--c-empacar);
+}
+.c-empresa:before {
+    content: var(--c-empresa);
+}
+.c-entregar:before {
+    content: var(--c-entregar);
+}
+.c-error:before {
+    content: var(--c-error);
+}
+.c-estadisticas:before {
+    content: var(--c-estadisticas);
+}
+.c-estanteria-llena:before {
+    content: var(--c-estanteria-llena);
+}
+.c-estanteria-vacia:before {
+    content: var(--c-estanteria-vacia);
+}
+.c-evaluacion:before {
+    content: var(--c-evaluacion);
+}
+.c-excel:before {
+    content: var(--c-excel);
+}
+.c-exclamacion:before {
+    content: var(--c-exclamacion);
+}
+.c-factura:before {
+    content: var(--c-factura);
+}
+.c-femenino:before {
+    content: var(--c-femenino);
+}
+.c-grua:before {
+    content: var(--c-grua);
+}
+.c-grupo:before {
+    content: var(--c-grupo);
+}
+.c-guardar:before {
+    content: var(--c-guardar);
+}
+.c-home:before {
+    content: var(--c-home);
+}
+.c-id:before {
+    content: var(--c-id);
+}
+.c-impresora:before {
+    content: var(--c-impresora);
+}
+.c-impuestos:before {
+    content: var(--c-impuestos);
+}
+.c-informacion:before {
+    content: var(--c-informacion);
+}
+.c-izquierda:before {
+    content: var(--c-izquierda);
+}
+.c-izquierda-abajo-derecha:before {
+    content: var(--c-izquierda-abajo-derecha);
+}
+.c-izquierda-arriba-derecha:before {
+    content: var(--c-izquierda-arriba-derecha);
+}
+.c-izquierda-doble:before {
+    content: var(--c-izquierda-doble);
+}
+.c-izquierda-simple:before {
+    content: var(--c-izquierda-simple);
+}
+.c-kanban:before {
+    content: var(--c-kanban);
+}
+.c-kpis:before {
+    content: var(--c-kpis);
+}
+.c-lapiz:before {
+    content: var(--c-lapiz);
+}
+.c-lealtad:before {
+    content: var(--c-lealtad);
+}
+.c-lealtad1:before {
+    content: var(--c-lealtad1);
+}
+.c-link:before {
+    content: var(--c-link);
+}
+.c-link-roto:before {
+    content: var(--c-link-roto);
+}
+.c-lista:before {
+    content: var(--c-lista);
+}
+.c-lista-checkbox:before {
+    content: var(--c-lista-checkbox);
+}
+.c-logistica:before {
+    content: var(--c-logistica);
+}
+.c-luna:before {
+    content: var(--c-luna);
+}
+.c-lupa:before {
+    content: var(--c-lupa);
+}
+.c-mail:before {
+    content: var(--c-mail);
+}
+.c-mapa:before {
+    content: var(--c-mapa);
+}
+.c-mapa-ubicacion:before {
+    content: var(--c-mapa-ubicacion);
+}
+.c-maquina-elevadora:before {
+    content: var(--c-maquina-elevadora);
+}
+.c-masculino:before {
+    content: var(--c-masculino);
+}
+.c-memos:before {
+    content: var(--c-memos);
+}
+.c-menu:before {
+    content: var(--c-menu);
+}
+.c-modulo:before {
+    content: var(--c-modulo);
+}
+.c-mundo:before {
+    content: var(--c-mundo);
+}
+.c-no-encontrado:before {
+    content: var(--c-no-encontrado);
+}
+.c-no-ver:before {
+    content: var(--c-no-ver);
+}
+.c-numeros:before {
+    content: var(--c-numeros);
+}
+.c-pallet:before {
+    content: var(--c-pallet);
+}
+.c-pantalla-404:before {
+    content: var(--c-pantalla-404);
+}
+.c-pdf:before {
+    content: var(--c-pdf);
+}
+.c-pegar:before {
+    content: var(--c-pegar);
+}
+.c-perfil-usuario:before {
+    content: var(--c-perfil-usuario);
+}
+.c-peso:before {
+    content: var(--c-peso);
+}
+.c-porcentaje:before {
+    content: var(--c-porcentaje);
+}
+.c-proceedor:before {
+    content: var(--c-proceedor);
+}
+.c-puerto-derecha:before {
+    content: var(--c-puerto-derecha);
+}
+.c-puerto-izquierda:before {
+    content: var(--c-puerto-izquierda);
+}
+.c-puesto:before {
+    content: var(--c-puesto);
+}
+.c-radio-button:before {
+    content: var(--c-radio-button);
+}
+.c-recursos-humanos:before {
+    content: var(--c-recursos-humanos);
+}
+.c-reloj:before {
+    content: var(--c-reloj);
+}
+.c-reportes:before {
+    content: var(--c-reportes);
+}
+.c-restar:before {
+    content: var(--c-restar);
+}
+.c-rol:before {
+    content: var(--c-rol);
+}
+.c-sol:before {
+    content: var(--c-sol);
+}
+.c-suma:before {
+    content: var(--c-suma);
+}
+.c-tarifa:before {
+    content: var(--c-tarifa);
+}
+.c-telefono:before {
+    content: var(--c-telefono);
+}
+.c-ticket:before {
+    content: var(--c-ticket);
+}
+.c-trabajador-bodega:before {
+    content: var(--c-trabajador-bodega);
+}
+.c-transferir:before {
+    content: var(--c-transferir);
+}
+.c-ubicacion-paquete:before {
+    content: var(--c-ubicacion-paquete);
+}
+.c-usuario:before {
+    content: var(--c-usuario);
+}
+.c-ver:before {
+    content: var(--c-ver);
+}
+.c-video-llamada:before {
+    content: var(--c-video-llamada);
+}
+.c-volumen:before {
+    content: var(--c-volumen);
+}
+.c-x1:before {
+    content: var(--c-x1);
+}
+.c-0:before {
+    content: var(--c-0);
+}
+.c-1:before {
+    content: var(--c-1);
+}
+.c-2:before {
+    content: var(--c-2);
+}
+.c-3:before {
+    content: var(--c-3);
+}
+.c-4:before {
+    content: var(--c-4);
+}
+.c-5:before {
+    content: var(--c-5);
+}
+.c-6:before {
+    content: var(--c-6);
+}
+.c-7:before {
+    content: var(--c-7);
+}
+.c-8:before {
+    content: var(--c-8);
+}
+.c-9:before {
+    content: var(--c-9);
+}
+.c-a:before {
+    content: var(--c-a);
+}
+.c-b:before {
+    content: var(--c-b);
+}
+.c-c:before {
+    content: var(--c-c);
+}
+.c-d:before {
+    content: var(--c-d);
+}
+.c-e:before {
+    content: var(--c-e);
+}
+.c-f:before {
+    content: var(--c-f);
+}
+.c-g:before {
+    content: var(--c-g);
+}
+.c-h:before {
+    content: var(--c-h);
+}
+.c-i:before {
+    content: var(--c-i);
+}
+.c-j:before {
+    content: var(--c-j);
+}
+.c-k:before {
+    content: var(--c-k);
+}
+.c-l:before {
+    content: var(--c-l);
+}
+.c-m:before {
+    content: var(--c-m);
+}
+.c-n:before {
+    content: var(--c-n);
+}
+.c-o:before {
+    content: var(--c-o);
+}
+.c-p:before {
+    content: var(--c-p);
+}
+.c-q:before {
+    content: var(--c-q);
+}
+.c-r:before {
+    content: var(--c-r);
+}
+.c-s:before {
+    content: var(--c-s);
+}
+.c-t:before {
+    content: var(--c-t);
+}
+.c-u:before {
+    content: var(--c-u);
+}
+.c-v:before {
+    content: var(--c-v);
+}
+.c-w:before {
+    content: var(--c-w);
+}
+.c-x:before {
+    content: var(--c-x);
+}
+.c-y:before {
+    content: var(--c-y);
+}
+.c-z:before {
+    content: var(--c-z);
+}
+.c-logo:before {
+    content: var(--c-logo);
+}
+.c-logo-dsv:before {
+    content: var(--c-logo-dsv);
+}
+.c-cropa:before {
+    content: var(--c-cropa);
+}
+.c-cropa-dsv-long:before {
+    content: var(--c-cropa-dsv-long);
+}
+.c-cropa-dsv:before {
+    content: var(--c-cropa-dsv);
+}
+.c-grupo-cropa:before {
+    content: var(--c-grupo-cropa);
+}
