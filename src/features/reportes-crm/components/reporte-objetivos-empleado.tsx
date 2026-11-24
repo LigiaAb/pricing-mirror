@@ -1,16 +1,28 @@
 "use client";
 
+import { CalendarDays, Clock, Hash } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import type { Actividad } from "@/features/actividades";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
-import { formatearFechaHora } from "@/shared/lib/date";
-import type { useObjetivosReporte } from "../api/objetivos-reporte";
+import { Badge } from "@/shared/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/shared/components/ui/tooltip";
+import { formatearFecha } from "@/shared/lib/date";
+import type {
+  ActividadObjetivo,
+  ObjetivoReporte,
+  useObjetivosReporte,
+} from "../api/objetivos-reporte";
 import {
   cumpleMeta,
   etiquetaPeriodo,
   indicesPeriodo,
   maxPeriodos,
+  periodoDeColumna,
 } from "../lib/objetivos-reporte-vista";
 import {
   type ActividadParaSerie,
@@ -18,6 +30,7 @@ import {
   medidoresObjetivosPeriodoActual,
   serieSemanalPorTipo,
 } from "../lib/series-actividades";
+import { ModalActividadesObjetivo } from "./modal-actividades-objetivo";
 
 // Recharts vía next/dynamic (2.8): el skeleton reserva la misma altura que el
 // gráfico real (`h-80` en graficas-objetivos.tsx) para no mover el layout.
@@ -39,9 +52,7 @@ export function ReporteObjetivos({
   grafica: boolean;
   actividadesGrafica?: Actividad[];
 }>) {
-  const [detalle, setDetalle] = useState<
-    Array<{ asunto: string; descripcion: string; fecha_programada: string }>
-  >([]);
+  const [detalle, setDetalle] = useState<ActividadObjetivo[]>([]);
   const objetivos = datos ?? [];
   if (!objetivos.length && !grafica)
     return (
@@ -72,10 +83,24 @@ export function ReporteObjetivos({
           className="rounded-lg border p-4"
           key={`${objetivo.cod_tipo_actividad}-${objetivo.descripcion}-${objetivo.fecha_inicial}`}
         >
-          <h2 className="font-semibold">{objetivo.descripcion}</h2>
-          <p className="text-sm text-muted-foreground">
-            Meta: {objetivo.cantidad} · {maxPeriodos(objetivo)} periodos
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {objetivo.tipo_descripcion && <Badge>{objetivo.tipo_descripcion}</Badge>}
+            <h2 className="font-semibold">{objetivo.descripcion}</h2>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <CalendarDays className="size-4" />
+              {formatearFecha(objetivo.fecha_inicial)} - {formatearFecha(objetivo.fecha_final)}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Clock className="size-4" />
+              Periodicidad: {objetivo.periodicidad_descripcion || "—"}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Hash className="size-4" />
+              Cantidad: {objetivo.cantidad} · {maxPeriodos(objetivo)} periodos
+            </span>
+          </div>
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -83,7 +108,7 @@ export function ReporteObjetivos({
                   <th className="text-left">Empleado</th>
                   {indicesPeriodo(objetivo).map((numero) => (
                     <th className="px-2 text-left" key={numero}>
-                      {etiquetaPeriodo(objetivo.periodicidad_unidad, numero)}
+                      <EncabezadoPeriodo numero={numero} objetivo={objetivo} />
                     </th>
                   ))}
                 </tr>
@@ -122,34 +147,29 @@ export function ReporteObjetivos({
           </div>
         </div>
       ))}
-      <Dialog
-        open={detalle.length > 0}
-        onOpenChange={(abierto) => {
-          if (!abierto) setDetalle([]);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Actividades del periodo</DialogTitle>
-          </DialogHeader>
-          <ul className="max-h-72 space-y-2 overflow-y-auto text-sm">
-            {detalle.map((actividad) => (
-              <li
-                className="rounded border p-2"
-                key={actividad.asunto + actividad.fecha_programada}
-              >
-                <strong>{actividad.asunto}</strong>
-                <br />
-                {actividad.descripcion}
-                <br />
-                <span className="text-muted-foreground">
-                  {formatearFechaHora(actividad.fecha_programada)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </DialogContent>
-      </Dialog>
+      <ModalActividadesObjetivo actividades={detalle} onClose={() => setDetalle([])} />
     </div>
+  );
+}
+
+/** Columna de periodo: `numero` del backend y, en el tooltip, sus fechas (legacy). */
+function EncabezadoPeriodo({
+  objetivo,
+  numero,
+}: Readonly<{ objetivo: ObjetivoReporte; numero: number }>) {
+  const periodo = periodoDeColumna(objetivo, numero);
+  const etiqueta = etiquetaPeriodo(objetivo.periodicidad_unidad, periodo?.numero || numero);
+  if (!periodo) return etiqueta;
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="cursor-default whitespace-nowrap">{etiqueta}</span>
+        </TooltipTrigger>
+        <TooltipContent>
+          {formatearFecha(periodo.fecha_inicial)} - {formatearFecha(periodo.fecha_final)}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

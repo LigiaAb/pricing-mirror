@@ -1,5 +1,6 @@
 "use client";
 
+import { format } from "date-fns";
 import {
   CalendarDays,
   ChartColumnBig,
@@ -245,7 +246,10 @@ export function ReportesCrmClient() {
     setTiposActividad([]);
     setTipoAsignacion("");
     setInicio("");
-    setFin("");
+    // Objetivos: como en el legacy, la fecha final arranca en hoy.
+    setFin(
+      obtenerConfiguracionReporte(id).vista === "objetivos" ? format(new Date(), "yyyy-MM-dd") : "",
+    );
     setClienteId("");
     setConsultaSeguimientoClienteId(null);
   };
