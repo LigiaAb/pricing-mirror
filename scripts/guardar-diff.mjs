@@ -26,6 +26,7 @@ const RUTAS_CODIGO = [
   "src/features/embarques",
   "src/features/actividades",
   "src/features/reportes-crm",
+  "src/features/reportes",
   "src/shared/components/form/fields/async-combobox-input.tsx",
   "src/shared/components/data-table/data-table-pagination.tsx",
 ];
