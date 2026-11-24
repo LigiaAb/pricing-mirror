@@ -245,11 +245,10 @@ export function ReportesCrmClient() {
     setEstado("");
     setTiposActividad([]);
     setTipoAsignacion("");
-    setInicio("");
-    // Objetivos: como en el legacy, la fecha final arranca en hoy.
-    setFin(
-      obtenerConfiguracionReporte(id).vista === "objetivos" ? format(new Date(), "yyyy-MM-dd") : "",
-    );
+    // Las fechas se conservan; en Objetivos, como en el legacy, la final arranca en hoy si está vacía.
+    if (obtenerConfiguracionReporte(id).vista === "objetivos" && !fin) {
+      setFin(format(new Date(), "yyyy-MM-dd"));
+    }
     setClienteId("");
     setConsultaSeguimientoClienteId(null);
   };
