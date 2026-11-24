@@ -64,8 +64,9 @@ function rangoSemanaActual() {
   const fin = new Date(inicio);
   fin.setDate(inicio.getDate() + 6);
   return {
-    inicio: inicio.toISOString().slice(0, 10),
-    fin: fin.toISOString().slice(0, 10),
+    // Día local: `toISOString` corría la semana un día después de las 18:00 de Guatemala.
+    inicio: format(inicio, "yyyy-MM-dd"),
+    fin: format(fin, "yyyy-MM-dd"),
   };
 }
 
@@ -194,7 +195,7 @@ export function ReportesCrmClient() {
 
   const filas = useMemo(() => {
     const datos = actividades.data ?? [];
-    const enRango = inicio && fin ? actividadesEnRango(datos, inicio, fin) : datos;
+    const enRango = actividadesEnRango(datos, inicio, fin);
     return tiposActividad.length
       ? enRango.filter((actividad) => tiposActividad.includes(String(actividad.cod_tipo ?? "")))
       : enRango;
@@ -585,6 +586,10 @@ export function ReportesCrmClient() {
               filas={historial.data ?? []}
               cargando={historial.isFetching}
               empresaId={empresaId}
+              empresaNombre={String(
+                (catalogoEmpresas.data ?? []).find((i) => String(i.cod_empresa) === empresaId)
+                  ?.nombre_emp ?? "",
+              )}
               ccId={ccId}
             />
           )}

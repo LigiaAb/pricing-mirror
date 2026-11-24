@@ -54,6 +54,9 @@ export function GraficasObjetivos({
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      {medidores.length === 0 ? (
+        <p className="py-6 text-center text-lg font-bold">No se encontraron objetivos activos</p>
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {medidores.map((medidor) => (
           <div className="rounded-lg border p-3" key={medidor.id}>

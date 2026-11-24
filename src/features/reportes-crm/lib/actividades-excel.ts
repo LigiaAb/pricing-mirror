@@ -61,7 +61,9 @@ const formatearCelda = (
     fecha_programada_locale: actividad_base.fecha_programada
       ? format(new Date(actividad_base.fecha_programada), "dd/MM/yyyy")
       : null,
-    resultado_cod_actividad: resultado?.COD_ACTIVIDAD || null,
+    // Legacy: con resultado sin código, "Resultado final".
+    resultado_cod_actividad:
+      resultado?.COD_ACTIVIDAD || (resultado?.NOM_TIPO ? "Resultado final" : null),
     resultado_nom_tipo: resultado?.NOM_TIPO || null,
     resultado_descripcion: resultado?.DESCRIPCION || null,
     resultado_fecha_programada_locale: resultado?.FECHA_PROGRAMADA
@@ -115,10 +117,8 @@ export function filasExcelActividades(
     columnasVisibles.map(({ campo, color }): CeldaExcel => {
       const dato = normalizarValor(actividad[campo]);
       if (!color) return dato;
-      return {
-        dato,
-        ...(dato === "EN PROCESO" ? { fontColor: ROJO_EN_PROCESO_VENCIDO } : {}),
-      };
+      const fontColor = colorEstadoActividad(dato, actividad.fecha_creada);
+      return { dato, ...(fontColor ? { fontColor } : {}) };
     }),
   );
 
@@ -142,17 +142,9 @@ export function colorEstadoActividad(
   }
   const fecha = new Date(fechaProgramada);
   if (Number.isNaN(fecha.getTime())) return undefined;
+  // Legacy compara contra el día (DD/MM/YYYY) de la fecha de programación, sin la hora.
   const limite = new Date(fecha);
+  limite.setHours(0, 0, 0, 0);
   limite.setDate(limite.getDate() + DIAS_LIMITE_EN_PROCESO);
   return ahora > limite ? ROJO_EN_PROCESO_VENCIDO : undefined;
-}
-
-/** `colorCelda` de `exportarExcel` para las plantillas de visitas: solo colorea "Estado". */
-export function colorCeldaActividades() {
-  const indiceEstado = columnas_historico.findIndex(({ color }) => color);
-  const indiceProgramada = columnas_historico.findIndex(({ color }) => color);
-  return (valor: CeldaExcel, indiceColumna: number, fila: CeldaExcel[]) =>
-    indiceColumna === indiceEstado
-      ? colorEstadoActividad(valor, fila[indiceProgramada])
-      : undefined;
 }

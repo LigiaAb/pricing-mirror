@@ -1,4 +1,11 @@
-import { endOfWeek, getISOWeek, getISOWeeksInYear, isWithinInterval, startOfWeek } from "date-fns";
+import {
+  endOfWeek,
+  getISOWeek,
+  getISOWeeksInYear,
+  getISOWeekYear,
+  isWithinInterval,
+  startOfWeek,
+} from "date-fns";
 import type { ObjetivoReporte } from "../api/objetivos-reporte";
 
 export interface MedidorObjetivo {
@@ -45,7 +52,8 @@ export function serieSemanalPorTipo(
     if (
       fecha &&
       !Number.isNaN(fecha.getTime()) &&
-      fecha.getFullYear() === year &&
+      // Año ISO: fin de diciembre en la semana 1 del año siguiente no suma a la semana 1 actual.
+      getISOWeekYear(fecha) === year &&
       tipo &&
       datos[getISOWeek(fecha) - 1]
     ) {

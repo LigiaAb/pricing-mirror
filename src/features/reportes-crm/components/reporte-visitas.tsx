@@ -1,6 +1,6 @@
 "use client";
 
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { FileSpreadsheet, FileText } from "lucide-react";
 import { useMemo } from "react";
 import type { EmpleadoUsuario } from "@/features/catalogos";
@@ -10,25 +10,36 @@ import { formatearFechaHora } from "@/shared/lib/date";
 import { exportarExcel } from "@/shared/lib/excel";
 import type { ColumnDef } from "@/shared/lib/tanstack-table";
 import type { ActividadReporte } from "../api/actividades-reporte";
-import { colorCeldaActividades, filasExcelActividades } from "../lib/actividades-excel";
+import { filasExcelActividades } from "../lib/actividades-excel";
 import { actividadResultado, numeroResultado } from "../lib/actividades-vista";
 import {
   type AgenteCalendario,
   generarPdfCalendarioActividades,
 } from "../lib/pdf-calendario-actividades";
 
-const columnasActividades: ColumnDef<ActividadReporte>[] = [
-  { accessorKey: "cod_actividad", header: "Código" },
-  { accessorKey: "asunto", header: "Asunto" },
-  { accessorKey: "nombre_cliente", header: "Cliente" },
-  { accessorKey: "nom_tipo", header: "Tipo" },
-  { accessorKey: "estado_desc", header: "Estado" },
-  {
-    accessorKey: "fecha_programada",
-    header: "Programada",
-    cell: ({ getValue }) => formatearFechaHora(getValue<string>()),
-  },
-];
+/** Reporte 2 (planificación): columnas del legacy `tabla_actividades_reporte`. */
+function columnasActividades(asesores: Map<string, string>): ColumnDef<ActividadReporte>[] {
+  return [
+    { accessorKey: "nom_tipo", header: "Tipo" },
+    {
+      id: "asesor",
+      header: "Asesor",
+      accessorFn: (actividad) => asesores.get(String(actividad.cod_asesor ?? "")) ?? "",
+    },
+    { accessorKey: "nombre_cliente", header: "Cliente" },
+    {
+      accessorKey: "fecha_creada",
+      header: "Fecha de programación",
+      cell: ({ getValue }) => formatearFechaHora(getValue<string>()),
+    },
+    {
+      accessorKey: "fecha_programada",
+      header: "Fecha de ejecución",
+      cell: ({ getValue }) => formatearFechaHora(getValue<string>()),
+    },
+    { accessorKey: "objetivo_actividad_desc", header: "Objetivo" },
+  ];
+}
 
 /** Reporte 1 (histórico): columnas del legacy `tabla_actividades_reporte_2`, con el resultado desglosado. */
 function columnasHistorico(asesores: Map<string, string>): ColumnDef<ActividadReporte>[] {
@@ -109,14 +120,17 @@ export function ReporteActividades({
   empleados: EmpleadoUsuario[];
 }>) {
   const columnas = useMemo(() => {
-    if (!historico) return columnasActividades;
     const asesores = new Map(
       empleados.map((empleado) => [String(empleado.codUsuario), empleado.nombreCompleto]),
     );
-    return columnasHistorico(asesores);
+    return historico ? columnasHistorico(asesores) : columnasActividades(asesores);
   }, [historico, empleados]);
   const exportar = async () => {
-    filas.sort((a, b) => Number(a.cod_actividad) - Number(b.cod_actividad));
+    // Copia: `filas` puede ser el arreglo de la caché de React Query.
+    const ordenadas = [...filas].sort((a, b) => Number(a.cod_actividad) - Number(b.cod_actividad));
+    const nombreReporte = historico
+      ? "Reporte Historico de actividades"
+      : "Planificacion de actividades";
 
     const encabezados: { [key: string]: string } = { "Generado el": new Date().toLocaleString() };
 
@@ -124,26 +138,26 @@ export function ReporteActividades({
     if (centroCosto) encabezados["Centro de Costo:"] = centroCosto;
     if (agente) encabezados["Empleado:"] = agente?.nombre;
     if (estado) encabezados["Estado:"] = estado;
-    if (inicio) encabezados["Fecha inicio:"] = format(new Date(inicio), "dd/MM/yyyy");
-    if (fin) encabezados["Fecha fin:"] = format(new Date(fin), "dd/MM/yyyy");
+    if (inicio) encabezados["Fecha inicio:"] = format(parseISO(inicio), "dd/MM/yyyy");
+    if (fin) encabezados["Fecha fin:"] = format(parseISO(fin), "dd/MM/yyyy");
     if (tipos.length) encabezados["Tipo de actividad:"] = tipos.join(", ");
 
-    const datosExcel = filasExcelActividades(filas, historico, empleados);
+    const datosExcel = filasExcelActividades(ordenadas, historico, empleados);
 
     await exportarExcel({
-      nombreArchivo: `${historico ? `Reporte Historico de actividades` : "Planificacion de actividades"} - APPWEB - ${format(new Date(), "yyyy_MM_dd_hh_mm_ss")}.xlsx`,
+      nombreArchivo: `${nombreReporte} - ERPWEB - ${format(new Date(), "yyyy_MM_dd_HH_mm_ss")}.xlsx`,
       titulo: historico ? "Reporte de visitas histórico" : "Reporte de visitas",
       encabezado: encabezados,
       hojas: [
         {
-          nombre: "Actividades",
+          // Excel admite 31 caracteres en el nombre de la hoja.
+          nombre: nombreReporte.slice(0, 31),
           mostrarCuadricula: true,
           autoFiltro: true,
           columnaInicio: 2,
           filaInicio: 1,
           columnas: datosExcel.columnas,
           filas: datosExcel.filas,
-          colorCelda: colorCeldaActividades(),
         },
       ],
     });
@@ -166,7 +180,7 @@ export function ReporteActividades({
         <DataTable
           columns={columnas}
           data={filas}
-          searchKeys={[historico ? "nombre_cliente" : "asunto"]}
+          searchKeys={["nombre_cliente"]}
           searchPlaceholder="Buscar actividad…"
           extraActions={
             pdf ? (

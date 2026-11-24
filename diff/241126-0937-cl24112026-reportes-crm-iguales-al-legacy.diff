@@ -1,0 +1,333 @@
+diff --git a/src/features/reportes-crm/components/graficas-objetivos.tsx b/src/features/reportes-crm/components/graficas-objetivos.tsx
+index eb6c108..731ec99 100644
+--- a/src/features/reportes-crm/components/graficas-objetivos.tsx
++++ b/src/features/reportes-crm/components/graficas-objetivos.tsx
+@@ -54,6 +54,9 @@ export function GraficasObjetivos({
+           </AreaChart>
+         </ResponsiveContainer>
+       </div>
++      {medidores.length === 0 ? (
++        <p className="py-6 text-center text-lg font-bold">No se encontraron objetivos activos</p>
++      ) : null}
+       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+         {medidores.map((medidor) => (
+           <div className="rounded-lg border p-3" key={medidor.id}>
+diff --git a/src/features/reportes-crm/components/reporte-seguimiento-cliente.tsx b/src/features/reportes-crm/components/reporte-seguimiento-cliente.tsx
+index e60f585..94d30e3 100644
+--- a/src/features/reportes-crm/components/reporte-seguimiento-cliente.tsx
++++ b/src/features/reportes-crm/components/reporte-seguimiento-cliente.tsx
+@@ -31,6 +31,8 @@ interface ReporteSeguimientoClienteProps {
+   filas: HistorialActividad[];
+   cargando: boolean;
+   empresaId: string;
++  /** Respaldo del legacy: filas sin `cod_empresa` se comparan por nombre de empresa. */
++  empresaNombre: string;
+   ccId: string;
+ }
+ 
+@@ -43,6 +45,7 @@ export function ReporteSeguimientoCliente({
+   filas,
+   cargando,
+   empresaId,
++  empresaNombre,
+   ccId,
+ }: Readonly<ReporteSeguimientoClienteProps>) {
+   const ordenadas = useMemo(
+@@ -50,13 +53,16 @@ export function ReporteSeguimientoCliente({
+       filas
+         .filter(
+           (fila) =>
+-            (!empresaId || String(fila.cod_empresa ?? "") === empresaId) &&
++            (!empresaId ||
++              (fila.cod_empresa
++                ? String(fila.cod_empresa) === empresaId
++                : fila.nombre_empresa === empresaNombre)) &&
+             (!ccId || String(fila.cod_cenco ?? "") === ccId),
+         )
+         .sort(
+           (a, b) => new Date(b.fecha_programada).getTime() - new Date(a.fecha_programada).getTime(),
+         ),
+-    [ccId, empresaId, filas],
++    [ccId, empresaId, empresaNombre, filas],
+   );
+   // Miles de clientes: se memoizan las opciones (el Combobox virtualiza más de 1000).
+   const opcionesClientes = useMemo(
+diff --git a/src/features/reportes-crm/components/reporte-visitas.tsx b/src/features/reportes-crm/components/reporte-visitas.tsx
+index 0fc5522..c250a5f 100644
+--- a/src/features/reportes-crm/components/reporte-visitas.tsx
++++ b/src/features/reportes-crm/components/reporte-visitas.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { format } from "date-fns";
++import { format, parseISO } from "date-fns";
+ import { FileSpreadsheet, FileText } from "lucide-react";
+ import { useMemo } from "react";
+ import type { EmpleadoUsuario } from "@/features/catalogos";
+@@ -10,25 +10,36 @@ import { formatearFechaHora } from "@/shared/lib/date";
+ import { exportarExcel } from "@/shared/lib/excel";
+ import type { ColumnDef } from "@/shared/lib/tanstack-table";
+ import type { ActividadReporte } from "../api/actividades-reporte";
+-import { colorCeldaActividades, filasExcelActividades } from "../lib/actividades-excel";
++import { filasExcelActividades } from "../lib/actividades-excel";
+ import { actividadResultado, numeroResultado } from "../lib/actividades-vista";
+ import {
+   type AgenteCalendario,
+   generarPdfCalendarioActividades,
+ } from "../lib/pdf-calendario-actividades";
+ 
+-const columnasActividades: ColumnDef<ActividadReporte>[] = [
+-  { accessorKey: "cod_actividad", header: "Código" },
+-  { accessorKey: "asunto", header: "Asunto" },
+-  { accessorKey: "nombre_cliente", header: "Cliente" },
+-  { accessorKey: "nom_tipo", header: "Tipo" },
+-  { accessorKey: "estado_desc", header: "Estado" },
+-  {
+-    accessorKey: "fecha_programada",
+-    header: "Programada",
+-    cell: ({ getValue }) => formatearFechaHora(getValue<string>()),
+-  },
+-];
++/** Reporte 2 (planificación): columnas del legacy `tabla_actividades_reporte`. */
++function columnasActividades(asesores: Map<string, string>): ColumnDef<ActividadReporte>[] {
++  return [
++    { accessorKey: "nom_tipo", header: "Tipo" },
++    {
++      id: "asesor",
++      header: "Asesor",
++      accessorFn: (actividad) => asesores.get(String(actividad.cod_asesor ?? "")) ?? "",
++    },
++    { accessorKey: "nombre_cliente", header: "Cliente" },
++    {
++      accessorKey: "fecha_creada",
++      header: "Fecha de programación",
++      cell: ({ getValue }) => formatearFechaHora(getValue<string>()),
++    },
++    {
++      accessorKey: "fecha_programada",
++      header: "Fecha de ejecución",
++      cell: ({ getValue }) => formatearFechaHora(getValue<string>()),
++    },
++    { accessorKey: "objetivo_actividad_desc", header: "Objetivo" },
++  ];
++}
+ 
+ /** Reporte 1 (histórico): columnas del legacy `tabla_actividades_reporte_2`, con el resultado desglosado. */
+ function columnasHistorico(asesores: Map<string, string>): ColumnDef<ActividadReporte>[] {
+@@ -109,14 +120,17 @@ export function ReporteActividades({
+   empleados: EmpleadoUsuario[];
+ }>) {
+   const columnas = useMemo(() => {
+-    if (!historico) return columnasActividades;
+     const asesores = new Map(
+       empleados.map((empleado) => [String(empleado.codUsuario), empleado.nombreCompleto]),
+     );
+-    return columnasHistorico(asesores);
++    return historico ? columnasHistorico(asesores) : columnasActividades(asesores);
+   }, [historico, empleados]);
+   const exportar = async () => {
+-    filas.sort((a, b) => Number(a.cod_actividad) - Number(b.cod_actividad));
++    // Copia: `filas` puede ser el arreglo de la caché de React Query.
++    const ordenadas = [...filas].sort((a, b) => Number(a.cod_actividad) - Number(b.cod_actividad));
++    const nombreReporte = historico
++      ? "Reporte Historico de actividades"
++      : "Planificacion de actividades";
+ 
+     const encabezados: { [key: string]: string } = { "Generado el": new Date().toLocaleString() };
+ 
+@@ -124,26 +138,26 @@ export function ReporteActividades({
+     if (centroCosto) encabezados["Centro de Costo:"] = centroCosto;
+     if (agente) encabezados["Empleado:"] = agente?.nombre;
+     if (estado) encabezados["Estado:"] = estado;
+-    if (inicio) encabezados["Fecha inicio:"] = format(new Date(inicio), "dd/MM/yyyy");
+-    if (fin) encabezados["Fecha fin:"] = format(new Date(fin), "dd/MM/yyyy");
++    if (inicio) encabezados["Fecha inicio:"] = format(parseISO(inicio), "dd/MM/yyyy");
++    if (fin) encabezados["Fecha fin:"] = format(parseISO(fin), "dd/MM/yyyy");
+     if (tipos.length) encabezados["Tipo de actividad:"] = tipos.join(", ");
+ 
+-    const datosExcel = filasExcelActividades(filas, historico, empleados);
++    const datosExcel = filasExcelActividades(ordenadas, historico, empleados);
+ 
+     await exportarExcel({
+-      nombreArchivo: `${historico ? `Reporte Historico de actividades` : "Planificacion de actividades"} - APPWEB - ${format(new Date(), "yyyy_MM_dd_hh_mm_ss")}.xlsx`,
++      nombreArchivo: `${nombreReporte} - ERPWEB - ${format(new Date(), "yyyy_MM_dd_HH_mm_ss")}.xlsx`,
+       titulo: historico ? "Reporte de visitas histórico" : "Reporte de visitas",
+       encabezado: encabezados,
+       hojas: [
+         {
+-          nombre: "Actividades",
++          // Excel admite 31 caracteres en el nombre de la hoja.
++          nombre: nombreReporte.slice(0, 31),
+           mostrarCuadricula: true,
+           autoFiltro: true,
+           columnaInicio: 2,
+           filaInicio: 1,
+           columnas: datosExcel.columnas,
+           filas: datosExcel.filas,
+-          colorCelda: colorCeldaActividades(),
+         },
+       ],
+     });
+@@ -166,7 +180,7 @@ export function ReporteActividades({
+         <DataTable
+           columns={columnas}
+           data={filas}
+-          searchKeys={[historico ? "nombre_cliente" : "asunto"]}
++          searchKeys={["nombre_cliente"]}
+           searchPlaceholder="Buscar actividad…"
+           extraActions={
+             pdf ? (
+diff --git a/src/features/reportes-crm/components/reportes-crm-client.tsx b/src/features/reportes-crm/components/reportes-crm-client.tsx
+index f68ae4c..0b92e34 100644
+--- a/src/features/reportes-crm/components/reportes-crm-client.tsx
++++ b/src/features/reportes-crm/components/reportes-crm-client.tsx
+@@ -64,8 +64,9 @@ function rangoSemanaActual() {
+   const fin = new Date(inicio);
+   fin.setDate(inicio.getDate() + 6);
+   return {
+-    inicio: inicio.toISOString().slice(0, 10),
+-    fin: fin.toISOString().slice(0, 10),
++    // Día local: `toISOString` corría la semana un día después de las 18:00 de Guatemala.
++    inicio: format(inicio, "yyyy-MM-dd"),
++    fin: format(fin, "yyyy-MM-dd"),
+   };
+ }
+ 
+@@ -194,7 +195,7 @@ export function ReportesCrmClient() {
+ 
+   const filas = useMemo(() => {
+     const datos = actividades.data ?? [];
+-    const enRango = inicio && fin ? actividadesEnRango(datos, inicio, fin) : datos;
++    const enRango = actividadesEnRango(datos, inicio, fin);
+     return tiposActividad.length
+       ? enRango.filter((actividad) => tiposActividad.includes(String(actividad.cod_tipo ?? "")))
+       : enRango;
+@@ -585,6 +586,10 @@ export function ReportesCrmClient() {
+               filas={historial.data ?? []}
+               cargando={historial.isFetching}
+               empresaId={empresaId}
++              empresaNombre={String(
++                (catalogoEmpresas.data ?? []).find((i) => String(i.cod_empresa) === empresaId)
++                  ?.nombre_emp ?? "",
++              )}
+               ccId={ccId}
+             />
+           )}
+diff --git a/src/features/reportes-crm/lib/actividades-excel.ts b/src/features/reportes-crm/lib/actividades-excel.ts
+index 3939086..15f17fa 100644
+--- a/src/features/reportes-crm/lib/actividades-excel.ts
++++ b/src/features/reportes-crm/lib/actividades-excel.ts
+@@ -61,7 +61,9 @@ const formatearCelda = (
+     fecha_programada_locale: actividad_base.fecha_programada
+       ? format(new Date(actividad_base.fecha_programada), "dd/MM/yyyy")
+       : null,
+-    resultado_cod_actividad: resultado?.COD_ACTIVIDAD || null,
++    // Legacy: con resultado sin código, "Resultado final".
++    resultado_cod_actividad:
++      resultado?.COD_ACTIVIDAD || (resultado?.NOM_TIPO ? "Resultado final" : null),
+     resultado_nom_tipo: resultado?.NOM_TIPO || null,
+     resultado_descripcion: resultado?.DESCRIPCION || null,
+     resultado_fecha_programada_locale: resultado?.FECHA_PROGRAMADA
+@@ -115,10 +117,8 @@ export function filasExcelActividades(
+     columnasVisibles.map(({ campo, color }): CeldaExcel => {
+       const dato = normalizarValor(actividad[campo]);
+       if (!color) return dato;
+-      return {
+-        dato,
+-        ...(dato === "EN PROCESO" ? { fontColor: ROJO_EN_PROCESO_VENCIDO } : {}),
+-      };
++      const fontColor = colorEstadoActividad(dato, actividad.fecha_creada);
++      return { dato, ...(fontColor ? { fontColor } : {}) };
+     }),
+   );
+ 
+@@ -142,17 +142,9 @@ export function colorEstadoActividad(
+   }
+   const fecha = new Date(fechaProgramada);
+   if (Number.isNaN(fecha.getTime())) return undefined;
++  // Legacy compara contra el día (DD/MM/YYYY) de la fecha de programación, sin la hora.
+   const limite = new Date(fecha);
++  limite.setHours(0, 0, 0, 0);
+   limite.setDate(limite.getDate() + DIAS_LIMITE_EN_PROCESO);
+   return ahora > limite ? ROJO_EN_PROCESO_VENCIDO : undefined;
+ }
+-
+-/** `colorCelda` de `exportarExcel` para las plantillas de visitas: solo colorea "Estado". */
+-export function colorCeldaActividades() {
+-  const indiceEstado = columnas_historico.findIndex(({ color }) => color);
+-  const indiceProgramada = columnas_historico.findIndex(({ color }) => color);
+-  return (valor: CeldaExcel, indiceColumna: number, fila: CeldaExcel[]) =>
+-    indiceColumna === indiceEstado
+-      ? colorEstadoActividad(valor, fila[indiceProgramada])
+-      : undefined;
+-}
+diff --git a/src/features/reportes-crm/lib/actividades-vista.ts b/src/features/reportes-crm/lib/actividades-vista.ts
+index 2286218..fea433d 100644
+--- a/src/features/reportes-crm/lib/actividades-vista.ts
++++ b/src/features/reportes-crm/lib/actividades-vista.ts
+@@ -9,11 +9,11 @@ export function jsonSeguro<T>(valor: string | null | undefined): T[] {
+ }
+ export function actividadesEnRango(actividades: ActividadReporte[], inicio: string, fin: string) {
+   // G-1: el API aún ignora las fechas; se filtra el conjunto ya acotado por empresa y CC.
+-  const inicioDate = new Date(`${inicio}T00:00:00.000Z`);
+-  const finDate = new Date(`${fin}T23:59:59.999Z`);
+-  if (Number.isNaN(inicioDate.getTime()) || Number.isNaN(finDate.getTime())) return [];
+-  const desde = inicioDate.getTime();
+-  const hasta = finDate.getTime();
++  // Como el legacy: cada fecha filtra sola y se compara por día local (no UTC).
++  if (!inicio && !fin) return actividades;
++  const desde = inicio ? new Date(`${inicio}T00:00:00`).getTime() : Number.NEGATIVE_INFINITY;
++  const hasta = fin ? new Date(`${fin}T23:59:59.999`).getTime() : Number.POSITIVE_INFINITY;
++  if (Number.isNaN(desde) || Number.isNaN(hasta)) return [];
+   return actividades.filter((actividad) => {
+     const fecha = new Date(actividad.fecha_programada).getTime();
+     return Number.isFinite(fecha) && fecha >= desde && fecha <= hasta;
+diff --git a/src/features/reportes-crm/lib/pdf-calendario-actividades.ts b/src/features/reportes-crm/lib/pdf-calendario-actividades.ts
+index ef20fce..6ec3bf1 100644
+--- a/src/features/reportes-crm/lib/pdf-calendario-actividades.ts
++++ b/src/features/reportes-crm/lib/pdf-calendario-actividades.ts
+@@ -1,4 +1,4 @@
+-import { format } from "date-fns";
++import { format, parseISO } from "date-fns";
+ import logoCropa from "@/assets/logos/logo-cropa-dsv.png";
+ import type { ActividadReporte } from "../api/actividades-reporte";
+ import { jsonSeguro } from "./actividades-vista";
+@@ -90,8 +90,9 @@ function agrupar(actividades: ActividadReporte[]) {
+ }
+ 
+ function textoRango(fechaInicio?: string, fechaFin?: string) {
+-  const desde = fechaInicio ? new Date(fechaInicio) : null;
+-  const hasta = fechaFin ? new Date(fechaFin) : null;
++  // Fechas "yyyy-MM-dd" en día local (`new Date` las toma en UTC y restaba un día).
++  const desde = fechaInicio ? parseISO(fechaInicio) : null;
++  const hasta = fechaFin ? parseISO(fechaFin) : null;
+   const partes = [
+     desde && !Number.isNaN(desde.getTime()) ? `Del ${format(desde, "dd-MM-yyyy")}` : "",
+     hasta && !Number.isNaN(hasta.getTime()) ? `Al ${format(hasta, "dd-MM-yyyy")}` : "",
+diff --git a/src/features/reportes-crm/lib/series-actividades.ts b/src/features/reportes-crm/lib/series-actividades.ts
+index 9f353a4..6884041 100644
+--- a/src/features/reportes-crm/lib/series-actividades.ts
++++ b/src/features/reportes-crm/lib/series-actividades.ts
+@@ -1,4 +1,11 @@
+-import { endOfWeek, getISOWeek, getISOWeeksInYear, isWithinInterval, startOfWeek } from "date-fns";
++import {
++  endOfWeek,
++  getISOWeek,
++  getISOWeeksInYear,
++  getISOWeekYear,
++  isWithinInterval,
++  startOfWeek,
++} from "date-fns";
+ import type { ObjetivoReporte } from "../api/objetivos-reporte";
+ 
+ export interface MedidorObjetivo {
+@@ -45,7 +52,8 @@ export function serieSemanalPorTipo(
+     if (
+       fecha &&
+       !Number.isNaN(fecha.getTime()) &&
+-      fecha.getFullYear() === year &&
++      // Año ISO: fin de diciembre en la semana 1 del año siguiente no suma a la semana 1 actual.
++      getISOWeekYear(fecha) === year &&
+       tipo &&
+       datos[getISOWeek(fecha) - 1]
+     ) {
