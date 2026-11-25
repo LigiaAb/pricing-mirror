@@ -1,9 +1,49 @@
 # Guía: agregar un reporte
 
-Paso a paso para agregar un reporte a la pantalla de Reportes. La arquitectura (qué hace cada
-archivo) está en `ARQUITECTURA.md`; aquí solo lo que hay que hacer.
+## Empieza aquí: hay PLANTILLAS para copiar
 
-## Cómo funciona (leer primero)
+Un reporte nuevo **no se escribe desde cero**: se copia una de estas 3 plantillas, que están en
+
+```
+src/features/reportes/definiciones/plantillas/
+```
+
+| Plantilla                      | Usarla cuando…                                                                         |
+| ------------------------------ | -------------------------------------------------------------------------------------- |
+| `reporte-basico.ts`            | El endpoint responde la lista de filas y recibe los parámetros con los nombres de la pantalla (lo más común). |
+| `reporte-endpoint-distinto.ts` | El endpoint trae la lista en otra propiedad, espera otros nombres de parámetros, necesita un parámetro fijo o no filtra algo (ej. fechas). |
+| `reporte-personalizado.tsx`    | Hay que juntar varias consultas o se quiere un filtro, vista, Excel o PDF propios.      |
+
+**Los 5 pasos:**
+
+1. **Base de datos**: crear el `TIPO` del reporte y su relación con rol/CC/módulo (paso 1).
+2. **Copiar** la plantilla a la carpeta del módulo, con otro nombre:
+   `src/features/reportes/definiciones/plantillas/reporte-basico.ts` →
+   `src/features/reportes/definiciones/pricing/reporte-ventas-cliente.ts`
+3. **Cambiar** en la copia solo las líneas marcadas con `// CAMBIAR` (buscar `CAMBIAR` en el
+   archivo). De dónde sale cada dato: tabla de abajo.
+4. **Registrar** la copia en `src/features/reportes/definiciones/<modulo>/index.ts` (paso 3).
+5. `npm run check:nuevos` sin errores y probar: elegir el módulo y el reporte, pulsar
+   **Consultar**.
+
+## De dónde sale cada dato
+
+| Dato (línea `// CAMBIAR`)                        | De dónde sacarlo                                                                    |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `nomenclatura`                                   | Se inventa con la regla `MÓDULO-INICIALES-CORRELATIVO` (paso 1) y se guarda igual en `TIPO.NOMENCLATURA`. |
+| Endpoint (`/api/appweb/CAMBIAR`)                 | El nombre de la ruta del backend (`/api/appweb/<nombre>`). Si otra pantalla ya lo usa, buscar el nombre en `src/features/**/api/*.ts` (`http.get("/api/appweb/…")`) o verlo en la pestaña **Network** del navegador en esa pantalla. |
+| Campos del schema (`campo_texto`, `campo_numero`) | La respuesta del endpoint: pestaña **Network** → la petición → **Response** (copiar los nombres tal cual, en minúsculas). En el backend: los alias del `select` (`… AS NOMBRES` llega como `nombres`). |
+| Nombres de los parámetros que espera el endpoint | En el backend, la función del endpoint: lo que lee de `campos` (ej. `campos.fecha_inicio`, `campos.cod_cc`). Si son distintos a los de la pantalla (`fecha_inicio`, `fecha_fin`, `cod_empresa`, `cod_cc`), usar `nombres` (plantilla de endpoint distinto). |
+| Dónde viene la lista (`lista`)                   | La misma respuesta en **Network**: si las filas no están en `data` sino en `data.<algo>`, `lista: "<algo>"`. |
+| `id` de cada filtro                              | El nombre del parámetro que el backend lee de `campos` para ese filtro (ej. `cod_usuario`, `cod_tipo_pago`). |
+| `filtroTipo("TIPO_TABLA", …)`                    | La `TIPO_TABLA` de los tipos que se quieren listar (tabla `TIPO`; ej. `ACTIVIDAD`, `TIPO_PAGO`). |
+| `filtroEstado("NOMBRE", …)`                      | El `nom_tipo` de los estados (catálogo `estados`; ej. `ACTIVIDAD`).                  |
+| Otros catálogos (consulta o filtro propios)      | Todos los catálogos están en `src/features/catalogos/index.ts` (ej. `empleadosUsuarios`, `tipos`, `empresas`, `roles`, `modulos`). |
+| `columnas` (`valor: (f) => f.campo`)             | Los campos del schema de la misma copia.                                            |
+| `ROL_ID`, `MODULO_ID`, `CENCOS_ID`, `EMPRESA_ID` de la relación | Catálogos `roles` (`/api/appweb/lista-rol`), `modulos` (`/api/appweb/listamodulo`, el select Módulo de la pantalla), `centrosCosto` (`/api/appweb/listacentrocosto`) y `empresas` (`/api/appweb/listaempresas`). |
+
+
+## Cómo funciona un reporte por dentro
 
 Un reporte es **un solo archivo** que exporta `definirReporte({ … })`. Cada propiedad de ese
 objeto es una parte de la pantalla. Las que **no** se ponen usan lo de siempre; para cambiar
@@ -30,16 +70,6 @@ registrarlo, paso 3).
 > - **Botón Consultar, "Personaliza tu reporte", "Resumen agrupado" y "Excel agrupado"**: salen
 >   solos para todos los reportes.
 
-## Checklist
-
-1. [ ] **Base de datos**: `TIPO` del reporte y su relación con rol/CC/módulo (paso 1).
-2. [ ] **Archivo** del reporte: copiar una plantilla y cambiar las líneas `// CAMBIAR` (paso 2).
-3. [ ] **Registro**: una línea en `definiciones/<modulo>/index.ts` (paso 3).
-4. [ ] `npm run check:nuevos` sin errores (si Biome se queja del formato: `npm run biome:arreglar`).
-5. [ ] Probarlo: elegir el módulo y el reporte, pulsar **Consultar**.
-
----
-
 ## Paso 1 — Base de datos
 
 1. Un registro en `TIPO`:
@@ -48,7 +78,7 @@ registrarlo, paso 3).
    - `NOMENCLATURA` = **clave que une la base de datos con el código** (máximo 20 caracteres):
      `[MÓDULO EN 3 CARACTERES]-[INICIALES DEL REPORTE]-[CORRELATIVO DEL MÓDULO]`, correlativo de
      2 dígitos, sin contar "de" en las iniciales. Ej. `PRI-HR-01`, `CRM-OA-04`. Ver los usados
-     en `definiciones/<modulo>/index.ts`.
+     en `src/features/reportes/definiciones/<modulo>/index.ts`.
 2. Filas en `REPORTE_X_CC_X_MDULO_X_ROL` (`REPORTE_TIPO_ID` = el `TIPO_ID` de arriba) con
    `ROL_ID`, `EMPRESA_ID`, `CENCOS_ID` y `MODULO_ID`; `NULL` = todos.
 
@@ -56,8 +86,8 @@ Sin esto el reporte no aparece en el select, aunque el código esté listo.
 
 ## Paso 2 — Archivo del reporte
 
-**Copiar una plantilla** de `definiciones/plantillas/` a la carpeta del módulo
-(`definiciones/crm/`, `definiciones/pricing/`…; si no existe, ver el paso 3) con su nombre en
+**Copiar una plantilla** de `src/features/reportes/definiciones/plantillas/` a la carpeta del módulo
+(`src/features/reportes/definiciones/crm/`, `src/features/reportes/definiciones/pricing/`…; si no existe, ver el paso 3) con su nombre en
 kebab-case (ej. `reporte-ventas-cliente.ts`) y **cambiar solo las líneas marcadas con
 `// CAMBIAR`**. Los imports no se tocan: las plantillas están a la misma profundidad que las
 carpetas de los módulos.
@@ -84,7 +114,7 @@ Notas de las piezas de `reporte-personalizado.tsx`:
 - **Consulta propia** (`consultar`): recibe los parámetros de la pantalla (`fecha_inicio`,
   `fecha_fin`, `cod_empresa`, `cod_cc` y el `id` de cada filtro; vacíos = no vienen) y devuelve
   las filas. Puede llamar varios endpoints o catálogos (todos tienen `fetchLista`), aplanar
-  respuestas anidadas (una fila por lo que se quiera agrupar, ej. `crm/reporte-objetivos.tsx`) y
+  respuestas anidadas (una fila por lo que se quiera agrupar, ej. `src/features/reportes/definiciones/crm/reporte-objetivos.tsx`) y
   agregar campos. El usuario de la sesión: `useAuthStore.getState().user?.cod_usuario`
   (`@/shared/stores/auth-store`). Un `throw new Error("mensaje")` se muestra en "Reporte".
 - **Filtro propio** (`FiltroReporte`): `value` siempre es texto (`String(…)`). `useOpciones` (y
@@ -94,17 +124,17 @@ Notas de las piezas de `reporte-personalizado.tsx`:
 - **Vista propia** (`Contenido`): recibe `{ filas, columnas, params }`; `TablaReporte` deja la
   tabla de siempre. La vista de otro módulo se importa **por su ruta** (ej.
   `@/features/reportes-crm/components/reporte-objetivos-empleado`), no por su `index`. Datos que
-  no son filas: ver `crm/reporte-graficas-objetivos.tsx`.
+  no son filas: ver `src/features/reportes/definiciones/crm/reporte-graficas-objetivos.tsx`.
 - **Excel propio**: `exportarExcel` (`@/shared/lib/excel`); celda con formato
   `{ dato, fontColor }`; otras opciones de la hoja: `columnaInicio`, `filaInicio`, `anchos`,
   `color`; varias hojas = varios objetos en `hojas`. `encabezado` trae los filtros de la
   consulta con nombre (Período, Empresa, Centro de costo, Asesor…).
 - **PDF propio**: `descargarPdf` usa el formato de Reportes de pricing. Bloques: `titulo`,
   `texto` (`weight`, `align`, `fontSize`), `tabla`, `fila` (bloques lado a lado, `anchos` en %),
-  `espacio` y `pagina` (detalle en `pricing/reportes/lib/pdf-reporte.ts`). Un diseño totalmente
-  propio usa jsPDF directo (ej. el calendario de `crm/reporte-actividades.ts`).
+  `espacio` y `pagina` (detalle en `src/features/pricing/reportes/lib/pdf-reporte.ts`). Un diseño totalmente
+  propio usa jsPDF directo (ej. el calendario de `src/features/reportes/definiciones/crm/reporte-actividades.ts`).
 
-Reportes reales para consultar en `definiciones/crm/`:
+Reportes reales para consultar en `src/features/reportes/definiciones/crm/`:
 
 | Archivo                          | Qué personaliza                                                         |
 | -------------------------------- | ----------------------------------------------------------------------- |
@@ -137,7 +167,7 @@ Formato: `yyyy-MM-dd`.
 
 ### Filtros
 
-Atajos de `lib/filtros.ts` (el segundo argumento es el **nombre del parámetro** que se manda):
+Atajos de `src/features/reportes/lib/filtros.ts` (el segundo argumento es el **nombre del parámetro** que se manda):
 
 | Atajo                                        | Qué muestra                                   |
 | -------------------------------------------- | --------------------------------------------- |
@@ -196,7 +226,7 @@ las sumas del grupo por `id`. `porcentaje` se importa junto con `definirReporte`
 
 ## Paso 3 — Registro
 
-En `definiciones/<modulo>/index.ts`, importar el reporte y sumarlo a la lista (en orden de
+En `src/features/reportes/definiciones/<modulo>/index.ts`, importar el reporte y sumarlo a la lista (en orden de
 correlativo):
 
 ```ts
@@ -207,9 +237,9 @@ export const REPORTES_PRI: readonly Reporte[] = [reporteVentasCliente];
 
 **Módulo nuevo** (sin carpeta todavía):
 
-1. Crear `definiciones/<modulo>/index.ts` copiando `definiciones/crm/index.ts` (cambiar el
+1. Crear `src/features/reportes/definiciones/<modulo>/index.ts` copiando `src/features/reportes/definiciones/crm/index.ts` (cambiar el
    nombre de la lista, ej. `REPORTES_PRI`).
-2. En `definiciones/index.ts`: `import { REPORTES_PRI } from "./pricing";` y
+2. En `src/features/reportes/definiciones/index.ts`: `import { REPORTES_PRI } from "./pricing";` y
    `REPORTES = [...REPORTES_CRM, ...REPORTES_PRI]`.
 
 ## Errores comunes
