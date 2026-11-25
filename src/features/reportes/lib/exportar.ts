@@ -1,5 +1,7 @@
 import { format } from "date-fns";
 import type { BloquePdf } from "@/features/pricing/reportes";
+import type { TreeNode } from "@/features/pricing/shared";
+import type { CampoConfig } from "@/shared/components/tabla-double/niveles-builder";
 import { exportarExcel } from "@/shared/lib/excel";
 import type { ColumnaReporte, ValorCelda } from "./definir-reporte";
 import type { Resumen } from "./resumen-agrupado";
@@ -14,23 +16,28 @@ export interface TablaExportable {
   filas: ValorCelda[][];
 }
 
-/** Resumen agrupado como tabla plana: niveles, columnas del pivote y total (con fila TOTAL). */
-export function tablaResumen(resumen: Resumen): TablaExportable {
-  const conTotal = resumen.tituloColumnas !== "";
-  const total = (valor: number) => (conTotal ? [valor] : []);
-  // Sin niveles solo queda la fila TOTAL, con una primera columna para su etiqueta.
-  const niveles = resumen.niveles.length > 0 ? resumen.niveles : [""];
-  const filas: ValorCelda[][] =
-    resumen.niveles.length > 0
-      ? resumen.filas.map((f) => [...f.claves, ...f.valores, ...total(f.total)])
-      : [];
-  filas.push([
-    "TOTAL",
-    ...Array<ValorCelda>(niveles.length - 1).fill(""),
-    ...resumen.totales,
-    ...total(resumen.total),
-  ]);
-  return { columnas: [...niveles, ...resumen.columnas, ...(conTotal ? ["Total"] : [])], filas };
+/**
+ * Resumen agrupado como tabla plana (igual que el Excel de pricing): una columna por nivel de
+ * agrupación; cada fila escribe solo su valor, en la columna de su nivel. El TOTAL GENERAL va
+ * en la primera.
+ */
+export function tablaResumen(resumen: Resumen, niveles: readonly CampoConfig[]): TablaExportable {
+  const columnasNivel = niveles.length ? niveles.map((n) => n.etiqueta) : ["Concepto"];
+  const filas: ValorCelda[][] = [];
+  const agregar = (nodos: readonly TreeNode[], profundidad: number) => {
+    for (const nodo of nodos) {
+      filas.push([
+        ...columnasNivel.map((_, i) => (i === Math.max(profundidad - 1, 0) ? nodo.label : null)),
+        ...resumen.columnas.map((c) => {
+          const valor = nodo.values?.[c.key];
+          return valor === "" || valor == null ? null : Number(valor);
+        }),
+      ]);
+      agregar(nodo.children ?? [], profundidad + 1);
+    }
+  };
+  agregar(resumen.data, 0);
+  return { columnas: [...columnasNivel, ...resumen.columnas.map((c) => c.label)], filas };
 }
 
 /** Detalle del reporte con sus columnas. */

@@ -27,7 +27,7 @@ export interface ColumnaReporte<TFila> {
   valor: (fila: TFila) => ValorCelda;
   /** Se puede agrupar por ella en "Personaliza tu reporte" (filas o columnas). */
   agrupable?: boolean;
-  /** Se puede sumar en el "Resumen agrupado" (medida). */
+  /** Se suma en el "Resumen agrupado" (medida, además de la cantidad de registros). */
   sumable?: boolean;
   /** Alineada a la derecha (números). Por defecto, igual que `sumable`. */
   numerica?: boolean;
@@ -76,7 +76,7 @@ export interface DefinicionReporte<TFila> {
   /** Columnas de la tabla, del PDF y del Excel; también las agrupables y sumables. */
   columnas: readonly ColumnaReporte<TFila>[];
   /** Agrupación inicial de "Personaliza tu reporte" (ids de columnas agrupables). */
-  agrupacion?: { filas?: readonly string[]; columna?: string; medida?: string };
+  agrupacion?: { filas?: readonly string[]; columna?: string };
   /**
    * Contenido propio de la sección "Reporte" (gráficas, tarjetas…). Sin esto, una tabla
    * con las columnas.

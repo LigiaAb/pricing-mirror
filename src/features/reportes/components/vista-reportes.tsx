@@ -13,57 +13,51 @@ import { EncabezadoPanel, MensajeVacio, Panel } from "./panel";
 import { PantallaReporte } from "./pantalla-reporte";
 
 /**
- * Pantalla de reportes: lista los reportes que el rol del usuario puede ver en la empresa
- * y el CC del contexto, por módulo, y muestra el elegido. `codModulo` = módulo elegido al
- * abrir. Cada reporte se configura en `definiciones/` (ver `ARQUITECTURA.md`).
+ * Pantalla de reportes: primero el módulo (catálogo de módulos) y luego los reportes que el
+ * rol del usuario puede ver en ese módulo, en la empresa y el CC del contexto. `codModulo` =
+ * módulo elegido al abrir. Cada reporte se configura en `definiciones/` (ver `ARQUITECTURA.md`).
  */
 const VistaReportes = ({ codModulo }: Readonly<{ codModulo?: number | undefined }>) => {
   const codUsuario = useAuthStore((s) => s.user?.cod_usuario);
   const empresa = useContextoOperativoStore((s) => s.currentEmpresa?.cod_empresa);
   const centroCosto = useContextoOperativoStore((s) => s.currentCentroCosto?.cod_cc);
 
+  const catalogoModulos = modulos.useLista();
+  const [modulo, setModulo] = React.useState(codModulo == null ? "" : String(codModulo));
+  const [elegido, setElegido] = React.useState("");
+
+  // Sin módulo no se consultan los reportes.
   const disponibles = reportesDisponibles.useLista({
     cod_usuario: codUsuario,
     cod_empresa: empresa,
     cod_cc: centroCosto,
+    cod_modulo: modulo,
   });
-  const catalogoModulos = modulos.useLista();
 
-  const [modulo, setModulo] = React.useState(codModulo == null ? "" : String(codModulo));
-  const [elegido, setElegido] = React.useState("");
-
-  // Módulos con al menos un reporte asignado (nombre del catálogo de módulos).
-  const opcionesModulo = React.useMemo<ComboboxOption[]>(() => {
-    const codigos = new Set(
-      (disponibles.data ?? []).flatMap((r) => (r.codModulo == null ? [] : [r.codModulo])),
-    );
-    return (catalogoModulos.data ?? [])
-      .filter((m) => codigos.has(String(m.cod_modulo)))
-      .map((m) => ({ value: String(m.cod_modulo), label: m.nom_modulo }));
-  }, [disponibles.data, catalogoModulos.data]);
-
-  // Reportes del módulo elegido (los de módulo NULL aplican en todos); sin módulo, todos.
-  const delModulo = React.useMemo(() => {
-    const vistos = new Set<string>();
-    return (disponibles.data ?? []).filter((r) => {
-      if (modulo && r.codModulo != null && r.codModulo !== modulo) return false;
-      if (vistos.has(r.nomenclatura)) return false;
-      vistos.add(r.nomenclatura);
-      return true;
-    });
-  }, [disponibles.data, modulo]);
+  const opcionesModulo = React.useMemo<ComboboxOption[]>(
+    () =>
+      (catalogoModulos.data ?? []).map((m) => ({
+        value: String(m.cod_modulo),
+        label: m.nom_modulo,
+      })),
+    [catalogoModulos.data],
+  );
+  const reportesModulo = React.useMemo(
+    () => (modulo ? (disponibles.data ?? []) : []),
+    [modulo, disponibles.data],
+  );
   const opciones = React.useMemo<ComboboxOption[]>(
-    () => delModulo.map((r) => ({ value: r.nomenclatura, label: r.nombre })),
-    [delModulo],
+    () => reportesModulo.map((r) => ({ value: r.nomenclatura, label: r.nombre })),
+    [reportesModulo],
   );
 
-  const disponible = delModulo.find((r) => r.nomenclatura === elegido);
+  const disponible = reportesModulo.find((r) => r.nomenclatura === elegido);
   const definicion = REPORTES.find((r) => r.nomenclatura.toUpperCase() === elegido);
 
   // Si al cambiar de CC o de módulo el reporte deja de estar disponible, se quita.
   React.useEffect(() => {
-    if (elegido && disponibles.data && !disponible) setElegido("");
-  }, [elegido, disponibles.data, disponible]);
+    if (elegido && (!modulo || (disponibles.data && !disponible))) setElegido("");
+  }, [elegido, modulo, disponibles.data, disponible]);
 
   return (
     <section className="grid w-full grid-cols-[minmax(0,1fr)] gap-5 bg-surface-1 p-4 md:p-6">
@@ -80,8 +74,8 @@ const VistaReportes = ({ codModulo }: Readonly<{ codModulo?: number | undefined 
             value={modulo}
             onChange={setModulo}
             opciones={opcionesModulo}
-            cargando={disponibles.isLoading || catalogoModulos.isLoading}
-            placeholder="Todos"
+            cargando={catalogoModulos.isLoading}
+            placeholder="Seleccione un módulo"
           />
           <CampoSelect
             id="reporte"
@@ -89,16 +83,17 @@ const VistaReportes = ({ codModulo }: Readonly<{ codModulo?: number | undefined 
             value={elegido}
             onChange={setElegido}
             opciones={opciones}
-            cargando={disponibles.isLoading}
+            cargando={Boolean(modulo) && disponibles.isLoading}
+            placeholder={modulo ? "Seleccione una opción" : "Seleccione primero el módulo"}
           />
           {disponibles.isError ? (
             <p role="alert" className="text-sm text-destructive md:col-span-2">
               No se pudieron cargar los reportes: {disponibles.error.message}
             </p>
           ) : null}
-          {disponibles.data?.length === 0 ? (
+          {modulo && disponibles.data?.length === 0 ? (
             <p className="text-sm text-muted-foreground md:col-span-2">
-              Su rol no tiene reportes asignados en este centro de costo.
+              Su rol no tiene reportes asignados en este módulo y centro de costo.
             </p>
           ) : null}
         </div>

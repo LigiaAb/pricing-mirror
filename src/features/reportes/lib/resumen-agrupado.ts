@@ -1,53 +1,73 @@
-import type { ColumnaReporte, ValorCelda } from "./definir-reporte";
+import type { ColumnaTabla, TreeNode } from "@/features/pricing/shared";
+import type { CampoConfig } from "@/shared/components/tabla-double/niveles-builder";
+import type { ColumnaReporte } from "./definir-reporte";
 
 /**
- * RESUMEN AGRUPADO (tabla dinámica genérica)
+ * RESUMEN AGRUPADO (tabla dinámica genérica, igual que la de Reportes de pricing)
  *
- * Agrupa las filas del reporte por las columnas elegidas en "Personaliza tu reporte":
- * - `filas`: niveles (una fila del resumen por combinación de valores, ordenadas).
- * - `columna`: opcional; sus valores pasan a ser columnas (pivote).
- * - `medida`: `MEDIDA_CANTIDAD` (cuenta filas) o el id de una columna `sumable`.
+ * Arma el árbol que dibuja `TablaDouble` (mismo formato que `construirTablaKpi` de pricing):
+ * un nodo raíz "TOTAL GENERAL" con las filas agrupadas por los niveles elegidos en
+ * "Personaliza tu reporte" (`NivelesBuilder`) y columnas por un campo (o ninguna).
+ * Medidas: cantidad de registros y la suma de cada columna `sumable` del reporte.
  */
 
-/** Medida por defecto: cantidad de registros. */
-export const MEDIDA_CANTIDAD = "__cantidad__";
-
-/** Texto para valores vacíos al agrupar. */
-const SIN_VALOR = "(Sin dato)";
-
 export interface ConfiguracionResumen {
-  filas: readonly string[];
+  /** Niveles de filas, en el orden en que se agrupan. */
+  niveles: CampoConfig[];
+  /** Campo de columnas; "" = sin columnas (solo el total). */
   columna: string;
-  medida: string;
 }
 
-export interface FilaResumen {
-  /** Un valor por nivel de `filas`. */
-  claves: string[];
-  /** Un valor por columna del pivote (o uno solo sin pivote). */
-  valores: number[];
-  total: number;
+const SIN_DATO = "SIN DATO";
+
+/** Grupo de columnas del total (siempre al final). */
+const CLAVE_TOTAL = "__total__";
+
+/** Campos de una definición que se pueden agrupar (filas o columnas). */
+export const camposAgrupables = <TFila>(columnas: readonly ColumnaReporte<TFila>[]) =>
+  columnas.filter((c) => c.agrupable).map<CampoConfig>((c) => ({ campo: c.id, etiqueta: c.label }));
+
+interface Medida<TFila> {
+  key: string;
+  etiqueta: string;
+  valor: (fila: TFila) => number;
 }
+
+function medidasDe<TFila>(columnas: readonly ColumnaReporte<TFila>[]): Medida<TFila>[] {
+  return [
+    { key: "cantidad", etiqueta: "Cantidad", valor: () => 1 },
+    ...columnas
+      .filter((c) => c.sumable)
+      .map((c) => ({
+        key: c.id,
+        etiqueta: c.label,
+        valor: (fila: TFila) => {
+          const n = Number(c.valor(fila));
+          return Number.isFinite(n) ? n : 0;
+        },
+      })),
+  ];
+}
+
+type Nodo = {
+  id: string;
+  label: string;
+  sumas: Map<string, number[]>;
+  hijos: Map<string, Nodo>;
+};
+
+const nuevoNodo = (id: string, label: string): Nodo => ({
+  id,
+  label,
+  sumas: new Map(),
+  hijos: new Map(),
+});
 
 export interface Resumen {
-  /** Encabezados de los niveles. */
-  niveles: string[];
-  /** Encabezado del pivote ("" si no hay columna). */
-  tituloColumnas: string;
-  /** Valores del pivote (columnas), ordenados; sin pivote, solo el nombre de la medida. */
-  columnas: string[];
-  filas: FilaResumen[];
-  /** Totales por columna y total general. */
-  totales: number[];
-  total: number;
-  /** Nombre de la medida (ej. "Cantidad"). */
-  medida: string;
+  /** Un nodo raíz "TOTAL GENERAL" con los niveles debajo (vacío sin filas). */
+  data: TreeNode[];
+  columnas: ColumnaTabla[];
 }
-
-const texto = (valor: ValorCelda): string =>
-  valor == null || valor === "" ? SIN_VALOR : String(valor);
-
-const comparar = (a: string, b: string) => a.localeCompare(b, "es", { numeric: true });
 
 export function calcularResumen<TFila>(
   filas: readonly TFila[],
@@ -55,63 +75,78 @@ export function calcularResumen<TFila>(
   config: ConfiguracionResumen,
 ): Resumen {
   const porId = new Map(columnas.map((c) => [c.id, c]));
-  const niveles = config.filas
-    .map((id) => porId.get(id))
-    .filter((c): c is ColumnaReporte<TFila> => c != null);
-  const pivote = porId.get(config.columna);
-  const medida = porId.get(config.medida);
+  const texto = (campo: string, fila: TFila) => {
+    const valor = porId.get(campo)?.valor(fila);
+    const limpio = valor == null ? "" : String(valor).trim();
+    return limpio || SIN_DATO;
+  };
+  const medidas = medidasDe(columnas);
+  const raiz = nuevoNodo("total", "TOTAL GENERAL");
+  const valoresColumna = new Set<string>();
 
-  const valorMedida = (fila: TFila): number => {
-    if (!medida) return 1;
-    const n = Number(medida.valor(fila));
-    return Number.isFinite(n) ? n : 0;
+  const sumarEn = (nodo: Nodo, grupo: string, valores: number[]) => {
+    for (const clave of grupo === CLAVE_TOTAL ? [CLAVE_TOTAL] : [grupo, CLAVE_TOTAL]) {
+      const suma = nodo.sumas.get(clave) ?? medidas.map(() => 0);
+      valores.forEach((v, i) => {
+        suma[i] = (suma[i] ?? 0) + v;
+      });
+      nodo.sumas.set(clave, suma);
+    }
   };
 
-  // Valores del pivote, ordenados.
-  const columnasPivote = pivote
-    ? [...new Set(filas.map((f) => texto(pivote.valor(f))))].sort(comparar)
-    : [medida?.label ?? "Cantidad"];
-  const indicePivote = new Map(columnasPivote.map((c, i) => [c, i]));
-
-  // Una fila del resumen por combinación de niveles.
-  const grupos = new Map<string, FilaResumen>();
   for (const fila of filas) {
-    const claves = niveles.map((n) => texto(n.valor(fila)));
-    const llave = JSON.stringify(claves);
-    let grupo = grupos.get(llave);
-    if (!grupo) {
-      grupo = { claves, valores: columnasPivote.map(() => 0), total: 0 };
-      grupos.set(llave, grupo);
+    const valores = medidas.map((m) => m.valor(fila));
+    const grupo = config.columna ? texto(config.columna, fila) : CLAVE_TOTAL;
+    if (grupo !== CLAVE_TOTAL) valoresColumna.add(grupo);
+
+    let nodo = raiz;
+    sumarEn(nodo, grupo, valores);
+    for (const nivel of config.niveles) {
+      const valor = texto(nivel.campo, fila);
+      let hijo = nodo.hijos.get(valor);
+      if (!hijo) {
+        hijo = nuevoNodo(`${nodo.id}|${nivel.campo}:${valor}`, valor);
+        nodo.hijos.set(valor, hijo);
+      }
+      nodo = hijo;
+      sumarEn(nodo, grupo, valores);
     }
-    const i = pivote ? (indicePivote.get(texto(pivote.valor(fila))) ?? 0) : 0;
-    const v = valorMedida(fila);
-    grupo.valores[i] = (grupo.valores[i] ?? 0) + v;
-    grupo.total += v;
   }
 
-  const filasResumen = [...grupos.values()].sort((a, b) => {
-    for (let i = 0; i < a.claves.length; i++) {
-      const r = comparar(a.claves[i] ?? "", b.claves[i] ?? "");
-      if (r !== 0) return r;
-    }
-    return 0;
-  });
+  const grupos = [...[...valoresColumna].sort(), CLAVE_TOTAL];
+  const etiquetaCampo = porId.get(config.columna)?.label ?? config.columna;
 
-  const totales = columnasPivote.map((_, i) =>
-    filasResumen.reduce((suma, f) => suma + (f.valores[i] ?? 0), 0),
+  const columnasTabla: ColumnaTabla[] = grupos.flatMap((grupo) =>
+    medidas.map((medida) => ({
+      key: `${grupo}__${medida.key}`,
+      label:
+        grupo === CLAVE_TOTAL
+          ? config.columna
+            ? `Total · ${medida.etiqueta}`
+            : medida.etiqueta
+          : `${etiquetaCampo} ${grupo} · ${medida.etiqueta}`,
+      entero: medida.key === "cantidad",
+      excluirTotal: true,
+    })),
   );
 
-  return {
-    niveles: niveles.map((n) => n.label),
-    tituloColumnas: pivote?.label ?? "",
-    columnas: columnasPivote,
-    filas: filasResumen,
-    totales,
-    total: totales.reduce((a, b) => a + b, 0),
-    medida: medida?.label ?? "Cantidad",
+  const aTreeNode = (nodo: Nodo): TreeNode => {
+    const values: Record<string, number> = {};
+    for (const grupo of grupos) {
+      const suma = nodo.sumas.get(grupo);
+      medidas.forEach((medida, i) => {
+        values[`${grupo}__${medida.key}`] = suma?.[i] ?? 0;
+      });
+    }
+    return {
+      id: nodo.id,
+      label: nodo.label,
+      values,
+      children: [...nodo.hijos.values()]
+        .sort((a, b) => a.label.localeCompare(b.label))
+        .map(aTreeNode),
+    };
   };
-}
 
-/** Número con separador de miles y hasta 2 decimales. */
-export const formatearNumero = (n: number): string =>
-  n.toLocaleString("es-GT", { maximumFractionDigits: 2 });
+  return { data: filas.length ? [aTreeNode(raiz)] : [], columnas: columnasTabla };
+}
