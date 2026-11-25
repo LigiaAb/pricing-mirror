@@ -11,6 +11,8 @@ reportes/
   definiciones/
     index.ts                  REGISTRO: lista REPORTES (1 línea por reporte)
     reporte-visitas-historico.ts  Reporte de visitas — histórico (CRM); plantilla
+    reporte-visitas.ts        Reporte de visitas (planificación, CRM): reusa la consulta y el
+                              Excel del histórico
   lib/
     definir-reporte.ts        contrato (DefinicionReporte, ColumnaReporte, FiltroReporte)
     filtros.ts                atajos: filtroUsuario, filtroTipo, filtroEstado, filtroLista;
