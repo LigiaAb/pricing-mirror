@@ -47,10 +47,10 @@ interface Resultado {
   FECHA_PROGRAMADA?: string;
 }
 
-type Fila = z.infer<typeof actividadSchema> & { asesor: string; res: Resultado | null };
+export type Fila = z.infer<typeof actividadSchema> & { asesor: string; res: Resultado | null };
 
 /** Tipos de actividad que ofrecía el reporte en el legacy. */
-const TIPOS_ACTIVIDAD = [
+export const TIPOS_ACTIVIDAD = [
   "CORREO",
   "LLAMADA",
   "VISITA",
@@ -78,7 +78,7 @@ function enRango(fecha: string, inicio: string | undefined, fin: string | undefi
   return valor >= desde && valor <= hasta;
 }
 
-async function consultar(params: ParamsReporte): Promise<Fila[]> {
+export async function consultar(params: ParamsReporte): Promise<Fila[]> {
   const { cod_empresa, cod_cc, cod_asesor, cod_estado } = params;
   const consulta = Object.fromEntries(
     Object.entries({ cod_empresa, cod_cc, cod_asesor, cod_estado }).filter(([, v]) => v),
@@ -106,9 +106,12 @@ async function consultar(params: ParamsReporte): Promise<Fila[]> {
     }));
 }
 
-// ── Excel del reporte: el mismo de Reportes CRM (`ReporteActividades` con `historico`) ──
+// ── Excel del reporte: el mismo de Reportes CRM (`ReporteActividades`) ──
 
-/** Columnas del legacy (`columnas_historico` de `reportes-crm/lib/actividades-excel.ts`). */
+/**
+ * Columnas del legacy (`columnas_historico` de `reportes-crm/lib/actividades-excel.ts`). El
+ * "Reporte de visitas" (planificación) usa solo las de `COLUMNAS_PLANIFICACION`.
+ */
 const COLUMNAS_EXCEL: {
   label: string;
   valor: (f: Fila) => string | number | null;
@@ -140,6 +143,16 @@ function fechaDia(fecha: string | undefined): string | null {
   return fecha ? format(new Date(fecha), "dd/MM/yyyy") : null;
 }
 
+/** Columnas del Excel del "Reporte de visitas" (legacy `columnas`), en el mismo orden. */
+const COLUMNAS_PLANIFICACION = new Set([
+  "TIPO",
+  "ASESOR",
+  "CLIENTE",
+  "FECHA DE PROGRAMACION",
+  "FECHA DE EJECUCION",
+  "OBJETIVO",
+]);
+
 const ROJO_EN_PROCESO_VENCIDO = "FFB30000";
 const DIAS_LIMITE_EN_PROCESO = 7;
 
@@ -166,8 +179,14 @@ function usuarioSesion(): string {
   return nombre || asText(usuario?.nombre_usuario) || asText(usuario?.email);
 }
 
-async function excelHistorico({ filas, encabezado, params }: DescargaReporte<Fila>) {
-  const nombreReporte = "Reporte Historico de actividades";
+/** Excel de actividades de Reportes CRM: histórico o, con `historico: false`, planificación. */
+export async function excelActividades(
+  historico: boolean,
+  { filas, encabezado, params }: DescargaReporte<Fila>,
+) {
+  const nombreReporte = historico
+    ? "Reporte Historico de actividades"
+    : "Planificacion de actividades";
   const encabezados: Record<string, string> = { "Generado el": new Date().toLocaleString() };
   if (encabezado.Empresa) encabezados["Empresa:"] = encabezado.Empresa;
   if (encabezado["Centro de costo"])
@@ -182,12 +201,14 @@ async function excelHistorico({ filas, encabezado, params }: DescargaReporte<Fil
     encabezados["Tipo de actividad:"] = encabezado["Tipo de actividad"];
 
   const visibles = COLUMNAS_EXCEL.filter(
-    (c) => !c.filtrarSiMultiplesValores || new Set(filas.map(c.valor)).size > 1,
+    (c) =>
+      (historico || COLUMNAS_PLANIFICACION.has(c.label)) &&
+      (!c.filtrarSiMultiplesValores || new Set(filas.map(c.valor)).size > 1),
   );
 
   await exportarExcel({
     nombreArchivo: `${nombreReporte} - ERPWEB - ${format(new Date(), "yyyy_MM_dd_HH_mm_ss")}.xlsx`,
-    titulo: "Reporte de visitas histórico",
+    titulo: historico ? "Reporte de visitas histórico" : "Reporte de visitas",
     encabezado: encabezados,
     hojas: [
       {
@@ -222,7 +243,7 @@ export const reporteVisitasHistorico = definirReporte<Fila>({
   ],
   consultar,
   // Como en Reportes CRM: solo Excel (sin PDF).
-  descargas: { excel: excelHistorico },
+  descargas: { excel: (descarga) => excelActividades(true, descarga) },
   agrupacion: { filas: ["asesor"], columna: "tipo" },
   columnas: [
     { id: "codigo", label: "Código", valor: (f) => f.cod_actividad },
