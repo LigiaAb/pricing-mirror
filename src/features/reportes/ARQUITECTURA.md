@@ -13,6 +13,8 @@ reportes/
     reporte-visitas-historico.ts  Reporte de visitas — histórico (CRM); plantilla
     reporte-visitas.ts        Reporte de visitas (planificación, CRM): reusa la consulta y el
                               Excel del histórico
+    reporte-actividades.ts    Actividades (calendario PDF de CRM, del usuario de la sesión; sin
+                              empresa ni CC: `empresaCentroCosto: false`)
   lib/
     definir-reporte.ts        contrato (DefinicionReporte, ColumnaReporte, FiltroReporte)
     filtros.ts                atajos: filtroUsuario, filtroTipo, filtroEstado, filtroLista;
@@ -61,7 +63,8 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
 - **Empresa y Centro de costo**: los pone la pantalla en Filtros (no cada reporte), igual que
   Tarifas y Cotizaciones: con la acción "Filtrar Empresa Centro Costo" de la opción **"Reportes"**
   se muestran (arrancan en el contexto) y mandan en la consulta; sin el permiso no se muestran y
-  siempre van los del contexto. Un filtro con `depende: ["cod_cc"]` se limpia al cambiar el CC.
+  siempre van los del contexto. Un reporte que no los usa lleva `empresaCentroCosto: false`
+  (no se muestran, no se envían y no van en el encabezado). Un filtro con `depende: ["cod_cc"]` se limpia al cambiar el CC.
 - **Consultar**: el reporte se consulta **solo con el botón** (fechas y filtros no consultan
   solos). "Personaliza tu reporte" sí se aplica al instante sobre lo ya consultado.
 - **Resumen agrupado**: `calcularResumen` sobre las filas ya consultadas (sin otra consulta),

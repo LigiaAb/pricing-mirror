@@ -86,6 +86,11 @@ export interface DefinicionReporte<TFila> {
    * "Filtrar Empresa Centro Costo"). Atajos en `lib/filtros.ts`.
    */
   filtros?: readonly FiltroReporte[];
+  /**
+   * `false`: el reporte no usa empresa ni CC (ej. Actividades, solo del usuario de la sesión): no
+   * se muestran, no se envían y no van en el encabezado. Por defecto, sí.
+   */
+  empresaCentroCosto?: boolean;
   /** Consulta al backend. Atajo: `consultarApi(endpoint, schema)`. */
   consultar: (params: ParamsReporte) => Promise<TFila[]>;
   /** Columnas de la tabla, del PDF y del Excel; también las agrupables y sumables. */

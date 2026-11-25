@@ -123,7 +123,10 @@ export function PantallaReporte({
   const centroCosto = useContextoOperativoStore((s) => s.currentCentroCosto);
   const hidratado = useContextoOperativoStore((s) => s._hasHydrated);
   // Como Tarifas y Cotizaciones: con el permiso se eligen empresa y CC; sin él, los del contexto.
-  const { puedeFiltrarEmpresaCentroCosto } = usePermisosCategoria(OPCION_PERMISOS_REPORTES);
+  const { puedeFiltrarEmpresaCentroCosto: conPermiso } =
+    usePermisosCategoria(OPCION_PERMISOS_REPORTES);
+  const usaEmpresaCc = definicion.empresaCentroCosto !== false;
+  const puedeFiltrarEmpresaCentroCosto = usaEmpresaCc && conPermiso;
   const filtros = React.useMemo(
     () => [
       ...(puedeFiltrarEmpresaCentroCosto ? FILTROS_EMPRESA_CC : []),
@@ -174,6 +177,7 @@ export function PantallaReporte({
 
   /** Valores que se usan: con el permiso, los elegidos (o el contexto); sin él, el contexto. */
   const efectivos = React.useMemo<ValoresFiltros>(() => {
+    if (!usaEmpresaCc) return valores;
     const contexto = {
       cod_empresa: empresa?.cod_empresa == null ? "" : String(empresa.cod_empresa),
       cod_cc: centroCosto?.cod_cc == null ? "" : String(centroCosto.cod_cc),
@@ -181,7 +185,13 @@ export function PantallaReporte({
     return puedeFiltrarEmpresaCentroCosto
       ? { ...contexto, ...valores }
       : { ...valores, ...contexto };
-  }, [empresa?.cod_empresa, centroCosto?.cod_cc, valores, puedeFiltrarEmpresaCentroCosto]);
+  }, [
+    empresa?.cod_empresa,
+    centroCosto?.cod_cc,
+    valores,
+    puedeFiltrarEmpresaCentroCosto,
+    usaEmpresaCc,
+  ]);
 
   const params = React.useMemo<ParamsReporte>(() => {
     const todos: ParamsReporte = {
@@ -229,8 +239,8 @@ export function PantallaReporte({
         : "";
     const campos: Record<string, string> = {
       Período: periodo,
-      Empresa: empresa?.nombre_emp ?? empresa?.nom_emp ?? "",
-      "Centro de costo": centroCosto?.nombre_cc ?? centroCosto?.nom_cc ?? "",
+      Empresa: usaEmpresaCc ? (empresa?.nombre_emp ?? empresa?.nom_emp ?? "") : "",
+      "Centro de costo": usaEmpresaCc ? (centroCosto?.nombre_cc ?? centroCosto?.nom_cc ?? "") : "",
       ...etiquetas.current,
     };
     return Object.fromEntries(Object.entries(campos).filter(([, v]) => v !== ""));
