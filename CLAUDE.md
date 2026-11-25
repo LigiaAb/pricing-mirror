@@ -166,6 +166,7 @@ Leer primero la guía del submódulo:
 - `src/features/pricing/cotizacion/calculo/ARQUITECTURA.md`
 - `src/features/pricing/tarifas/ARQUITECTURA.md`
 - `src/features/embarques/v2/general/ARQUITECTURA.md` (embarques: solo `v2/`, el resto es referencia)
+- `src/features/reportes/ARQUITECTURA.md` (reportes: cómo agregar un reporte)
 
 Resumen:
 
