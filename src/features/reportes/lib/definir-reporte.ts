@@ -59,6 +59,16 @@ export interface ContenidoReporteProps<TFila> {
   params: ParamsReporte;
 }
 
+/** Lo que recibe una descarga propia de un reporte (`descargas` de la definición). */
+export interface DescargaReporte<TFila> {
+  filas: readonly TFila[];
+  /** Nombre del reporte (`TIPO_DESCRIPCION`). */
+  titulo: string;
+  /** Filtros de la consulta con nombre (Período, Empresa, Centro de costo, Asesor…). */
+  encabezado: Record<string, string>;
+  params: ParamsReporte;
+}
+
 export interface DefinicionReporte<TFila> {
   /**
    * Une el reporte con la API de reportes disponibles: `NOMENCLATURA` del `TIPO`
@@ -80,6 +90,15 @@ export interface DefinicionReporte<TFila> {
   columnas: readonly ColumnaReporte<TFila>[];
   /** Agrupación inicial de "Personaliza tu reporte" (ids de columnas agrupables). */
   agrupacion?: { filas?: readonly string[]; columna?: string };
+  /**
+   * Descargas del reporte (opcionales: sin esto no tiene ninguna; en CRM unos tienen Excel,
+   * otros PDF y otros ambos). `true` = el detalle con las columnas; una función = formato
+   * propio (p. ej. el del legacy). El "Excel agrupado" (Resumen agrupado) está siempre.
+   */
+  descargas?: {
+    excel?: true | ((descarga: DescargaReporte<TFila>) => Promise<void>);
+    pdf?: true | ((descarga: DescargaReporte<TFila>) => Promise<void>);
+  };
   /**
    * Contenido propio de la sección "Reporte" (gráficas, tarjetas…). Sin esto, una tabla
    * con las columnas.

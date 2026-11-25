@@ -1,10 +1,14 @@
+import { format, parseISO } from "date-fns";
 import { z } from "zod";
 import { empleadosUsuarios } from "@/features/catalogos";
 import { http } from "@/shared/api/client";
 import { parseEnvelope } from "@/shared/api/envelope";
 import { formatearFechaHora } from "@/shared/lib/date";
+import { type CeldaExcel, exportarExcel } from "@/shared/lib/excel";
+import { asText } from "@/shared/lib/text";
 import { zIdSafe } from "@/shared/lib/zod-scalars";
-import { definirReporte, type ParamsReporte } from "../lib/definir-reporte";
+import { useAuthStore } from "@/shared/stores/auth-store";
+import { type DescargaReporte, definirReporte, type ParamsReporte } from "../lib/definir-reporte";
 import { filtroEstado, filtroTipo, filtroUsuario } from "../lib/filtros";
 
 /**
@@ -102,6 +106,111 @@ async function consultar(params: ParamsReporte): Promise<Fila[]> {
     }));
 }
 
+// ── Excel del reporte: el mismo de Reportes CRM (`ReporteActividades` con `historico`) ──
+
+/** Columnas del legacy (`columnas_historico` de `reportes-crm/lib/actividades-excel.ts`). */
+const COLUMNAS_EXCEL: {
+  label: string;
+  valor: (f: Fila) => string | number | null;
+  /** Se oculta si todas las filas tienen el mismo valor. */
+  filtrarSiMultiplesValores?: boolean;
+  /** Estado en rojo si sigue EN PROCESO más de 7 días. */
+  color?: boolean;
+}[] = [
+  { label: "CODIGO DE ACTIVIDAD", valor: (f) => f.cod_actividad },
+  { label: "TIPO", valor: (f) => f.nom_tipo, filtrarSiMultiplesValores: true },
+  { label: "ASESOR", valor: (f) => f.asesor || null, filtrarSiMultiplesValores: true },
+  { label: "CLIENTE", valor: (f) => f.nombre_cliente },
+  { label: "ESTADO", valor: (f) => f.estado_desc, color: true },
+  { label: "FECHA DE PROGRAMACION", valor: (f) => fechaDia(f.fecha_creada) },
+  { label: "FECHA DE EJECUCION", valor: (f) => fechaDia(f.fecha_programada) },
+  { label: "OBJETIVO", valor: (f) => f.objetivo_actividad_desc },
+  {
+    label: "NO RESULTADO",
+    // Legacy: con resultado sin código, "Resultado final".
+    valor: (f) => f.res?.COD_ACTIVIDAD || (f.res?.NOM_TIPO ? "Resultado final" : null),
+  },
+  { label: "TIPO RESULTADO", valor: (f) => f.res?.NOM_TIPO || null },
+  { label: "COMENTARIOS", valor: (f) => f.res?.DESCRIPCION || null },
+  { label: "FECHA REPROGRAMACION", valor: (f) => fechaDia(f.res?.FECHA_PROGRAMADA) },
+];
+
+/** Fecha en `dd/MM/yyyy` (día local), o null. */
+function fechaDia(fecha: string | undefined): string | null {
+  return fecha ? format(new Date(fecha), "dd/MM/yyyy") : null;
+}
+
+const ROJO_EN_PROCESO_VENCIDO = "FFB30000";
+const DIAS_LIMITE_EN_PROCESO = 7;
+
+/** Legacy: rojo si sigue "EN PROCESO" y pasaron más de 7 días desde el día de programación. */
+function colorEstado(
+  estado: string | number | null,
+  fechaProgramacion: string,
+): string | undefined {
+  if (estado !== "EN PROCESO" || !fechaProgramacion) return undefined;
+  const limite = new Date(fechaProgramacion);
+  if (Number.isNaN(limite.getTime())) return undefined;
+  limite.setHours(0, 0, 0, 0);
+  limite.setDate(limite.getDate() + DIAS_LIMITE_EN_PROCESO);
+  return new Date() > limite ? ROJO_EN_PROCESO_VENCIDO : undefined;
+}
+
+/** Nombre del usuario de la sesión (el legacy lo pone como "Empleado" si no se elige asesor). */
+function usuarioSesion(): string {
+  const usuario = useAuthStore.getState().user;
+  const nombre = [usuario?.nom_empleado, usuario?.apellido_emp]
+    .map((parte) => asText(parte))
+    .filter(Boolean)
+    .join(" ");
+  return nombre || asText(usuario?.nombre_usuario) || asText(usuario?.email);
+}
+
+async function excelHistorico({ filas, encabezado, params }: DescargaReporte<Fila>) {
+  const nombreReporte = "Reporte Historico de actividades";
+  const encabezados: Record<string, string> = { "Generado el": new Date().toLocaleString() };
+  if (encabezado.Empresa) encabezados["Empresa:"] = encabezado.Empresa;
+  if (encabezado["Centro de costo"])
+    encabezados["Centro de Costo:"] = encabezado["Centro de costo"];
+  encabezados["Empleado:"] = encabezado.Asesor || usuarioSesion();
+  if (encabezado.Estado) encabezados["Estado:"] = encabezado.Estado;
+  if (params.fecha_inicio)
+    encabezados["Fecha inicio:"] = format(parseISO(params.fecha_inicio), "dd/MM/yyyy");
+  if (params.fecha_fin)
+    encabezados["Fecha fin:"] = format(parseISO(params.fecha_fin), "dd/MM/yyyy");
+  if (encabezado["Tipo de actividad"])
+    encabezados["Tipo de actividad:"] = encabezado["Tipo de actividad"];
+
+  const visibles = COLUMNAS_EXCEL.filter(
+    (c) => !c.filtrarSiMultiplesValores || new Set(filas.map(c.valor)).size > 1,
+  );
+
+  await exportarExcel({
+    nombreArchivo: `${nombreReporte} - ERPWEB - ${format(new Date(), "yyyy_MM_dd_HH_mm_ss")}.xlsx`,
+    titulo: "Reporte de visitas histórico",
+    encabezado: encabezados,
+    hojas: [
+      {
+        // Excel admite 31 caracteres en el nombre de la hoja.
+        nombre: nombreReporte.slice(0, 31),
+        mostrarCuadricula: true,
+        autoFiltro: true,
+        columnaInicio: 2,
+        filaInicio: 1,
+        columnas: visibles.map((c) => c.label),
+        filas: filas.map((f) =>
+          visibles.map(({ valor, color }): CeldaExcel => {
+            const dato = valor(f);
+            if (!color) return dato;
+            const fontColor = colorEstado(dato, f.fecha_creada);
+            return { dato, ...(fontColor ? { fontColor } : {}) };
+          }),
+        ),
+      },
+    ],
+  });
+}
+
 export const reporteVisitasHistorico = definirReporte<Fila>({
   nomenclatura: "REP_VISITAS_HIST",
   descripcion: "Actividades del CRM con su resultado",
@@ -112,6 +221,8 @@ export const reporteVisitasHistorico = definirReporte<Fila>({
     filtroTipo("ACTIVIDAD", "cod_tipo", "Tipo de actividad", TIPOS_ACTIVIDAD),
   ],
   consultar,
+  // Como en Reportes CRM: solo Excel (sin PDF).
+  descargas: { excel: excelHistorico },
   agrupacion: { filas: ["asesor"], columna: "tipo" },
   columnas: [
     { id: "codigo", label: "Código", valor: (f) => f.cod_actividad },
