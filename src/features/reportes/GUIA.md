@@ -53,7 +53,7 @@ las líneas marcadas `// CAMBIAR`):
 [`reporte-basico.ts`](definiciones/plantillas/reporte-basico.ts),
 [`reporte-endpoint-distinto.ts`](definiciones/plantillas/reporte-endpoint-distinto.ts) y
 [`reporte-personalizado.tsx`](definiciones/plantillas/reporte-personalizado.tsx).
-De dónde sacar cada dato (endpoint, campos, parámetros, ids): [`DOCUMENTACION.md`](DOCUMENTACION.md).
+Explicación completa (cómo funciona, de dónde sale cada dato, ejemplos completos y referencia): [`DOCUMENTACION.md`](DOCUMENTACION.md).
 
 ```ts
 import { z } from "zod";
