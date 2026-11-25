@@ -1,0 +1,1531 @@
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+new file mode 100644
+index 0000000..5c5d52b
+--- /dev/null
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -0,0 +1,63 @@
++# Reportes — arquitectura
++
++Pantalla única para **todos** los reportes. Cada reporte es un archivo de configuración;
++la pantalla arma lo demás.
++
++```
++reportes/
++  api/
++    reportes-disponibles.ts   reportes del rol + empresa + CC (+ módulo) → selector
++    consultar-api.ts          atajo consultarApi(endpoint, schema) para `consultar`
++  definiciones/
++    index.ts                  REGISTRO: lista REPORTES (1 línea por reporte)
++    llamadas-visitas.ts       ejemplo / plantilla
++  lib/
++    definir-reporte.ts        contrato (DefinicionReporte, ColumnaReporte, FiltroReporte)
++    filtros.ts                atajos: filtroCentroCosto, filtroUsuario, filtroTipo, filtroLista
++    resumen-agrupado.ts       tabla dinámica genérica (calcularResumen)
++    exportar.ts               PDF y Excel (resumen + detalle) de cualquier reporte
++  components/
++    vista-reportes.tsx        "Reportes disponibles" + reporte elegido
++    pantalla-reporte.tsx      título, filtros y configuración, resumen, reporte, descargas
++    personaliza-reporte.tsx   "Personaliza tu reporte"
++    resumen-agrupado.tsx      tabla del "Resumen agrupado"
++    contenido-reporte.tsx     tabla por defecto de la sección "Reporte"
++    campos.tsx / panel.tsx    select, fecha, panel y encabezados
++```
++
++## Agregar un reporte (3 pasos)
++
++1. **Base de datos**: un `TIPO` con `TIPO_TABLA = 'REPORTE'` (nombre = título en pantalla,
++   nomenclatura = clave, ej. `HIT_RATE`) y sus filas en `REPORTE_X_CC_X_MDULO_X_ROL`
++   (rol, empresa, CC, módulo; `NULL` = todos).
++2. **Definición**: copiar `definiciones/llamadas-visitas.ts` y cambiar:
++   - `nomenclatura`: la del `TIPO`.
++   - `consultar`: `consultarApi("/api/appweb/<endpoint>", filaSchema)`. Recibe
++     `fecha_inicio`, `fecha_fin` (`yyyy-MM-dd`), `cod_empresa`, `cod_cc` y el `id` de cada filtro
++     con valor (vacío = no se envía).
++   - `columnas`: `{ id, label, valor: (fila) => … }` + `agrupable` (se puede agrupar),
++     `sumable` (se puede sumar), `buscable` (buscador de la tabla).
++   - Opcional: `filtros` (atajos de `lib/filtros.ts`), `fechas` (`"requeridas"` por defecto,
++     `"opcionales"`, `"ninguna"`), `agrupacion` inicial y `Contenido` (gráficas u otra vista en
++     lugar de la tabla).
++3. **Registro**: sumarlo a `REPORTES` en `definiciones/index.ts`.
++
++Si la API devuelve un reporte que no está en el registro, la pantalla dice que aún no está
++configurado. Si está en el registro pero la API no lo devuelve, no se muestra (sin permiso).
++
++## Qué arma la pantalla sola
++
++- **Reportes disponibles**: `lista-reportes-disponibles` con `cod_usuario`, `cod_empresa`,
++  `cod_cc` (contexto operativo) y `cod_modulo` si `VistaReportes` lo recibe por prop.
++  Backend: `docs/backend/reportes-disponibles.js` (el rol lo resuelve el backend).
++- **Filtros y configuración**: fechas (mes actual), "Personaliza tu reporte" (hasta 3 niveles
++  de filas, columna de desglose y valor: cantidad o suma de una columna `sumable`) y "Filtros"
++  con los **botones PDF y Excel al final**.
++- **Resumen agrupado**: `calcularResumen` sobre las filas ya consultadas (sin otra consulta).
++- **Reporte**: `Contenido` de la definición o una `DataTable` con las columnas.
++- **Descargas**: encabezado (período, empresa, CC y filtros con nombre), resumen y detalle.
++  PDF con `usePdfReporte` (`@/features/pricing/reportes`); Excel con `exportarExcel`
++  (`@/shared/lib/excel`), hojas "Resumen" y "Detalle".
++
++La consulta corre sola al cambiar fechas o filtros (React Query, `["reportes", nomenclatura,
++params]`). Al cambiar de reporte, la pantalla se monta de nuevo (`key` = nomenclatura).
+diff --git a/src/features/reportes/api/consultar-api.ts b/src/features/reportes/api/consultar-api.ts
+new file mode 100644
+index 0000000..3e1a393
+--- /dev/null
++++ b/src/features/reportes/api/consultar-api.ts
+@@ -0,0 +1,15 @@
++import type { z } from "zod";
++import { http } from "@/shared/api/client";
++import { parseEnvelope } from "@/shared/api/envelope";
++import type { ParamsReporte } from "../lib/definir-reporte";
++
++/**
++ * Atajo para `consultar` de un reporte: GET al endpoint con los parámetros por query
++ * string y validación zod de cada fila.
++ *
++ *   consultar: consultarApi("/api/appweb/report-icc", filaSchema)
++ */
++export function consultarApi<TSchema extends z.ZodType>(endpoint: string, schema: TSchema) {
++  return async (params: ParamsReporte): Promise<z.output<TSchema>[]> =>
++    parseEnvelope(await http.get<unknown>(endpoint, { params }), schema, endpoint);
++}
+diff --git a/src/features/reportes/api/reportes-disponibles.ts b/src/features/reportes/api/reportes-disponibles.ts
+new file mode 100644
+index 0000000..ae09200
+--- /dev/null
++++ b/src/features/reportes/api/reportes-disponibles.ts
+@@ -0,0 +1,33 @@
++import { z } from "zod";
++import { createCatalogo } from "@/features/catalogos";
++import { zId } from "@/shared/lib/zod-scalars";
++
++/**
++ * Reportes que puede ver el usuario según su rol y el contexto (empresa, CC y, si se
++ * pasa, módulo). Sale de `REPORTE_X_CC_X_MDULO_X_ROL` + `TIPO` (`TIPO_TABLA = 'REPORTE'`).
++ * Backend: `docs/backend/reportes-disponibles.js`.
++ */
++const reporteDisponibleSchema = z.object({
++  cod_reporte: zId,
++  nom_reporte: z.string().catch(""),
++  nomenclatura: z.string().catch(""),
++});
++
++export interface ReporteDisponible {
++  codReporte: string | number;
++  nombre: string;
++  /** Une con la definición del front (`definirReporte({ nomenclatura })`). */
++  nomenclatura: string;
++}
++
++export const reportesDisponibles = createCatalogo({
++  nombre: "lista-reportes-disponibles",
++  schema: reporteDisponibleSchema,
++  endpoints: { lista: "/api/appweb/lista-reportes-disponibles" },
++  map: (raw): ReporteDisponible => ({
++    codReporte: raw.cod_reporte,
++    nombre: raw.nom_reporte,
++    nomenclatura: raw.nomenclatura.trim().toUpperCase(),
++  }),
++  habilitado: (filtros) => filtros.cod_usuario != null && filtros.cod_empresa != null,
++});
+diff --git a/src/features/reportes/components/campos.tsx b/src/features/reportes/components/campos.tsx
+new file mode 100644
+index 0000000..ba163a8
+--- /dev/null
++++ b/src/features/reportes/components/campos.tsx
+@@ -0,0 +1,122 @@
++"use client";
++
++import { X } from "lucide-react";
++import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
++import { Field, FieldLabel } from "@/shared/components/ui/field";
++import { cn } from "@/shared/lib/utils";
++
++/** "x" al final del input para limpiar el campo. */
++function BotonLimpiar({
++  label,
++  onClick,
++  className,
++}: Readonly<{ label: string; onClick: () => void; className?: string }>) {
++  return (
++    <button
++      type="button"
++      aria-label={`Limpiar ${label}`}
++      title="Limpiar"
++      tabIndex={-1}
++      className={cn(
++        "absolute top-1/2 z-10 -translate-y-1/2 rounded-sm text-muted-foreground hover:text-destructive",
++        className,
++      )}
++      onClick={(event) => {
++        event.preventDefault();
++        event.stopPropagation();
++        onClick();
++      }}
++    >
++      <X className="size-4" aria-hidden="true" />
++    </button>
++  );
++}
++
++/** Select buscable con etiqueta y "x" para limpiar ("" = sin valor). */
++export function CampoSelect({
++  id,
++  label,
++  value,
++  onChange,
++  opciones,
++  cargando,
++  placeholder = "Seleccione una opción",
++  limpiable = true,
++}: Readonly<{
++  id: string;
++  label: string;
++  value: string;
++  onChange: (valor: string) => void;
++  opciones: readonly ComboboxOption[];
++  cargando?: boolean | undefined;
++  placeholder?: string;
++  limpiable?: boolean;
++}>) {
++  const conX = limpiable && value !== "";
++  return (
++    <Field className="gap-1">
++      <FieldLabel htmlFor={id}>{label}</FieldLabel>
++      <div className="relative">
++        <Combobox
++          id={id}
++          value={value}
++          onChange={onChange}
++          options={opciones}
++          isLoading={cargando}
++          placeholder={placeholder}
++          className={conX ? "pr-16" : undefined}
++          popoverClassName="z-[9999]"
++        />
++        {conX ? (
++          <BotonLimpiar label={label} onClick={() => onChange("")} className="right-8" />
++        ) : null}
++      </div>
++    </Field>
++  );
++}
++
++/** Fecha con el input nativo (`yyyy-MM-dd`) y "x" si no es requerida. */
++export function CampoFecha({
++  id,
++  label,
++  value,
++  onChange,
++  min,
++  max,
++  requerida,
++}: Readonly<{
++  id: string;
++  label: string;
++  value: string;
++  onChange: (valor: string) => void;
++  min?: string | undefined;
++  max?: string | undefined;
++  requerida: boolean;
++}>) {
++  const conX = !requerida && value !== "";
++  return (
++    <Field className="gap-1">
++      <FieldLabel htmlFor={id}>
++        {label}
++        {requerida ? " *" : ""}
++      </FieldLabel>
++      <div className="relative">
++        <input
++          id={id}
++          type="date"
++          className={cn("h-9 w-full rounded-md border bg-card px-2 text-sm", conX && "pr-14")}
++          value={value}
++          min={min || undefined}
++          max={max || undefined}
++          onChange={(event) => {
++            // Requerida: no se deja vaciar.
++            if (event.target.value || !requerida) onChange(event.target.value);
++          }}
++        />
++        {conX ? (
++          <BotonLimpiar label={label} onClick={() => onChange("")} className="right-9" />
++        ) : null}
++      </div>
++    </Field>
++  );
++}
+diff --git a/src/features/reportes/components/contenido-reporte.tsx b/src/features/reportes/components/contenido-reporte.tsx
+new file mode 100644
+index 0000000..2d7542a
+--- /dev/null
++++ b/src/features/reportes/components/contenido-reporte.tsx
+@@ -0,0 +1,43 @@
++"use client";
++
++import React from "react";
++import { DataTable } from "@/shared/components/data-table/data-table";
++import type { ColumnDef } from "@/shared/lib/tanstack-table";
++import type { ContenidoReporteProps } from "../lib/definir-reporte";
++
++/** Fila envuelta: la tabla pide objetos y la fila de un reporte puede ser cualquier cosa. */
++type FilaTabla<TFila> = { fila: TFila };
++
++/** Contenido por defecto de la sección "Reporte": tabla con las columnas del reporte. */
++export function TablaReporte<TFila>({ filas, columnas }: ContenidoReporteProps<TFila>) {
++  const datos = React.useMemo(() => filas.map((fila) => ({ fila })), [filas]);
++  const columnasTabla = React.useMemo<ColumnDef<FilaTabla<TFila>>[]>(
++    () =>
++      columnas.map((c) => ({
++        id: c.id,
++        header: c.label,
++        accessorFn: (r: FilaTabla<TFila>) => c.valor(r.fila) ?? "",
++      })),
++    [columnas],
++  );
++  const numericas = React.useMemo(
++    () => columnas.filter((c) => c.numerica ?? c.sumable).map((c) => c.id),
++    [columnas],
++  );
++  const buscables = React.useMemo(
++    () => columnas.filter((c) => c.buscable).map((c) => c.id),
++    [columnas],
++  );
++
++  return (
++    <DataTable
++      columns={columnasTabla}
++      data={datos}
++      searchKeys={buscables}
++      searchPlaceholder="Buscar…"
++      numericColumns={numericas}
++      showColumnToggle
++      emptyMessage="No hay registros con los filtros elegidos."
++    />
++  );
++}
+diff --git a/src/features/reportes/components/panel.tsx b/src/features/reportes/components/panel.tsx
+new file mode 100644
+index 0000000..4409ff4
+--- /dev/null
++++ b/src/features/reportes/components/panel.tsx
+@@ -0,0 +1,56 @@
++import { cn } from "@/shared/lib/utils";
++
++/** Contenedor de cada sección: borde redondeado y sombra. */
++export function Panel({
++  children,
++  className,
++}: Readonly<{ children: React.ReactNode; className?: string | undefined }>) {
++  return (
++    <section
++      className={cn("overflow-hidden rounded-xl border border-border bg-card shadow-md", className)}
++    >
++      {children}
++    </section>
++  );
++}
++
++/** Encabezado de un `Panel`: ícono, título en mayúsculas, subtítulo y acción a la derecha. */
++export function EncabezadoPanel({
++  icono,
++  titulo,
++  subtitulo,
++  accion,
++}: Readonly<{
++  icono: React.ReactNode;
++  titulo: string;
++  subtitulo?: string | undefined;
++  accion?: React.ReactNode;
++}>) {
++  return (
++    <div className="flex w-full items-center justify-between gap-3 bg-brand-50 px-4 py-3">
++      <div className="flex items-center gap-3 text-left">
++        <span className="text-primary [&>svg]:size-5">{icono}</span>
++        <div>
++          <p className="font-semibold uppercase leading-tight text-primary">{titulo}</p>
++          {subtitulo ? <p className="mt-0.5 text-xs text-primary/80">{subtitulo}</p> : null}
++        </div>
++      </div>
++      {accion}
++    </div>
++  );
++}
++
++/** Título grande del reporte con la línea a la derecha. */
++export function TituloReporte({ titulo }: Readonly<{ titulo: string }>) {
++  return (
++    <div className="flex items-center gap-6">
++      <h1 className="shrink-0 text-3xl font-medium uppercase text-foreground">{titulo}</h1>
++      <span aria-hidden="true" className="h-1 flex-1 rounded bg-primary" />
++    </div>
++  );
++}
++
++/** Texto centrado para estados vacíos. */
++export function MensajeVacio({ children }: Readonly<{ children: React.ReactNode }>) {
++  return <p className="py-10 text-center text-sm text-muted-foreground">{children}</p>;
++}
+diff --git a/src/features/reportes/components/pantalla-reporte.tsx b/src/features/reportes/components/pantalla-reporte.tsx
+new file mode 100644
+index 0000000..fe5099f
+--- /dev/null
++++ b/src/features/reportes/components/pantalla-reporte.tsx
+@@ -0,0 +1,361 @@
++"use client";
++
++import { useQuery } from "@tanstack/react-query";
++import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
++import {
++  ChevronDown,
++  FileSpreadsheet,
++  FileText,
++  Filter,
++  Loader2,
++  SlidersHorizontal,
++  Table2,
++} from "lucide-react";
++import React from "react";
++import { usePdfReporte } from "@/features/pricing/reportes";
++import { useContextoOperativoStore } from "@/features/shell";
++import { CACHE_DYNAMIC } from "@/shared/api/cache";
++import {
++  Accordion,
++  AccordionContent,
++  AccordionItem,
++  AccordionTrigger,
++} from "@/shared/components/ui/accordion";
++import { Button } from "@/shared/components/ui/button";
++import type { FiltroReporte, ParamsReporte, Reporte, ValoresFiltros } from "../lib/definir-reporte";
++import {
++  bloquesPdf,
++  descargarExcel,
++  nombreArchivo,
++  tablaDetalle,
++  tablaResumen,
++} from "../lib/exportar";
++import {
++  type ConfiguracionResumen,
++  calcularResumen,
++  MEDIDA_CANTIDAD,
++} from "../lib/resumen-agrupado";
++import { CampoFecha, CampoSelect } from "./campos";
++import { TablaReporte } from "./contenido-reporte";
++import { EncabezadoPanel, MensajeVacio, Panel, TituloReporte } from "./panel";
++import { PersonalizaReporte } from "./personaliza-reporte";
++import { TablaResumen } from "./resumen-agrupado";
++
++const SIN_FILAS: readonly unknown[] = [];
++const sinValorInicial = () => "";
++const fechaVisible = (iso: string) => (iso ? format(parseISO(iso), "dd/MM/yyyy") : "");
++
++/** Un filtro de la definición; su hook de opciones vive en este componente. */
++function CampoFiltro({
++  filtro,
++  valores,
++  onChange,
++  onEtiqueta,
++}: Readonly<{
++  filtro: FiltroReporte;
++  valores: ValoresFiltros;
++  onChange: (id: string, valor: string) => void;
++  onEtiqueta: (label: string, valor: string) => void;
++}>) {
++  const { opciones, cargando } = filtro.useOpciones(valores);
++  const usarValorInicial = filtro.useValorInicial ?? sinValorInicial;
++  const inicial = usarValorInicial();
++  const valor = valores[filtro.id] ?? inicial;
++  const etiqueta = valor ? (opciones.find((o) => o.value === valor)?.label ?? valor) : "";
++
++  // El valor inicial (ej. CC del contexto) pasa a los filtros cuando llega.
++  React.useEffect(() => {
++    if (valores[filtro.id] === undefined && inicial) onChange(filtro.id, inicial);
++  }, [valores, filtro.id, inicial, onChange]);
++
++  // Nombre de lo elegido, para el encabezado del PDF y del Excel.
++  React.useEffect(() => {
++    onEtiqueta(filtro.label, String(etiqueta));
++  }, [onEtiqueta, filtro.label, etiqueta]);
++
++  return (
++    <CampoSelect
++      id={`filtro-${filtro.id}`}
++      label={filtro.label}
++      value={valor}
++      onChange={(nuevo) => onChange(filtro.id, nuevo)}
++      opciones={opciones}
++      cargando={cargando}
++      placeholder="Todos"
++    />
++  );
++}
++
++/**
++ * Pantalla de un reporte (se monta con `key` = nomenclatura: al cambiar de reporte todo
++ * vuelve a su estado inicial). Arma fechas, filtros, "Personaliza tu reporte", resumen
++ * agrupado, tabla del reporte y descargas a partir de la definición.
++ */
++export function PantallaReporte({
++  definicion,
++  titulo,
++}: Readonly<{ definicion: Reporte; titulo: string }>) {
++  const empresa = useContextoOperativoStore((s) => s.currentEmpresa);
++  const centroCosto = useContextoOperativoStore((s) => s.currentCentroCosto);
++  const hidratado = useContextoOperativoStore((s) => s._hasHydrated);
++
++  const modoFechas = definicion.fechas ?? "requeridas";
++  const [fechas, setFechas] = React.useState(() => {
++    const hoy = new Date();
++    return modoFechas === "ninguna"
++      ? { inicio: "", fin: "" }
++      : {
++          inicio: format(startOfMonth(hoy), "yyyy-MM-dd"),
++          fin: format(endOfMonth(hoy), "yyyy-MM-dd"),
++        };
++  });
++  const [valores, setValores] = React.useState<ValoresFiltros>({});
++  const etiquetas = React.useRef<Record<string, string>>({});
++  const [config, setConfig] = React.useState<ConfiguracionResumen>({
++    filas: definicion.agrupacion?.filas ?? [],
++    columna: definicion.agrupacion?.columna ?? "",
++    medida: definicion.agrupacion?.medida ?? MEDIDA_CANTIDAD,
++  });
++
++  const cambiarFiltro = React.useCallback(
++    (id: string, valor: string) => {
++      const limpia = definicion.filtros?.find((f) => f.id === id)?.limpia ?? [];
++      setValores((actuales) => {
++        const nuevos = { ...actuales, [id]: valor };
++        for (const otro of limpia) nuevos[otro] = "";
++        return nuevos;
++      });
++    },
++    [definicion.filtros],
++  );
++  const guardarEtiqueta = React.useCallback((label: string, valor: string) => {
++    etiquetas.current[label] = valor;
++  }, []);
++
++  const params = React.useMemo<ParamsReporte>(() => {
++    const ccContexto = centroCosto?.cod_cc == null ? "" : String(centroCosto.cod_cc);
++    const todos: ParamsReporte = {
++      fecha_inicio: fechas.inicio,
++      fecha_fin: fechas.fin,
++      cod_empresa: empresa?.cod_empresa == null ? "" : String(empresa.cod_empresa),
++      cod_cc: ccContexto,
++      ...valores,
++    };
++    // Vacío = sin filtro: no se envía.
++    return Object.fromEntries(Object.entries(todos).filter(([, v]) => v !== ""));
++  }, [fechas, empresa?.cod_empresa, centroCosto?.cod_cc, valores]);
++
++  const faltanFechas = modoFechas === "requeridas" && (!fechas.inicio || !fechas.fin);
++  const consulta = useQuery({
++    ...CACHE_DYNAMIC,
++    queryKey: ["reportes", definicion.nomenclatura, params] as const,
++    queryFn: () => definicion.consultar(params),
++    enabled: hidratado && !faltanFechas,
++  });
++  const filas = consulta.data ?? SIN_FILAS;
++
++  const resumen = React.useMemo(
++    () => calcularResumen(filas, definicion.columnas, config),
++    [filas, definicion.columnas, config],
++  );
++
++  // ── Descargas ──
++  const pdf = usePdfReporte();
++  const [generandoExcel, setGenerandoExcel] = React.useState(false);
++  const [errorExcel, setErrorExcel] = React.useState<string | null>(null);
++  const sinDatos = filas.length === 0;
++
++  const encabezado = (): Record<string, string> => {
++    const periodo =
++      fechas.inicio || fechas.fin
++        ? `${fechaVisible(fechas.inicio) || "…"} al ${fechaVisible(fechas.fin) || "…"}`
++        : "";
++    const campos: Record<string, string> = {
++      Período: periodo,
++      Empresa: empresa?.nombre_emp ?? empresa?.nom_emp ?? "",
++      "Centro de costo": centroCosto?.nombre_cc ?? centroCosto?.nom_cc ?? "",
++      ...etiquetas.current,
++    };
++    return Object.fromEntries(Object.entries(campos).filter(([, v]) => v !== ""));
++  };
++
++  const descargarPdf = () => {
++    pdf.generar({
++      titulo,
++      archivo: `${nombreArchivo(titulo)}.pdf`,
++      horizontal: true,
++      header: encabezado(),
++      contenido: bloquesPdf(tablaResumen(resumen), tablaDetalle(filas, definicion.columnas)),
++    });
++  };
++
++  const descargarXlsx = async () => {
++    setGenerandoExcel(true);
++    setErrorExcel(null);
++    try {
++      await descargarExcel({
++        titulo,
++        encabezado: encabezado(),
++        resumen: tablaResumen(resumen),
++        detalle: tablaDetalle(filas, definicion.columnas),
++      });
++    } catch (causa) {
++      setErrorExcel(causa instanceof Error ? causa.message : "No se pudo generar el Excel.");
++    } finally {
++      setGenerandoExcel(false);
++    }
++  };
++
++  const error = pdf.error ?? errorExcel;
++  const Contenido = definicion.Contenido ?? TablaReporte;
++  const requeridas = modoFechas === "requeridas";
++
++  return (
++    <div className="space-y-5">
++      <TituloReporte titulo={titulo} />
++
++      {/* ── Filtros y configuración ── */}
++      <Panel>
++        <Accordion type="single" collapsible defaultValue="filtros">
++          <AccordionItem value="filtros" className="border-none">
++            <AccordionTrigger className="p-0 hover:no-underline [&>svg]:hidden">
++              <EncabezadoPanel
++                icono={<Filter />}
++                titulo="Filtros y configuración"
++                accion={<ChevronDown className="size-5 shrink-0 text-primary" />}
++              />
++            </AccordionTrigger>
++            <AccordionContent className="space-y-5 p-4">
++              {modoFechas === "ninguna" ? null : (
++                <div className="grid gap-4 md:grid-cols-2">
++                  <CampoFecha
++                    id="fecha-inicio"
++                    label="Fecha inicial"
++                    value={fechas.inicio}
++                    max={fechas.fin}
++                    requerida={requeridas}
++                    onChange={(inicio) => setFechas((f) => ({ ...f, inicio }))}
++                  />
++                  <CampoFecha
++                    id="fecha-fin"
++                    label="Fecha final"
++                    value={fechas.fin}
++                    min={fechas.inicio}
++                    requerida={requeridas}
++                    onChange={(fin) => setFechas((f) => ({ ...f, fin }))}
++                  />
++                </div>
++              )}
++
++              <div className="grid gap-5 md:grid-cols-2">
++                <Panel>
++                  <EncabezadoPanel
++                    icono={<SlidersHorizontal />}
++                    titulo="Personaliza tu reporte"
++                    subtitulo="Define cómo se agrupan y desglosan los datos"
++                  />
++                  <PersonalizaReporte
++                    columnas={definicion.columnas}
++                    config={config}
++                    onChange={setConfig}
++                  />
++                </Panel>
++
++                <Panel>
++                  <EncabezadoPanel
++                    icono={<Filter />}
++                    titulo="Filtros"
++                    subtitulo="Acota el universo de datos a analizar"
++                  />
++                  <div className="flex flex-col gap-3 p-4">
++                    {(definicion.filtros ?? []).map((filtro) => (
++                      <CampoFiltro
++                        key={filtro.id}
++                        filtro={filtro}
++                        valores={valores}
++                        onChange={cambiarFiltro}
++                        onEtiqueta={guardarEtiqueta}
++                      />
++                    ))}
++
++                    {/* Descargas: al final de los filtros */}
++                    <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-3">
++                      <Button
++                        type="button"
++                        className="gap-1.5 bg-red-600 text-white hover:bg-red-700"
++                        disabled={pdf.generando || sinDatos}
++                        onClick={descargarPdf}
++                      >
++                        {pdf.generando ? (
++                          <Loader2 className="size-4 animate-spin" />
++                        ) : (
++                          <FileText className="size-4" />
++                        )}
++                        {pdf.generando ? "Generando PDF..." : "PDF"}
++                      </Button>
++                      <Button
++                        type="button"
++                        className="gap-1.5 bg-green-600 text-white hover:bg-green-700"
++                        disabled={generandoExcel || sinDatos}
++                        onClick={descargarXlsx}
++                      >
++                        {generandoExcel ? (
++                          <Loader2 className="size-4 animate-spin" />
++                        ) : (
++                          <FileSpreadsheet className="size-4" />
++                        )}
++                        {generandoExcel ? "Generando Excel..." : "Excel"}
++                      </Button>
++                    </div>
++                    {error ? (
++                      <p role="alert" className="text-right text-sm text-destructive">
++                        {error}
++                      </p>
++                    ) : null}
++                  </div>
++                </Panel>
++              </div>
++            </AccordionContent>
++          </AccordionItem>
++        </Accordion>
++      </Panel>
++
++      {/* ── Resumen agrupado ── */}
++      <Panel>
++        <EncabezadoPanel
++          icono={<Table2 />}
++          titulo="Resumen agrupado"
++          subtitulo="Agrupado según «Personaliza tu reporte»"
++        />
++        <div className="p-4">
++          {consulta.isLoading ? (
++            <MensajeVacio>Cargando…</MensajeVacio>
++          ) : (
++            <TablaResumen resumen={resumen} />
++          )}
++        </div>
++      </Panel>
++
++      {/* ── Reporte ── */}
++      <Panel>
++        <EncabezadoPanel icono={<Table2 />} titulo="Reporte" subtitulo={definicion.descripcion} />
++        <div className="p-4">
++          {faltanFechas ? (
++            <MensajeVacio>Seleccione la fecha inicial y la final.</MensajeVacio>
++          ) : consulta.isError ? (
++            <MensajeVacio>
++              No se pudo consultar el reporte: {consulta.error.message}{" "}
++              <Button type="button" variant="link" onClick={() => consulta.refetch()}>
++                Reintentar
++              </Button>
++            </MensajeVacio>
++          ) : consulta.isLoading ? (
++            <MensajeVacio>Cargando…</MensajeVacio>
++          ) : (
++            <Contenido filas={filas} columnas={definicion.columnas} params={params} />
++          )}
++        </div>
++      </Panel>
++    </div>
++  );
++}
+diff --git a/src/features/reportes/components/personaliza-reporte.tsx b/src/features/reportes/components/personaliza-reporte.tsx
+new file mode 100644
+index 0000000..d63cca3
+--- /dev/null
++++ b/src/features/reportes/components/personaliza-reporte.tsx
+@@ -0,0 +1,77 @@
++"use client";
++
++import type { ComboboxOption } from "@/shared/components/ui/combobox";
++import type { ColumnaReporte } from "../lib/definir-reporte";
++import { type ConfiguracionResumen, MEDIDA_CANTIDAD } from "../lib/resumen-agrupado";
++import { CampoSelect } from "./campos";
++
++/** Niveles de agrupación de filas que se pueden elegir (máximo 3). */
++const NIVELES = ["nivel-1", "nivel-2", "nivel-3"] as const;
++
++/**
++ * "Personaliza tu reporte": por qué columnas se agrupan las filas (hasta 3 niveles), cuál
++ * pasa a columnas y qué se suma. Las opciones salen de las columnas `agrupable` y `sumable`.
++ */
++export function PersonalizaReporte<TFila>({
++  columnas,
++  config,
++  onChange,
++}: Readonly<{
++  columnas: readonly ColumnaReporte<TFila>[];
++  config: ConfiguracionResumen;
++  onChange: (config: ConfiguracionResumen) => void;
++}>) {
++  const agrupables = columnas
++    .filter((c) => c.agrupable)
++    .map<ComboboxOption>((c) => ({ value: c.id, label: c.label }));
++  const medidas: ComboboxOption[] = [
++    { value: MEDIDA_CANTIDAD, label: "Cantidad de registros" },
++    ...columnas.filter((c) => c.sumable).map((c) => ({ value: c.id, label: `Suma de ${c.label}` })),
++  ];
++
++  const libres = (propio: string) =>
++    agrupables.filter(
++      (o) => o.value === propio || (!config.filas.includes(o.value) && o.value !== config.columna),
++    );
++
++  const cambiarNivel = (indice: number, valor: string) => {
++    // Al limpiar un nivel se quitan también los siguientes.
++    const filas = [...config.filas.slice(0, indice), ...(valor ? [valor] : [])];
++    onChange({ ...config, filas });
++  };
++
++  const visibles = NIVELES.slice(0, config.filas.length + 1);
++
++  return (
++    <div className="flex flex-col gap-3 p-4">
++      {visibles.map((clave, indice) => {
++        const valor = config.filas[indice] ?? "";
++        return (
++          <CampoSelect
++            key={clave}
++            id={clave}
++            label={indice === 0 ? "Agrupar filas por" : `Luego por (nivel ${indice + 1})`}
++            value={valor}
++            onChange={(v) => cambiarNivel(indice, v)}
++            opciones={libres(valor)}
++          />
++        );
++      })}
++      <CampoSelect
++        id="columna-pivote"
++        label="Desglosar en columnas por"
++        value={config.columna}
++        onChange={(columna) => onChange({ ...config, columna })}
++        opciones={libres(config.columna)}
++      />
++      <CampoSelect
++        id="medida"
++        label="Valor a mostrar"
++        value={config.medida}
++        onChange={(medida) => onChange({ ...config, medida: medida || MEDIDA_CANTIDAD })}
++        opciones={medidas}
++        limpiable={false}
++      />
++    </div>
++  );
++}
+diff --git a/src/features/reportes/components/resumen-agrupado.tsx b/src/features/reportes/components/resumen-agrupado.tsx
+new file mode 100644
+index 0000000..c365da7
+--- /dev/null
++++ b/src/features/reportes/components/resumen-agrupado.tsx
+@@ -0,0 +1,95 @@
++import { formatearNumero, type Resumen } from "../lib/resumen-agrupado";
++import { MensajeVacio } from "./panel";
++
++const celda = "border-r border-border px-4 py-2 last:border-r-0";
++const encabezado = "border-r border-white/20 px-4 py-2 text-left font-semibold last:border-r-0";
++
++/** Tabla del "Resumen agrupado": niveles, columnas del pivote, total y fila TOTAL. */
++export function TablaResumen({ resumen }: Readonly<{ resumen: Resumen }>) {
++  if (resumen.filas.length === 0) return <MensajeVacio>No hay datos para agrupar.</MensajeVacio>;
++  if (resumen.niveles.length === 0)
++    return (
++      <MensajeVacio>Elija en «Personaliza tu reporte» por qué agrupar las filas.</MensajeVacio>
++    );
++
++  const conPivote = resumen.tituloColumnas !== "";
++  const filasEncabezado = conPivote ? 2 : 1;
++
++  return (
++    <div className="max-h-[32rem] overflow-auto rounded-md">
++      <table className="w-full border-collapse text-sm">
++        <thead className="sticky top-0 z-10 bg-primary text-primary-foreground">
++          {conPivote ? (
++            <tr>
++              {resumen.niveles.map((nivel) => (
++                <th key={nivel} rowSpan={filasEncabezado} className={encabezado}>
++                  {nivel}
++                </th>
++              ))}
++              <th colSpan={resumen.columnas.length} className={encabezado}>
++                {resumen.tituloColumnas}
++              </th>
++              <th rowSpan={filasEncabezado} className={`${encabezado} text-right`}>
++                Total
++              </th>
++            </tr>
++          ) : null}
++          <tr>
++            {conPivote
++              ? null
++              : resumen.niveles.map((nivel) => (
++                  <th key={nivel} className={encabezado}>
++                    {nivel}
++                  </th>
++                ))}
++            {resumen.columnas.map((columna) => (
++              <th key={columna} className={`${encabezado} text-right`}>
++                {columna}
++              </th>
++            ))}
++          </tr>
++        </thead>
++        <tbody>
++          {resumen.filas.map((fila) => (
++            <tr key={fila.claves.join("\u0000")} className="border-b border-border">
++              {fila.claves.map((clave, i) => (
++                <td key={resumen.niveles[i]} className={celda}>
++                  {clave}
++                </td>
++              ))}
++              {resumen.columnas.map((columna, i) => (
++                <td key={columna} className={`${celda} text-right tabular-nums`}>
++                  {formatearNumero(fila.valores[i] ?? 0)}
++                </td>
++              ))}
++              {conPivote ? (
++                <td className={`${celda} text-right font-semibold tabular-nums`}>
++                  {formatearNumero(fila.total)}
++                </td>
++              ) : null}
++            </tr>
++          ))}
++        </tbody>
++        <tfoot className="sticky bottom-0 bg-brand-50 font-semibold">
++          <tr>
++            {resumen.niveles.length > 0 ? (
++              <td colSpan={resumen.niveles.length} className={celda}>
++                TOTAL
++              </td>
++            ) : null}
++            {resumen.totales.map((total, i) => (
++              <td key={resumen.columnas[i]} className={`${celda} text-right tabular-nums`}>
++                {formatearNumero(total)}
++              </td>
++            ))}
++            {conPivote ? (
++              <td className={`${celda} text-right tabular-nums`}>
++                {formatearNumero(resumen.total)}
++              </td>
++            ) : null}
++          </tr>
++        </tfoot>
++      </table>
++    </div>
++  );
++}
+diff --git a/src/features/reportes/components/vista-reportes.tsx b/src/features/reportes/components/vista-reportes.tsx
+index 0ad40e5..b720851 100644
+--- a/src/features/reportes/components/vista-reportes.tsx
++++ b/src/features/reportes/components/vista-reportes.tsx
+@@ -1,5 +1,94 @@
+-const VistaReportes = () => {
+-  return <div>VistaReportes</div>;
++"use client";
++
++import { ChartLine } from "lucide-react";
++import React from "react";
++import { useContextoOperativoStore } from "@/features/shell";
++import type { ComboboxOption } from "@/shared/components/ui/combobox";
++import { useAuthStore } from "@/shared/stores/auth-store";
++import { reportesDisponibles } from "../api/reportes-disponibles";
++import { REPORTES } from "../definiciones";
++import { CampoSelect } from "./campos";
++import { EncabezadoPanel, MensajeVacio, Panel } from "./panel";
++import { PantallaReporte } from "./pantalla-reporte";
++
++/**
++ * Pantalla de reportes: lista los reportes que el rol del usuario puede ver en la empresa
++ * y el CC del contexto (y en el módulo, si se pasa `codModulo`) y muestra el elegido.
++ * Cada reporte se configura en `definiciones/` (ver `ARQUITECTURA.md`).
++ */
++const VistaReportes = ({ codModulo }: Readonly<{ codModulo?: number | undefined }>) => {
++  const codUsuario = useAuthStore((s) => s.user?.cod_usuario);
++  const empresa = useContextoOperativoStore((s) => s.currentEmpresa?.cod_empresa);
++  const centroCosto = useContextoOperativoStore((s) => s.currentCentroCosto?.cod_cc);
++
++  const disponibles = reportesDisponibles.useLista({
++    cod_usuario: codUsuario,
++    cod_empresa: empresa,
++    cod_cc: centroCosto,
++    ...(codModulo == null ? {} : { cod_modulo: codModulo }),
++  });
++
++  const opciones = React.useMemo<ComboboxOption[]>(
++    () => (disponibles.data ?? []).map((r) => ({ value: r.nomenclatura, label: r.nombre })),
++    [disponibles.data],
++  );
++
++  const [elegido, setElegido] = React.useState("");
++  const disponible = disponibles.data?.find((r) => r.nomenclatura === elegido);
++  const definicion = REPORTES.find((r) => r.nomenclatura.toUpperCase() === elegido);
++
++  // Si al cambiar de CC el reporte deja de estar disponible, se quita.
++  React.useEffect(() => {
++    if (elegido && disponibles.data && !disponible) setElegido("");
++  }, [elegido, disponibles.data, disponible]);
++
++  return (
++    <section className="w-full space-y-5 bg-surface-1 p-4 md:p-6">
++      <Panel>
++        <EncabezadoPanel
++          icono={<ChartLine />}
++          titulo="Reportes disponibles"
++          subtitulo="Seleccione un reporte para cargarlo"
++        />
++        <div className="p-4">
++          <CampoSelect
++            id="reporte"
++            label="Reportes"
++            value={elegido}
++            onChange={setElegido}
++            opciones={opciones}
++            cargando={disponibles.isLoading}
++          />
++          {disponibles.isError ? (
++            <p role="alert" className="mt-2 text-sm text-destructive">
++              No se pudieron cargar los reportes: {disponibles.error.message}
++            </p>
++          ) : null}
++          {disponibles.data?.length === 0 ? (
++            <p className="mt-2 text-sm text-muted-foreground">
++              Su rol no tiene reportes asignados en este centro de costo.
++            </p>
++          ) : null}
++        </div>
++      </Panel>
++
++      {disponible && definicion ? (
++        <PantallaReporte
++          key={definicion.nomenclatura}
++          definicion={definicion}
++          titulo={disponible.nombre}
++        />
++      ) : null}
++      {disponible && !definicion ? (
++        <Panel>
++          <MensajeVacio>
++            El reporte «{disponible.nombre}» ({disponible.nomenclatura}) todavía no está configurado
++            en esta pantalla.
++          </MensajeVacio>
++        </Panel>
++      ) : null}
++    </section>
++  );
+ };
+ 
+ export default VistaReportes;
+diff --git a/src/features/reportes/definiciones/index.ts b/src/features/reportes/definiciones/index.ts
+new file mode 100644
+index 0000000..32568a1
+--- /dev/null
++++ b/src/features/reportes/definiciones/index.ts
+@@ -0,0 +1,11 @@
++import type { Reporte } from "../lib/definir-reporte";
++import { llamadasVisitas } from "./llamadas-visitas";
++
++/**
++ * REGISTRO DE REPORTES
++ *
++ * Agregar un reporte: crear su archivo en esta carpeta (copiar `llamadas-visitas.ts`) y
++ * sumarlo a esta lista. Solo se muestran los que la API de reportes disponibles devuelve
++ * para el rol y el CC del usuario (se unen por `nomenclatura`).
++ */
++export const REPORTES: readonly Reporte[] = [llamadasVisitas];
+diff --git a/src/features/reportes/definiciones/llamadas-visitas.ts b/src/features/reportes/definiciones/llamadas-visitas.ts
+new file mode 100644
+index 0000000..9d2570c
+--- /dev/null
++++ b/src/features/reportes/definiciones/llamadas-visitas.ts
+@@ -0,0 +1,78 @@
++import { format, parseISO } from "date-fns";
++import { z } from "zod";
++import { zId } from "@/shared/lib/zod-scalars";
++import { consultarApi } from "../api/consultar-api";
++import { definirReporte } from "../lib/definir-reporte";
++import { filtroCentroCosto, filtroUsuario } from "../lib/filtros";
++
++/**
++ * EJEMPLO: llamadas y visitas programadas en el rango (endpoint `report_icc`, una fila por
++ * actividad). Sirve de plantilla para los demás reportes.
++ */
++
++const texto = z
++  .string()
++  .nullable()
++  .optional()
++  .transform((v) => v ?? "");
++const bandera = z.coerce.number().catch(0);
++
++const filaSchema = z.looseObject({
++  actividad: zId,
++  asunto: texto,
++  fecha_programacion: texto,
++  tipo: texto,
++  nombres: texto,
++  apellidos: texto,
++  cc_nombre: texto,
++  cliente: texto,
++  estado: texto,
++  con_resultado: bandera,
++  finalizada: bandera,
++});
++
++type Fila = z.infer<typeof filaSchema>;
++
++/** Fecha ISO (UTC) en día local; "" si no hay. */
++const fecha = (iso: string, patron: string) => (iso ? format(parseISO(iso), patron) : "");
++
++export const llamadasVisitas = definirReporte<Fila>({
++  nomenclatura: "LLAMADAS_VISITAS",
++  descripcion: "Llamadas y visitas con fecha programada en el rango",
++  filtros: [filtroCentroCosto(), filtroUsuario("Asesor")],
++  consultar: consultarApi("/api/appweb/report-icc", filaSchema),
++  agrupacion: { filas: ["asesor"], columna: "tipo" },
++  columnas: [
++    { id: "actividad", label: "Actividad", valor: (f) => f.actividad },
++    { id: "tipo", label: "Tipo", valor: (f) => f.tipo, agrupable: true },
++    {
++      id: "asesor",
++      label: "Asesor",
++      valor: (f) => `${f.nombres} ${f.apellidos}`.trim(),
++      agrupable: true,
++      buscable: true,
++    },
++    { id: "cc", label: "Centro de costo", valor: (f) => f.cc_nombre, agrupable: true },
++    { id: "cliente", label: "Cliente", valor: (f) => f.cliente, agrupable: true, buscable: true },
++    { id: "asunto", label: "Asunto", valor: (f) => f.asunto, buscable: true },
++    {
++      id: "fecha",
++      label: "Fecha programada",
++      valor: (f) => fecha(f.fecha_programacion, "dd/MM/yyyy"),
++    },
++    {
++      id: "mes",
++      label: "Mes programado",
++      valor: (f) => fecha(f.fecha_programacion, "yyyy-MM"),
++      agrupable: true,
++    },
++    { id: "estado", label: "Estado", valor: (f) => f.estado, agrupable: true },
++    {
++      id: "con_resultado",
++      label: "Con resultado",
++      valor: (f) => (f.con_resultado ? "Sí" : "No"),
++      agrupable: true,
++    },
++    { id: "realizadas", label: "Realizadas", valor: (f) => f.finalizada, sumable: true },
++  ],
++});
+diff --git a/src/features/reportes/lib/definir-reporte.ts b/src/features/reportes/lib/definir-reporte.ts
+new file mode 100644
+index 0000000..21ed4e7
+--- /dev/null
++++ b/src/features/reportes/lib/definir-reporte.ts
+@@ -0,0 +1,94 @@
++import type { ComboboxOption } from "@/shared/components/ui/combobox";
++
++/**
++ * CONTRATO DE UN REPORTE
++ *
++ * Un reporte = un archivo en `definiciones/` que llama a `definirReporte` + 1 línea en
++ * `definiciones/index.ts`. La pantalla (`VistaReportes`) arma todo lo demás: selector,
++ * fechas, filtros, "Personaliza tu reporte", "Resumen agrupado", tabla del reporte y
++ * descargas (PDF y Excel). Ver `ARQUITECTURA.md`.
++ */
++
++/** Valor de una celda del reporte. */
++export type ValorCelda = string | number | null;
++
++/** Parámetros que recibe `consultar`: fechas, empresa, CC y el valor de cada filtro. */
++export type ParamsReporte = Record<string, string>;
++
++/** Valor elegido de cada filtro (por `id`); "" = sin filtro (todos). */
++export type ValoresFiltros = Record<string, string>;
++
++export interface ColumnaReporte<TFila> {
++  /** Clave única de la columna. */
++  id: string;
++  /** Encabezado en pantalla, PDF y Excel. */
++  label: string;
++  /** Valor de la celda para una fila. */
++  valor: (fila: TFila) => ValorCelda;
++  /** Se puede agrupar por ella en "Personaliza tu reporte" (filas o columnas). */
++  agrupable?: boolean;
++  /** Se puede sumar en el "Resumen agrupado" (medida). */
++  sumable?: boolean;
++  /** Alineada a la derecha (números). Por defecto, igual que `sumable`. */
++  numerica?: boolean;
++  /** El buscador de la tabla busca en ella. */
++  buscable?: boolean;
++}
++
++export interface FiltroReporte {
++  /** Nombre del parámetro que recibe `consultar` (ej. `cod_usuario`). */
++  id: string;
++  label: string;
++  /**
++   * Hook con las opciones del select. Recibe los valores actuales de los filtros, por si
++   * depende de otro (ej. usuarios del CC elegido). Ver los atajos de `lib/filtros.ts`.
++   */
++  useOpciones: (valores: ValoresFiltros) => {
++    opciones: readonly ComboboxOption[];
++    cargando?: boolean | undefined;
++  };
++  /** Valor inicial (ej. el CC del contexto operativo). Sin esto, "" (todos). */
++  useValorInicial?: () => string;
++  /** Filtros que se limpian cuando este cambia (ej. CC → usuario). */
++  limpia?: readonly string[];
++}
++
++export interface ContenidoReporteProps<TFila> {
++  filas: readonly TFila[];
++  columnas: readonly ColumnaReporte<TFila>[];
++  params: ParamsReporte;
++}
++
++export interface DefinicionReporte<TFila> {
++  /**
++   * Une el reporte con la API de reportes disponibles: `NOMENCLATURA` del `TIPO`
++   * (`TIPO_TABLA = 'REPORTE'`). El título sale del nombre del tipo.
++   */
++  nomenclatura: string;
++  /** Subtítulo de la sección "Reporte". */
++  descripcion?: string;
++  /** "requeridas" (por defecto: el mes actual), "opcionales" o "ninguna". */
++  fechas?: "requeridas" | "opcionales" | "ninguna";
++  /** Filtros extra (además de fechas). Atajos en `lib/filtros.ts`. */
++  filtros?: readonly FiltroReporte[];
++  /** Consulta al backend. Atajo: `consultarApi(endpoint, schema)`. */
++  consultar: (params: ParamsReporte) => Promise<TFila[]>;
++  /** Columnas de la tabla, del PDF y del Excel; también las agrupables y sumables. */
++  columnas: readonly ColumnaReporte<TFila>[];
++  /** Agrupación inicial de "Personaliza tu reporte" (ids de columnas agrupables). */
++  agrupacion?: { filas?: readonly string[]; columna?: string; medida?: string };
++  /**
++   * Contenido propio de la sección "Reporte" (gráficas, tarjetas…). Sin esto, una tabla
++   * con las columnas.
++   */
++  Contenido?: (props: ContenidoReporteProps<TFila>) => React.ReactNode;
++}
++
++/** Reporte con el tipo de fila borrado, para guardarlo en el registro. */
++export type Reporte = DefinicionReporte<unknown>;
++
++/** Define un reporte con su tipo de fila y lo deja listo para el registro. */
++export function definirReporte<TFila>(definicion: DefinicionReporte<TFila>): Reporte {
++  // Las funciones solo reciben filas que entrega el mismo `consultar` del reporte.
++  return definicion as unknown as Reporte;
++}
+diff --git a/src/features/reportes/lib/exportar.ts b/src/features/reportes/lib/exportar.ts
+new file mode 100644
+index 0000000..5e3f6a9
+--- /dev/null
++++ b/src/features/reportes/lib/exportar.ts
+@@ -0,0 +1,88 @@
++import { format } from "date-fns";
++import type { BloquePdf } from "@/features/pricing/reportes";
++import { exportarExcel } from "@/shared/lib/excel";
++import type { ColumnaReporte, ValorCelda } from "./definir-reporte";
++import type { Resumen } from "./resumen-agrupado";
++
++/**
++ * DESCARGAS (PDF y Excel) de cualquier reporte, con lo que ya está en pantalla:
++ * encabezado (período y filtros elegidos), resumen agrupado y detalle.
++ */
++
++export interface TablaExportable {
++  columnas: string[];
++  filas: ValorCelda[][];
++}
++
++/** Resumen agrupado como tabla plana: niveles, columnas del pivote y total (con fila TOTAL). */
++export function tablaResumen(resumen: Resumen): TablaExportable {
++  const conTotal = resumen.tituloColumnas !== "";
++  const total = (valor: number) => (conTotal ? [valor] : []);
++  // Sin niveles solo queda la fila TOTAL, con una primera columna para su etiqueta.
++  const niveles = resumen.niveles.length > 0 ? resumen.niveles : [""];
++  const filas: ValorCelda[][] =
++    resumen.niveles.length > 0
++      ? resumen.filas.map((f) => [...f.claves, ...f.valores, ...total(f.total)])
++      : [];
++  filas.push([
++    "TOTAL",
++    ...Array<ValorCelda>(niveles.length - 1).fill(""),
++    ...resumen.totales,
++    ...total(resumen.total),
++  ]);
++  return { columnas: [...niveles, ...resumen.columnas, ...(conTotal ? ["Total"] : [])], filas };
++}
++
++/** Detalle del reporte con sus columnas. */
++export function tablaDetalle<TFila>(
++  filas: readonly TFila[],
++  columnas: readonly ColumnaReporte<TFila>[],
++): TablaExportable {
++  return {
++    columnas: columnas.map((c) => c.label),
++    filas: filas.map((f) => columnas.map((c) => c.valor(f))),
++  };
++}
++
++/** Nombre de archivo: "<título> - ERPWEB - yyyy_MM_dd_HH_mm_ss". */
++export const nombreArchivo = (titulo: string) =>
++  `${titulo} - ERPWEB - ${format(new Date(), "yyyy_MM_dd_HH_mm_ss")}`;
++
++export async function descargarExcel(opciones: {
++  titulo: string;
++  encabezado: Record<string, string>;
++  resumen: TablaExportable;
++  detalle: TablaExportable;
++}): Promise<void> {
++  await exportarExcel({
++    nombreArchivo: `${nombreArchivo(opciones.titulo)}.xlsx`,
++    titulo: opciones.titulo,
++    encabezado: opciones.encabezado,
++    hojas: [
++      {
++        nombre: "Resumen",
++        columnas: opciones.resumen.columnas,
++        filas: opciones.resumen.filas,
++        mostrarCuadricula: true,
++      },
++      {
++        nombre: "Detalle",
++        columnas: opciones.detalle.columnas,
++        filas: opciones.detalle.filas,
++        mostrarCuadricula: true,
++        autoFiltro: true,
++      },
++    ],
++  });
++}
++
++/** Bloques del PDF: resumen agrupado y, en otra página, el detalle. */
++export function bloquesPdf(resumen: TablaExportable, detalle: TablaExportable): BloquePdf[] {
++  return [
++    { tipo: "titulo", texto: "Resumen agrupado" },
++    { tipo: "tabla", columnas: resumen.columnas, filas: resumen.filas },
++    { tipo: "pagina" },
++    { tipo: "titulo", texto: "Detalle" },
++    { tipo: "tabla", columnas: detalle.columnas, filas: detalle.filas },
++  ];
++}
+diff --git a/src/features/reportes/lib/filtros.ts b/src/features/reportes/lib/filtros.ts
+new file mode 100644
+index 0000000..bbe2d36
+--- /dev/null
++++ b/src/features/reportes/lib/filtros.ts
+@@ -0,0 +1,87 @@
++import React from "react";
++import { centrosCosto, empleadosUsuarios, tipos } from "@/features/catalogos";
++import { useContextoOperativoStore } from "@/features/shell";
++import type { ComboboxOption } from "@/shared/components/ui/combobox";
++import type { FiltroReporte } from "./definir-reporte";
++
++/**
++ * ATAJOS DE FILTROS
++ *
++ * Cada reporte elige sus filtros en `filtros: [...]`. Si un filtro no está aquí,
++ * `filtroLista` (opciones fijas) o un objeto `FiltroReporte` propio.
++ */
++
++/** Centro de costo de la empresa del contexto; arranca en el CC del contexto. */
++export function filtroCentroCosto(label = "Centro de costo"): FiltroReporte {
++  return {
++    id: "cod_cc",
++    label,
++    limpia: ["cod_usuario"],
++    useValorInicial: () => {
++      const cc = useContextoOperativoStore((s) => s.currentCentroCosto?.cod_cc);
++      return cc == null ? "" : String(cc);
++    },
++    useOpciones: () => {
++      const empresa = useContextoOperativoStore((s) => s.currentEmpresa?.cod_empresa);
++      const { data, isLoading } = centrosCosto.useLista();
++      const opciones = React.useMemo<ComboboxOption[]>(
++        () =>
++          (data ?? [])
++            .filter((cc) => String(cc.codEmpresaCc) === String(empresa))
++            .map((cc) => ({ value: String(cc.codCc), label: cc.nombreCc })),
++        [data, empresa],
++      );
++      return { opciones, cargando: isLoading };
++    },
++  };
++}
++
++/** Usuarios (empleados) del CC elegido en `filtroCentroCosto`; sin CC, todos. */
++export function filtroUsuario(label = "Usuario"): FiltroReporte {
++  return {
++    id: "cod_usuario",
++    label,
++    useOpciones: (valores) => {
++      const codCc = valores.cod_cc || undefined;
++      const { data, isLoading } = empleadosUsuarios.useLista({ cod_cc: codCc });
++      const opciones = React.useMemo<ComboboxOption[]>(() => {
++        // Un usuario puede venir repetido (varios puestos): se deja el primero.
++        const vistos = new Set<string>();
++        const lista: ComboboxOption[] = [];
++        for (const u of data ?? []) {
++          const value = String(u.codUsuario);
++          if (vistos.has(value)) continue;
++          vistos.add(value);
++          lista.push({ value, label: u.nombreCompleto });
++        }
++        return lista;
++      }, [data]);
++      return { opciones, cargando: isLoading };
++    },
++  };
++}
++
++/** Tipos de una tabla del catálogo `TIPO` (ej. `filtroTipo("PAGO", "cod_tipo_pago", "Tipo de pago")`). */
++export function filtroTipo(tipoTabla: string, id: string, label: string): FiltroReporte {
++  return {
++    id,
++    label,
++    useOpciones: () => {
++      const { data, isLoading } = tipos.useLista({ tipo_tabla: tipoTabla });
++      const opciones = React.useMemo<ComboboxOption[]>(
++        () => (data ?? []).map((t) => ({ value: String(t.codTipo), label: t.nomTipo })),
++        [data],
++      );
++      return { opciones, cargando: isLoading };
++    },
++  };
++}
++
++/** Opciones fijas. */
++export function filtroLista(
++  id: string,
++  label: string,
++  opciones: readonly ComboboxOption[],
++): FiltroReporte {
++  return { id, label, useOpciones: () => ({ opciones }) };
++}
+diff --git a/src/features/reportes/lib/resumen-agrupado.ts b/src/features/reportes/lib/resumen-agrupado.ts
+new file mode 100644
+index 0000000..2bff621
+--- /dev/null
++++ b/src/features/reportes/lib/resumen-agrupado.ts
+@@ -0,0 +1,117 @@
++import type { ColumnaReporte, ValorCelda } from "./definir-reporte";
++
++/**
++ * RESUMEN AGRUPADO (tabla dinámica genérica)
++ *
++ * Agrupa las filas del reporte por las columnas elegidas en "Personaliza tu reporte":
++ * - `filas`: niveles (una fila del resumen por combinación de valores, ordenadas).
++ * - `columna`: opcional; sus valores pasan a ser columnas (pivote).
++ * - `medida`: `MEDIDA_CANTIDAD` (cuenta filas) o el id de una columna `sumable`.
++ */
++
++/** Medida por defecto: cantidad de registros. */
++export const MEDIDA_CANTIDAD = "__cantidad__";
++
++/** Texto para valores vacíos al agrupar. */
++const SIN_VALOR = "(Sin dato)";
++
++export interface ConfiguracionResumen {
++  filas: readonly string[];
++  columna: string;
++  medida: string;
++}
++
++export interface FilaResumen {
++  /** Un valor por nivel de `filas`. */
++  claves: string[];
++  /** Un valor por columna del pivote (o uno solo sin pivote). */
++  valores: number[];
++  total: number;
++}
++
++export interface Resumen {
++  /** Encabezados de los niveles. */
++  niveles: string[];
++  /** Encabezado del pivote ("" si no hay columna). */
++  tituloColumnas: string;
++  /** Valores del pivote (columnas), ordenados; sin pivote, solo el nombre de la medida. */
++  columnas: string[];
++  filas: FilaResumen[];
++  /** Totales por columna y total general. */
++  totales: number[];
++  total: number;
++  /** Nombre de la medida (ej. "Cantidad"). */
++  medida: string;
++}
++
++const texto = (valor: ValorCelda): string =>
++  valor == null || valor === "" ? SIN_VALOR : String(valor);
++
++const comparar = (a: string, b: string) => a.localeCompare(b, "es", { numeric: true });
++
++export function calcularResumen<TFila>(
++  filas: readonly TFila[],
++  columnas: readonly ColumnaReporte<TFila>[],
++  config: ConfiguracionResumen,
++): Resumen {
++  const porId = new Map(columnas.map((c) => [c.id, c]));
++  const niveles = config.filas
++    .map((id) => porId.get(id))
++    .filter((c): c is ColumnaReporte<TFila> => c != null);
++  const pivote = porId.get(config.columna);
++  const medida = porId.get(config.medida);
++
++  const valorMedida = (fila: TFila): number => {
++    if (!medida) return 1;
++    const n = Number(medida.valor(fila));
++    return Number.isFinite(n) ? n : 0;
++  };
++
++  // Valores del pivote, ordenados.
++  const columnasPivote = pivote
++    ? [...new Set(filas.map((f) => texto(pivote.valor(f))))].sort(comparar)
++    : [medida?.label ?? "Cantidad"];
++  const indicePivote = new Map(columnasPivote.map((c, i) => [c, i]));
++
++  // Una fila del resumen por combinación de niveles.
++  const grupos = new Map<string, FilaResumen>();
++  for (const fila of filas) {
++    const claves = niveles.map((n) => texto(n.valor(fila)));
++    const llave = JSON.stringify(claves);
++    let grupo = grupos.get(llave);
++    if (!grupo) {
++      grupo = { claves, valores: columnasPivote.map(() => 0), total: 0 };
++      grupos.set(llave, grupo);
++    }
++    const i = pivote ? (indicePivote.get(texto(pivote.valor(fila))) ?? 0) : 0;
++    const v = valorMedida(fila);
++    grupo.valores[i] = (grupo.valores[i] ?? 0) + v;
++    grupo.total += v;
++  }
++
++  const filasResumen = [...grupos.values()].sort((a, b) => {
++    for (let i = 0; i < a.claves.length; i++) {
++      const r = comparar(a.claves[i] ?? "", b.claves[i] ?? "");
++      if (r !== 0) return r;
++    }
++    return 0;
++  });
++
++  const totales = columnasPivote.map((_, i) =>
++    filasResumen.reduce((suma, f) => suma + (f.valores[i] ?? 0), 0),
++  );
++
++  return {
++    niveles: niveles.map((n) => n.label),
++    tituloColumnas: pivote?.label ?? "",
++    columnas: columnasPivote,
++    filas: filasResumen,
++    totales,
++    total: totales.reduce((a, b) => a + b, 0),
++    medida: medida?.label ?? "Cantidad",
++  };
++}
++
++/** Número con separador de miles y hasta 2 decimales. */
++export const formatearNumero = (n: number): string =>
++  n.toLocaleString("es-GT", { maximumFractionDigits: 2 });
