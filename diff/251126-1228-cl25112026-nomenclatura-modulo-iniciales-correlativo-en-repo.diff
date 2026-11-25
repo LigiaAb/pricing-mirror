@@ -1,0 +1,57 @@
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+index 1335f79..e667b38 100644
+--- a/src/features/reportes/ARQUITECTURA.md
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -33,8 +33,12 @@ reportes/
+ ## Agregar un reporte (3 pasos)
+ 
+ 1. **Base de datos**: un `TIPO` con `TIPO_TABLA = 'REPORTE'` (nombre = título en pantalla,
+-   nomenclatura = clave, **máximo 20 caracteres**, ej. `REP_VISITAS_HIST`) y sus filas en `REPORTE_X_CC_X_MDULO_X_ROL`
++   nomenclatura = clave, **máximo 20 caracteres**) y sus filas en `REPORTE_X_CC_X_MDULO_X_ROL`
+    (rol, empresa, CC, módulo; `NULL` = todos).
++   **Nomenclatura**: `[MÓDULO EN 3 CARACTERES]-[INICIALES DEL REPORTE]-[CORRELATIVO DEL MÓDULO]`,
++   con correlativo de 2 dígitos y sin contar "de" en las iniciales. CRM: `CRM-RVH-01` (Reporte de
++   visitas — histórico), `CRM-RV-02` (Reporte de visitas), `CRM-A-03` (Actividades). El siguiente
++   de CRM es `CRM-…-04`.
+ 2. **Definición**: copiar `definiciones/reporte-visitas-historico.ts` y cambiar:
+    - `nomenclatura`: la del `TIPO`.
+    - `consultar`: `consultarApi("/api/appweb/<endpoint>", filaSchema)`. Recibe
+diff --git a/src/features/reportes/definiciones/reporte-actividades.ts b/src/features/reportes/definiciones/reporte-actividades.ts
+index 4cc924b..39ef01e 100644
+--- a/src/features/reportes/definiciones/reporte-actividades.ts
++++ b/src/features/reportes/definiciones/reporte-actividades.ts
+@@ -68,7 +68,7 @@ async function pdfCalendario({ filas, params }: DescargaReporte<Fila>) {
+ }
+ 
+ export const reporteActividades = definirReporte<Fila>({
+-  nomenclatura: "REP_ACTIVIDADES",
++  nomenclatura: "CRM-A-03",
+   descripcion: "Calendario de seguimientos del usuario",
+   fechas: "opcionales",
+   empresaCentroCosto: false,
+diff --git a/src/features/reportes/definiciones/reporte-visitas-historico.ts b/src/features/reportes/definiciones/reporte-visitas-historico.ts
+index acbf9da..0dc669a 100644
+--- a/src/features/reportes/definiciones/reporte-visitas-historico.ts
++++ b/src/features/reportes/definiciones/reporte-visitas-historico.ts
+@@ -238,7 +238,7 @@ export async function excelActividades(
+ }
+ 
+ export const reporteVisitasHistorico = definirReporte<Fila>({
+-  nomenclatura: "REP_VISITAS_HIST",
++  nomenclatura: "CRM-RVH-01",
+   descripcion: "Actividades del CRM con su resultado",
+   fechas: "opcionales",
+   filtros: [
+diff --git a/src/features/reportes/definiciones/reporte-visitas.ts b/src/features/reportes/definiciones/reporte-visitas.ts
+index db056f2..0f551dd 100644
+--- a/src/features/reportes/definiciones/reporte-visitas.ts
++++ b/src/features/reportes/definiciones/reporte-visitas.ts
+@@ -16,7 +16,7 @@ import {
+  * columnas, y su Excel "Planificacion de actividades".
+  */
+ export const reporteVisitas = definirReporte<Fila>({
+-  nomenclatura: "REP_VISITAS",
++  nomenclatura: "CRM-RV-02",
+   descripcion: "Actividades planificadas del CRM",
+   fechas: "opcionales",
+   filtros: [

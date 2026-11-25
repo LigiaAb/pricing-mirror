@@ -68,7 +68,7 @@ async function pdfCalendario({ filas, params }: DescargaReporte<Fila>) {
 }
 
 export const reporteActividades = definirReporte<Fila>({
-  nomenclatura: "REP_ACTIVIDADES",
+  nomenclatura: "CRM-A-03",
   descripcion: "Calendario de seguimientos del usuario",
   fechas: "opcionales",
   empresaCentroCosto: false,

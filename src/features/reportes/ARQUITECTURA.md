@@ -33,8 +33,12 @@ reportes/
 ## Agregar un reporte (3 pasos)
 
 1. **Base de datos**: un `TIPO` con `TIPO_TABLA = 'REPORTE'` (nombre = título en pantalla,
-   nomenclatura = clave, **máximo 20 caracteres**, ej. `REP_VISITAS_HIST`) y sus filas en `REPORTE_X_CC_X_MDULO_X_ROL`
+   nomenclatura = clave, **máximo 20 caracteres**) y sus filas en `REPORTE_X_CC_X_MDULO_X_ROL`
    (rol, empresa, CC, módulo; `NULL` = todos).
+   **Nomenclatura**: `[MÓDULO EN 3 CARACTERES]-[INICIALES DEL REPORTE]-[CORRELATIVO DEL MÓDULO]`,
+   con correlativo de 2 dígitos y sin contar "de" en las iniciales. CRM: `CRM-RVH-01` (Reporte de
+   visitas — histórico), `CRM-RV-02` (Reporte de visitas), `CRM-A-03` (Actividades). El siguiente
+   de CRM es `CRM-…-04`.
 2. **Definición**: copiar `definiciones/reporte-visitas-historico.ts` y cambiar:
    - `nomenclatura`: la del `TIPO`.
    - `consultar`: `consultarApi("/api/appweb/<endpoint>", filaSchema)`. Recibe

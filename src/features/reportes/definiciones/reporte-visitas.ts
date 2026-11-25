@@ -16,7 +16,7 @@ import {
  * columnas, y su Excel "Planificacion de actividades".
  */
 export const reporteVisitas = definirReporte<Fila>({
-  nomenclatura: "REP_VISITAS",
+  nomenclatura: "CRM-RV-02",
   descripcion: "Actividades planificadas del CRM",
   fechas: "opcionales",
   filtros: [
