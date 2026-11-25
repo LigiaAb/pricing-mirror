@@ -1,0 +1,18 @@
+diff --git a/src/features/reportes/GUIA.md b/src/features/reportes/GUIA.md
+index 5be5ebe..08afe0d 100644
+--- a/src/features/reportes/GUIA.md
++++ b/src/features/reportes/GUIA.md
+@@ -59,9 +59,10 @@ Sin esto el reporte no aparece en el select, aunque el código esté listo.
+ 
+ ## Paso 2 — Archivo del reporte
+ 
+-**Copiar una plantilla** de `src/features/reportes/definiciones/plantillas/` a la carpeta del módulo
+-(`src/features/reportes/definiciones/crm/`, `src/features/reportes/definiciones/pricing/`…; si no existe, ver el paso 3) con su nombre en
+-kebab-case (ej. `reporte-ventas-cliente.ts`) y **cambiar solo las líneas marcadas con
++**Crear el archivo del reporte** como copia de una plantilla de
++`src/features/reportes/definiciones/plantillas/`, con nombre propio en kebab-case, en la carpeta
++del módulo (ej. `src/features/reportes/definiciones/pricing/reporte-ventas-cliente.ts`; si el
++módulo aún no tiene carpeta, ver el paso 3), y **cambiar solo las líneas marcadas con
+ `// CAMBIAR`**. Los imports no se tocan: las plantillas están a la misma profundidad que las
+ carpetas de los módulos.
+ 
