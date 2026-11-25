@@ -77,6 +77,8 @@ filtros y las columnas. Los tres compilan y funcionan tal cual (probados con
 [`reporte-endpoint-distinto.ts`](definiciones/plantillas/reporte-endpoint-distinto.ts) (B) y
 [`reporte-personalizado.tsx`](definiciones/plantillas/reporte-personalizado.tsx) (C).
 
+De dónde sacar cada dato (endpoint, campos, parámetros, ids): [`DATOS-REPORTE.md`](DATOS-REPORTE.md).
+
 ### Ejemplo A — básico
 
 ```ts
