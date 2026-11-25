@@ -42,6 +42,21 @@ export interface ColumnaReporte<TFila> {
   calculada?: (sumas: Record<string, number>) => number | null;
 }
 
+/**
+ * La fecha (texto ISO o `yyyy-MM-dd`) está dentro del período de la pantalla (`fecha_inicio` y
+ * `fecha_fin` de `params`, por día local, cada una sola). Sin fechas en `params`, `true`. Para
+ * `filtrar` de `consultarApi` cuando el endpoint no filtra por fecha.
+ */
+export function fechaEnRango(fecha: string | null | undefined, params: ParamsReporte): boolean {
+  const { fecha_inicio: inicio, fecha_fin: fin } = params;
+  if (!inicio && !fin) return true;
+  const valor = fecha ? new Date(fecha).getTime() : Number.NaN;
+  if (!Number.isFinite(valor)) return false;
+  const desde = inicio ? new Date(`${inicio}T00:00:00`).getTime() : Number.NEGATIVE_INFINITY;
+  const hasta = fin ? new Date(`${fin}T23:59:59.999`).getTime() : Number.POSITIVE_INFINITY;
+  return valor >= desde && valor <= hasta;
+}
+
 /** Porcentaje con 2 decimales (ej. `porcentaje(5, 20)` = 25); `null` si `total` es 0. */
 export const porcentaje = (parte: number | undefined, total: number | undefined): number | null =>
   total ? Math.round(((parte ?? 0) / total) * 10000) / 100 : null;
