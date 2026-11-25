@@ -211,7 +211,7 @@ export function PantallaReporte({
   const requeridas = modoFechas === "requeridas";
 
   return (
-    <div className="space-y-5">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-5">
       <TituloReporte titulo={titulo} />
 
       {/* ── Filtros y configuración ── */}

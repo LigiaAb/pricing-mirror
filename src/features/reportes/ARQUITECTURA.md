@@ -6,18 +6,18 @@ la pantalla arma lo demás.
 ```
 reportes/
   api/
-    reportes-disponibles.ts   reportes del rol + empresa + CC (+ módulo) → selector
+    reportes-disponibles.ts   reportes del rol + empresa + CC, con su módulo → selects
     consultar-api.ts          atajo consultarApi(endpoint, schema) para `consultar`
   definiciones/
     index.ts                  REGISTRO: lista REPORTES (1 línea por reporte)
-    llamadas-visitas.ts       ejemplo / plantilla
+    reporte-visitas-historico.ts  Reporte de visitas — histórico (CRM); plantilla
   lib/
     definir-reporte.ts        contrato (DefinicionReporte, ColumnaReporte, FiltroReporte)
-    filtros.ts                atajos: filtroCentroCosto, filtroUsuario, filtroTipo, filtroLista
+    filtros.ts                atajos: filtroCentroCosto, filtroUsuario, filtroTipo, filtroEstado, filtroLista
     resumen-agrupado.ts       tabla dinámica genérica (calcularResumen)
     exportar.ts               PDF y Excel (resumen + detalle) de cualquier reporte
   components/
-    vista-reportes.tsx        "Reportes disponibles" + reporte elegido
+    vista-reportes.tsx        "Reportes disponibles" (Módulo → Reporte) + reporte elegido
     pantalla-reporte.tsx      título, filtros y configuración, resumen, reporte, descargas
     personaliza-reporte.tsx   "Personaliza tu reporte"
     resumen-agrupado.tsx      tabla del "Resumen agrupado"
@@ -30,11 +30,12 @@ reportes/
 1. **Base de datos**: un `TIPO` con `TIPO_TABLA = 'REPORTE'` (nombre = título en pantalla,
    nomenclatura = clave, ej. `HIT_RATE`) y sus filas en `REPORTE_X_CC_X_MDULO_X_ROL`
    (rol, empresa, CC, módulo; `NULL` = todos).
-2. **Definición**: copiar `definiciones/llamadas-visitas.ts` y cambiar:
+2. **Definición**: copiar `definiciones/reporte-visitas-historico.ts` y cambiar:
    - `nomenclatura`: la del `TIPO`.
    - `consultar`: `consultarApi("/api/appweb/<endpoint>", filaSchema)`. Recibe
      `fecha_inicio`, `fecha_fin` (`yyyy-MM-dd`), `cod_empresa`, `cod_cc` y el `id` de cada filtro
-     con valor (vacío = no se envía).
+     con valor (vacío = no se envía). Si el endpoint no aplica algún filtro (ej. fechas), una
+     función propia consulta y filtra aquí (ver `reporte-visitas-historico.ts`).
    - `columnas`: `{ id, label, valor: (fila) => … }` + `agrupable` (se puede agrupar),
      `sumable` (se puede sumar), `buscable` (buscador de la tabla).
    - Opcional: `filtros` (atajos de `lib/filtros.ts`), `fechas` (`"requeridas"` por defecto,
@@ -47,8 +48,10 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
 
 ## Qué arma la pantalla sola
 
-- **Reportes disponibles**: `lista-reportes-disponibles` con `cod_usuario`, `cod_empresa`,
-  `cod_cc` (contexto operativo) y `cod_modulo` si `VistaReportes` lo recibe por prop.
+- **Reportes disponibles**: `lista-reportes-disponibles` con `cod_usuario`, `cod_empresa` y
+  `cod_cc` (contexto operativo); cada fila trae su `cod_modulo` (`NULL` = todos los módulos).
+  Dos selects: **Módulo** (los que tienen reportes; nombre del catálogo `modulos`; vacío = todos)
+  y **Reporte** (los del módulo). `VistaReportes` acepta `codModulo` como módulo inicial.
   Backend: `docs/backend/reportes-disponibles.js` (el rol lo resuelve el backend).
 - **Filtros y configuración**: fechas (mes actual), "Personaliza tu reporte" (hasta 3 niveles
   de filas, columna de desglose y valor: cantidad o suma de una columna `sumable`) y "Filtros"
