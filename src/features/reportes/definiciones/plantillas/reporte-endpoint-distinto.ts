@@ -43,5 +43,6 @@ export const reporteCambiar = definirReporte<Fila>({
     { id: "numero", label: "Número", valor: (f) => f.campo_numero, sumable: true },
     { id: "fecha", label: "Fecha", valor: (f) => f.campo_fecha },
   ],
+  agrupacion: { filas: ["texto"] }, // CAMBIAR u OPCIONAL: agrupación inicial (ids de columnas)
   descargas: { excel: true }, // OPCIONAL
 });

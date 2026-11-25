@@ -1,0 +1,21 @@
+diff --git a/src/features/reportes/definiciones/plantillas/reporte-endpoint-distinto.ts b/src/features/reportes/definiciones/plantillas/reporte-endpoint-distinto.ts
+index 345482c..eddd0a5 100644
+--- a/src/features/reportes/definiciones/plantillas/reporte-endpoint-distinto.ts
++++ b/src/features/reportes/definiciones/plantillas/reporte-endpoint-distinto.ts
+@@ -43,5 +43,6 @@ export const reporteCambiar = definirReporte<Fila>({
+     { id: "numero", label: "Número", valor: (f) => f.campo_numero, sumable: true },
+     { id: "fecha", label: "Fecha", valor: (f) => f.campo_fecha },
+   ],
++  agrupacion: { filas: ["texto"] }, // CAMBIAR u OPCIONAL: agrupación inicial (ids de columnas)
+   descargas: { excel: true }, // OPCIONAL
+ });
+diff --git a/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx b/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx
+index d3acfb4..097afda 100644
+--- a/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx
++++ b/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx
+@@ -135,4 +135,5 @@ export const reporteCambiar = definirReporte<Fila>({
+     { id: "usuario", label: "Usuario", valor: (f) => f.usuario, agrupable: true },
+     { id: "numero", label: "Número", valor: (f) => f.campo_numero, sumable: true },
+   ],
++  agrupacion: { filas: ["texto"] }, // CAMBIAR u OPCIONAL: agrupación inicial (ids de columnas)
+ });

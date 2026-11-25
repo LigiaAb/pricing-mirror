@@ -135,4 +135,5 @@ export const reporteCambiar = definirReporte<Fila>({
     { id: "usuario", label: "Usuario", valor: (f) => f.usuario, agrupable: true },
     { id: "numero", label: "Número", valor: (f) => f.campo_numero, sumable: true },
   ],
+  agrupacion: { filas: ["texto"] }, // CAMBIAR u OPCIONAL: agrupación inicial (ids de columnas)
 });
