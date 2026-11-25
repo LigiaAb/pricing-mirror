@@ -1,76 +1,61 @@
 "use client";
 
-import type { ComboboxOption } from "@/shared/components/ui/combobox";
-import type { ColumnaReporte } from "../lib/definir-reporte";
-import { type ConfiguracionResumen, MEDIDA_CANTIDAD } from "../lib/resumen-agrupado";
-import { CampoSelect } from "./campos";
+import NivelesBuilder, { type CampoConfig } from "@/shared/components/tabla-double/niveles-builder";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
+import type { ConfiguracionResumen } from "../lib/resumen-agrupado";
 
-/** Niveles de agrupación de filas que se pueden elegir (máximo 3). */
-const NIVELES = ["nivel-1", "nivel-2", "nivel-3"] as const;
+/** El Select de Radix no acepta "" como valor: "sin columnas" se guarda como "". */
+const SIN_COLUMNA = "__ninguna__";
 
 /**
- * "Personaliza tu reporte": por qué columnas se agrupan las filas (hasta 3 niveles), cuál
- * pasa a columnas y qué se suma. Las opciones salen de las columnas `agrupable` y `sumable`.
+ * "Personaliza tu reporte": mismos controles que `ConfiguracionTablaKpi` de Reportes de
+ * pricing: campo de columnas y niveles de filas (y su orden) con `NivelesBuilder`. Los campos
+ * salen de las columnas `agrupable` del reporte.
  */
-export function PersonalizaReporte<TFila>({
-  columnas,
+export function PersonalizaReporte({
+  campos,
   config,
   onChange,
 }: Readonly<{
-  columnas: readonly ColumnaReporte<TFila>[];
+  campos: CampoConfig[];
   config: ConfiguracionResumen;
   onChange: (config: ConfiguracionResumen) => void;
 }>) {
-  const agrupables = columnas
-    .filter((c) => c.agrupable)
-    .map<ComboboxOption>((c) => ({ value: c.id, label: c.label }));
-  const medidas: ComboboxOption[] = [
-    { value: MEDIDA_CANTIDAD, label: "Cantidad de registros" },
-    ...columnas.filter((c) => c.sumable).map((c) => ({ value: c.id, label: `Suma de ${c.label}` })),
-  ];
-
-  const libres = (propio: string) =>
-    agrupables.filter(
-      (o) => o.value === propio || (!config.filas.includes(o.value) && o.value !== config.columna),
-    );
-
-  const cambiarNivel = (indice: number, valor: string) => {
-    // Al limpiar un nivel se quitan también los siguientes.
-    const filas = [...config.filas.slice(0, indice), ...(valor ? [valor] : [])];
-    onChange({ ...config, filas });
-  };
-
-  const visibles = NIVELES.slice(0, config.filas.length + 1);
-
   return (
-    <div className="flex flex-col gap-3 p-4">
-      {visibles.map((clave, indice) => {
-        const valor = config.filas[indice] ?? "";
-        return (
-          <CampoSelect
-            key={clave}
-            id={clave}
-            label={indice === 0 ? "Agrupar filas por" : `Luego por (nivel ${indice + 1})`}
-            value={valor}
-            onChange={(v) => cambiarNivel(indice, v)}
-            opciones={libres(valor)}
-          />
-        );
-      })}
-      <CampoSelect
-        id="columna-pivote"
-        label="Desglosar en columnas por"
-        value={config.columna}
-        onChange={(columna) => onChange({ ...config, columna })}
-        opciones={libres(config.columna)}
-      />
-      <CampoSelect
-        id="medida"
-        label="Valor a mostrar"
-        value={config.medida}
-        onChange={(medida) => onChange({ ...config, medida: medida || MEDIDA_CANTIDAD })}
-        opciones={medidas}
-        limpiable={false}
+    <div className="space-y-4 p-4">
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Columnas (qué se desglosa en columnas)
+        </p>
+        <Select
+          value={config.columna || SIN_COLUMNA}
+          onValueChange={(valor) =>
+            onChange({ ...config, columna: valor === SIN_COLUMNA ? "" : valor })
+          }
+        >
+          <SelectTrigger className="h-9 text-sm">
+            <SelectValue placeholder="Seleccione el campo de columnas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={SIN_COLUMNA}>Ninguna (solo total)</SelectItem>
+            {campos.map((c) => (
+              <SelectItem key={c.campo} value={c.campo}>
+                {c.etiqueta}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <NivelesBuilder
+        camposDisponibles={campos}
+        nivelesActivos={config.niveles}
+        onChange={(niveles) => onChange({ ...config, niveles })}
       />
     </div>
   );

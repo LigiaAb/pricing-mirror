@@ -8,11 +8,13 @@ import {
   FileText,
   Filter,
   Loader2,
+  Search,
   SlidersHorizontal,
   Table2,
 } from "lucide-react";
 import React from "react";
 import { usePdfReporte } from "@/features/pricing/reportes";
+import { TablaDouble } from "@/features/pricing/shared";
 import { useContextoOperativoStore } from "@/features/shell";
 import { CACHE_DYNAMIC } from "@/shared/api/cache";
 import {
@@ -33,13 +35,12 @@ import {
 import {
   type ConfiguracionResumen,
   calcularResumen,
-  MEDIDA_CANTIDAD,
+  camposAgrupables,
 } from "../lib/resumen-agrupado";
 import { CampoFecha, CampoSelect } from "./campos";
 import { TablaReporte } from "./contenido-reporte";
 import { EncabezadoPanel, MensajeVacio, Panel, TituloReporte } from "./panel";
 import { PersonalizaReporte } from "./personaliza-reporte";
-import { TablaResumen } from "./resumen-agrupado";
 
 const SIN_FILAS: readonly unknown[] = [];
 const sinValorInicial = () => "";
@@ -111,11 +112,11 @@ export function PantallaReporte({
   });
   const [valores, setValores] = React.useState<ValoresFiltros>({});
   const etiquetas = React.useRef<Record<string, string>>({});
-  const [config, setConfig] = React.useState<ConfiguracionResumen>({
-    filas: definicion.agrupacion?.filas ?? [],
+  const campos = React.useMemo(() => camposAgrupables(definicion.columnas), [definicion.columnas]);
+  const [config, setConfig] = React.useState<ConfiguracionResumen>(() => ({
+    niveles: campos.filter((c) => definicion.agrupacion?.filas?.includes(c.campo)),
     columna: definicion.agrupacion?.columna ?? "",
-    medida: definicion.agrupacion?.medida ?? MEDIDA_CANTIDAD,
-  });
+  }));
 
   const cambiarFiltro = React.useCallback(
     (id: string, valor: string) => {
@@ -146,11 +147,18 @@ export function PantallaReporte({
   }, [fechas, empresa?.cod_empresa, centroCosto?.cod_cc, valores]);
 
   const faltanFechas = modoFechas === "requeridas" && (!fechas.inicio || !fechas.fin);
+
+  /** Lo último que se pidió con "Consultar": parámetros y encabezado de las descargas. */
+  const [consultada, setConsultada] = React.useState<{
+    params: ParamsReporte;
+    encabezado: Record<string, string>;
+  } | null>(null);
   const consulta = useQuery({
     ...CACHE_DYNAMIC,
-    queryKey: ["reportes", definicion.nomenclatura, params] as const,
-    queryFn: () => definicion.consultar(params),
-    enabled: hidratado && !faltanFechas,
+    queryKey: ["reportes", definicion.nomenclatura, consultada?.params] as const,
+    queryFn: () => definicion.consultar(consultada?.params ?? {}),
+    // Solo con el botón "Consultar" (no al cambiar fechas o filtros).
+    enabled: consultada !== null,
   });
   const filas = consulta.data ?? SIN_FILAS;
 
@@ -179,13 +187,36 @@ export function PantallaReporte({
     return Object.fromEntries(Object.entries(campos).filter(([, v]) => v !== ""));
   };
 
+  const consultar = () => {
+    // Con "Consultar" de nuevo y los mismos filtros, se vuelve a pedir al backend.
+    if (consultada && JSON.stringify(consultada.params) === JSON.stringify(params)) {
+      void consulta.refetch();
+      return;
+    }
+    setConsultada({ params, encabezado: encabezado() });
+  };
+
+  // Encabezado de las descargas: los filtros de la consulta, no los que se cambiaron después.
+  const encabezadoDescarga = (): Record<string, string> => {
+    const agrupado = config.niveles.map((n) => n.etiqueta).join(" > ");
+    const columna = campos.find((c) => c.campo === config.columna)?.etiqueta;
+    return {
+      ...consultada?.encabezado,
+      ...(agrupado ? { "Agrupado por": agrupado } : {}),
+      ...(columna ? { Columnas: columna } : {}),
+    };
+  };
+
   const descargarPdf = () => {
     pdf.generar({
       titulo,
       archivo: `${nombreArchivo(titulo)}.pdf`,
       horizontal: true,
-      header: encabezado(),
-      contenido: bloquesPdf(tablaResumen(resumen), tablaDetalle(filas, definicion.columnas)),
+      header: encabezadoDescarga(),
+      contenido: bloquesPdf(
+        tablaResumen(resumen, config.niveles),
+        tablaDetalle(filas, definicion.columnas),
+      ),
     });
   };
 
@@ -195,8 +226,8 @@ export function PantallaReporte({
     try {
       await descargarExcel({
         titulo,
-        encabezado: encabezado(),
-        resumen: tablaResumen(resumen),
+        encabezado: encabezadoDescarga(),
+        resumen: tablaResumen(resumen, config.niveles),
         detalle: tablaDetalle(filas, definicion.columnas),
       });
     } catch (causa) {
@@ -254,11 +285,7 @@ export function PantallaReporte({
                     titulo="Personaliza tu reporte"
                     subtitulo="Define cómo se agrupan y desglosan los datos"
                   />
-                  <PersonalizaReporte
-                    columnas={definicion.columnas}
-                    config={config}
-                    onChange={setConfig}
-                  />
+                  <PersonalizaReporte campos={campos} config={config} onChange={setConfig} />
                 </Panel>
 
                 <Panel>
@@ -278,8 +305,21 @@ export function PantallaReporte({
                       />
                     ))}
 
-                    {/* Descargas: al final de los filtros */}
+                    {/* Consultar y descargas: al final de los filtros */}
                     <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-3">
+                      <Button
+                        type="button"
+                        className="gap-1.5"
+                        disabled={!hidratado || faltanFechas || consulta.isFetching}
+                        onClick={consultar}
+                      >
+                        {consulta.isFetching ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Search className="size-4" />
+                        )}
+                        {consulta.isFetching ? "Consultando..." : "Consultar"}
+                      </Button>
                       <Button
                         type="button"
                         className="gap-1.5 bg-red-600 text-white hover:bg-red-700"
@@ -328,10 +368,25 @@ export function PantallaReporte({
           subtitulo="Agrupado según «Personaliza tu reporte»"
         />
         <div className="p-4">
-          {consulta.isLoading ? (
+          {consultada === null ? (
+            <MensajeVacio>Pulse «Consultar» para cargar el reporte.</MensajeVacio>
+          ) : consulta.isLoading ? (
             <MensajeVacio>Cargando…</MensajeVacio>
+          ) : resumen.data.length === 0 ? (
+            <MensajeVacio>No hay datos para agrupar.</MensajeVacio>
           ) : (
-            <TablaResumen resumen={resumen} />
+            <TablaDouble
+              // Se vuelve a montar al cambiar datos o agrupación para expandir el total general.
+              key={`${consulta.dataUpdatedAt}-${config.columna}-${config.niveles.map((n) => n.campo).join(",")}`}
+              data={resumen.data}
+              columns={resumen.columnas}
+              rowKey="id"
+              showTotals={false}
+              mostrarColumnaTotal={false}
+              mostrarTotalesPie={false}
+              firstColumnWidth={280}
+              nivelExpandidoInicial={1}
+            />
           )}
         </div>
       </Panel>
@@ -340,8 +395,12 @@ export function PantallaReporte({
       <Panel>
         <EncabezadoPanel icono={<Table2 />} titulo="Reporte" subtitulo={definicion.descripcion} />
         <div className="p-4">
-          {faltanFechas ? (
-            <MensajeVacio>Seleccione la fecha inicial y la final.</MensajeVacio>
+          {consultada === null ? (
+            <MensajeVacio>
+              {faltanFechas
+                ? "Seleccione la fecha inicial y la final y pulse «Consultar»."
+                : "Pulse «Consultar» para cargar el reporte."}
+            </MensajeVacio>
           ) : consulta.isError ? (
             <MensajeVacio>
               No se pudo consultar el reporte: {consulta.error.message}{" "}
@@ -352,7 +411,7 @@ export function PantallaReporte({
           ) : consulta.isLoading ? (
             <MensajeVacio>Cargando…</MensajeVacio>
           ) : (
-            <Contenido filas={filas} columnas={definicion.columnas} params={params} />
+            <Contenido filas={filas} columnas={definicion.columnas} params={consultada.params} />
           )}
         </div>
       </Panel>
