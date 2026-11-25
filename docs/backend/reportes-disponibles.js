@@ -20,17 +20,17 @@
  * Respuesta (una fila por reporte, sin repetidos):
  *   COD_REPORTE  = TIPO.TIPO_ID
  *   NOM_REPORTE  = TIPO.TIPO_DESCRIPCION   (título en pantalla)
- *   NOMENCLATURA = TIPO.TIPO_NOMENCLATURA  (une con la definición del front)
+ *   NOMENCLATURA = TIPO.NOMENCLATURA       (une con la definición del front)
  *
- * CONFIRMAR con la base real:
- *  - Columna de la nomenclatura en TIPO (aquí TIPO_NOMENCLATURA), TIPO_TABLA y ESTADO_ID activo.
- *  - Cómo se obtienen los roles del usuario (aquí: USUARIO_EMPLEADO_PUESTO → ROL_X_PUESTO).
- *    Si el backend ya tiene el rol en la sesión (como getPermisosxRol), usar ese.
+ * Confirmado por el usuario: ROL_PUESTO (roles por puesto) y TIPO.NOMENCLATURA.
+ * PENDIENTE de confirmar (nombres supuestos):
+ *  - USUARIO_EMPLEADO_PUESTO.PUESTO_ID y las columnas PUESTO_ID / ROL_ID de ROL_PUESTO.
+ *  - TIPO.TIPO_TABLA y TIPO.ESTADO_ID (activo = 1).
  */
 
 // ── INICIO ───────────────────────────────────────────────────────────────────
 
-/** ESTADO_ID activo de TIPO (CONFIRMAR). */
+/** ESTADO_ID activo de TIPO (PENDIENTE de confirmar). */
 const ESTADO_TIPO_ACTIVO = 1;
 
 module.exports.lista_reportes_disponibles = async (campos) => {
@@ -38,9 +38,9 @@ module.exports.lista_reportes_disponibles = async (campos) => {
     return { success: false, cod_mensaje: 1043, mensaje: "faltan parametros requeridos, verifique" };
 
   try {
-    // Roles del usuario (CONFIRMAR tablas).
+    // Roles del usuario: puestos del usuario → ROL_PUESTO (columnas PENDIENTES de confirmar).
     const rolesUsuario = azureSqlClient({ UEP: "USUARIO_EMPLEADO_PUESTO" })
-      .join({ RP: "ROL_X_PUESTO" }, "RP.PUESTO_ID", "UEP.PUESTO_ID")
+      .join({ RP: "ROL_PUESTO" }, "RP.PUESTO_ID", "UEP.PUESTO_ID")
       .where("UEP.USUARIO_ID", `${campos.cod_usuario}`)
       .select("RP.ROL_ID");
 
@@ -58,7 +58,7 @@ module.exports.lista_reportes_disponibles = async (campos) => {
       .distinct(
         "T.TIPO_ID AS COD_REPORTE",
         "T.TIPO_DESCRIPCION AS NOM_REPORTE",
-        "T.TIPO_NOMENCLATURA AS NOMENCLATURA",
+        "T.NOMENCLATURA AS NOMENCLATURA",
       )
       .orderBy("T.TIPO_DESCRIPCION");
 
