@@ -1,0 +1,185 @@
+diff --git a/src/features/reportes/components/campos.tsx b/src/features/reportes/components/campos.tsx
+index ba163a8..578030d 100644
+--- a/src/features/reportes/components/campos.tsx
++++ b/src/features/reportes/components/campos.tsx
+@@ -3,6 +3,7 @@
+ import { X } from "lucide-react";
+ import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
+ import { Field, FieldLabel } from "@/shared/components/ui/field";
++import { MultiSelect } from "@/shared/components/ui/multi-select";
+ import { cn } from "@/shared/lib/utils";
+ 
+ /** "x" al final del input para limpiar el campo. */
+@@ -75,6 +76,49 @@ export function CampoSelect({
+   );
+ }
+ 
++/** Select de selección múltiple (chips) con "x" para limpiar; el valor va separado por comas. */
++export function CampoMultiSelect({
++  id,
++  label,
++  value,
++  onChange,
++  opciones,
++  placeholder = "Todos",
++}: Readonly<{
++  id: string;
++  label: string;
++  value: string;
++  onChange: (valor: string) => void;
++  opciones: readonly ComboboxOption[];
++  placeholder?: string;
++}>) {
++  const elegidos = value ? value.split(",") : [];
++  return (
++    <Field className="gap-1">
++      <FieldLabel htmlFor={id}>{label}</FieldLabel>
++      <div className="relative">
++        <MultiSelect
++          id={id}
++          value={elegidos}
++          onChange={(valores) => onChange(valores.join(","))}
++          options={opciones.map((o) => ({ value: o.value, label: o.label }))}
++          placeholder={placeholder}
++          searchPlaceholder="Buscar…"
++          {...(elegidos.length ? { className: "pr-16" } : {})}
++        />
++        {elegidos.length ? (
++          // Centrado en el botón (h-9), no en el bloque con los chips.
++          <BotonLimpiar
++            label={label}
++            onClick={() => onChange("")}
++            className="top-[1.125rem] right-8"
++          />
++        ) : null}
++      </div>
++    </Field>
++  );
++}
++
+ /** Fecha con el input nativo (`yyyy-MM-dd`) y "x" si no es requerida. */
+ export function CampoFecha({
+   id,
+diff --git a/src/features/reportes/components/pantalla-reporte.tsx b/src/features/reportes/components/pantalla-reporte.tsx
+index 79b8aa7..18cf52e 100644
+--- a/src/features/reportes/components/pantalla-reporte.tsx
++++ b/src/features/reportes/components/pantalla-reporte.tsx
+@@ -39,7 +39,7 @@ import {
+   calcularResumen,
+   camposAgrupables,
+ } from "../lib/resumen-agrupado";
+-import { CampoFecha, CampoSelect } from "./campos";
++import { CampoFecha, CampoMultiSelect, CampoSelect } from "./campos";
+ import { TablaReporte } from "./contenido-reporte";
+ import { EncabezadoPanel, MensajeVacio, Panel, TituloReporte } from "./panel";
+ import { PersonalizaReporte } from "./personaliza-reporte";
+@@ -66,7 +66,15 @@ function CampoFiltro({
+   const usarValorInicial = filtro.useValorInicial ?? sinValorInicial;
+   const inicial = usarValorInicial();
+   const valor = valores[filtro.id] ?? inicial;
+-  const etiqueta = valor ? (opciones.find((o) => o.value === valor)?.label ?? valor) : "";
++  const etiqueta = !valor
++    ? ""
++    : filtro.multiple
++      ? // Como Reportes CRM: los nombres en el orden de las opciones, separados por ", ".
++        opciones
++          .filter((o) => valor.split(",").includes(o.value))
++          .map((o) => o.label)
++          .join(", ")
++      : (opciones.find((o) => o.value === valor)?.label ?? valor);
+ 
+   // El valor inicial (ej. CC del contexto) pasa a los filtros cuando llega.
+   React.useEffect(() => {
+@@ -78,6 +86,17 @@ function CampoFiltro({
+     onEtiqueta(filtro.label, String(etiqueta));
+   }, [onEtiqueta, filtro.label, etiqueta]);
+ 
++  if (filtro.multiple) {
++    return (
++      <CampoMultiSelect
++        id={`filtro-${filtro.id}`}
++        label={filtro.label}
++        value={valor}
++        onChange={(nuevo) => onChange(filtro.id, nuevo)}
++        opciones={opciones}
++      />
++    );
++  }
+   return (
+     <CampoSelect
+       id={`filtro-${filtro.id}`}
+diff --git a/src/features/reportes/definiciones/reporte-visitas-historico.ts b/src/features/reportes/definiciones/reporte-visitas-historico.ts
+index 2dcbdf2..acbf9da 100644
+--- a/src/features/reportes/definiciones/reporte-visitas-historico.ts
++++ b/src/features/reportes/definiciones/reporte-visitas-historico.ts
+@@ -95,15 +95,20 @@ export async function consultar(params: ParamsReporte): Promise<Fila[]> {
+     const clave = String(e.codUsuario);
+     if (!asesores.has(clave)) asesores.set(clave, e.nombreCompleto);
+   }
+-  return actividades
+-    .filter((a) => enRango(a.fecha_programada, params.fecha_inicio, params.fecha_fin))
+-    .filter((a) => !params.cod_tipo || String(a.cod_tipo ?? "") === params.cod_tipo)
+-    .sort((a, b) => Number(a.cod_actividad) - Number(b.cod_actividad))
+-    .map((a) => ({
+-      ...a,
+-      asesor: asesores.get(String(a.cod_asesor ?? "")) ?? "",
+-      res: primerResultado(a.resultado),
+-    }));
++  return (
++    actividades
++      .filter((a) => enRango(a.fecha_programada, params.fecha_inicio, params.fecha_fin))
++      // Tipo: selección múltiple, como en CRM ("7,8" = cualquiera de los dos).
++      .filter(
++        (a) => !params.cod_tipo || params.cod_tipo.split(",").includes(String(a.cod_tipo ?? "")),
++      )
++      .sort((a, b) => Number(a.cod_actividad) - Number(b.cod_actividad))
++      .map((a) => ({
++        ...a,
++        asesor: asesores.get(String(a.cod_asesor ?? "")) ?? "",
++        res: primerResultado(a.resultado),
++      }))
++  );
+ }
+ 
+ // ── Excel del reporte: el mismo de Reportes CRM (`ReporteActividades`) ──
+@@ -239,7 +244,10 @@ export const reporteVisitasHistorico = definirReporte<Fila>({
+   filtros: [
+     filtroUsuario("Asesor", "cod_asesor"),
+     filtroEstado("ACTIVIDAD", "cod_estado"),
+-    filtroTipo("ACTIVIDAD", "cod_tipo", "Tipo de actividad", TIPOS_ACTIVIDAD),
++    {
++      ...filtroTipo("ACTIVIDAD", "cod_tipo", "Tipo de actividad", TIPOS_ACTIVIDAD),
++      multiple: true,
++    },
+   ],
+   consultar,
+   // Como en Reportes CRM: solo Excel (sin PDF).
+diff --git a/src/features/reportes/definiciones/reporte-visitas.ts b/src/features/reportes/definiciones/reporte-visitas.ts
+index f8fab2f..db056f2 100644
+--- a/src/features/reportes/definiciones/reporte-visitas.ts
++++ b/src/features/reportes/definiciones/reporte-visitas.ts
+@@ -22,7 +22,10 @@ export const reporteVisitas = definirReporte<Fila>({
+   filtros: [
+     filtroUsuario("Asesor", "cod_asesor"),
+     filtroEstado("ACTIVIDAD", "cod_estado"),
+-    filtroTipo("ACTIVIDAD", "cod_tipo", "Tipo de actividad", TIPOS_ACTIVIDAD),
++    {
++      ...filtroTipo("ACTIVIDAD", "cod_tipo", "Tipo de actividad", TIPOS_ACTIVIDAD),
++      multiple: true,
++    },
+   ],
+   consultar,
+   // Como en Reportes CRM: solo Excel (sin PDF).
+diff --git a/src/features/reportes/lib/definir-reporte.ts b/src/features/reportes/lib/definir-reporte.ts
+index 0bcee6a..cb7c999 100644
+--- a/src/features/reportes/lib/definir-reporte.ts
++++ b/src/features/reportes/lib/definir-reporte.ts
+@@ -51,6 +51,8 @@ export interface FiltroReporte {
+   useValorInicial?: () => string;
+   /** Este filtro se limpia cuando cambia alguno de estos (ej. usuario depende de `cod_cc`). */
+   depende?: readonly string[];
++  /** Selección múltiple (ej. Tipo en Reportes CRM): el valor va separado por comas (`"7,8"`). */
++  multiple?: boolean;
+ }
+ 
+ export interface ContenidoReporteProps<TFila> {

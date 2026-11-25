@@ -95,15 +95,20 @@ export async function consultar(params: ParamsReporte): Promise<Fila[]> {
     const clave = String(e.codUsuario);
     if (!asesores.has(clave)) asesores.set(clave, e.nombreCompleto);
   }
-  return actividades
-    .filter((a) => enRango(a.fecha_programada, params.fecha_inicio, params.fecha_fin))
-    .filter((a) => !params.cod_tipo || String(a.cod_tipo ?? "") === params.cod_tipo)
-    .sort((a, b) => Number(a.cod_actividad) - Number(b.cod_actividad))
-    .map((a) => ({
-      ...a,
-      asesor: asesores.get(String(a.cod_asesor ?? "")) ?? "",
-      res: primerResultado(a.resultado),
-    }));
+  return (
+    actividades
+      .filter((a) => enRango(a.fecha_programada, params.fecha_inicio, params.fecha_fin))
+      // Tipo: selección múltiple, como en CRM ("7,8" = cualquiera de los dos).
+      .filter(
+        (a) => !params.cod_tipo || params.cod_tipo.split(",").includes(String(a.cod_tipo ?? "")),
+      )
+      .sort((a, b) => Number(a.cod_actividad) - Number(b.cod_actividad))
+      .map((a) => ({
+        ...a,
+        asesor: asesores.get(String(a.cod_asesor ?? "")) ?? "",
+        res: primerResultado(a.resultado),
+      }))
+  );
 }
 
 // ── Excel del reporte: el mismo de Reportes CRM (`ReporteActividades`) ──
@@ -239,7 +244,10 @@ export const reporteVisitasHistorico = definirReporte<Fila>({
   filtros: [
     filtroUsuario("Asesor", "cod_asesor"),
     filtroEstado("ACTIVIDAD", "cod_estado"),
-    filtroTipo("ACTIVIDAD", "cod_tipo", "Tipo de actividad", TIPOS_ACTIVIDAD),
+    {
+      ...filtroTipo("ACTIVIDAD", "cod_tipo", "Tipo de actividad", TIPOS_ACTIVIDAD),
+      multiple: true,
+    },
   ],
   consultar,
   // Como en Reportes CRM: solo Excel (sin PDF).
