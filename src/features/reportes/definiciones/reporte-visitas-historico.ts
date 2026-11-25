@@ -5,7 +5,7 @@ import { parseEnvelope } from "@/shared/api/envelope";
 import { formatearFechaHora } from "@/shared/lib/date";
 import { zIdSafe } from "@/shared/lib/zod-scalars";
 import { definirReporte, type ParamsReporte } from "../lib/definir-reporte";
-import { filtroCentroCosto, filtroEstado, filtroTipo, filtroUsuario } from "../lib/filtros";
+import { filtroEstado, filtroTipo, filtroUsuario } from "../lib/filtros";
 
 /**
  * REPORTE DE VISITAS — HISTÓRICO (historial de actividades del CRM)
@@ -107,7 +107,6 @@ export const reporteVisitasHistorico = definirReporte<Fila>({
   descripcion: "Actividades del CRM con su resultado",
   fechas: "opcionales",
   filtros: [
-    filtroCentroCosto("Centro de costo", ["cod_asesor"]),
     filtroUsuario("Asesor", "cod_asesor"),
     filtroEstado("ACTIVIDAD", "cod_estado"),
     filtroTipo("ACTIVIDAD", "cod_tipo", "Tipo de actividad", TIPOS_ACTIVIDAD),
