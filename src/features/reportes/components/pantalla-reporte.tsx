@@ -24,6 +24,7 @@ import {
   AccordionTrigger,
 } from "@/shared/components/ui/accordion";
 import { Button } from "@/shared/components/ui/button";
+import { useExcelJS } from "@/shared/hooks/use-dynamic-libraries";
 import type { FiltroReporte, ParamsReporte, Reporte, ValoresFiltros } from "../lib/definir-reporte";
 import {
   bloquesPdf,
@@ -232,6 +233,9 @@ export function PantallaReporte({
   const sinDatos = filas.length === 0;
   const descargas = definicion.descargas ?? {};
 
+  const { loadExcelJS } = useExcelJS();
+  const tablaAgrupada = () => tablaResumen(resumen, config.niveles);
+
   const encabezado = (): Record<string, string> => {
     const periodo =
       fechas.inicio || fechas.fin
@@ -256,13 +260,23 @@ export function PantallaReporte({
   };
 
   // Encabezado de las descargas: los filtros de la consulta, no los que se cambiaron después.
-  /** Encabezado del Excel agrupado: filtros de la consulta + la agrupación. */
+  /**
+   * Encabezado del Excel agrupado, como el de pricing: filtros de la consulta (período en
+   * `dd-MM-yyyy al dd-MM-yyyy`, "Centro de Costo") + "Agrupado por" y "Columnas".
+   */
   const encabezadoAgrupado = (): Record<string, string> => {
-    const agrupado = config.niveles.map((n) => n.etiqueta).join(" > ");
+    const { fecha_inicio: inicio, fecha_fin: fin } = consultada?.params ?? {};
+    const fechaPricing = (iso: string | undefined) =>
+      iso ? format(parseISO(iso), "dd-MM-yyyy") : "…";
+    const filtrosConsulta = Object.entries(consultada?.encabezado ?? {}).map(([campo, valor]) =>
+      campo === "Período"
+        ? [campo, `${fechaPricing(inicio)} al ${fechaPricing(fin)}`]
+        : [campo === "Centro de costo" ? "Centro de Costo" : campo, valor],
+    );
     const columna = campos.find((c) => c.campo === config.columna)?.etiqueta;
     return {
-      ...consultada?.encabezado,
-      ...(agrupado ? { "Agrupado por": agrupado } : {}),
+      ...Object.fromEntries(filtrosConsulta),
+      "Agrupado por": tablaAgrupada().columnasNivel.join(" > "),
       ...(columna ? { Columnas: columna } : {}),
     };
   };
@@ -326,7 +340,10 @@ export function PantallaReporte({
       descargarExcelAgrupado({
         titulo,
         encabezado: encabezadoAgrupado(),
-        resumen: tablaResumen(resumen, config.niveles),
+        resumen: tablaAgrupada(),
+        cargarExcel: loadExcelJS,
+        fechaInicio: consultada?.params.fecha_inicio,
+        fechaFin: consultada?.params.fecha_fin,
       }),
     );
 

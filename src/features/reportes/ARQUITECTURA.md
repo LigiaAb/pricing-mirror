@@ -21,6 +21,7 @@ reportes/
                               FILTROS_EMPRESA_CC (filtroEmpresa + filtroCentroCosto, los pone la pantalla)
     resumen-agrupado.ts       tabla dinámica genérica (calcularResumen → árbol de TablaDouble)
     exportar.ts               Excel agrupado (resumen) y PDF/Excel genéricos del reporte (detalle)
+    excel-reporte.ts          COPIA del generador de Excel de Reportes de pricing (Excel agrupado)
   components/
     vista-reportes.tsx        "Reportes disponibles" (Módulo → Reporte) + reporte elegido
     pantalla-reporte.tsx      título, filtros y configuración, Consultar, resumen, reporte, descargas
@@ -72,8 +73,11 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
   suma de cada columna `sumable`, por cada valor de la columna de desglose y en total.
 - **Reporte**: `Contenido` de la definición o una `DataTable` con las columnas.
 - **Descargas**: son dos cosas distintas, con los filtros de la última consulta en el encabezado.
-  - **Excel agrupado** (siempre): el Resumen agrupado, aplanado como el Excel de pricing (una
-    columna por nivel), con "Agrupado por" y "Columnas" en el encabezado.
+  - **Excel agrupado** (siempre): el Resumen agrupado con el **mismo generador que Reportes de
+    pricing** (`agregarHojaReporte`, copiado de `pricing/reportes/lib/excel-reporte.ts` en
+    `lib/excel-reporte.ts`: si cambia allá, copiarlo aquí): logo, título, encabezado (período
+    `dd-MM-yyyy al dd-MM-yyyy`, "Agrupado por", "Columnas"), una columna por nivel, subtotales en
+    negrita y `#,##0`.
   - **Excel / PDF del reporte** (opcionales, `descargas: { excel, pdf }` de la definición; en
     CRM unos tienen Excel, otros PDF y otros ambos): `true` = el detalle con las columnas
     (Excel con `exportarExcel` de `@/shared/lib/excel`; PDF con `usePdfReporte` de
