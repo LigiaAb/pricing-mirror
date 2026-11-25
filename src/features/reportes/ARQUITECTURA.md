@@ -7,7 +7,7 @@ la pantalla arma lo demás.
 reportes/
   api/
     reportes-disponibles.ts   reportes del rol + módulo + empresa + CC → select Reporte
-    consultar-api.ts          atajo consultarApi(endpoint, schema) para `consultar`
+    consultar-api.ts          atajo consultarApi(endpoint, schema, { lista, params }) para `consultar`
   definiciones/                 UNA CARPETA POR MÓDULO
     index.ts                  REGISTRO: REPORTES = las listas de todos los módulos
     crm/
@@ -36,32 +36,15 @@ reportes/
     campos.tsx / panel.tsx    select, fecha, panel y encabezados
 ```
 
-## Agregar un reporte (3 pasos)
+## Agregar un reporte
 
-1. **Base de datos**: un `TIPO` con `TIPO_TABLA = 'REPORTE'` (nombre = título en pantalla,
-   nomenclatura = clave, **máximo 20 caracteres**) y sus filas en `REPORTE_X_CC_X_MDULO_X_ROL`
-   (rol, empresa, CC, módulo; `NULL` = todos).
-   **Nomenclatura**: `[MÓDULO EN 3 CARACTERES]-[INICIALES DEL REPORTE]-[CORRELATIVO DEL MÓDULO]`,
-   con correlativo de 2 dígitos y sin contar "de" en las iniciales. CRM: `CRM-RVH-01` (Reporte de
-   visitas — histórico), `CRM-RV-02` (Reporte de visitas), `CRM-A-03` (Actividades). `CRM-OA-04`
-   (Objetivos de actividades), `CRM-GOSA-05` (Gráficas de objetivos de semana actual). El
-   siguiente de CRM es `CRM-…-06`.
-2. **Definición**: en la carpeta de su módulo (`definiciones/<modulo>/`, ej. `crm/`), copiar
-   `definiciones/crm/reporte-visitas-historico.ts` y cambiar:
-   - `nomenclatura`: la del `TIPO`.
-   - `consultar`: `consultarApi("/api/appweb/<endpoint>", filaSchema)`. Recibe
-     `fecha_inicio`, `fecha_fin` (`yyyy-MM-dd`), `cod_empresa`, `cod_cc` y el `id` de cada filtro
-     con valor (vacío = no se envía). Si el endpoint no aplica algún filtro (ej. fechas), una
-     función propia consulta y filtra aquí (ver `reporte-visitas-historico.ts`).
-   - `columnas`: `{ id, label, valor: (fila) => … }` + `agrupable` (campo de "Personaliza tu
-     reporte"), `sumable` (medida del resumen, además de la cantidad), `buscable` (buscador).
-   - Opcional: `filtros` (atajos de `lib/filtros.ts`; `multiple: true` = varios valores,
-     `requerido: true` = sin valor no se consulta), `fechas` (`"requeridas"` por defecto,
-     `"opcionales"`, `"ninguna"`), `agrupacion` inicial, `Contenido` (gráficas u otra vista en
-     lugar de la tabla) y `descargas` (ver abajo).
-3. **Registro**: sumarlo a la lista del módulo (`definiciones/<modulo>/index.ts`, ej.
-   `REPORTES_CRM`). Un módulo nuevo: su carpeta con su `index.ts` y su lista en `REPORTES`
-   (`definiciones/index.ts`).
+**Paso a paso en `GUIA.md`** (checklist, plantilla, recetas según cómo responde el endpoint,
+columnas calculadas y errores comunes). Resumen: `TIPO` + relación en la base de datos → archivo
+en `definiciones/<modulo>/` con `definirReporte` → 1 línea en `definiciones/<modulo>/index.ts`.
+
+**Nomenclatura**: `[MÓDULO EN 3 CARACTERES]-[INICIALES DEL REPORTE]-[CORRELATIVO DEL MÓDULO]`
+(máximo 20 caracteres, correlativo de 2 dígitos, sin contar "de"). CRM: `CRM-RVH-01`, `CRM-RV-02`,
+`CRM-A-03`, `CRM-OA-04`, `CRM-GOSA-05`; el siguiente de CRM es `CRM-…-06`.
 
 Si la API devuelve un reporte que no está en el registro, la pantalla dice que aún no está
 configurado. Si está en el registro pero la API no lo devuelve, no se muestra (sin permiso).
@@ -84,8 +67,9 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
 - **Consultar**: el reporte se consulta **solo con el botón** (fechas y filtros no consultan
   solos). "Personaliza tu reporte" sí se aplica al instante sobre lo ya consultado.
 - **Resumen agrupado**: `calcularResumen` sobre las filas ya consultadas (sin otra consulta),
-  dibujado con `TablaDouble` (árbol con TOTAL GENERAL, como pricing). Medidas: cantidad y la
-  suma de cada columna `sumable`, por cada valor de la columna de desglose y en total.
+  dibujado con `TablaDouble` (árbol con TOTAL GENERAL, como pricing). Medidas: cantidad, la
+  suma de cada columna `sumable` y cada columna `calculada` (con las sumas del grupo, ej. HR %),
+  por cada valor de la columna de desglose y en total.
 - **Reporte**: `Contenido` de la definición o una `DataTable` con las columnas.
 - **Descargas**: son dos cosas distintas, con los filtros de la última consulta en el encabezado.
   - **Excel agrupado** (siempre): el Resumen agrupado con el **mismo generador que Reportes de

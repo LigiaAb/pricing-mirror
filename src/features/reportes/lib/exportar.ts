@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import type { BloquePdf } from "@/features/pricing/reportes";
+import type { ReportePdf } from "@/features/pricing/reportes/lib/pdf-reporte";
 import type { TreeNode } from "@/features/pricing/shared";
 import type { CampoConfig } from "@/shared/components/tabla-double/niveles-builder";
 import type { useExcelJS } from "@/shared/hooks/use-dynamic-libraries";
@@ -145,4 +146,28 @@ export async function descargarExcelReporte(opciones: {
 /** Bloques del PDF del reporte: el detalle con sus columnas. */
 export function bloquesPdf(detalle: TablaExportable): BloquePdf[] {
   return [{ tipo: "tabla", columnas: detalle.columnas, filas: detalle.filas }];
+}
+
+/**
+ * PDF propio con el formato de Reportes de pricing (el mismo generador que `pdf: true`), para
+ * `descargas.pdf` de una definición. Se descarga; `archivo` por defecto: el nombre del reporte.
+ *
+ *   pdf: ({ filas, titulo, encabezado }) =>
+ *     descargarPdf({ titulo, header: encabezado, contenido: [{ tipo: "tabla", columnas, filas }] })
+ */
+export async function descargarPdf(
+  reporte: Omit<ReportePdf, "archivo" | "salida"> & { archivo?: string },
+): Promise<void> {
+  const { generarPdfReporte } = await import("@/features/pricing/reportes/lib/pdf-reporte");
+  const archivo = reporte.archivo ?? `${nombreArchivo(reporte.titulo)}.pdf`;
+  await new Promise<void>((resolver, rechazar) => {
+    generarPdfReporte(
+      { ...reporte, archivo },
+      (doc) => {
+        doc.save(archivo);
+        resolver();
+      },
+      rechazar,
+    );
+  });
 }

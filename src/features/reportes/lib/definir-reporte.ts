@@ -29,11 +29,22 @@ export interface ColumnaReporte<TFila> {
   agrupable?: boolean;
   /** Se suma en el "Resumen agrupado" (medida, además de la cantidad de registros). */
   sumable?: boolean;
-  /** Alineada a la derecha (números). Por defecto, igual que `sumable`. */
+  /** Alineada a la derecha (números). Por defecto, si es `sumable` o `calculada`. */
   numerica?: boolean;
   /** El buscador de la tabla busca en ella. */
   buscable?: boolean;
+  /**
+   * Medida CALCULADA del Resumen agrupado (ej. HR % = cerradas / realizadas): se calcula en
+   * cada grupo con las sumas del grupo, no sumando el valor de cada fila. Recibe
+   * `{ cantidad, <id de cada columna sumable>: suma }`; `null` = celda vacía (ej. dividir
+   * entre 0). Atajo: `porcentaje(parte, total)`.
+   */
+  calculada?: (sumas: Record<string, number>) => number | null;
 }
+
+/** Porcentaje con 2 decimales (ej. `porcentaje(5, 20)` = 25); `null` si `total` es 0. */
+export const porcentaje = (parte: number | undefined, total: number | undefined): number | null =>
+  total ? Math.round(((parte ?? 0) / total) * 10000) / 100 : null;
 
 export interface FiltroReporte {
   /** Nombre del parámetro que recibe `consultar` (ej. `cod_usuario`). */
