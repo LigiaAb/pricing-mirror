@@ -1,5 +1,5 @@
 import React from "react";
-import { centrosCosto, empleadosUsuarios, estados, tipos } from "@/features/catalogos";
+import { centrosCosto, empleadosUsuarios, empresas, estados, tipos } from "@/features/catalogos";
 import { useContextoOperativoStore } from "@/features/shell";
 import type { ComboboxOption } from "@/shared/components/ui/combobox";
 import type { FiltroReporte } from "./definir-reporte";
@@ -12,28 +12,45 @@ import type { FiltroReporte } from "./definir-reporte";
  */
 
 /**
- * Centro de costo de la empresa del contexto; arranca en el CC del contexto. Al cambiar,
- * limpia los filtros de `limpia` (por defecto el usuario, que depende del CC).
+ * Empresa; arranca en la del contexto. La pantalla la agrega a todos los reportes cuando el
+ * usuario tiene el permiso "Filtrar Empresa Centro Costo" (`FILTROS_EMPRESA_CC`).
  */
-export function filtroCentroCosto(
-  label = "Centro de costo",
-  limpia: readonly string[] = ["cod_usuario"],
-): FiltroReporte {
+export function filtroEmpresa(label = "Empresa"): FiltroReporte {
+  return {
+    id: "cod_empresa",
+    label,
+    useValorInicial: () => {
+      const empresa = useContextoOperativoStore((s) => s.currentEmpresa?.cod_empresa);
+      return empresa == null ? "" : String(empresa);
+    },
+    useOpciones: () => {
+      const { data, isLoading } = empresas.useLista();
+      const opciones = React.useMemo<ComboboxOption[]>(
+        () => (data ?? []).map((e) => ({ value: String(e.cod_empresa), label: e.nombre_emp })),
+        [data],
+      );
+      return { opciones, cargando: isLoading };
+    },
+  };
+}
+
+/** Centro de costo de la empresa elegida (sin empresa, todos); arranca en el del contexto. */
+export function filtroCentroCosto(label = "Centro de costo"): FiltroReporte {
   return {
     id: "cod_cc",
     label,
-    limpia,
+    depende: ["cod_empresa"],
     useValorInicial: () => {
       const cc = useContextoOperativoStore((s) => s.currentCentroCosto?.cod_cc);
       return cc == null ? "" : String(cc);
     },
-    useOpciones: () => {
-      const empresa = useContextoOperativoStore((s) => s.currentEmpresa?.cod_empresa);
+    useOpciones: (valores) => {
+      const empresa = valores.cod_empresa;
       const { data, isLoading } = centrosCosto.useLista();
       const opciones = React.useMemo<ComboboxOption[]>(
         () =>
           (data ?? [])
-            .filter((cc) => String(cc.codEmpresaCc) === String(empresa))
+            .filter((cc) => !empresa || String(cc.codEmpresaCc) === empresa)
             .map((cc) => ({ value: String(cc.codCc), label: cc.nombreCc })),
         [data, empresa],
       );
@@ -42,14 +59,18 @@ export function filtroCentroCosto(
   };
 }
 
+/** Empresa y centro de costo: los pone la pantalla con el permiso "Filtrar Empresa Centro Costo". */
+export const FILTROS_EMPRESA_CC: readonly FiltroReporte[] = [filtroEmpresa(), filtroCentroCosto()];
+
 /**
- * Usuarios (empleados) del CC elegido en `filtroCentroCosto`; sin CC, todos. `id` = nombre
- * del parámetro que espera el endpoint (ej. `cod_asesor`).
+ * Usuarios (empleados) del CC de la consulta (el elegido o el del contexto); sin CC, todos.
+ * `id` = nombre del parámetro que espera el endpoint (ej. `cod_asesor`).
  */
 export function filtroUsuario(label = "Usuario", id = "cod_usuario"): FiltroReporte {
   return {
     id,
     label,
+    depende: ["cod_cc"],
     useOpciones: (valores) => {
       const codCc = valores.cod_cc || undefined;
       const { data, isLoading } = empleadosUsuarios.useLista({ cod_cc: codCc });

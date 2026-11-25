@@ -1,0 +1,276 @@
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+index 138807b..0089920 100644
+--- a/src/features/reportes/ARQUITECTURA.md
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -13,7 +13,8 @@ reportes/
+     reporte-visitas-historico.ts  Reporte de visitas — histórico (CRM); plantilla
+   lib/
+     definir-reporte.ts        contrato (DefinicionReporte, ColumnaReporte, FiltroReporte)
+-    filtros.ts                atajos: filtroCentroCosto, filtroUsuario, filtroTipo, filtroEstado, filtroLista
++    filtros.ts                atajos: filtroUsuario, filtroTipo, filtroEstado, filtroLista;
++                              FILTROS_EMPRESA_CC (filtroEmpresa + filtroCentroCosto, los pone la pantalla)
+     resumen-agrupado.ts       tabla dinámica genérica (calcularResumen → árbol de TablaDouble)
+     exportar.ts               PDF y Excel (resumen + detalle) de cualquier reporte
+   components/
+@@ -55,6 +56,10 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
+ - **Filtros y configuración**: fechas (mes actual), "Personaliza tu reporte" (igual que pricing:
+   campo de columnas y niveles con `NivelesBuilder`) y "Filtros" con los botones **Consultar**,
+   **PDF** y **Excel** al final.
++- **Empresa y Centro de costo**: los pone la pantalla en Filtros (no cada reporte), igual que
++  Tarifas y Cotizaciones: con la acción "Filtrar Empresa Centro Costo" de la opción **"Reportes"**
++  se muestran (arrancan en el contexto) y mandan en la consulta; sin el permiso no se muestran y
++  siempre van los del contexto. Un filtro con `depende: ["cod_cc"]` se limpia al cambiar el CC.
+ - **Consultar**: el reporte se consulta **solo con el botón** (fechas y filtros no consultan
+   solos). "Personaliza tu reporte" sí se aplica al instante sobre lo ya consultado.
+ - **Resumen agrupado**: `calcularResumen` sobre las filas ya consultadas (sin otra consulta),
+diff --git a/src/features/reportes/components/pantalla-reporte.tsx b/src/features/reportes/components/pantalla-reporte.tsx
+index fbd30e7..c187906 100644
+--- a/src/features/reportes/components/pantalla-reporte.tsx
++++ b/src/features/reportes/components/pantalla-reporte.tsx
+@@ -15,7 +15,7 @@ import {
+ import React from "react";
+ import { usePdfReporte } from "@/features/pricing/reportes";
+ import { TablaDouble } from "@/features/pricing/shared";
+-import { useContextoOperativoStore } from "@/features/shell";
++import { useContextoOperativoStore, usePermisosCategoria } from "@/features/shell";
+ import { CACHE_DYNAMIC } from "@/shared/api/cache";
+ import {
+   Accordion,
+@@ -32,6 +32,7 @@ import {
+   tablaDetalle,
+   tablaResumen,
+ } from "../lib/exportar";
++import { FILTROS_EMPRESA_CC } from "../lib/filtros";
+ import {
+   type ConfiguracionResumen,
+   calcularResumen,
+@@ -43,6 +44,8 @@ import { EncabezadoPanel, MensajeVacio, Panel, TituloReporte } from "./panel";
+ import { PersonalizaReporte } from "./personaliza-reporte";
+ 
+ const SIN_FILAS: readonly unknown[] = [];
++/** Opción de permisos de la pantalla de reportes (acción "Filtrar Empresa Centro Costo"). */
++const OPCION_PERMISOS_REPORTES = "Reportes";
+ const sinValorInicial = () => "";
+ const fechaVisible = (iso: string) => (iso ? format(parseISO(iso), "dd/MM/yyyy") : "");
+ 
+@@ -99,6 +102,15 @@ export function PantallaReporte({
+   const empresa = useContextoOperativoStore((s) => s.currentEmpresa);
+   const centroCosto = useContextoOperativoStore((s) => s.currentCentroCosto);
+   const hidratado = useContextoOperativoStore((s) => s._hasHydrated);
++  // Como Tarifas y Cotizaciones: con el permiso se eligen empresa y CC; sin él, los del contexto.
++  const { puedeFiltrarEmpresaCentroCosto } = usePermisosCategoria(OPCION_PERMISOS_REPORTES);
++  const filtros = React.useMemo(
++    () => [
++      ...(puedeFiltrarEmpresaCentroCosto ? FILTROS_EMPRESA_CC : []),
++      ...(definicion.filtros ?? []),
++    ],
++    [puedeFiltrarEmpresaCentroCosto, definicion.filtros],
++  );
+ 
+   const modoFechas = definicion.fechas ?? "requeridas";
+   const [fechas, setFechas] = React.useState(() => {
+@@ -120,31 +132,46 @@ export function PantallaReporte({
+ 
+   const cambiarFiltro = React.useCallback(
+     (id: string, valor: string) => {
+-      const limpia = definicion.filtros?.find((f) => f.id === id)?.limpia ?? [];
+       setValores((actuales) => {
+         const nuevos = { ...actuales, [id]: valor };
+-        for (const otro of limpia) nuevos[otro] = "";
++        // Se limpian los que dependen de este, y los que dependen de esos (empresa → CC → asesor).
++        const limpiar = (cambiado: string) => {
++          for (const f of filtros) {
++            if (!f.depende?.includes(cambiado) || nuevos[f.id] === "") continue;
++            nuevos[f.id] = "";
++            limpiar(f.id);
++          }
++        };
++        limpiar(id);
+         return nuevos;
+       });
+     },
+-    [definicion.filtros],
++    [filtros],
+   );
+   const guardarEtiqueta = React.useCallback((label: string, valor: string) => {
+     etiquetas.current[label] = valor;
+   }, []);
+ 
++  /** Valores que se usan: con el permiso, los elegidos (o el contexto); sin él, el contexto. */
++  const efectivos = React.useMemo<ValoresFiltros>(() => {
++    const contexto = {
++      cod_empresa: empresa?.cod_empresa == null ? "" : String(empresa.cod_empresa),
++      cod_cc: centroCosto?.cod_cc == null ? "" : String(centroCosto.cod_cc),
++    };
++    return puedeFiltrarEmpresaCentroCosto
++      ? { ...contexto, ...valores }
++      : { ...valores, ...contexto };
++  }, [empresa?.cod_empresa, centroCosto?.cod_cc, valores, puedeFiltrarEmpresaCentroCosto]);
++
+   const params = React.useMemo<ParamsReporte>(() => {
+-    const ccContexto = centroCosto?.cod_cc == null ? "" : String(centroCosto.cod_cc);
+     const todos: ParamsReporte = {
+       fecha_inicio: fechas.inicio,
+       fecha_fin: fechas.fin,
+-      cod_empresa: empresa?.cod_empresa == null ? "" : String(empresa.cod_empresa),
+-      cod_cc: ccContexto,
+-      ...valores,
++      ...efectivos,
+     };
+     // Vacío = sin filtro: no se envía.
+     return Object.fromEntries(Object.entries(todos).filter(([, v]) => v !== ""));
+-  }, [fechas, empresa?.cod_empresa, centroCosto?.cod_cc, valores]);
++  }, [fechas, efectivos]);
+ 
+   const faltanFechas = modoFechas === "requeridas" && (!fechas.inicio || !fechas.fin);
+ 
+@@ -295,11 +322,11 @@ export function PantallaReporte({
+                     subtitulo="Acota el universo de datos a analizar"
+                   />
+                   <div className="flex flex-col gap-3 p-4">
+-                    {(definicion.filtros ?? []).map((filtro) => (
++                    {filtros.map((filtro) => (
+                       <CampoFiltro
+                         key={filtro.id}
+                         filtro={filtro}
+-                        valores={valores}
++                        valores={efectivos}
+                         onChange={cambiarFiltro}
+                         onEtiqueta={guardarEtiqueta}
+                       />
+diff --git a/src/features/reportes/definiciones/reporte-visitas-historico.ts b/src/features/reportes/definiciones/reporte-visitas-historico.ts
+index 924725c..bd104bf 100644
+--- a/src/features/reportes/definiciones/reporte-visitas-historico.ts
++++ b/src/features/reportes/definiciones/reporte-visitas-historico.ts
+@@ -5,7 +5,7 @@ import { parseEnvelope } from "@/shared/api/envelope";
+ import { formatearFechaHora } from "@/shared/lib/date";
+ import { zIdSafe } from "@/shared/lib/zod-scalars";
+ import { definirReporte, type ParamsReporte } from "../lib/definir-reporte";
+-import { filtroCentroCosto, filtroEstado, filtroTipo, filtroUsuario } from "../lib/filtros";
++import { filtroEstado, filtroTipo, filtroUsuario } from "../lib/filtros";
+ 
+ /**
+  * REPORTE DE VISITAS — HISTÓRICO (historial de actividades del CRM)
+@@ -107,7 +107,6 @@ export const reporteVisitasHistorico = definirReporte<Fila>({
+   descripcion: "Actividades del CRM con su resultado",
+   fechas: "opcionales",
+   filtros: [
+-    filtroCentroCosto("Centro de costo", ["cod_asesor"]),
+     filtroUsuario("Asesor", "cod_asesor"),
+     filtroEstado("ACTIVIDAD", "cod_estado"),
+     filtroTipo("ACTIVIDAD", "cod_tipo", "Tipo de actividad", TIPOS_ACTIVIDAD),
+diff --git a/src/features/reportes/lib/definir-reporte.ts b/src/features/reportes/lib/definir-reporte.ts
+index 604ed1b..fd8ec81 100644
+--- a/src/features/reportes/lib/definir-reporte.ts
++++ b/src/features/reportes/lib/definir-reporte.ts
+@@ -49,8 +49,8 @@ export interface FiltroReporte {
+   };
+   /** Valor inicial (ej. el CC del contexto operativo). Sin esto, "" (todos). */
+   useValorInicial?: () => string;
+-  /** Filtros que se limpian cuando este cambia (ej. CC → usuario). */
+-  limpia?: readonly string[];
++  /** Este filtro se limpia cuando cambia alguno de estos (ej. usuario depende de `cod_cc`). */
++  depende?: readonly string[];
+ }
+ 
+ export interface ContenidoReporteProps<TFila> {
+@@ -69,7 +69,10 @@ export interface DefinicionReporte<TFila> {
+   descripcion?: string;
+   /** "requeridas" (por defecto: el mes actual), "opcionales" o "ninguna". */
+   fechas?: "requeridas" | "opcionales" | "ninguna";
+-  /** Filtros extra (además de fechas). Atajos en `lib/filtros.ts`. */
++  /**
++   * Filtros extra (además de fechas, y de empresa y CC, que pone la pantalla con el permiso
++   * "Filtrar Empresa Centro Costo"). Atajos en `lib/filtros.ts`.
++   */
+   filtros?: readonly FiltroReporte[];
+   /** Consulta al backend. Atajo: `consultarApi(endpoint, schema)`. */
+   consultar: (params: ParamsReporte) => Promise<TFila[]>;
+diff --git a/src/features/reportes/lib/filtros.ts b/src/features/reportes/lib/filtros.ts
+index 4c47e2b..ffa7eea 100644
+--- a/src/features/reportes/lib/filtros.ts
++++ b/src/features/reportes/lib/filtros.ts
+@@ -1,5 +1,5 @@
+ import React from "react";
+-import { centrosCosto, empleadosUsuarios, estados, tipos } from "@/features/catalogos";
++import { centrosCosto, empleadosUsuarios, empresas, estados, tipos } from "@/features/catalogos";
+ import { useContextoOperativoStore } from "@/features/shell";
+ import type { ComboboxOption } from "@/shared/components/ui/combobox";
+ import type { FiltroReporte } from "./definir-reporte";
+@@ -12,28 +12,45 @@ import type { FiltroReporte } from "./definir-reporte";
+  */
+ 
+ /**
+- * Centro de costo de la empresa del contexto; arranca en el CC del contexto. Al cambiar,
+- * limpia los filtros de `limpia` (por defecto el usuario, que depende del CC).
++ * Empresa; arranca en la del contexto. La pantalla la agrega a todos los reportes cuando el
++ * usuario tiene el permiso "Filtrar Empresa Centro Costo" (`FILTROS_EMPRESA_CC`).
+  */
+-export function filtroCentroCosto(
+-  label = "Centro de costo",
+-  limpia: readonly string[] = ["cod_usuario"],
+-): FiltroReporte {
++export function filtroEmpresa(label = "Empresa"): FiltroReporte {
++  return {
++    id: "cod_empresa",
++    label,
++    useValorInicial: () => {
++      const empresa = useContextoOperativoStore((s) => s.currentEmpresa?.cod_empresa);
++      return empresa == null ? "" : String(empresa);
++    },
++    useOpciones: () => {
++      const { data, isLoading } = empresas.useLista();
++      const opciones = React.useMemo<ComboboxOption[]>(
++        () => (data ?? []).map((e) => ({ value: String(e.cod_empresa), label: e.nombre_emp })),
++        [data],
++      );
++      return { opciones, cargando: isLoading };
++    },
++  };
++}
++
++/** Centro de costo de la empresa elegida (sin empresa, todos); arranca en el del contexto. */
++export function filtroCentroCosto(label = "Centro de costo"): FiltroReporte {
+   return {
+     id: "cod_cc",
+     label,
+-    limpia,
++    depende: ["cod_empresa"],
+     useValorInicial: () => {
+       const cc = useContextoOperativoStore((s) => s.currentCentroCosto?.cod_cc);
+       return cc == null ? "" : String(cc);
+     },
+-    useOpciones: () => {
+-      const empresa = useContextoOperativoStore((s) => s.currentEmpresa?.cod_empresa);
++    useOpciones: (valores) => {
++      const empresa = valores.cod_empresa;
+       const { data, isLoading } = centrosCosto.useLista();
+       const opciones = React.useMemo<ComboboxOption[]>(
+         () =>
+           (data ?? [])
+-            .filter((cc) => String(cc.codEmpresaCc) === String(empresa))
++            .filter((cc) => !empresa || String(cc.codEmpresaCc) === empresa)
+             .map((cc) => ({ value: String(cc.codCc), label: cc.nombreCc })),
+         [data, empresa],
+       );
+@@ -42,14 +59,18 @@ export function filtroCentroCosto(
+   };
+ }
+ 
++/** Empresa y centro de costo: los pone la pantalla con el permiso "Filtrar Empresa Centro Costo". */
++export const FILTROS_EMPRESA_CC: readonly FiltroReporte[] = [filtroEmpresa(), filtroCentroCosto()];
++
+ /**
+- * Usuarios (empleados) del CC elegido en `filtroCentroCosto`; sin CC, todos. `id` = nombre
+- * del parámetro que espera el endpoint (ej. `cod_asesor`).
++ * Usuarios (empleados) del CC de la consulta (el elegido o el del contexto); sin CC, todos.
++ * `id` = nombre del parámetro que espera el endpoint (ej. `cod_asesor`).
+  */
+ export function filtroUsuario(label = "Usuario", id = "cod_usuario"): FiltroReporte {
+   return {
+     id,
+     label,
++    depende: ["cod_cc"],
+     useOpciones: (valores) => {
+       const codCc = valores.cod_cc || undefined;
+       const { data, isLoading } = empleadosUsuarios.useLista({ cod_cc: codCc });

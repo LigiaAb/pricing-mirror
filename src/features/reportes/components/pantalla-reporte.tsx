@@ -15,7 +15,7 @@ import {
 import React from "react";
 import { usePdfReporte } from "@/features/pricing/reportes";
 import { TablaDouble } from "@/features/pricing/shared";
-import { useContextoOperativoStore } from "@/features/shell";
+import { useContextoOperativoStore, usePermisosCategoria } from "@/features/shell";
 import { CACHE_DYNAMIC } from "@/shared/api/cache";
 import {
   Accordion,
@@ -32,6 +32,7 @@ import {
   tablaDetalle,
   tablaResumen,
 } from "../lib/exportar";
+import { FILTROS_EMPRESA_CC } from "../lib/filtros";
 import {
   type ConfiguracionResumen,
   calcularResumen,
@@ -43,6 +44,8 @@ import { EncabezadoPanel, MensajeVacio, Panel, TituloReporte } from "./panel";
 import { PersonalizaReporte } from "./personaliza-reporte";
 
 const SIN_FILAS: readonly unknown[] = [];
+/** Opción de permisos de la pantalla de reportes (acción "Filtrar Empresa Centro Costo"). */
+const OPCION_PERMISOS_REPORTES = "Reportes";
 const sinValorInicial = () => "";
 const fechaVisible = (iso: string) => (iso ? format(parseISO(iso), "dd/MM/yyyy") : "");
 
@@ -99,6 +102,15 @@ export function PantallaReporte({
   const empresa = useContextoOperativoStore((s) => s.currentEmpresa);
   const centroCosto = useContextoOperativoStore((s) => s.currentCentroCosto);
   const hidratado = useContextoOperativoStore((s) => s._hasHydrated);
+  // Como Tarifas y Cotizaciones: con el permiso se eligen empresa y CC; sin él, los del contexto.
+  const { puedeFiltrarEmpresaCentroCosto } = usePermisosCategoria(OPCION_PERMISOS_REPORTES);
+  const filtros = React.useMemo(
+    () => [
+      ...(puedeFiltrarEmpresaCentroCosto ? FILTROS_EMPRESA_CC : []),
+      ...(definicion.filtros ?? []),
+    ],
+    [puedeFiltrarEmpresaCentroCosto, definicion.filtros],
+  );
 
   const modoFechas = definicion.fechas ?? "requeridas";
   const [fechas, setFechas] = React.useState(() => {
@@ -120,31 +132,46 @@ export function PantallaReporte({
 
   const cambiarFiltro = React.useCallback(
     (id: string, valor: string) => {
-      const limpia = definicion.filtros?.find((f) => f.id === id)?.limpia ?? [];
       setValores((actuales) => {
         const nuevos = { ...actuales, [id]: valor };
-        for (const otro of limpia) nuevos[otro] = "";
+        // Se limpian los que dependen de este, y los que dependen de esos (empresa → CC → asesor).
+        const limpiar = (cambiado: string) => {
+          for (const f of filtros) {
+            if (!f.depende?.includes(cambiado) || nuevos[f.id] === "") continue;
+            nuevos[f.id] = "";
+            limpiar(f.id);
+          }
+        };
+        limpiar(id);
         return nuevos;
       });
     },
-    [definicion.filtros],
+    [filtros],
   );
   const guardarEtiqueta = React.useCallback((label: string, valor: string) => {
     etiquetas.current[label] = valor;
   }, []);
 
+  /** Valores que se usan: con el permiso, los elegidos (o el contexto); sin él, el contexto. */
+  const efectivos = React.useMemo<ValoresFiltros>(() => {
+    const contexto = {
+      cod_empresa: empresa?.cod_empresa == null ? "" : String(empresa.cod_empresa),
+      cod_cc: centroCosto?.cod_cc == null ? "" : String(centroCosto.cod_cc),
+    };
+    return puedeFiltrarEmpresaCentroCosto
+      ? { ...contexto, ...valores }
+      : { ...valores, ...contexto };
+  }, [empresa?.cod_empresa, centroCosto?.cod_cc, valores, puedeFiltrarEmpresaCentroCosto]);
+
   const params = React.useMemo<ParamsReporte>(() => {
-    const ccContexto = centroCosto?.cod_cc == null ? "" : String(centroCosto.cod_cc);
     const todos: ParamsReporte = {
       fecha_inicio: fechas.inicio,
       fecha_fin: fechas.fin,
-      cod_empresa: empresa?.cod_empresa == null ? "" : String(empresa.cod_empresa),
-      cod_cc: ccContexto,
-      ...valores,
+      ...efectivos,
     };
     // Vacío = sin filtro: no se envía.
     return Object.fromEntries(Object.entries(todos).filter(([, v]) => v !== ""));
-  }, [fechas, empresa?.cod_empresa, centroCosto?.cod_cc, valores]);
+  }, [fechas, efectivos]);
 
   const faltanFechas = modoFechas === "requeridas" && (!fechas.inicio || !fechas.fin);
 
@@ -295,11 +322,11 @@ export function PantallaReporte({
                     subtitulo="Acota el universo de datos a analizar"
                   />
                   <div className="flex flex-col gap-3 p-4">
-                    {(definicion.filtros ?? []).map((filtro) => (
+                    {filtros.map((filtro) => (
                       <CampoFiltro
                         key={filtro.id}
                         filtro={filtro}
-                        valores={valores}
+                        valores={efectivos}
                         onChange={cambiarFiltro}
                         onEtiqueta={guardarEtiqueta}
                       />

@@ -49,8 +49,8 @@ export interface FiltroReporte {
   };
   /** Valor inicial (ej. el CC del contexto operativo). Sin esto, "" (todos). */
   useValorInicial?: () => string;
-  /** Filtros que se limpian cuando este cambia (ej. CC → usuario). */
-  limpia?: readonly string[];
+  /** Este filtro se limpia cuando cambia alguno de estos (ej. usuario depende de `cod_cc`). */
+  depende?: readonly string[];
 }
 
 export interface ContenidoReporteProps<TFila> {
@@ -69,7 +69,10 @@ export interface DefinicionReporte<TFila> {
   descripcion?: string;
   /** "requeridas" (por defecto: el mes actual), "opcionales" o "ninguna". */
   fechas?: "requeridas" | "opcionales" | "ninguna";
-  /** Filtros extra (además de fechas). Atajos en `lib/filtros.ts`. */
+  /**
+   * Filtros extra (además de fechas, y de empresa y CC, que pone la pantalla con el permiso
+   * "Filtrar Empresa Centro Costo"). Atajos en `lib/filtros.ts`.
+   */
   filtros?: readonly FiltroReporte[];
   /** Consulta al backend. Atajo: `consultarApi(endpoint, schema)`. */
   consultar: (params: ParamsReporte) => Promise<TFila[]>;

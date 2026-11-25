@@ -13,7 +13,8 @@ reportes/
     reporte-visitas-historico.ts  Reporte de visitas — histórico (CRM); plantilla
   lib/
     definir-reporte.ts        contrato (DefinicionReporte, ColumnaReporte, FiltroReporte)
-    filtros.ts                atajos: filtroCentroCosto, filtroUsuario, filtroTipo, filtroEstado, filtroLista
+    filtros.ts                atajos: filtroUsuario, filtroTipo, filtroEstado, filtroLista;
+                              FILTROS_EMPRESA_CC (filtroEmpresa + filtroCentroCosto, los pone la pantalla)
     resumen-agrupado.ts       tabla dinámica genérica (calcularResumen → árbol de TablaDouble)
     exportar.ts               PDF y Excel (resumen + detalle) de cualquier reporte
   components/
@@ -55,6 +56,10 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
 - **Filtros y configuración**: fechas (mes actual), "Personaliza tu reporte" (igual que pricing:
   campo de columnas y niveles con `NivelesBuilder`) y "Filtros" con los botones **Consultar**,
   **PDF** y **Excel** al final.
+- **Empresa y Centro de costo**: los pone la pantalla en Filtros (no cada reporte), igual que
+  Tarifas y Cotizaciones: con la acción "Filtrar Empresa Centro Costo" de la opción **"Reportes"**
+  se muestran (arrancan en el contexto) y mandan en la consulta; sin el permiso no se muestran y
+  siempre van los del contexto. Un filtro con `depende: ["cod_cc"]` se limpia al cambiar el CC.
 - **Consultar**: el reporte se consulta **solo con el botón** (fechas y filtros no consultan
   solos). "Personaliza tu reporte" sí se aplica al instante sobre lo ya consultado.
 - **Resumen agrupado**: `calcularResumen` sobre las filas ya consultadas (sin otra consulta),
