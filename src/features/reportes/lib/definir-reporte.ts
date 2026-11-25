@@ -51,6 +51,8 @@ export interface FiltroReporte {
   useValorInicial?: () => string;
   /** Este filtro se limpia cuando cambia alguno de estos (ej. usuario depende de `cod_cc`). */
   depende?: readonly string[];
+  /** Selección múltiple (ej. Tipo en Reportes CRM): el valor va separado por comas (`"7,8"`). */
+  multiple?: boolean;
 }
 
 export interface ContenidoReporteProps<TFila> {

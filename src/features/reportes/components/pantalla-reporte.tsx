@@ -39,7 +39,7 @@ import {
   calcularResumen,
   camposAgrupables,
 } from "../lib/resumen-agrupado";
-import { CampoFecha, CampoSelect } from "./campos";
+import { CampoFecha, CampoMultiSelect, CampoSelect } from "./campos";
 import { TablaReporte } from "./contenido-reporte";
 import { EncabezadoPanel, MensajeVacio, Panel, TituloReporte } from "./panel";
 import { PersonalizaReporte } from "./personaliza-reporte";
@@ -66,7 +66,15 @@ function CampoFiltro({
   const usarValorInicial = filtro.useValorInicial ?? sinValorInicial;
   const inicial = usarValorInicial();
   const valor = valores[filtro.id] ?? inicial;
-  const etiqueta = valor ? (opciones.find((o) => o.value === valor)?.label ?? valor) : "";
+  const etiqueta = !valor
+    ? ""
+    : filtro.multiple
+      ? // Como Reportes CRM: los nombres en el orden de las opciones, separados por ", ".
+        opciones
+          .filter((o) => valor.split(",").includes(o.value))
+          .map((o) => o.label)
+          .join(", ")
+      : (opciones.find((o) => o.value === valor)?.label ?? valor);
 
   // El valor inicial (ej. CC del contexto) pasa a los filtros cuando llega.
   React.useEffect(() => {
@@ -78,6 +86,17 @@ function CampoFiltro({
     onEtiqueta(filtro.label, String(etiqueta));
   }, [onEtiqueta, filtro.label, etiqueta]);
 
+  if (filtro.multiple) {
+    return (
+      <CampoMultiSelect
+        id={`filtro-${filtro.id}`}
+        label={filtro.label}
+        value={valor}
+        onChange={(nuevo) => onChange(filtro.id, nuevo)}
+        opciones={opciones}
+      />
+    );
+  }
   return (
     <CampoSelect
       id={`filtro-${filtro.id}`}

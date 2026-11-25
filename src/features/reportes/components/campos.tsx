@@ -3,6 +3,7 @@
 import { X } from "lucide-react";
 import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
+import { MultiSelect } from "@/shared/components/ui/multi-select";
 import { cn } from "@/shared/lib/utils";
 
 /** "x" al final del input para limpiar el campo. */
@@ -69,6 +70,49 @@ export function CampoSelect({
         />
         {conX ? (
           <BotonLimpiar label={label} onClick={() => onChange("")} className="right-8" />
+        ) : null}
+      </div>
+    </Field>
+  );
+}
+
+/** Select de selección múltiple (chips) con "x" para limpiar; el valor va separado por comas. */
+export function CampoMultiSelect({
+  id,
+  label,
+  value,
+  onChange,
+  opciones,
+  placeholder = "Todos",
+}: Readonly<{
+  id: string;
+  label: string;
+  value: string;
+  onChange: (valor: string) => void;
+  opciones: readonly ComboboxOption[];
+  placeholder?: string;
+}>) {
+  const elegidos = value ? value.split(",") : [];
+  return (
+    <Field className="gap-1">
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <div className="relative">
+        <MultiSelect
+          id={id}
+          value={elegidos}
+          onChange={(valores) => onChange(valores.join(","))}
+          options={opciones.map((o) => ({ value: o.value, label: o.label }))}
+          placeholder={placeholder}
+          searchPlaceholder="Buscar…"
+          {...(elegidos.length ? { className: "pr-16" } : {})}
+        />
+        {elegidos.length ? (
+          // Centrado en el botón (h-9), no en el bloque con los chips.
+          <BotonLimpiar
+            label={label}
+            onClick={() => onChange("")}
+            className="top-[1.125rem] right-8"
+          />
         ) : null}
       </div>
     </Field>

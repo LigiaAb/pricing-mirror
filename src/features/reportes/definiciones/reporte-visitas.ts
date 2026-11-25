@@ -22,7 +22,10 @@ export const reporteVisitas = definirReporte<Fila>({
   filtros: [
     filtroUsuario("Asesor", "cod_asesor"),
     filtroEstado("ACTIVIDAD", "cod_estado"),
-    filtroTipo("ACTIVIDAD", "cod_tipo", "Tipo de actividad", TIPOS_ACTIVIDAD),
+    {
+      ...filtroTipo("ACTIVIDAD", "cod_tipo", "Tipo de actividad", TIPOS_ACTIVIDAD),
+      multiple: true,
+    },
   ],
   consultar,
   // Como en Reportes CRM: solo Excel (sin PDF).
