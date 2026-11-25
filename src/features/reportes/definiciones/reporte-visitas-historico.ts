@@ -103,7 +103,7 @@ async function consultar(params: ParamsReporte): Promise<Fila[]> {
 }
 
 export const reporteVisitasHistorico = definirReporte<Fila>({
-  nomenclatura: "REPORTE_VISITAS_HISTORICO",
+  nomenclatura: "REP_VISITAS_HIST",
   descripcion: "Actividades del CRM con su resultado",
   fechas: "opcionales",
   filtros: [
