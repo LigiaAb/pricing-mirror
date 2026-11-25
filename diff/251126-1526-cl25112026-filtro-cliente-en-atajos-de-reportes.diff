@@ -1,0 +1,38 @@
+diff --git a/src/features/reportes/lib/filtros.ts b/src/features/reportes/lib/filtros.ts
+index ffa7eea..eef40e8 100644
+--- a/src/features/reportes/lib/filtros.ts
++++ b/src/features/reportes/lib/filtros.ts
+@@ -1,5 +1,6 @@
+ import React from "react";
+ import { centrosCosto, empleadosUsuarios, empresas, estados, tipos } from "@/features/catalogos";
++import { useFetchEntidades } from "@/features/entidades";
+ import { useContextoOperativoStore } from "@/features/shell";
+ import type { ComboboxOption } from "@/shared/components/ui/combobox";
+ import type { FiltroReporte } from "./definir-reporte";
+@@ -91,6 +92,26 @@ export function filtroUsuario(label = "Usuario", id = "cod_usuario"): FiltroRepo
+   };
+ }
+ 
++/**
++ * Clientes activos (entidades `CLIENTE`, como Seguimiento de cliente de Reportes CRM).
++ * `id` = nombre del parámetro que espera el endpoint (ej. `cod_cliente`).
++ */
++export function filtroCliente(label = "Cliente", id = "cod_cliente"): FiltroReporte {
++  return {
++    id,
++    label,
++    useOpciones: () => {
++      const { data, isLoading } = useFetchEntidades({ tipo_entidad: "CLIENTE", cod_estado: 1 });
++      // Miles de clientes: opciones memoizadas (el Combobox virtualiza más de 1000).
++      const opciones = React.useMemo<ComboboxOption[]>(() => {
++        const clientes: Array<{ entidad_id: string | number; entidad_nombre: string }> = data ?? [];
++        return clientes.map((c) => ({ value: String(c.entidad_id), label: c.entidad_nombre }));
++      }, [data]);
++      return { opciones, cargando: Boolean(isLoading) };
++    },
++  };
++}
++
+ /**
+  * Tipos de una tabla del catálogo `TIPO` (ej. `filtroTipo("PAGO", "cod_tipo_pago", "Tipo de pago")`).
+  * `solo`: nombres permitidos (sin esto, todos los de la tabla).

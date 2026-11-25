@@ -1,5 +1,6 @@
 import React from "react";
 import { centrosCosto, empleadosUsuarios, empresas, estados, tipos } from "@/features/catalogos";
+import { useFetchEntidades } from "@/features/entidades";
 import { useContextoOperativoStore } from "@/features/shell";
 import type { ComboboxOption } from "@/shared/components/ui/combobox";
 import type { FiltroReporte } from "./definir-reporte";
@@ -87,6 +88,26 @@ export function filtroUsuario(label = "Usuario", id = "cod_usuario"): FiltroRepo
         return lista;
       }, [data]);
       return { opciones, cargando: isLoading };
+    },
+  };
+}
+
+/**
+ * Clientes activos (entidades `CLIENTE`, como Seguimiento de cliente de Reportes CRM).
+ * `id` = nombre del parámetro que espera el endpoint (ej. `cod_cliente`).
+ */
+export function filtroCliente(label = "Cliente", id = "cod_cliente"): FiltroReporte {
+  return {
+    id,
+    label,
+    useOpciones: () => {
+      const { data, isLoading } = useFetchEntidades({ tipo_entidad: "CLIENTE", cod_estado: 1 });
+      // Miles de clientes: opciones memoizadas (el Combobox virtualiza más de 1000).
+      const opciones = React.useMemo<ComboboxOption[]>(() => {
+        const clientes: Array<{ entidad_id: string | number; entidad_nombre: string }> = data ?? [];
+        return clientes.map((c) => ({ value: String(c.entidad_id), label: c.entidad_nombre }));
+      }, [data]);
+      return { opciones, cargando: Boolean(isLoading) };
     },
   };
 }
