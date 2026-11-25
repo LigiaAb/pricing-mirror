@@ -1,17 +1,13 @@
 import type { Reporte } from "../lib/definir-reporte";
-import { reporteActividades } from "./reporte-actividades";
-import { reporteVisitas } from "./reporte-visitas";
-import { reporteVisitasHistorico } from "./reporte-visitas-historico";
+import { REPORTES_CRM } from "./crm";
 
 /**
  * REGISTRO DE REPORTES
  *
- * Agregar un reporte: crear su archivo en esta carpeta (copiar `reporte-visitas-historico.ts`) y
- * sumarlo a esta lista. Solo se muestran los que la API de reportes disponibles devuelve
- * para el rol y el CC del usuario (se unen por `nomenclatura`).
+ * Una carpeta por módulo (`crm/`, …) con sus reportes y un `index.ts` con la lista del
+ * módulo. Agregar un reporte: crear su archivo en la carpeta de su módulo (copiar
+ * `crm/reporte-visitas-historico.ts`) y sumarlo a la lista del módulo; un módulo nuevo se
+ * suma aquí. Solo se muestran los que la API de reportes disponibles devuelve para el rol y
+ * el CC del usuario (se unen por `nomenclatura`).
  */
-export const REPORTES: readonly Reporte[] = [
-  reporteVisitasHistorico,
-  reporteVisitas,
-  reporteActividades,
-];
+export const REPORTES: readonly Reporte[] = [...REPORTES_CRM];

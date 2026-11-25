@@ -13,7 +13,11 @@ import { parseEnvelope } from "@/shared/api/envelope";
 import { formatearFechaHora } from "@/shared/lib/date";
 import { asText } from "@/shared/lib/text";
 import { useAuthStore } from "@/shared/stores/auth-store";
-import { type DescargaReporte, definirReporte, type ParamsReporte } from "../lib/definir-reporte";
+import {
+  type DescargaReporte,
+  definirReporte,
+  type ParamsReporte,
+} from "../../lib/definir-reporte";
 
 /**
  * ACTIVIDADES (calendario de seguimientos del CRM)

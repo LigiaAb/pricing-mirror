@@ -1,6 +1,6 @@
 import { formatearFechaHora } from "@/shared/lib/date";
-import { definirReporte } from "../lib/definir-reporte";
-import { filtroEstado, filtroTipo, filtroUsuario } from "../lib/filtros";
+import { definirReporte } from "../../lib/definir-reporte";
+import { filtroEstado, filtroTipo, filtroUsuario } from "../../lib/filtros";
 import {
   consultar,
   excelActividades,

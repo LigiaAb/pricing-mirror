@@ -3,8 +3,8 @@ import type { ComboboxOption } from "@/shared/components/ui/combobox";
 /**
  * CONTRATO DE UN REPORTE
  *
- * Un reporte = un archivo en `definiciones/` que llama a `definirReporte` + 1 línea en
- * `definiciones/index.ts`. La pantalla (`VistaReportes`) arma todo lo demás: selector,
+ * Un reporte = un archivo en `definiciones/<modulo>/` que llama a `definirReporte` + 1 línea
+ * en la lista del módulo (`definiciones/<modulo>/index.ts`). La pantalla (`VistaReportes`) arma todo lo demás: selector,
  * fechas, filtros, "Personaliza tu reporte", "Resumen agrupado", tabla del reporte y
  * descargas (PDF y Excel). Ver `ARQUITECTURA.md`.
  */
