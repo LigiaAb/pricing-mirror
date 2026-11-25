@@ -1,0 +1,216 @@
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+index d614b32..10a222a 100644
+--- a/src/features/reportes/ARQUITECTURA.md
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -13,6 +13,8 @@ reportes/
+     reporte-visitas-historico.ts  Reporte de visitas — histórico (CRM); plantilla
+     reporte-visitas.ts        Reporte de visitas (planificación, CRM): reusa la consulta y el
+                               Excel del histórico
++    reporte-actividades.ts    Actividades (calendario PDF de CRM, del usuario de la sesión; sin
++                              empresa ni CC: `empresaCentroCosto: false`)
+   lib/
+     definir-reporte.ts        contrato (DefinicionReporte, ColumnaReporte, FiltroReporte)
+     filtros.ts                atajos: filtroUsuario, filtroTipo, filtroEstado, filtroLista;
+@@ -61,7 +63,8 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
+ - **Empresa y Centro de costo**: los pone la pantalla en Filtros (no cada reporte), igual que
+   Tarifas y Cotizaciones: con la acción "Filtrar Empresa Centro Costo" de la opción **"Reportes"**
+   se muestran (arrancan en el contexto) y mandan en la consulta; sin el permiso no se muestran y
+-  siempre van los del contexto. Un filtro con `depende: ["cod_cc"]` se limpia al cambiar el CC.
++  siempre van los del contexto. Un reporte que no los usa lleva `empresaCentroCosto: false`
++  (no se muestran, no se envían y no van en el encabezado). Un filtro con `depende: ["cod_cc"]` se limpia al cambiar el CC.
+ - **Consultar**: el reporte se consulta **solo con el botón** (fechas y filtros no consultan
+   solos). "Personaliza tu reporte" sí se aplica al instante sobre lo ya consultado.
+ - **Resumen agrupado**: `calcularResumen` sobre las filas ya consultadas (sin otra consulta),
+diff --git a/src/features/reportes/components/pantalla-reporte.tsx b/src/features/reportes/components/pantalla-reporte.tsx
+index 18cf52e..44ad402 100644
+--- a/src/features/reportes/components/pantalla-reporte.tsx
++++ b/src/features/reportes/components/pantalla-reporte.tsx
+@@ -123,7 +123,10 @@ export function PantallaReporte({
+   const centroCosto = useContextoOperativoStore((s) => s.currentCentroCosto);
+   const hidratado = useContextoOperativoStore((s) => s._hasHydrated);
+   // Como Tarifas y Cotizaciones: con el permiso se eligen empresa y CC; sin él, los del contexto.
+-  const { puedeFiltrarEmpresaCentroCosto } = usePermisosCategoria(OPCION_PERMISOS_REPORTES);
++  const { puedeFiltrarEmpresaCentroCosto: conPermiso } =
++    usePermisosCategoria(OPCION_PERMISOS_REPORTES);
++  const usaEmpresaCc = definicion.empresaCentroCosto !== false;
++  const puedeFiltrarEmpresaCentroCosto = usaEmpresaCc && conPermiso;
+   const filtros = React.useMemo(
+     () => [
+       ...(puedeFiltrarEmpresaCentroCosto ? FILTROS_EMPRESA_CC : []),
+@@ -174,6 +177,7 @@ export function PantallaReporte({
+ 
+   /** Valores que se usan: con el permiso, los elegidos (o el contexto); sin él, el contexto. */
+   const efectivos = React.useMemo<ValoresFiltros>(() => {
++    if (!usaEmpresaCc) return valores;
+     const contexto = {
+       cod_empresa: empresa?.cod_empresa == null ? "" : String(empresa.cod_empresa),
+       cod_cc: centroCosto?.cod_cc == null ? "" : String(centroCosto.cod_cc),
+@@ -181,7 +185,13 @@ export function PantallaReporte({
+     return puedeFiltrarEmpresaCentroCosto
+       ? { ...contexto, ...valores }
+       : { ...valores, ...contexto };
+-  }, [empresa?.cod_empresa, centroCosto?.cod_cc, valores, puedeFiltrarEmpresaCentroCosto]);
++  }, [
++    empresa?.cod_empresa,
++    centroCosto?.cod_cc,
++    valores,
++    puedeFiltrarEmpresaCentroCosto,
++    usaEmpresaCc,
++  ]);
+ 
+   const params = React.useMemo<ParamsReporte>(() => {
+     const todos: ParamsReporte = {
+@@ -229,8 +239,8 @@ export function PantallaReporte({
+         : "";
+     const campos: Record<string, string> = {
+       Período: periodo,
+-      Empresa: empresa?.nombre_emp ?? empresa?.nom_emp ?? "",
+-      "Centro de costo": centroCosto?.nombre_cc ?? centroCosto?.nom_cc ?? "",
++      Empresa: usaEmpresaCc ? (empresa?.nombre_emp ?? empresa?.nom_emp ?? "") : "",
++      "Centro de costo": usaEmpresaCc ? (centroCosto?.nombre_cc ?? centroCosto?.nom_cc ?? "") : "",
+       ...etiquetas.current,
+     };
+     return Object.fromEntries(Object.entries(campos).filter(([, v]) => v !== ""));
+diff --git a/src/features/reportes/definiciones/index.ts b/src/features/reportes/definiciones/index.ts
+index 6b58d0d..4974f57 100644
+--- a/src/features/reportes/definiciones/index.ts
++++ b/src/features/reportes/definiciones/index.ts
+@@ -1,4 +1,5 @@
+ import type { Reporte } from "../lib/definir-reporte";
++import { reporteActividades } from "./reporte-actividades";
+ import { reporteVisitas } from "./reporte-visitas";
+ import { reporteVisitasHistorico } from "./reporte-visitas-historico";
+ 
+@@ -9,4 +10,8 @@ import { reporteVisitasHistorico } from "./reporte-visitas-historico";
+  * sumarlo a esta lista. Solo se muestran los que la API de reportes disponibles devuelve
+  * para el rol y el CC del usuario (se unen por `nomenclatura`).
+  */
+-export const REPORTES: readonly Reporte[] = [reporteVisitasHistorico, reporteVisitas];
++export const REPORTES: readonly Reporte[] = [
++  reporteVisitasHistorico,
++  reporteVisitas,
++  reporteActividades,
++];
+diff --git a/src/features/reportes/definiciones/reporte-actividades.ts b/src/features/reportes/definiciones/reporte-actividades.ts
+new file mode 100644
+index 0000000..4cc924b
+--- /dev/null
++++ b/src/features/reportes/definiciones/reporte-actividades.ts
+@@ -0,0 +1,101 @@
++import { empleadosUsuarios } from "@/features/catalogos";
++import {
++  type ActividadReporte,
++  actividadReporteSchema,
++} from "@/features/reportes-crm/api/actividades-reporte";
++import { actividadesEnRango } from "@/features/reportes-crm/lib/actividades-vista";
++import {
++  type AgenteCalendario,
++  generarPdfCalendarioActividades,
++} from "@/features/reportes-crm/lib/pdf-calendario-actividades";
++import { http } from "@/shared/api/client";
++import { parseEnvelope } from "@/shared/api/envelope";
++import { formatearFechaHora } from "@/shared/lib/date";
++import { asText } from "@/shared/lib/text";
++import { useAuthStore } from "@/shared/stores/auth-store";
++import { type DescargaReporte, definirReporte, type ParamsReporte } from "../lib/definir-reporte";
++
++/**
++ * ACTIVIDADES (calendario de seguimientos del CRM)
++ *
++ * Igual al reporte "Actividades" de Reportes CRM: las actividades del usuario de la sesión
++ * (`lista-actividades2` con `cod_asesor`), fechas opcionales filtradas aquí por día local
++ * (el API no las aplica) y el PDF "Calendario de Seguimientos de actividades" de CRM. Sin
++ * empresa ni CC (como en CRM).
++ */
++
++type Fila = ActividadReporte & { asesor: string };
++
++async function consultar(params: ParamsReporte): Promise<Fila[]> {
++  const usuario = asText(useAuthStore.getState().user?.cod_usuario);
++  if (!usuario) return [];
++  const [actividades, empleados] = await Promise.all([
++    http
++      .get<unknown>("/api/appweb/lista-actividades2", { params: { cod_asesor: usuario } })
++      .then((r) => parseEnvelope(r, actividadReporteSchema, "lista-actividades2")),
++    empleadosUsuarios.fetchLista({}),
++  ]);
++  // Como la tabla de CRM: nombre del asesor por código de usuario.
++  const asesores = new Map(empleados.map((e) => [String(e.codUsuario), e.nombreCompleto]));
++  return actividadesEnRango(actividades, params.fecha_inicio ?? "", params.fecha_fin ?? "").map(
++    (a) => ({ ...a, asesor: asesores.get(String(a.cod_asesor ?? "")) ?? "" }),
++  );
++}
++
++/** Usuario de la sesión, que encabeza cada página del calendario (como en CRM). */
++function agenteSesion(): AgenteCalendario {
++  const usuario = useAuthStore.getState().user;
++  const nombre = [usuario?.nom_empleado, usuario?.apellido_emp]
++    .map((parte) => asText(parte))
++    .filter(Boolean)
++    .join(" ");
++  return {
++    nombre: nombre || asText(usuario?.nombre_usuario) || asText(usuario?.email),
++    correo: asText(usuario?.usuario) || asText(usuario?.email),
++  };
++}
++
++/** PDF de CRM: calendario por día y hora, abierto en otra pestaña. */
++async function pdfCalendario({ filas, params }: DescargaReporte<Fila>) {
++  const blob = await generarPdfCalendarioActividades([...filas], {
++    agente: agenteSesion(),
++    fechaInicio: params.fecha_inicio ?? "",
++    fechaFin: params.fecha_fin ?? "",
++  });
++  const url = URL.createObjectURL(blob);
++  window.open(url, "_blank", "noopener,noreferrer");
++  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
++}
++
++export const reporteActividades = definirReporte<Fila>({
++  nomenclatura: "REP_ACTIVIDADES",
++  descripcion: "Calendario de seguimientos del usuario",
++  fechas: "opcionales",
++  empresaCentroCosto: false,
++  consultar,
++  // Como en Reportes CRM: solo PDF (sin Excel).
++  descargas: { pdf: pdfCalendario },
++  agrupacion: { filas: ["tipo"] },
++  columnas: [
++    { id: "tipo", label: "Tipo", valor: (f) => f.nom_tipo, agrupable: true },
++    { id: "asesor", label: "Asesor", valor: (f) => f.asesor, agrupable: true },
++    {
++      id: "cliente",
++      label: "Cliente",
++      valor: (f) => f.nombre_cliente,
++      agrupable: true,
++      buscable: true,
++    },
++    {
++      id: "fecha_programacion",
++      label: "Fecha de programación",
++      valor: (f) => formatearFechaHora(f.fecha_creada),
++    },
++    {
++      id: "fecha_ejecucion",
++      label: "Fecha de ejecución",
++      valor: (f) => formatearFechaHora(f.fecha_programada),
++    },
++    { id: "objetivo", label: "Objetivo", valor: (f) => f.objetivo_actividad_desc, agrupable: true },
++  ],
++});
+diff --git a/src/features/reportes/lib/definir-reporte.ts b/src/features/reportes/lib/definir-reporte.ts
+index cb7c999..fc5337a 100644
+--- a/src/features/reportes/lib/definir-reporte.ts
++++ b/src/features/reportes/lib/definir-reporte.ts
+@@ -86,6 +86,11 @@ export interface DefinicionReporte<TFila> {
+    * "Filtrar Empresa Centro Costo"). Atajos en `lib/filtros.ts`.
+    */
+   filtros?: readonly FiltroReporte[];
++  /**
++   * `false`: el reporte no usa empresa ni CC (ej. Actividades, solo del usuario de la sesión): no
++   * se muestran, no se envían y no van en el encabezado. Por defecto, sí.
++   */
++  empresaCentroCosto?: boolean;
+   /** Consulta al backend. Atajo: `consultarApi(endpoint, schema)`. */
+   consultar: (params: ParamsReporte) => Promise<TFila[]>;
+   /** Columnas de la tabla, del PDF y del Excel; también las agrupables y sumables. */

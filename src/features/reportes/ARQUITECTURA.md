@@ -13,12 +13,15 @@ reportes/
     reporte-visitas-historico.ts  Reporte de visitas — histórico (CRM); plantilla
     reporte-visitas.ts        Reporte de visitas (planificación, CRM): reusa la consulta y el
                               Excel del histórico
+    reporte-actividades.ts    Actividades (calendario PDF de CRM, del usuario de la sesión; sin
+                              empresa ni CC: `empresaCentroCosto: false`)
   lib/
     definir-reporte.ts        contrato (DefinicionReporte, ColumnaReporte, FiltroReporte)
     filtros.ts                atajos: filtroUsuario, filtroTipo, filtroEstado, filtroLista;
                               FILTROS_EMPRESA_CC (filtroEmpresa + filtroCentroCosto, los pone la pantalla)
     resumen-agrupado.ts       tabla dinámica genérica (calcularResumen → árbol de TablaDouble)
     exportar.ts               Excel agrupado (resumen) y PDF/Excel genéricos del reporte (detalle)
+    excel-reporte.ts          COPIA del generador de Excel de Reportes de pricing (Excel agrupado)
   components/
     vista-reportes.tsx        "Reportes disponibles" (Módulo → Reporte) + reporte elegido
     pantalla-reporte.tsx      título, filtros y configuración, Consultar, resumen, reporte, descargas
@@ -30,8 +33,12 @@ reportes/
 ## Agregar un reporte (3 pasos)
 
 1. **Base de datos**: un `TIPO` con `TIPO_TABLA = 'REPORTE'` (nombre = título en pantalla,
-   nomenclatura = clave, **máximo 20 caracteres**, ej. `REP_VISITAS_HIST`) y sus filas en `REPORTE_X_CC_X_MDULO_X_ROL`
+   nomenclatura = clave, **máximo 20 caracteres**) y sus filas en `REPORTE_X_CC_X_MDULO_X_ROL`
    (rol, empresa, CC, módulo; `NULL` = todos).
+   **Nomenclatura**: `[MÓDULO EN 3 CARACTERES]-[INICIALES DEL REPORTE]-[CORRELATIVO DEL MÓDULO]`,
+   con correlativo de 2 dígitos y sin contar "de" en las iniciales. CRM: `CRM-RVH-01` (Reporte de
+   visitas — histórico), `CRM-RV-02` (Reporte de visitas), `CRM-A-03` (Actividades). El siguiente
+   de CRM es `CRM-…-04`.
 2. **Definición**: copiar `definiciones/reporte-visitas-historico.ts` y cambiar:
    - `nomenclatura`: la del `TIPO`.
    - `consultar`: `consultarApi("/api/appweb/<endpoint>", filaSchema)`. Recibe
@@ -61,7 +68,8 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
 - **Empresa y Centro de costo**: los pone la pantalla en Filtros (no cada reporte), igual que
   Tarifas y Cotizaciones: con la acción "Filtrar Empresa Centro Costo" de la opción **"Reportes"**
   se muestran (arrancan en el contexto) y mandan en la consulta; sin el permiso no se muestran y
-  siempre van los del contexto. Un filtro con `depende: ["cod_cc"]` se limpia al cambiar el CC.
+  siempre van los del contexto. Un reporte que no los usa lleva `empresaCentroCosto: false`
+  (no se muestran, no se envían y no van en el encabezado). Un filtro con `depende: ["cod_cc"]` se limpia al cambiar el CC.
 - **Consultar**: el reporte se consulta **solo con el botón** (fechas y filtros no consultan
   solos). "Personaliza tu reporte" sí se aplica al instante sobre lo ya consultado.
 - **Resumen agrupado**: `calcularResumen` sobre las filas ya consultadas (sin otra consulta),
@@ -69,8 +77,11 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
   suma de cada columna `sumable`, por cada valor de la columna de desglose y en total.
 - **Reporte**: `Contenido` de la definición o una `DataTable` con las columnas.
 - **Descargas**: son dos cosas distintas, con los filtros de la última consulta en el encabezado.
-  - **Excel agrupado** (siempre): el Resumen agrupado, aplanado como el Excel de pricing (una
-    columna por nivel), con "Agrupado por" y "Columnas" en el encabezado.
+  - **Excel agrupado** (siempre): el Resumen agrupado con el **mismo generador que Reportes de
+    pricing** (`agregarHojaReporte`, copiado de `pricing/reportes/lib/excel-reporte.ts` en
+    `lib/excel-reporte.ts`: si cambia allá, copiarlo aquí): logo, título, encabezado (período
+    `dd-MM-yyyy al dd-MM-yyyy`, "Agrupado por", "Columnas"), una columna por nivel, subtotales en
+    negrita y `#,##0`.
   - **Excel / PDF del reporte** (opcionales, `descargas: { excel, pdf }` de la definición; en
     CRM unos tienen Excel, otros PDF y otros ambos): `true` = el detalle con las columnas
     (Excel con `exportarExcel` de `@/shared/lib/excel`; PDF con `usePdfReporte` de

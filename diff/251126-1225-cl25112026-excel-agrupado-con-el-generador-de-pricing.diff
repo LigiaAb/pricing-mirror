@@ -1,0 +1,437 @@
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+index 10a222a..1335f79 100644
+--- a/src/features/reportes/ARQUITECTURA.md
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -21,6 +21,7 @@ reportes/
+                               FILTROS_EMPRESA_CC (filtroEmpresa + filtroCentroCosto, los pone la pantalla)
+     resumen-agrupado.ts       tabla dinámica genérica (calcularResumen → árbol de TablaDouble)
+     exportar.ts               Excel agrupado (resumen) y PDF/Excel genéricos del reporte (detalle)
++    excel-reporte.ts          COPIA del generador de Excel de Reportes de pricing (Excel agrupado)
+   components/
+     vista-reportes.tsx        "Reportes disponibles" (Módulo → Reporte) + reporte elegido
+     pantalla-reporte.tsx      título, filtros y configuración, Consultar, resumen, reporte, descargas
+@@ -72,8 +73,11 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
+   suma de cada columna `sumable`, por cada valor de la columna de desglose y en total.
+ - **Reporte**: `Contenido` de la definición o una `DataTable` con las columnas.
+ - **Descargas**: son dos cosas distintas, con los filtros de la última consulta en el encabezado.
+-  - **Excel agrupado** (siempre): el Resumen agrupado, aplanado como el Excel de pricing (una
+-    columna por nivel), con "Agrupado por" y "Columnas" en el encabezado.
++  - **Excel agrupado** (siempre): el Resumen agrupado con el **mismo generador que Reportes de
++    pricing** (`agregarHojaReporte`, copiado de `pricing/reportes/lib/excel-reporte.ts` en
++    `lib/excel-reporte.ts`: si cambia allá, copiarlo aquí): logo, título, encabezado (período
++    `dd-MM-yyyy al dd-MM-yyyy`, "Agrupado por", "Columnas"), una columna por nivel, subtotales en
++    negrita y `#,##0`.
+   - **Excel / PDF del reporte** (opcionales, `descargas: { excel, pdf }` de la definición; en
+     CRM unos tienen Excel, otros PDF y otros ambos): `true` = el detalle con las columnas
+     (Excel con `exportarExcel` de `@/shared/lib/excel`; PDF con `usePdfReporte` de
+diff --git a/src/features/reportes/components/pantalla-reporte.tsx b/src/features/reportes/components/pantalla-reporte.tsx
+index 44ad402..5fbb090 100644
+--- a/src/features/reportes/components/pantalla-reporte.tsx
++++ b/src/features/reportes/components/pantalla-reporte.tsx
+@@ -24,6 +24,7 @@ import {
+   AccordionTrigger,
+ } from "@/shared/components/ui/accordion";
+ import { Button } from "@/shared/components/ui/button";
++import { useExcelJS } from "@/shared/hooks/use-dynamic-libraries";
+ import type { FiltroReporte, ParamsReporte, Reporte, ValoresFiltros } from "../lib/definir-reporte";
+ import {
+   bloquesPdf,
+@@ -232,6 +233,9 @@ export function PantallaReporte({
+   const sinDatos = filas.length === 0;
+   const descargas = definicion.descargas ?? {};
+ 
++  const { loadExcelJS } = useExcelJS();
++  const tablaAgrupada = () => tablaResumen(resumen, config.niveles);
++
+   const encabezado = (): Record<string, string> => {
+     const periodo =
+       fechas.inicio || fechas.fin
+@@ -256,13 +260,23 @@ export function PantallaReporte({
+   };
+ 
+   // Encabezado de las descargas: los filtros de la consulta, no los que se cambiaron después.
+-  /** Encabezado del Excel agrupado: filtros de la consulta + la agrupación. */
++  /**
++   * Encabezado del Excel agrupado, como el de pricing: filtros de la consulta (período en
++   * `dd-MM-yyyy al dd-MM-yyyy`, "Centro de Costo") + "Agrupado por" y "Columnas".
++   */
+   const encabezadoAgrupado = (): Record<string, string> => {
+-    const agrupado = config.niveles.map((n) => n.etiqueta).join(" > ");
++    const { fecha_inicio: inicio, fecha_fin: fin } = consultada?.params ?? {};
++    const fechaPricing = (iso: string | undefined) =>
++      iso ? format(parseISO(iso), "dd-MM-yyyy") : "…";
++    const filtrosConsulta = Object.entries(consultada?.encabezado ?? {}).map(([campo, valor]) =>
++      campo === "Período"
++        ? [campo, `${fechaPricing(inicio)} al ${fechaPricing(fin)}`]
++        : [campo === "Centro de costo" ? "Centro de Costo" : campo, valor],
++    );
+     const columna = campos.find((c) => c.campo === config.columna)?.etiqueta;
+     return {
+-      ...consultada?.encabezado,
+-      ...(agrupado ? { "Agrupado por": agrupado } : {}),
++      ...Object.fromEntries(filtrosConsulta),
++      "Agrupado por": tablaAgrupada().columnasNivel.join(" > "),
+       ...(columna ? { Columnas: columna } : {}),
+     };
+   };
+@@ -326,7 +340,10 @@ export function PantallaReporte({
+       descargarExcelAgrupado({
+         titulo,
+         encabezado: encabezadoAgrupado(),
+-        resumen: tablaResumen(resumen, config.niveles),
++        resumen: tablaAgrupada(),
++        cargarExcel: loadExcelJS,
++        fechaInicio: consultada?.params.fecha_inicio,
++        fechaFin: consultada?.params.fecha_fin,
+       }),
+     );
+ 
+diff --git a/src/features/reportes/lib/excel-reporte.ts b/src/features/reportes/lib/excel-reporte.ts
+new file mode 100644
+index 0000000..8d8f792
+--- /dev/null
++++ b/src/features/reportes/lib/excel-reporte.ts
+@@ -0,0 +1,199 @@
++import type { Workbook, Worksheet } from "exceljs";
++
++/** Logo de los reportes (el mismo `LOGO_URL` de `pricing/reportes/lib/pdf-reporte.ts`). */
++const LOGO_URL = "/images/logo-cropa-dsv-1024x205.png";
++
++/**
++ * EXCEL CON EL FORMATO DE `pdf-reporte.ts`
++ *
++ * Copia del generador de Reportes de pricing (`pricing/reportes/lib/excel-reporte.ts`) para el
++ * "Excel agrupado": si cambia allá, copiarlo aquí.
++ *
++ * Misma plantilla que el PDF: logo, título con línea inferior, campos del encabezado
++ * (etiqueta en negrita y mayúsculas), tabla con encabezado gris y pie azul
++ * "- CROPA DSV 2024 -". Al imprimir: horizontal (tamaño de papel por defecto), ajustada al ancho, con el
++ * encabezado de la tabla repetido y "Página N" arriba a la derecha.
++ */
++
++/** Colores del PDF (ARGB). */
++const GRIS_ENCABEZADO = "FFAAAAAA";
++// const AZUL_PIE = "FF00205B";
++// const BLANCO = "FFFFFFFF";
++const NEGRO = "FF000000";
++const PIE = "- CROPA DSV 2024 -";
++
++export type FilaExcel = {
++  celdas: Array<string | number | null>;
++  /** Fila de subtotal: negrita. */
++  negrita?: boolean;
++};
++
++export type ReporteExcel = {
++  titulo: string;
++  /** Nombre de la hoja (máx. 31 caracteres). */
++  hoja?: string;
++  /** Campos bajo el título: período, empresa, centro de costo, etc. Vacíos no se escriben. */
++  header?: Record<string, string | null | undefined>;
++  columnas: string[];
++  filas: FilaExcel[];
++  /** Ancho (en caracteres) por columna; por defecto 14. */
++  anchos?: Array<number | undefined>;
++  /** Formato numérico de Excel por columna (ej. "#,##0", '0.00"%"'). */
++  formatos?: Array<string | undefined>;
++};
++
++const BORDE = { style: "thin" as const, color: { argb: NEGRO } };
++const BORDES = { top: BORDE, left: BORDE, bottom: BORDE, right: BORDE };
++
++/** Texto de la celda como se ve en Excel (aplica `#,##0`, `0.00"%"`, etc.). */
++function textoVisible(valor: unknown, formato: string | undefined): string {
++  if (typeof valor !== "number") return String(valor);
++  const decimales = formato?.match(/0\.(0+)/)?.[1]?.length ?? (formato ? 0 : 2);
++  const texto = valor.toLocaleString("en-US", {
++    minimumFractionDigits: formato ? decimales : 0,
++    maximumFractionDigits: decimales,
++    useGrouping: formato?.includes(",") ?? false,
++  });
++  return formato?.includes("%") ? `${texto}%` : texto;
++}
++
++/** Descarga el logo como data URL; si falla, el Excel se genera sin logo. */
++async function logoBase64(): Promise<string | null> {
++  try {
++    const respuesta = await fetch(LOGO_URL);
++    if (!respuesta.ok) return null;
++    const blob = await respuesta.blob();
++    return await new Promise<string | null>((resolver) => {
++      const lector = new FileReader();
++      lector.onload = () => resolver(typeof lector.result === "string" ? lector.result : null);
++      lector.onerror = () => resolver(null);
++      lector.readAsDataURL(blob);
++    });
++  } catch {
++    return null;
++  }
++}
++
++/** Agrega al libro una hoja con el formato del PDF y la devuelve. */
++export async function agregarHojaReporte(
++  libro: Workbook,
++  opciones: ReporteExcel,
++): Promise<Worksheet> {
++  const total = Math.max(2, opciones.columnas.length + 1);
++  const hoja = libro.addWorksheet((opciones.hoja ?? "Reporte").slice(0, 31), {
++    pageSetup: {
++      orientation: "landscape",
++      fitToPage: true,
++      fitToWidth: 1,
++      fitToHeight: 0,
++      margins: { left: 0.5, right: 0.5, top: 0.6, bottom: 0.6, header: 0.3, footer: 0.3 },
++    },
++    headerFooter: {
++      oddHeader: `&L&B${opciones.titulo}&RPágina &P`,
++      oddFooter: `&C${PIE}`,
++    },
++  });
++
++  for (let i = 0; i < total; i++) {
++    hoja.getColumn(i + 1).width = opciones.anchos?.[i] ?? 14;
++  }
++
++  // Filas 1-3: logo (195 x 39 pt en el PDF ≈ 260 x 52 px).
++  const logo = await logoBase64();
++  if (logo) {
++    const id = libro.addImage({ base64: logo, extension: "png" });
++    hoja.addImage(id, { tl: { col: 1, row: 0 }, ext: { width: 260, height: 52 } });
++  }
++  for (const numero of [1, 2, 3]) hoja.getRow(numero).height = 15;
++
++  // Fila 4: título con la línea inferior del PDF.
++  const filaTitulo = hoja.getRow(4);
++  filaTitulo.getCell(2).value = opciones.titulo;
++  filaTitulo.getCell(2).font = { bold: true, size: 15 };
++  filaTitulo.height = 22;
++  if (total > 1) hoja.mergeCells(4, 2, 4, total);
++  filaTitulo.getCell(2).border = { bottom: BORDE };
++
++  // Campos del encabezado: etiqueta en la primera columna, valor en el resto.
++  let numero = 6;
++  for (const [campo, valor] of Object.entries(opciones.header ?? {})) {
++    if (valor == null || valor === "") continue;
++    const fila = hoja.getRow(numero);
++    fila.getCell(2).value = campo.toUpperCase();
++    fila.getCell(2).font = { bold: true, size: 10 };
++    fila.getCell(3).value = valor;
++    fila.getCell(3).font = { size: 10 };
++    if (total > 2) hoja.mergeCells(numero, 3, numero, total);
++    numero += 1;
++  }
++  numero += 1;
++
++  // Encabezado de la tabla: gris del PDF, negrita, con bordes.
++  const filaEncabezado = hoja.getRow(numero);
++  opciones.columnas.forEach((columna, i) => {
++    const celda = filaEncabezado.getCell(i + 2);
++    celda.value = columna;
++    celda.font = { bold: true, size: 9, color: { argb: NEGRO } };
++    celda.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GRIS_ENCABEZADO } };
++    celda.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
++    celda.border = BORDES;
++  });
++  hoja.views = [{ /* state: "frozen", */ ySplit: numero }];
++  hoja.pageSetup.printTitlesRow = `${numero}:${numero}`;
++  hoja.autoFilter = `${filaEncabezado.getCell(2).address}:${filaEncabezado.getCell(total).address}`;
++  numero += 1;
++
++  // Cuerpo: cuadrícula como el tema "grid" del PDF.
++  for (const { celdas, negrita } of opciones.filas) {
++    const fila = hoja.getRow(numero);
++    celdas.forEach((valor, i) => {
++      const celda = fila.getCell(i + 2);
++      celda.value = valor;
++      celda.font = { size: 9, bold: negrita === true };
++      celda.border = BORDES;
++      const formato = opciones.formatos?.[i];
++      if (formato) celda.numFmt = formato;
++      celda.alignment = {
++        vertical: "top",
++        horizontal: typeof valor === "number" ? "right" : "left",
++      };
++    });
++    numero += 1;
++  }
++
++  const celda = hoja.getColumn(1);
++  celda.width = 5;
++
++  // Source - https://stackoverflow.com/a/64097746
++  // Posted by Ashish S, modified by community. See post 'Timeline' for change history
++  // Retrieved 2026-11-20, License - CC BY-SA 4.0
++
++  // Ancho según el texto que se ve: números con su formato (66.67%, no 66.666…), sin contar
++  // celdas vacías ni combinadas; la columna 1 (margen) queda en 5. Excel mide en caracteres
++  // de fuente 11: el texto se escala por el tamaño de su fuente (tabla en 9).
++  hoja.columns.forEach((column) => {
++    if (column.number === 1) return;
++    let maxLength = 0;
++    column.eachCell?.({ includeEmpty: false }, (cell) => {
++      if (cell.isMerged || cell.value == null || cell.value === "") return;
++      const texto = textoVisible(cell.value, cell.numFmt);
++      const lineas = cell.alignment?.wrapText ? texto.split(/\s+/) : [texto];
++      const largo = Math.max(...lineas.map((l) => l.length)) * ((cell.font?.size ?? 11) / 11);
++      if (largo > maxLength) maxLength = largo;
++    });
++    column.width = Math.max(Math.ceil(maxLength) + 2, 8);
++  });
++
++  // pie altera visualizacion de formato
++  // // Pie azul del PDF.
++  // numero += 1;
++  // const filaPie = hoja.getRow(numero);
++  // filaPie.getCell(1).value = PIE;
++  // if (total > 1) hoja.mergeCells(numero, 1, numero, total);
++  // const celdaPie = filaPie.getCell(1);
++  // celdaPie.font = { size: 7, color: { argb: BLANCO } };
++  // celdaPie.fill = { type: "pattern", pattern: "solid", fgColor: { argb: AZUL_PIE } };
++  // celdaPie.alignment = { horizontal: "center", vertical: "middle" };
++
++  return hoja;
++}
+diff --git a/src/features/reportes/lib/exportar.ts b/src/features/reportes/lib/exportar.ts
+index 7ef7bac..415bede 100644
+--- a/src/features/reportes/lib/exportar.ts
++++ b/src/features/reportes/lib/exportar.ts
+@@ -2,13 +2,15 @@ import { format } from "date-fns";
+ import type { BloquePdf } from "@/features/pricing/reportes";
+ import type { TreeNode } from "@/features/pricing/shared";
+ import type { CampoConfig } from "@/shared/components/tabla-double/niveles-builder";
++import type { useExcelJS } from "@/shared/hooks/use-dynamic-libraries";
+ import { exportarExcel } from "@/shared/lib/excel";
+ import type { ColumnaReporte, ValorCelda } from "./definir-reporte";
++import { agregarHojaReporte, type FilaExcel } from "./excel-reporte";
+ import type { Resumen } from "./resumen-agrupado";
+ 
+ /**
+  * DESCARGAS de cualquier reporte, con lo ya consultado. Son dos cosas distintas:
+- * - Excel agrupado: el Resumen agrupado ("Personaliza tu reporte").
++ * - Excel agrupado: el Resumen agrupado ("Personaliza tu reporte"), con el generador de pricing.
+  * - Excel y PDF del reporte: el detalle (o el Excel propio de la definición, `excel`).
+  * Encabezado: período y filtros de la consulta.
+  */
+@@ -18,28 +20,52 @@ export interface TablaExportable {
+   filas: ValorCelda[][];
+ }
+ 
++/** Resumen agrupado listo para `agregarHojaReporte` (columnas, filas con negrita y formatos). */
++export interface TablaResumenExcel {
++  columnasNivel: string[];
++  columnas: string[];
++  filas: FilaExcel[];
++  formatos: Array<string | undefined>;
++}
++
+ /**
+- * Resumen agrupado como tabla plana (igual que el Excel de pricing): una columna por nivel de
+- * agrupación; cada fila escribe solo su valor, en la columna de su nivel. El TOTAL GENERAL va
+- * en la primera.
++ * Resumen agrupado como tabla plana, igual que el Excel de Reportes de pricing (`exportarExcel`
++ * de `pricing/reportes/components/tabla-kpi.tsx`): una columna por nivel de agrupación; cada
++ * fila escribe solo su valor, en la columna de su nivel (sin repetir los superiores). El total
++ * general va en la primera; las filas con hijos y el total, en negrita.
+  */
+-export function tablaResumen(resumen: Resumen, niveles: readonly CampoConfig[]): TablaExportable {
++export function tablaResumen(resumen: Resumen, niveles: readonly CampoConfig[]): TablaResumenExcel {
+   const columnasNivel = niveles.length ? niveles.map((n) => n.etiqueta) : ["Concepto"];
+-  const filas: ValorCelda[][] = [];
+-  const agregar = (nodos: readonly TreeNode[], profundidad: number) => {
++  const filas: FilaExcel[] = [];
++  const agregar = (nodos: readonly TreeNode[], ruta: string[]) => {
+     for (const nodo of nodos) {
+-      filas.push([
+-        ...columnasNivel.map((_, i) => (i === Math.max(profundidad - 1, 0) ? nodo.label : null)),
+-        ...resumen.columnas.map((c) => {
+-          const valor = nodo.values?.[c.key];
+-          return valor === "" || valor == null ? null : Number(valor);
+-        }),
+-      ]);
+-      agregar(nodo.children ?? [], profundidad + 1);
++      const esRaiz = ruta.length === 0 && nodo.id === "total";
++      const rutaNodo = esRaiz ? [] : [...ruta, nodo.label];
++      const columnaNodo = Math.max(0, rutaNodo.length - 1);
++      const celdasNivel = columnasNivel.map((_, i) => (i === columnaNodo ? nodo.label : null));
++      filas.push({
++        celdas: [
++          ...celdasNivel,
++          ...resumen.columnas.map((c) => {
++            const valor = nodo.values?.[c.key];
++            return valor === "" || valor == null ? null : Number(valor);
++          }),
++        ],
++        negrita: Boolean(nodo.children?.length) || esRaiz,
++      });
++      agregar(nodo.children ?? [], rutaNodo);
+     }
+   };
+-  agregar(resumen.data, 0);
+-  return { columnas: [...columnasNivel, ...resumen.columnas.map((c) => c.label)], filas };
++  agregar(resumen.data, []);
++  return {
++    columnasNivel,
++    columnas: [...columnasNivel, ...resumen.columnas.map((c) => c.label)],
++    filas,
++    formatos: [
++      ...columnasNivel.map(() => undefined),
++      ...resumen.columnas.map((c) => (c.label.includes("%") ? '0.00"%"' : "#,##0")),
++    ],
++  };
+ }
+ 
+ /** Detalle del reporte con sus columnas. */
+@@ -57,25 +83,40 @@ export function tablaDetalle<TFila>(
+ export const nombreArchivo = (titulo: string) =>
+   `${titulo} - ERPWEB - ${format(new Date(), "yyyy_MM_dd_HH_mm_ss")}`;
+ 
+-/** Excel agrupado (botón "Excel agrupado"): el Resumen agrupado, como el Excel de pricing. */
++/**
++ * Excel agrupado (botón "Excel agrupado"): el Resumen agrupado con el mismo generador que
++ * Reportes de pricing (`agregarHojaReporte`, copiado en `excel-reporte.ts`).
++ */
+ export async function descargarExcelAgrupado(opciones: {
+   titulo: string;
+   encabezado: Record<string, string>;
+-  resumen: TablaExportable;
++  resumen: TablaResumenExcel;
++  /** `loadExcelJS` de `useExcelJS()`. */
++  cargarExcel: ReturnType<typeof useExcelJS>["loadExcelJS"];
++  /** Rango consultado (`yyyy-MM-dd`), para el nombre del archivo como en pricing. */
++  fechaInicio?: string | undefined;
++  fechaFin?: string | undefined;
+ }): Promise<void> {
+-  await exportarExcel({
+-    nombreArchivo: `${nombreArchivo(`${opciones.titulo} - Resumen agrupado`)}.xlsx`,
++  if (opciones.resumen.filas.length === 0) throw new Error("No hay datos para exportar a Excel.");
++  const { ExcelJS, saveAs } = await opciones.cargarExcel();
++  const libro = new ExcelJS.Workbook();
++  await agregarHojaReporte(libro, {
+     titulo: `${opciones.titulo} - Resumen agrupado`,
+-    encabezado: opciones.encabezado,
+-    hojas: [
+-      {
+-        nombre: "Resumen agrupado",
+-        columnas: opciones.resumen.columnas,
+-        filas: opciones.resumen.filas,
+-        mostrarCuadricula: true,
+-      },
+-    ],
++    hoja: "Resumen agrupado",
++    header: opciones.encabezado,
++    columnas: opciones.resumen.columnas,
++    filas: opciones.resumen.filas,
++    formatos: opciones.resumen.formatos,
+   });
++  const buffer = await libro.xlsx.writeBuffer();
++  // Como pricing: "<reporte>-<inicio>-<fin>.xlsx" (sin fechas, solo el nombre).
++  const rango = [opciones.fechaInicio, opciones.fechaFin].filter(Boolean).join("-");
++  saveAs(
++    new Blob([buffer], {
++      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
++    }),
++    `${opciones.titulo} - Resumen agrupado${rango ? `-${rango}` : ""}.xlsx`,
++  );
+ }
+ 
+ /** Excel del reporte (sin `excel` propio en la definición): el detalle con sus columnas. */

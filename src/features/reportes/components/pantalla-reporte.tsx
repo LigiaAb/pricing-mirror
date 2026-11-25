@@ -24,6 +24,7 @@ import {
   AccordionTrigger,
 } from "@/shared/components/ui/accordion";
 import { Button } from "@/shared/components/ui/button";
+import { useExcelJS } from "@/shared/hooks/use-dynamic-libraries";
 import type { FiltroReporte, ParamsReporte, Reporte, ValoresFiltros } from "../lib/definir-reporte";
 import {
   bloquesPdf,
@@ -123,7 +124,10 @@ export function PantallaReporte({
   const centroCosto = useContextoOperativoStore((s) => s.currentCentroCosto);
   const hidratado = useContextoOperativoStore((s) => s._hasHydrated);
   // Como Tarifas y Cotizaciones: con el permiso se eligen empresa y CC; sin él, los del contexto.
-  const { puedeFiltrarEmpresaCentroCosto } = usePermisosCategoria(OPCION_PERMISOS_REPORTES);
+  const { puedeFiltrarEmpresaCentroCosto: conPermiso } =
+    usePermisosCategoria(OPCION_PERMISOS_REPORTES);
+  const usaEmpresaCc = definicion.empresaCentroCosto !== false;
+  const puedeFiltrarEmpresaCentroCosto = usaEmpresaCc && conPermiso;
   const filtros = React.useMemo(
     () => [
       ...(puedeFiltrarEmpresaCentroCosto ? FILTROS_EMPRESA_CC : []),
@@ -174,6 +178,7 @@ export function PantallaReporte({
 
   /** Valores que se usan: con el permiso, los elegidos (o el contexto); sin él, el contexto. */
   const efectivos = React.useMemo<ValoresFiltros>(() => {
+    if (!usaEmpresaCc) return valores;
     const contexto = {
       cod_empresa: empresa?.cod_empresa == null ? "" : String(empresa.cod_empresa),
       cod_cc: centroCosto?.cod_cc == null ? "" : String(centroCosto.cod_cc),
@@ -181,7 +186,13 @@ export function PantallaReporte({
     return puedeFiltrarEmpresaCentroCosto
       ? { ...contexto, ...valores }
       : { ...valores, ...contexto };
-  }, [empresa?.cod_empresa, centroCosto?.cod_cc, valores, puedeFiltrarEmpresaCentroCosto]);
+  }, [
+    empresa?.cod_empresa,
+    centroCosto?.cod_cc,
+    valores,
+    puedeFiltrarEmpresaCentroCosto,
+    usaEmpresaCc,
+  ]);
 
   const params = React.useMemo<ParamsReporte>(() => {
     const todos: ParamsReporte = {
@@ -222,6 +233,9 @@ export function PantallaReporte({
   const sinDatos = filas.length === 0;
   const descargas = definicion.descargas ?? {};
 
+  const { loadExcelJS } = useExcelJS();
+  const tablaAgrupada = () => tablaResumen(resumen, config.niveles);
+
   const encabezado = (): Record<string, string> => {
     const periodo =
       fechas.inicio || fechas.fin
@@ -229,8 +243,8 @@ export function PantallaReporte({
         : "";
     const campos: Record<string, string> = {
       Período: periodo,
-      Empresa: empresa?.nombre_emp ?? empresa?.nom_emp ?? "",
-      "Centro de costo": centroCosto?.nombre_cc ?? centroCosto?.nom_cc ?? "",
+      Empresa: usaEmpresaCc ? (empresa?.nombre_emp ?? empresa?.nom_emp ?? "") : "",
+      "Centro de costo": usaEmpresaCc ? (centroCosto?.nombre_cc ?? centroCosto?.nom_cc ?? "") : "",
       ...etiquetas.current,
     };
     return Object.fromEntries(Object.entries(campos).filter(([, v]) => v !== ""));
@@ -246,13 +260,23 @@ export function PantallaReporte({
   };
 
   // Encabezado de las descargas: los filtros de la consulta, no los que se cambiaron después.
-  /** Encabezado del Excel agrupado: filtros de la consulta + la agrupación. */
+  /**
+   * Encabezado del Excel agrupado, como el de pricing: filtros de la consulta (período en
+   * `dd-MM-yyyy al dd-MM-yyyy`, "Centro de Costo") + "Agrupado por" y "Columnas".
+   */
   const encabezadoAgrupado = (): Record<string, string> => {
-    const agrupado = config.niveles.map((n) => n.etiqueta).join(" > ");
+    const { fecha_inicio: inicio, fecha_fin: fin } = consultada?.params ?? {};
+    const fechaPricing = (iso: string | undefined) =>
+      iso ? format(parseISO(iso), "dd-MM-yyyy") : "…";
+    const filtrosConsulta = Object.entries(consultada?.encabezado ?? {}).map(([campo, valor]) =>
+      campo === "Período"
+        ? [campo, `${fechaPricing(inicio)} al ${fechaPricing(fin)}`]
+        : [campo === "Centro de costo" ? "Centro de Costo" : campo, valor],
+    );
     const columna = campos.find((c) => c.campo === config.columna)?.etiqueta;
     return {
-      ...consultada?.encabezado,
-      ...(agrupado ? { "Agrupado por": agrupado } : {}),
+      ...Object.fromEntries(filtrosConsulta),
+      "Agrupado por": tablaAgrupada().columnasNivel.join(" > "),
       ...(columna ? { Columnas: columna } : {}),
     };
   };
@@ -316,7 +340,10 @@ export function PantallaReporte({
       descargarExcelAgrupado({
         titulo,
         encabezado: encabezadoAgrupado(),
-        resumen: tablaResumen(resumen, config.niveles),
+        resumen: tablaAgrupada(),
+        cargarExcel: loadExcelJS,
+        fechaInicio: consultada?.params.fecha_inicio,
+        fechaFin: consultada?.params.fecha_fin,
       }),
     );
 

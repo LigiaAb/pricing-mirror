@@ -238,7 +238,7 @@ export async function excelActividades(
 }
 
 export const reporteVisitasHistorico = definirReporte<Fila>({
-  nomenclatura: "REP_VISITAS_HIST",
+  nomenclatura: "CRM-RVH-01",
   descripcion: "Actividades del CRM con su resultado",
   fechas: "opcionales",
   filtros: [
