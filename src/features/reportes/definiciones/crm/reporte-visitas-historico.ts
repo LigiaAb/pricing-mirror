@@ -8,8 +8,12 @@ import { type CeldaExcel, exportarExcel } from "@/shared/lib/excel";
 import { asText } from "@/shared/lib/text";
 import { zIdSafe } from "@/shared/lib/zod-scalars";
 import { useAuthStore } from "@/shared/stores/auth-store";
-import { type DescargaReporte, definirReporte, type ParamsReporte } from "../lib/definir-reporte";
-import { filtroEstado, filtroTipo, filtroUsuario } from "../lib/filtros";
+import {
+  type DescargaReporte,
+  definirReporte,
+  type ParamsReporte,
+} from "../../lib/definir-reporte";
+import { filtroEstado, filtroTipo, filtroUsuario } from "../../lib/filtros";
 
 /**
  * REPORTE DE VISITAS — HISTÓRICO (historial de actividades del CRM)

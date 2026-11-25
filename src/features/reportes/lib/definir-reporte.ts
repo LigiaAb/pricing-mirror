@@ -3,8 +3,8 @@ import type { ComboboxOption } from "@/shared/components/ui/combobox";
 /**
  * CONTRATO DE UN REPORTE
  *
- * Un reporte = un archivo en `definiciones/` que llama a `definirReporte` + 1 línea en
- * `definiciones/index.ts`. La pantalla (`VistaReportes`) arma todo lo demás: selector,
+ * Un reporte = un archivo en `definiciones/<modulo>/` que llama a `definirReporte` + 1 línea
+ * en la lista del módulo (`definiciones/<modulo>/index.ts`). La pantalla (`VistaReportes`) arma todo lo demás: selector,
  * fechas, filtros, "Personaliza tu reporte", "Resumen agrupado", tabla del reporte y
  * descargas (PDF y Excel). Ver `ARQUITECTURA.md`.
  */
@@ -53,6 +53,8 @@ export interface FiltroReporte {
   depende?: readonly string[];
   /** Selección múltiple (ej. Tipo en Reportes CRM): el valor va separado por comas (`"7,8"`). */
   multiple?: boolean;
+  /** Obligatorio (ej. Tipo de asignación en Objetivos): sin valor no se puede consultar. */
+  requerido?: boolean;
 }
 
 export interface ContenidoReporteProps<TFila> {

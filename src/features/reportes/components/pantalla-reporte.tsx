@@ -101,12 +101,13 @@ function CampoFiltro({
   return (
     <CampoSelect
       id={`filtro-${filtro.id}`}
-      label={filtro.label}
+      label={filtro.requerido ? `${filtro.label} *` : filtro.label}
       value={valor}
       onChange={(nuevo) => onChange(filtro.id, nuevo)}
       opciones={opciones}
       cargando={cargando}
-      placeholder="Todos"
+      placeholder={filtro.requerido ? "Seleccione una opción" : "Todos"}
+      limpiable={!filtro.requerido}
     />
   );
 }
@@ -205,6 +206,8 @@ export function PantallaReporte({
   }, [fechas, efectivos]);
 
   const faltanFechas = modoFechas === "requeridas" && (!fechas.inicio || !fechas.fin);
+  /** Filtros obligatorios sin valor: no se puede consultar. */
+  const faltanFiltros = filtros.filter((f) => f.requerido && !efectivos[f.id]).map((f) => f.label);
 
   /** Lo último que se pidió con "Consultar": parámetros y encabezado de las descargas. */
   const [consultada, setConsultada] = React.useState<{
@@ -421,7 +424,12 @@ export function PantallaReporte({
                       <Button
                         type="button"
                         className="gap-1.5"
-                        disabled={!hidratado || faltanFechas || consulta.isFetching}
+                        disabled={
+                          !hidratado ||
+                          faltanFechas ||
+                          faltanFiltros.length > 0 ||
+                          consulta.isFetching
+                        }
                         onClick={consultar}
                       >
                         {consulta.isFetching ? (
@@ -529,7 +537,9 @@ export function PantallaReporte({
             <MensajeVacio>
               {faltanFechas
                 ? "Seleccione la fecha inicial y la final y pulse «Consultar»."
-                : "Pulse «Consultar» para cargar el reporte."}
+                : faltanFiltros.length
+                  ? `Seleccione ${faltanFiltros.join(", ")} y pulse «Consultar».`
+                  : "Pulse «Consultar» para cargar el reporte."}
             </MensajeVacio>
           ) : consulta.isError ? (
             <MensajeVacio>

@@ -1,0 +1,1072 @@
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+index e667b38..6e4cce3 100644
+--- a/src/features/reportes/ARQUITECTURA.md
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -8,13 +8,15 @@ reportes/
+   api/
+     reportes-disponibles.ts   reportes del rol + módulo + empresa + CC → select Reporte
+     consultar-api.ts          atajo consultarApi(endpoint, schema) para `consultar`
+-  definiciones/
+-    index.ts                  REGISTRO: lista REPORTES (1 línea por reporte)
+-    reporte-visitas-historico.ts  Reporte de visitas — histórico (CRM); plantilla
+-    reporte-visitas.ts        Reporte de visitas (planificación, CRM): reusa la consulta y el
+-                              Excel del histórico
+-    reporte-actividades.ts    Actividades (calendario PDF de CRM, del usuario de la sesión; sin
+-                              empresa ni CC: `empresaCentroCosto: false`)
++  definiciones/                 UNA CARPETA POR MÓDULO
++    index.ts                  REGISTRO: REPORTES = las listas de todos los módulos
++    crm/
++      index.ts                REPORTES_CRM (1 línea por reporte, en orden de correlativo)
++      reporte-visitas-historico.ts  CRM-RVH-01 Reporte de visitas — histórico; plantilla
++      reporte-visitas.ts      CRM-RV-02 Reporte de visitas (planificación): reusa la consulta y
++                              el Excel del histórico
++      reporte-actividades.ts  CRM-A-03 Actividades (calendario PDF, del usuario de la sesión;
++                              sin empresa ni CC: `empresaCentroCosto: false`)
+   lib/
+     definir-reporte.ts        contrato (DefinicionReporte, ColumnaReporte, FiltroReporte)
+     filtros.ts                atajos: filtroUsuario, filtroTipo, filtroEstado, filtroLista;
+@@ -39,7 +41,8 @@ reportes/
+    con correlativo de 2 dígitos y sin contar "de" en las iniciales. CRM: `CRM-RVH-01` (Reporte de
+    visitas — histórico), `CRM-RV-02` (Reporte de visitas), `CRM-A-03` (Actividades). El siguiente
+    de CRM es `CRM-…-04`.
+-2. **Definición**: copiar `definiciones/reporte-visitas-historico.ts` y cambiar:
++2. **Definición**: en la carpeta de su módulo (`definiciones/<modulo>/`, ej. `crm/`), copiar
++   `definiciones/crm/reporte-visitas-historico.ts` y cambiar:
+    - `nomenclatura`: la del `TIPO`.
+    - `consultar`: `consultarApi("/api/appweb/<endpoint>", filaSchema)`. Recibe
+      `fecha_inicio`, `fecha_fin` (`yyyy-MM-dd`), `cod_empresa`, `cod_cc` y el `id` de cada filtro
+@@ -50,7 +53,9 @@ reportes/
+    - Opcional: `filtros` (atajos de `lib/filtros.ts`), `fechas` (`"requeridas"` por defecto,
+      `"opcionales"`, `"ninguna"`), `agrupacion` inicial, `Contenido` (gráficas u otra vista en
+      lugar de la tabla) y `descargas` (ver abajo).
+-3. **Registro**: sumarlo a `REPORTES` en `definiciones/index.ts`.
++3. **Registro**: sumarlo a la lista del módulo (`definiciones/<modulo>/index.ts`, ej.
++   `REPORTES_CRM`). Un módulo nuevo: su carpeta con su `index.ts` y su lista en `REPORTES`
++   (`definiciones/index.ts`).
+ 
+ Si la API devuelve un reporte que no está en el registro, la pantalla dice que aún no está
+ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (sin permiso).
+@@ -86,7 +91,7 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
+     CRM unos tienen Excel, otros PDF y otros ambos): `true` = el detalle con las columnas
+     (Excel con `exportarExcel` de `@/shared/lib/excel`; PDF con `usePdfReporte` de
+     `@/features/pricing/reportes`); una función = formato propio, que recibe `{ filas, titulo,
+-    encabezado, params }` (ej. `excelHistorico` en `reporte-visitas-historico.ts`, el Excel de
++    encabezado, params }` (ej. `excelActividades` en `crm/reporte-visitas-historico.ts`, el Excel de
+     Reportes CRM). Sin la clave, no hay botón.
+ 
+ La consulta se guarda con React Query (`["reportes", nomenclatura, params]`) al pulsar
+diff --git a/src/features/reportes/definiciones/crm/index.ts b/src/features/reportes/definiciones/crm/index.ts
+new file mode 100644
+index 0000000..98b01a3
+--- /dev/null
++++ b/src/features/reportes/definiciones/crm/index.ts
+@@ -0,0 +1,11 @@
++import type { Reporte } from "../../lib/definir-reporte";
++import { reporteActividades } from "./reporte-actividades";
++import { reporteVisitas } from "./reporte-visitas";
++import { reporteVisitasHistorico } from "./reporte-visitas-historico";
++
++/** Reportes del módulo CRM (nomenclatura `CRM-…`), en orden de correlativo. */
++export const REPORTES_CRM: readonly Reporte[] = [
++  reporteVisitasHistorico,
++  reporteVisitas,
++  reporteActividades,
++];
+diff --git a/src/features/reportes/definiciones/crm/reporte-actividades.ts b/src/features/reportes/definiciones/crm/reporte-actividades.ts
+new file mode 100644
+index 0000000..ef00b50
+--- /dev/null
++++ b/src/features/reportes/definiciones/crm/reporte-actividades.ts
+@@ -0,0 +1,105 @@
++import { empleadosUsuarios } from "@/features/catalogos";
++import {
++  type ActividadReporte,
++  actividadReporteSchema,
++} from "@/features/reportes-crm/api/actividades-reporte";
++import { actividadesEnRango } from "@/features/reportes-crm/lib/actividades-vista";
++import {
++  type AgenteCalendario,
++  generarPdfCalendarioActividades,
++} from "@/features/reportes-crm/lib/pdf-calendario-actividades";
++import { http } from "@/shared/api/client";
++import { parseEnvelope } from "@/shared/api/envelope";
++import { formatearFechaHora } from "@/shared/lib/date";
++import { asText } from "@/shared/lib/text";
++import { useAuthStore } from "@/shared/stores/auth-store";
++import {
++  type DescargaReporte,
++  definirReporte,
++  type ParamsReporte,
++} from "../../lib/definir-reporte";
++
++/**
++ * ACTIVIDADES (calendario de seguimientos del CRM)
++ *
++ * Igual al reporte "Actividades" de Reportes CRM: las actividades del usuario de la sesión
++ * (`lista-actividades2` con `cod_asesor`), fechas opcionales filtradas aquí por día local
++ * (el API no las aplica) y el PDF "Calendario de Seguimientos de actividades" de CRM. Sin
++ * empresa ni CC (como en CRM).
++ */
++
++type Fila = ActividadReporte & { asesor: string };
++
++async function consultar(params: ParamsReporte): Promise<Fila[]> {
++  const usuario = asText(useAuthStore.getState().user?.cod_usuario);
++  if (!usuario) return [];
++  const [actividades, empleados] = await Promise.all([
++    http
++      .get<unknown>("/api/appweb/lista-actividades2", { params: { cod_asesor: usuario } })
++      .then((r) => parseEnvelope(r, actividadReporteSchema, "lista-actividades2")),
++    empleadosUsuarios.fetchLista({}),
++  ]);
++  // Como la tabla de CRM: nombre del asesor por código de usuario.
++  const asesores = new Map(empleados.map((e) => [String(e.codUsuario), e.nombreCompleto]));
++  return actividadesEnRango(actividades, params.fecha_inicio ?? "", params.fecha_fin ?? "").map(
++    (a) => ({ ...a, asesor: asesores.get(String(a.cod_asesor ?? "")) ?? "" }),
++  );
++}
++
++/** Usuario de la sesión, que encabeza cada página del calendario (como en CRM). */
++function agenteSesion(): AgenteCalendario {
++  const usuario = useAuthStore.getState().user;
++  const nombre = [usuario?.nom_empleado, usuario?.apellido_emp]
++    .map((parte) => asText(parte))
++    .filter(Boolean)
++    .join(" ");
++  return {
++    nombre: nombre || asText(usuario?.nombre_usuario) || asText(usuario?.email),
++    correo: asText(usuario?.usuario) || asText(usuario?.email),
++  };
++}
++
++/** PDF de CRM: calendario por día y hora, abierto en otra pestaña. */
++async function pdfCalendario({ filas, params }: DescargaReporte<Fila>) {
++  const blob = await generarPdfCalendarioActividades([...filas], {
++    agente: agenteSesion(),
++    fechaInicio: params.fecha_inicio ?? "",
++    fechaFin: params.fecha_fin ?? "",
++  });
++  const url = URL.createObjectURL(blob);
++  window.open(url, "_blank", "noopener,noreferrer");
++  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
++}
++
++export const reporteActividades = definirReporte<Fila>({
++  nomenclatura: "CRM-A-03",
++  descripcion: "Calendario de seguimientos del usuario",
++  fechas: "opcionales",
++  empresaCentroCosto: false,
++  consultar,
++  // Como en Reportes CRM: solo PDF (sin Excel).
++  descargas: { pdf: pdfCalendario },
++  agrupacion: { filas: ["tipo"] },
++  columnas: [
++    { id: "tipo", label: "Tipo", valor: (f) => f.nom_tipo, agrupable: true },
++    { id: "asesor", label: "Asesor", valor: (f) => f.asesor, agrupable: true },
++    {
++      id: "cliente",
++      label: "Cliente",
++      valor: (f) => f.nombre_cliente,
++      agrupable: true,
++      buscable: true,
++    },
++    {
++      id: "fecha_programacion",
++      label: "Fecha de programación",
++      valor: (f) => formatearFechaHora(f.fecha_creada),
++    },
++    {
++      id: "fecha_ejecucion",
++      label: "Fecha de ejecución",
++      valor: (f) => formatearFechaHora(f.fecha_programada),
++    },
++    { id: "objetivo", label: "Objetivo", valor: (f) => f.objetivo_actividad_desc, agrupable: true },
++  ],
++});
+diff --git a/src/features/reportes/definiciones/crm/reporte-visitas-historico.ts b/src/features/reportes/definiciones/crm/reporte-visitas-historico.ts
+new file mode 100644
+index 0000000..fd8a896
+--- /dev/null
++++ b/src/features/reportes/definiciones/crm/reporte-visitas-historico.ts
+@@ -0,0 +1,302 @@
++import { format, parseISO } from "date-fns";
++import { z } from "zod";
++import { empleadosUsuarios } from "@/features/catalogos";
++import { http } from "@/shared/api/client";
++import { parseEnvelope } from "@/shared/api/envelope";
++import { formatearFechaHora } from "@/shared/lib/date";
++import { type CeldaExcel, exportarExcel } from "@/shared/lib/excel";
++import { asText } from "@/shared/lib/text";
++import { zIdSafe } from "@/shared/lib/zod-scalars";
++import { useAuthStore } from "@/shared/stores/auth-store";
++import {
++  type DescargaReporte,
++  definirReporte,
++  type ParamsReporte,
++} from "../../lib/definir-reporte";
++import { filtroEstado, filtroTipo, filtroUsuario } from "../../lib/filtros";
++
++/**
++ * REPORTE DE VISITAS — HISTÓRICO (historial de actividades del CRM)
++ *
++ * Igual al "Reporte de visitas — histórico" de Reportes CRM (legacy
++ * `tabla_actividades_reporte_2`): `lista-actividades2` filtra por empresa, CC, asesor y
++ * estado; las fechas (por fecha programada, día local) y el tipo se filtran aquí, como en
++ * CRM, porque el API no los aplica.
++ */
++
++const texto = z
++  .string()
++  .nullable()
++  .optional()
++  .transform((v) => v ?? "");
++
++const actividadSchema = z.looseObject({
++  cod_actividad: zIdSafe,
++  fecha_creada: texto,
++  fecha_programada: texto,
++  cod_tipo: zIdSafe.optional(),
++  nom_tipo: texto,
++  estado_desc: texto,
++  cod_asesor: zIdSafe.optional(),
++  nombre_cliente: texto,
++  objetivo_actividad_desc: texto,
++  resultado: texto,
++});
++
++/** Primer resultado de la actividad (`resultado` viaja como JSON serializado). */
++interface Resultado {
++  COD_ACTIVIDAD?: string | number;
++  NOM_TIPO?: string;
++  DESCRIPCION?: string;
++  FECHA_PROGRAMADA?: string;
++}
++
++export type Fila = z.infer<typeof actividadSchema> & { asesor: string; res: Resultado | null };
++
++/** Tipos de actividad que ofrecía el reporte en el legacy. */
++export const TIPOS_ACTIVIDAD = [
++  "CORREO",
++  "LLAMADA",
++  "VISITA",
++  "SEGUIMIENTO COTIZACION",
++  "SEGUIMIENTO CTS",
++] as const;
++
++function primerResultado(json: string): Resultado | null {
++  if (!json) return null;
++  try {
++    const lista: unknown = JSON.parse(json);
++    return Array.isArray(lista) ? ((lista[0] as Resultado | undefined) ?? {}) : {};
++  } catch {
++    return {};
++  }
++}
++
++/** Legacy: cada fecha filtra sola y se compara por día local con la fecha programada. */
++function enRango(fecha: string, inicio: string | undefined, fin: string | undefined) {
++  if (!inicio && !fin) return true;
++  const valor = new Date(fecha).getTime();
++  if (!Number.isFinite(valor)) return false;
++  const desde = inicio ? new Date(`${inicio}T00:00:00`).getTime() : Number.NEGATIVE_INFINITY;
++  const hasta = fin ? new Date(`${fin}T23:59:59.999`).getTime() : Number.POSITIVE_INFINITY;
++  return valor >= desde && valor <= hasta;
++}
++
++export async function consultar(params: ParamsReporte): Promise<Fila[]> {
++  const { cod_empresa, cod_cc, cod_asesor, cod_estado } = params;
++  const consulta = Object.fromEntries(
++    Object.entries({ cod_empresa, cod_cc, cod_asesor, cod_estado }).filter(([, v]) => v),
++  );
++  const [actividades, empleados] = await Promise.all([
++    http
++      .get<unknown>("/api/appweb/lista-actividades2", { params: consulta })
++      .then((r) => parseEnvelope(r, actividadSchema, "lista-actividades2")),
++    empleadosUsuarios.fetchLista({}),
++  ]);
++  // Nombre del asesor: primer registro de cada usuario en el catálogo de empleados.
++  const asesores = new Map<string, string>();
++  for (const e of empleados) {
++    const clave = String(e.codUsuario);
++    if (!asesores.has(clave)) asesores.set(clave, e.nombreCompleto);
++  }
++  return (
++    actividades
++      .filter((a) => enRango(a.fecha_programada, params.fecha_inicio, params.fecha_fin))
++      // Tipo: selección múltiple, como en CRM ("7,8" = cualquiera de los dos).
++      .filter(
++        (a) => !params.cod_tipo || params.cod_tipo.split(",").includes(String(a.cod_tipo ?? "")),
++      )
++      .sort((a, b) => Number(a.cod_actividad) - Number(b.cod_actividad))
++      .map((a) => ({
++        ...a,
++        asesor: asesores.get(String(a.cod_asesor ?? "")) ?? "",
++        res: primerResultado(a.resultado),
++      }))
++  );
++}
++
++// ── Excel del reporte: el mismo de Reportes CRM (`ReporteActividades`) ──
++
++/**
++ * Columnas del legacy (`columnas_historico` de `reportes-crm/lib/actividades-excel.ts`). El
++ * "Reporte de visitas" (planificación) usa solo las de `COLUMNAS_PLANIFICACION`.
++ */
++const COLUMNAS_EXCEL: {
++  label: string;
++  valor: (f: Fila) => string | number | null;
++  /** Se oculta si todas las filas tienen el mismo valor. */
++  filtrarSiMultiplesValores?: boolean;
++  /** Estado en rojo si sigue EN PROCESO más de 7 días. */
++  color?: boolean;
++}[] = [
++  { label: "CODIGO DE ACTIVIDAD", valor: (f) => f.cod_actividad },
++  { label: "TIPO", valor: (f) => f.nom_tipo, filtrarSiMultiplesValores: true },
++  { label: "ASESOR", valor: (f) => f.asesor || null, filtrarSiMultiplesValores: true },
++  { label: "CLIENTE", valor: (f) => f.nombre_cliente },
++  { label: "ESTADO", valor: (f) => f.estado_desc, color: true },
++  { label: "FECHA DE PROGRAMACION", valor: (f) => fechaDia(f.fecha_creada) },
++  { label: "FECHA DE EJECUCION", valor: (f) => fechaDia(f.fecha_programada) },
++  { label: "OBJETIVO", valor: (f) => f.objetivo_actividad_desc },
++  {
++    label: "NO RESULTADO",
++    // Legacy: con resultado sin código, "Resultado final".
++    valor: (f) => f.res?.COD_ACTIVIDAD || (f.res?.NOM_TIPO ? "Resultado final" : null),
++  },
++  { label: "TIPO RESULTADO", valor: (f) => f.res?.NOM_TIPO || null },
++  { label: "COMENTARIOS", valor: (f) => f.res?.DESCRIPCION || null },
++  { label: "FECHA REPROGRAMACION", valor: (f) => fechaDia(f.res?.FECHA_PROGRAMADA) },
++];
++
++/** Fecha en `dd/MM/yyyy` (día local), o null. */
++function fechaDia(fecha: string | undefined): string | null {
++  return fecha ? format(new Date(fecha), "dd/MM/yyyy") : null;
++}
++
++/** Columnas del Excel del "Reporte de visitas" (legacy `columnas`), en el mismo orden. */
++const COLUMNAS_PLANIFICACION = new Set([
++  "TIPO",
++  "ASESOR",
++  "CLIENTE",
++  "FECHA DE PROGRAMACION",
++  "FECHA DE EJECUCION",
++  "OBJETIVO",
++]);
++
++const ROJO_EN_PROCESO_VENCIDO = "FFB30000";
++const DIAS_LIMITE_EN_PROCESO = 7;
++
++/** Legacy: rojo si sigue "EN PROCESO" y pasaron más de 7 días desde el día de programación. */
++function colorEstado(
++  estado: string | number | null,
++  fechaProgramacion: string,
++): string | undefined {
++  if (estado !== "EN PROCESO" || !fechaProgramacion) return undefined;
++  const limite = new Date(fechaProgramacion);
++  if (Number.isNaN(limite.getTime())) return undefined;
++  limite.setHours(0, 0, 0, 0);
++  limite.setDate(limite.getDate() + DIAS_LIMITE_EN_PROCESO);
++  return new Date() > limite ? ROJO_EN_PROCESO_VENCIDO : undefined;
++}
++
++/** Nombre del usuario de la sesión (el legacy lo pone como "Empleado" si no se elige asesor). */
++function usuarioSesion(): string {
++  const usuario = useAuthStore.getState().user;
++  const nombre = [usuario?.nom_empleado, usuario?.apellido_emp]
++    .map((parte) => asText(parte))
++    .filter(Boolean)
++    .join(" ");
++  return nombre || asText(usuario?.nombre_usuario) || asText(usuario?.email);
++}
++
++/** Excel de actividades de Reportes CRM: histórico o, con `historico: false`, planificación. */
++export async function excelActividades(
++  historico: boolean,
++  { filas, encabezado, params }: DescargaReporte<Fila>,
++) {
++  const nombreReporte = historico
++    ? "Reporte Historico de actividades"
++    : "Planificacion de actividades";
++  const encabezados: Record<string, string> = { "Generado el": new Date().toLocaleString() };
++  if (encabezado.Empresa) encabezados["Empresa:"] = encabezado.Empresa;
++  if (encabezado["Centro de costo"])
++    encabezados["Centro de Costo:"] = encabezado["Centro de costo"];
++  encabezados["Empleado:"] = encabezado.Asesor || usuarioSesion();
++  if (encabezado.Estado) encabezados["Estado:"] = encabezado.Estado;
++  if (params.fecha_inicio)
++    encabezados["Fecha inicio:"] = format(parseISO(params.fecha_inicio), "dd/MM/yyyy");
++  if (params.fecha_fin)
++    encabezados["Fecha fin:"] = format(parseISO(params.fecha_fin), "dd/MM/yyyy");
++  if (encabezado["Tipo de actividad"])
++    encabezados["Tipo de actividad:"] = encabezado["Tipo de actividad"];
++
++  const visibles = COLUMNAS_EXCEL.filter(
++    (c) =>
++      (historico || COLUMNAS_PLANIFICACION.has(c.label)) &&
++      (!c.filtrarSiMultiplesValores || new Set(filas.map(c.valor)).size > 1),
++  );
++
++  await exportarExcel({
++    nombreArchivo: `${nombreReporte} - ERPWEB - ${format(new Date(), "yyyy_MM_dd_HH_mm_ss")}.xlsx`,
++    titulo: historico ? "Reporte de visitas histórico" : "Reporte de visitas",
++    encabezado: encabezados,
++    hojas: [
++      {
++        // Excel admite 31 caracteres en el nombre de la hoja.
++        nombre: nombreReporte.slice(0, 31),
++        mostrarCuadricula: true,
++        autoFiltro: true,
++        columnaInicio: 2,
++        filaInicio: 1,
++        columnas: visibles.map((c) => c.label),
++        filas: filas.map((f) =>
++          visibles.map(({ valor, color }): CeldaExcel => {
++            const dato = valor(f);
++            if (!color) return dato;
++            const fontColor = colorEstado(dato, f.fecha_creada);
++            return { dato, ...(fontColor ? { fontColor } : {}) };
++          }),
++        ),
++      },
++    ],
++  });
++}
++
++export const reporteVisitasHistorico = definirReporte<Fila>({
++  nomenclatura: "CRM-RVH-01",
++  descripcion: "Actividades del CRM con su resultado",
++  fechas: "opcionales",
++  filtros: [
++    filtroUsuario("Asesor", "cod_asesor"),
++    filtroEstado("ACTIVIDAD", "cod_estado"),
++    {
++      ...filtroTipo("ACTIVIDAD", "cod_tipo", "Tipo de actividad", TIPOS_ACTIVIDAD),
++      multiple: true,
++    },
++  ],
++  consultar,
++  // Como en Reportes CRM: solo Excel (sin PDF).
++  descargas: { excel: (descarga) => excelActividades(true, descarga) },
++  agrupacion: { filas: ["asesor"], columna: "tipo" },
++  columnas: [
++    { id: "codigo", label: "Código", valor: (f) => f.cod_actividad },
++    { id: "tipo", label: "Tipo", valor: (f) => f.nom_tipo, agrupable: true },
++    { id: "asesor", label: "Asesor", valor: (f) => f.asesor, agrupable: true },
++    {
++      id: "cliente",
++      label: "Cliente",
++      valor: (f) => f.nombre_cliente,
++      agrupable: true,
++      buscable: true,
++    },
++    { id: "estado", label: "Estado", valor: (f) => f.estado_desc, agrupable: true },
++    {
++      id: "fecha_programacion",
++      label: "Fecha de programación",
++      valor: (f) => formatearFechaHora(f.fecha_creada),
++    },
++    {
++      id: "fecha_ejecucion",
++      label: "Fecha de ejecución",
++      valor: (f) => formatearFechaHora(f.fecha_programada),
++    },
++    { id: "objetivo", label: "Objetivo", valor: (f) => f.objetivo_actividad_desc, agrupable: true },
++    {
++      id: "resultado_numero",
++      label: "No. Resultado",
++      // Legacy: con resultado sin código, "Resultado Final".
++      valor: (f) => (f.res ? String(f.res.COD_ACTIVIDAD ?? "") || "Resultado Final" : ""),
++    },
++    {
++      id: "resultado_tipo",
++      label: "Tipo de Resultado",
++      valor: (f) => f.res?.NOM_TIPO ?? "",
++      agrupable: true,
++    },
++    { id: "comentarios", label: "Comentarios", valor: (f) => f.res?.DESCRIPCION ?? "" },
++    {
++      id: "fecha_reprogramacion",
++      label: "Fecha de reprogramación",
++      valor: (f) => (f.res?.FECHA_PROGRAMADA ? formatearFechaHora(f.res.FECHA_PROGRAMADA) : ""),
++    },
++  ],
++});
+diff --git a/src/features/reportes/definiciones/crm/reporte-visitas.ts b/src/features/reportes/definiciones/crm/reporte-visitas.ts
+new file mode 100644
+index 0000000..664bbe5
+--- /dev/null
++++ b/src/features/reportes/definiciones/crm/reporte-visitas.ts
+@@ -0,0 +1,56 @@
++import { formatearFechaHora } from "@/shared/lib/date";
++import { definirReporte } from "../../lib/definir-reporte";
++import { filtroEstado, filtroTipo, filtroUsuario } from "../../lib/filtros";
++import {
++  consultar,
++  excelActividades,
++  type Fila,
++  TIPOS_ACTIVIDAD,
++} from "./reporte-visitas-historico";
++
++/**
++ * REPORTE DE VISITAS (planificación de actividades del CRM)
++ *
++ * Igual al "Reporte de visitas" de Reportes CRM (legacy `tabla_actividades_reporte`): la
++ * misma consulta y los mismos filtros que el histórico, sin estado ni resultado en las
++ * columnas, y su Excel "Planificacion de actividades".
++ */
++export const reporteVisitas = definirReporte<Fila>({
++  nomenclatura: "CRM-RV-02",
++  descripcion: "Actividades planificadas del CRM",
++  fechas: "opcionales",
++  filtros: [
++    filtroUsuario("Asesor", "cod_asesor"),
++    filtroEstado("ACTIVIDAD", "cod_estado"),
++    {
++      ...filtroTipo("ACTIVIDAD", "cod_tipo", "Tipo de actividad", TIPOS_ACTIVIDAD),
++      multiple: true,
++    },
++  ],
++  consultar,
++  // Como en Reportes CRM: solo Excel (sin PDF).
++  descargas: { excel: (descarga) => excelActividades(false, descarga) },
++  agrupacion: { filas: ["asesor"], columna: "tipo" },
++  columnas: [
++    { id: "tipo", label: "Tipo", valor: (f) => f.nom_tipo, agrupable: true },
++    { id: "asesor", label: "Asesor", valor: (f) => f.asesor, agrupable: true },
++    {
++      id: "cliente",
++      label: "Cliente",
++      valor: (f) => f.nombre_cliente,
++      agrupable: true,
++      buscable: true,
++    },
++    {
++      id: "fecha_programacion",
++      label: "Fecha de programación",
++      valor: (f) => formatearFechaHora(f.fecha_creada),
++    },
++    {
++      id: "fecha_ejecucion",
++      label: "Fecha de ejecución",
++      valor: (f) => formatearFechaHora(f.fecha_programada),
++    },
++    { id: "objetivo", label: "Objetivo", valor: (f) => f.objetivo_actividad_desc, agrupable: true },
++  ],
++});
+diff --git a/src/features/reportes/definiciones/index.ts b/src/features/reportes/definiciones/index.ts
+index 4974f57..4b7d138 100644
+--- a/src/features/reportes/definiciones/index.ts
++++ b/src/features/reportes/definiciones/index.ts
+@@ -1,17 +1,13 @@
+ import type { Reporte } from "../lib/definir-reporte";
+-import { reporteActividades } from "./reporte-actividades";
+-import { reporteVisitas } from "./reporte-visitas";
+-import { reporteVisitasHistorico } from "./reporte-visitas-historico";
++import { REPORTES_CRM } from "./crm";
+ 
+ /**
+  * REGISTRO DE REPORTES
+  *
+- * Agregar un reporte: crear su archivo en esta carpeta (copiar `reporte-visitas-historico.ts`) y
+- * sumarlo a esta lista. Solo se muestran los que la API de reportes disponibles devuelve
+- * para el rol y el CC del usuario (se unen por `nomenclatura`).
++ * Una carpeta por módulo (`crm/`, …) con sus reportes y un `index.ts` con la lista del
++ * módulo. Agregar un reporte: crear su archivo en la carpeta de su módulo (copiar
++ * `crm/reporte-visitas-historico.ts`) y sumarlo a la lista del módulo; un módulo nuevo se
++ * suma aquí. Solo se muestran los que la API de reportes disponibles devuelve para el rol y
++ * el CC del usuario (se unen por `nomenclatura`).
+  */
+-export const REPORTES: readonly Reporte[] = [
+-  reporteVisitasHistorico,
+-  reporteVisitas,
+-  reporteActividades,
+-];
++export const REPORTES: readonly Reporte[] = [...REPORTES_CRM];
+diff --git a/src/features/reportes/definiciones/reporte-actividades.ts b/src/features/reportes/definiciones/reporte-actividades.ts
+deleted file mode 100644
+index 39ef01e..0000000
+--- a/src/features/reportes/definiciones/reporte-actividades.ts
++++ /dev/null
+@@ -1,101 +0,0 @@
+-import { empleadosUsuarios } from "@/features/catalogos";
+-import {
+-  type ActividadReporte,
+-  actividadReporteSchema,
+-} from "@/features/reportes-crm/api/actividades-reporte";
+-import { actividadesEnRango } from "@/features/reportes-crm/lib/actividades-vista";
+-import {
+-  type AgenteCalendario,
+-  generarPdfCalendarioActividades,
+-} from "@/features/reportes-crm/lib/pdf-calendario-actividades";
+-import { http } from "@/shared/api/client";
+-import { parseEnvelope } from "@/shared/api/envelope";
+-import { formatearFechaHora } from "@/shared/lib/date";
+-import { asText } from "@/shared/lib/text";
+-import { useAuthStore } from "@/shared/stores/auth-store";
+-import { type DescargaReporte, definirReporte, type ParamsReporte } from "../lib/definir-reporte";
+-
+-/**
+- * ACTIVIDADES (calendario de seguimientos del CRM)
+- *
+- * Igual al reporte "Actividades" de Reportes CRM: las actividades del usuario de la sesión
+- * (`lista-actividades2` con `cod_asesor`), fechas opcionales filtradas aquí por día local
+- * (el API no las aplica) y el PDF "Calendario de Seguimientos de actividades" de CRM. Sin
+- * empresa ni CC (como en CRM).
+- */
+-
+-type Fila = ActividadReporte & { asesor: string };
+-
+-async function consultar(params: ParamsReporte): Promise<Fila[]> {
+-  const usuario = asText(useAuthStore.getState().user?.cod_usuario);
+-  if (!usuario) return [];
+-  const [actividades, empleados] = await Promise.all([
+-    http
+-      .get<unknown>("/api/appweb/lista-actividades2", { params: { cod_asesor: usuario } })
+-      .then((r) => parseEnvelope(r, actividadReporteSchema, "lista-actividades2")),
+-    empleadosUsuarios.fetchLista({}),
+-  ]);
+-  // Como la tabla de CRM: nombre del asesor por código de usuario.
+-  const asesores = new Map(empleados.map((e) => [String(e.codUsuario), e.nombreCompleto]));
+-  return actividadesEnRango(actividades, params.fecha_inicio ?? "", params.fecha_fin ?? "").map(
+-    (a) => ({ ...a, asesor: asesores.get(String(a.cod_asesor ?? "")) ?? "" }),
+-  );
+-}
+-
+-/** Usuario de la sesión, que encabeza cada página del calendario (como en CRM). */
+-function agenteSesion(): AgenteCalendario {
+-  const usuario = useAuthStore.getState().user;
+-  const nombre = [usuario?.nom_empleado, usuario?.apellido_emp]
+-    .map((parte) => asText(parte))
+-    .filter(Boolean)
+-    .join(" ");
+-  return {
+-    nombre: nombre || asText(usuario?.nombre_usuario) || asText(usuario?.email),
+-    correo: asText(usuario?.usuario) || asText(usuario?.email),
+-  };
+-}
+-
+-/** PDF de CRM: calendario por día y hora, abierto en otra pestaña. */
+-async function pdfCalendario({ filas, params }: DescargaReporte<Fila>) {
+-  const blob = await generarPdfCalendarioActividades([...filas], {
+-    agente: agenteSesion(),
+-    fechaInicio: params.fecha_inicio ?? "",
+-    fechaFin: params.fecha_fin ?? "",
+-  });
+-  const url = URL.createObjectURL(blob);
+-  window.open(url, "_blank", "noopener,noreferrer");
+-  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+-}
+-
+-export const reporteActividades = definirReporte<Fila>({
+-  nomenclatura: "CRM-A-03",
+-  descripcion: "Calendario de seguimientos del usuario",
+-  fechas: "opcionales",
+-  empresaCentroCosto: false,
+-  consultar,
+-  // Como en Reportes CRM: solo PDF (sin Excel).
+-  descargas: { pdf: pdfCalendario },
+-  agrupacion: { filas: ["tipo"] },
+-  columnas: [
+-    { id: "tipo", label: "Tipo", valor: (f) => f.nom_tipo, agrupable: true },
+-    { id: "asesor", label: "Asesor", valor: (f) => f.asesor, agrupable: true },
+-    {
+-      id: "cliente",
+-      label: "Cliente",
+-      valor: (f) => f.nombre_cliente,
+-      agrupable: true,
+-      buscable: true,
+-    },
+-    {
+-      id: "fecha_programacion",
+-      label: "Fecha de programación",
+-      valor: (f) => formatearFechaHora(f.fecha_creada),
+-    },
+-    {
+-      id: "fecha_ejecucion",
+-      label: "Fecha de ejecución",
+-      valor: (f) => formatearFechaHora(f.fecha_programada),
+-    },
+-    { id: "objetivo", label: "Objetivo", valor: (f) => f.objetivo_actividad_desc, agrupable: true },
+-  ],
+-});
+diff --git a/src/features/reportes/definiciones/reporte-visitas-historico.ts b/src/features/reportes/definiciones/reporte-visitas-historico.ts
+deleted file mode 100644
+index 0dc669a..0000000
+--- a/src/features/reportes/definiciones/reporte-visitas-historico.ts
++++ /dev/null
+@@ -1,298 +0,0 @@
+-import { format, parseISO } from "date-fns";
+-import { z } from "zod";
+-import { empleadosUsuarios } from "@/features/catalogos";
+-import { http } from "@/shared/api/client";
+-import { parseEnvelope } from "@/shared/api/envelope";
+-import { formatearFechaHora } from "@/shared/lib/date";
+-import { type CeldaExcel, exportarExcel } from "@/shared/lib/excel";
+-import { asText } from "@/shared/lib/text";
+-import { zIdSafe } from "@/shared/lib/zod-scalars";
+-import { useAuthStore } from "@/shared/stores/auth-store";
+-import { type DescargaReporte, definirReporte, type ParamsReporte } from "../lib/definir-reporte";
+-import { filtroEstado, filtroTipo, filtroUsuario } from "../lib/filtros";
+-
+-/**
+- * REPORTE DE VISITAS — HISTÓRICO (historial de actividades del CRM)
+- *
+- * Igual al "Reporte de visitas — histórico" de Reportes CRM (legacy
+- * `tabla_actividades_reporte_2`): `lista-actividades2` filtra por empresa, CC, asesor y
+- * estado; las fechas (por fecha programada, día local) y el tipo se filtran aquí, como en
+- * CRM, porque el API no los aplica.
+- */
+-
+-const texto = z
+-  .string()
+-  .nullable()
+-  .optional()
+-  .transform((v) => v ?? "");
+-
+-const actividadSchema = z.looseObject({
+-  cod_actividad: zIdSafe,
+-  fecha_creada: texto,
+-  fecha_programada: texto,
+-  cod_tipo: zIdSafe.optional(),
+-  nom_tipo: texto,
+-  estado_desc: texto,
+-  cod_asesor: zIdSafe.optional(),
+-  nombre_cliente: texto,
+-  objetivo_actividad_desc: texto,
+-  resultado: texto,
+-});
+-
+-/** Primer resultado de la actividad (`resultado` viaja como JSON serializado). */
+-interface Resultado {
+-  COD_ACTIVIDAD?: string | number;
+-  NOM_TIPO?: string;
+-  DESCRIPCION?: string;
+-  FECHA_PROGRAMADA?: string;
+-}
+-
+-export type Fila = z.infer<typeof actividadSchema> & { asesor: string; res: Resultado | null };
+-
+-/** Tipos de actividad que ofrecía el reporte en el legacy. */
+-export const TIPOS_ACTIVIDAD = [
+-  "CORREO",
+-  "LLAMADA",
+-  "VISITA",
+-  "SEGUIMIENTO COTIZACION",
+-  "SEGUIMIENTO CTS",
+-] as const;
+-
+-function primerResultado(json: string): Resultado | null {
+-  if (!json) return null;
+-  try {
+-    const lista: unknown = JSON.parse(json);
+-    return Array.isArray(lista) ? ((lista[0] as Resultado | undefined) ?? {}) : {};
+-  } catch {
+-    return {};
+-  }
+-}
+-
+-/** Legacy: cada fecha filtra sola y se compara por día local con la fecha programada. */
+-function enRango(fecha: string, inicio: string | undefined, fin: string | undefined) {
+-  if (!inicio && !fin) return true;
+-  const valor = new Date(fecha).getTime();
+-  if (!Number.isFinite(valor)) return false;
+-  const desde = inicio ? new Date(`${inicio}T00:00:00`).getTime() : Number.NEGATIVE_INFINITY;
+-  const hasta = fin ? new Date(`${fin}T23:59:59.999`).getTime() : Number.POSITIVE_INFINITY;
+-  return valor >= desde && valor <= hasta;
+-}
+-
+-export async function consultar(params: ParamsReporte): Promise<Fila[]> {
+-  const { cod_empresa, cod_cc, cod_asesor, cod_estado } = params;
+-  const consulta = Object.fromEntries(
+-    Object.entries({ cod_empresa, cod_cc, cod_asesor, cod_estado }).filter(([, v]) => v),
+-  );
+-  const [actividades, empleados] = await Promise.all([
+-    http
+-      .get<unknown>("/api/appweb/lista-actividades2", { params: consulta })
+-      .then((r) => parseEnvelope(r, actividadSchema, "lista-actividades2")),
+-    empleadosUsuarios.fetchLista({}),
+-  ]);
+-  // Nombre del asesor: primer registro de cada usuario en el catálogo de empleados.
+-  const asesores = new Map<string, string>();
+-  for (const e of empleados) {
+-    const clave = String(e.codUsuario);
+-    if (!asesores.has(clave)) asesores.set(clave, e.nombreCompleto);
+-  }
+-  return (
+-    actividades
+-      .filter((a) => enRango(a.fecha_programada, params.fecha_inicio, params.fecha_fin))
+-      // Tipo: selección múltiple, como en CRM ("7,8" = cualquiera de los dos).
+-      .filter(
+-        (a) => !params.cod_tipo || params.cod_tipo.split(",").includes(String(a.cod_tipo ?? "")),
+-      )
+-      .sort((a, b) => Number(a.cod_actividad) - Number(b.cod_actividad))
+-      .map((a) => ({
+-        ...a,
+-        asesor: asesores.get(String(a.cod_asesor ?? "")) ?? "",
+-        res: primerResultado(a.resultado),
+-      }))
+-  );
+-}
+-
+-// ── Excel del reporte: el mismo de Reportes CRM (`ReporteActividades`) ──
+-
+-/**
+- * Columnas del legacy (`columnas_historico` de `reportes-crm/lib/actividades-excel.ts`). El
+- * "Reporte de visitas" (planificación) usa solo las de `COLUMNAS_PLANIFICACION`.
+- */
+-const COLUMNAS_EXCEL: {
+-  label: string;
+-  valor: (f: Fila) => string | number | null;
+-  /** Se oculta si todas las filas tienen el mismo valor. */
+-  filtrarSiMultiplesValores?: boolean;
+-  /** Estado en rojo si sigue EN PROCESO más de 7 días. */
+-  color?: boolean;
+-}[] = [
+-  { label: "CODIGO DE ACTIVIDAD", valor: (f) => f.cod_actividad },
+-  { label: "TIPO", valor: (f) => f.nom_tipo, filtrarSiMultiplesValores: true },
+-  { label: "ASESOR", valor: (f) => f.asesor || null, filtrarSiMultiplesValores: true },
+-  { label: "CLIENTE", valor: (f) => f.nombre_cliente },
+-  { label: "ESTADO", valor: (f) => f.estado_desc, color: true },
+-  { label: "FECHA DE PROGRAMACION", valor: (f) => fechaDia(f.fecha_creada) },
+-  { label: "FECHA DE EJECUCION", valor: (f) => fechaDia(f.fecha_programada) },
+-  { label: "OBJETIVO", valor: (f) => f.objetivo_actividad_desc },
+-  {
+-    label: "NO RESULTADO",
+-    // Legacy: con resultado sin código, "Resultado final".
+-    valor: (f) => f.res?.COD_ACTIVIDAD || (f.res?.NOM_TIPO ? "Resultado final" : null),
+-  },
+-  { label: "TIPO RESULTADO", valor: (f) => f.res?.NOM_TIPO || null },
+-  { label: "COMENTARIOS", valor: (f) => f.res?.DESCRIPCION || null },
+-  { label: "FECHA REPROGRAMACION", valor: (f) => fechaDia(f.res?.FECHA_PROGRAMADA) },
+-];
+-
+-/** Fecha en `dd/MM/yyyy` (día local), o null. */
+-function fechaDia(fecha: string | undefined): string | null {
+-  return fecha ? format(new Date(fecha), "dd/MM/yyyy") : null;
+-}
+-
+-/** Columnas del Excel del "Reporte de visitas" (legacy `columnas`), en el mismo orden. */
+-const COLUMNAS_PLANIFICACION = new Set([
+-  "TIPO",
+-  "ASESOR",
+-  "CLIENTE",
+-  "FECHA DE PROGRAMACION",
+-  "FECHA DE EJECUCION",
+-  "OBJETIVO",
+-]);
+-
+-const ROJO_EN_PROCESO_VENCIDO = "FFB30000";
+-const DIAS_LIMITE_EN_PROCESO = 7;
+-
+-/** Legacy: rojo si sigue "EN PROCESO" y pasaron más de 7 días desde el día de programación. */
+-function colorEstado(
+-  estado: string | number | null,
+-  fechaProgramacion: string,
+-): string | undefined {
+-  if (estado !== "EN PROCESO" || !fechaProgramacion) return undefined;
+-  const limite = new Date(fechaProgramacion);
+-  if (Number.isNaN(limite.getTime())) return undefined;
+-  limite.setHours(0, 0, 0, 0);
+-  limite.setDate(limite.getDate() + DIAS_LIMITE_EN_PROCESO);
+-  return new Date() > limite ? ROJO_EN_PROCESO_VENCIDO : undefined;
+-}
+-
+-/** Nombre del usuario de la sesión (el legacy lo pone como "Empleado" si no se elige asesor). */
+-function usuarioSesion(): string {
+-  const usuario = useAuthStore.getState().user;
+-  const nombre = [usuario?.nom_empleado, usuario?.apellido_emp]
+-    .map((parte) => asText(parte))
+-    .filter(Boolean)
+-    .join(" ");
+-  return nombre || asText(usuario?.nombre_usuario) || asText(usuario?.email);
+-}
+-
+-/** Excel de actividades de Reportes CRM: histórico o, con `historico: false`, planificación. */
+-export async function excelActividades(
+-  historico: boolean,
+-  { filas, encabezado, params }: DescargaReporte<Fila>,
+-) {
+-  const nombreReporte = historico
+-    ? "Reporte Historico de actividades"
+-    : "Planificacion de actividades";
+-  const encabezados: Record<string, string> = { "Generado el": new Date().toLocaleString() };
+-  if (encabezado.Empresa) encabezados["Empresa:"] = encabezado.Empresa;
+-  if (encabezado["Centro de costo"])
+-    encabezados["Centro de Costo:"] = encabezado["Centro de costo"];
+-  encabezados["Empleado:"] = encabezado.Asesor || usuarioSesion();
+-  if (encabezado.Estado) encabezados["Estado:"] = encabezado.Estado;
+-  if (params.fecha_inicio)
+-    encabezados["Fecha inicio:"] = format(parseISO(params.fecha_inicio), "dd/MM/yyyy");
+-  if (params.fecha_fin)
+-    encabezados["Fecha fin:"] = format(parseISO(params.fecha_fin), "dd/MM/yyyy");
+-  if (encabezado["Tipo de actividad"])
+-    encabezados["Tipo de actividad:"] = encabezado["Tipo de actividad"];
+-
+-  const visibles = COLUMNAS_EXCEL.filter(
+-    (c) =>
+-      (historico || COLUMNAS_PLANIFICACION.has(c.label)) &&
+-      (!c.filtrarSiMultiplesValores || new Set(filas.map(c.valor)).size > 1),
+-  );
+-
+-  await exportarExcel({
+-    nombreArchivo: `${nombreReporte} - ERPWEB - ${format(new Date(), "yyyy_MM_dd_HH_mm_ss")}.xlsx`,
+-    titulo: historico ? "Reporte de visitas histórico" : "Reporte de visitas",
+-    encabezado: encabezados,
+-    hojas: [
+-      {
+-        // Excel admite 31 caracteres en el nombre de la hoja.
+-        nombre: nombreReporte.slice(0, 31),
+-        mostrarCuadricula: true,
+-        autoFiltro: true,
+-        columnaInicio: 2,
+-        filaInicio: 1,
+-        columnas: visibles.map((c) => c.label),
+-        filas: filas.map((f) =>
+-          visibles.map(({ valor, color }): CeldaExcel => {
+-            const dato = valor(f);
+-            if (!color) return dato;
+-            const fontColor = colorEstado(dato, f.fecha_creada);
+-            return { dato, ...(fontColor ? { fontColor } : {}) };
+-          }),
+-        ),
+-      },
+-    ],
+-  });
+-}
+-
+-export const reporteVisitasHistorico = definirReporte<Fila>({
+-  nomenclatura: "CRM-RVH-01",
+-  descripcion: "Actividades del CRM con su resultado",
+-  fechas: "opcionales",
+-  filtros: [
+-    filtroUsuario("Asesor", "cod_asesor"),
+-    filtroEstado("ACTIVIDAD", "cod_estado"),
+-    {
+-      ...filtroTipo("ACTIVIDAD", "cod_tipo", "Tipo de actividad", TIPOS_ACTIVIDAD),
+-      multiple: true,
+-    },
+-  ],
+-  consultar,
+-  // Como en Reportes CRM: solo Excel (sin PDF).
+-  descargas: { excel: (descarga) => excelActividades(true, descarga) },
+-  agrupacion: { filas: ["asesor"], columna: "tipo" },
+-  columnas: [
+-    { id: "codigo", label: "Código", valor: (f) => f.cod_actividad },
+-    { id: "tipo", label: "Tipo", valor: (f) => f.nom_tipo, agrupable: true },
+-    { id: "asesor", label: "Asesor", valor: (f) => f.asesor, agrupable: true },
+-    {
+-      id: "cliente",
+-      label: "Cliente",
+-      valor: (f) => f.nombre_cliente,
+-      agrupable: true,
+-      buscable: true,
+-    },
+-    { id: "estado", label: "Estado", valor: (f) => f.estado_desc, agrupable: true },
+-    {
+-      id: "fecha_programacion",
+-      label: "Fecha de programación",
+-      valor: (f) => formatearFechaHora(f.fecha_creada),
+-    },
+-    {
+-      id: "fecha_ejecucion",
+-      label: "Fecha de ejecución",
+-      valor: (f) => formatearFechaHora(f.fecha_programada),
+-    },
+-    { id: "objetivo", label: "Objetivo", valor: (f) => f.objetivo_actividad_desc, agrupable: true },
+-    {
+-      id: "resultado_numero",
+-      label: "No. Resultado",
+-      // Legacy: con resultado sin código, "Resultado Final".
+-      valor: (f) => (f.res ? String(f.res.COD_ACTIVIDAD ?? "") || "Resultado Final" : ""),
+-    },
+-    {
+-      id: "resultado_tipo",
+-      label: "Tipo de Resultado",
+-      valor: (f) => f.res?.NOM_TIPO ?? "",
+-      agrupable: true,
+-    },
+-    { id: "comentarios", label: "Comentarios", valor: (f) => f.res?.DESCRIPCION ?? "" },
+-    {
+-      id: "fecha_reprogramacion",
+-      label: "Fecha de reprogramación",
+-      valor: (f) => (f.res?.FECHA_PROGRAMADA ? formatearFechaHora(f.res.FECHA_PROGRAMADA) : ""),
+-    },
+-  ],
+-});
+diff --git a/src/features/reportes/definiciones/reporte-visitas.ts b/src/features/reportes/definiciones/reporte-visitas.ts
+deleted file mode 100644
+index 0f551dd..0000000
+--- a/src/features/reportes/definiciones/reporte-visitas.ts
++++ /dev/null
+@@ -1,56 +0,0 @@
+-import { formatearFechaHora } from "@/shared/lib/date";
+-import { definirReporte } from "../lib/definir-reporte";
+-import { filtroEstado, filtroTipo, filtroUsuario } from "../lib/filtros";
+-import {
+-  consultar,
+-  excelActividades,
+-  type Fila,
+-  TIPOS_ACTIVIDAD,
+-} from "./reporte-visitas-historico";
+-
+-/**
+- * REPORTE DE VISITAS (planificación de actividades del CRM)
+- *
+- * Igual al "Reporte de visitas" de Reportes CRM (legacy `tabla_actividades_reporte`): la
+- * misma consulta y los mismos filtros que el histórico, sin estado ni resultado en las
+- * columnas, y su Excel "Planificacion de actividades".
+- */
+-export const reporteVisitas = definirReporte<Fila>({
+-  nomenclatura: "CRM-RV-02",
+-  descripcion: "Actividades planificadas del CRM",
+-  fechas: "opcionales",
+-  filtros: [
+-    filtroUsuario("Asesor", "cod_asesor"),
+-    filtroEstado("ACTIVIDAD", "cod_estado"),
+-    {
+-      ...filtroTipo("ACTIVIDAD", "cod_tipo", "Tipo de actividad", TIPOS_ACTIVIDAD),
+-      multiple: true,
+-    },
+-  ],
+-  consultar,
+-  // Como en Reportes CRM: solo Excel (sin PDF).
+-  descargas: { excel: (descarga) => excelActividades(false, descarga) },
+-  agrupacion: { filas: ["asesor"], columna: "tipo" },
+-  columnas: [
+-    { id: "tipo", label: "Tipo", valor: (f) => f.nom_tipo, agrupable: true },
+-    { id: "asesor", label: "Asesor", valor: (f) => f.asesor, agrupable: true },
+-    {
+-      id: "cliente",
+-      label: "Cliente",
+-      valor: (f) => f.nombre_cliente,
+-      agrupable: true,
+-      buscable: true,
+-    },
+-    {
+-      id: "fecha_programacion",
+-      label: "Fecha de programación",
+-      valor: (f) => formatearFechaHora(f.fecha_creada),
+-    },
+-    {
+-      id: "fecha_ejecucion",
+-      label: "Fecha de ejecución",
+-      valor: (f) => formatearFechaHora(f.fecha_programada),
+-    },
+-    { id: "objetivo", label: "Objetivo", valor: (f) => f.objetivo_actividad_desc, agrupable: true },
+-  ],
+-});
+diff --git a/src/features/reportes/lib/definir-reporte.ts b/src/features/reportes/lib/definir-reporte.ts
+index fc5337a..6c14234 100644
+--- a/src/features/reportes/lib/definir-reporte.ts
++++ b/src/features/reportes/lib/definir-reporte.ts
+@@ -3,8 +3,8 @@ import type { ComboboxOption } from "@/shared/components/ui/combobox";
+ /**
+  * CONTRATO DE UN REPORTE
+  *
+- * Un reporte = un archivo en `definiciones/` que llama a `definirReporte` + 1 línea en
+- * `definiciones/index.ts`. La pantalla (`VistaReportes`) arma todo lo demás: selector,
++ * Un reporte = un archivo en `definiciones/<modulo>/` que llama a `definirReporte` + 1 línea
++ * en la lista del módulo (`definiciones/<modulo>/index.ts`). La pantalla (`VistaReportes`) arma todo lo demás: selector,
+  * fechas, filtros, "Personaliza tu reporte", "Resumen agrupado", tabla del reporte y
+  * descargas (PDF y Excel). Ver `ARQUITECTURA.md`.
+  */

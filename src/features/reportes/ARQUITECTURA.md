@@ -8,13 +8,17 @@ reportes/
   api/
     reportes-disponibles.ts   reportes del rol + módulo + empresa + CC → select Reporte
     consultar-api.ts          atajo consultarApi(endpoint, schema) para `consultar`
-  definiciones/
-    index.ts                  REGISTRO: lista REPORTES (1 línea por reporte)
-    reporte-visitas-historico.ts  Reporte de visitas — histórico (CRM); plantilla
-    reporte-visitas.ts        Reporte de visitas (planificación, CRM): reusa la consulta y el
-                              Excel del histórico
-    reporte-actividades.ts    Actividades (calendario PDF de CRM, del usuario de la sesión; sin
-                              empresa ni CC: `empresaCentroCosto: false`)
+  definiciones/                 UNA CARPETA POR MÓDULO
+    index.ts                  REGISTRO: REPORTES = las listas de todos los módulos
+    crm/
+      index.ts                REPORTES_CRM (1 línea por reporte, en orden de correlativo)
+      reporte-visitas-historico.ts  CRM-RVH-01 Reporte de visitas — histórico; plantilla
+      reporte-visitas.ts      CRM-RV-02 Reporte de visitas (planificación): reusa la consulta y
+                              el Excel del histórico
+      reporte-actividades.ts  CRM-A-03 Actividades (calendario PDF, del usuario de la sesión;
+                              sin empresa ni CC: `empresaCentroCosto: false`)
+      reporte-objetivos.tsx   CRM-OA-04 Objetivos de actividades (tipo de asignación
+                              `requerido`; sección "Reporte" = la vista de CRM, `Contenido`)
   lib/
     definir-reporte.ts        contrato (DefinicionReporte, ColumnaReporte, FiltroReporte)
     filtros.ts                atajos: filtroUsuario, filtroTipo, filtroEstado, filtroLista;
@@ -37,9 +41,10 @@ reportes/
    (rol, empresa, CC, módulo; `NULL` = todos).
    **Nomenclatura**: `[MÓDULO EN 3 CARACTERES]-[INICIALES DEL REPORTE]-[CORRELATIVO DEL MÓDULO]`,
    con correlativo de 2 dígitos y sin contar "de" en las iniciales. CRM: `CRM-RVH-01` (Reporte de
-   visitas — histórico), `CRM-RV-02` (Reporte de visitas), `CRM-A-03` (Actividades). El siguiente
-   de CRM es `CRM-…-04`.
-2. **Definición**: copiar `definiciones/reporte-visitas-historico.ts` y cambiar:
+   visitas — histórico), `CRM-RV-02` (Reporte de visitas), `CRM-A-03` (Actividades). `CRM-OA-04`
+   (Objetivos de actividades). El siguiente de CRM es `CRM-…-05`.
+2. **Definición**: en la carpeta de su módulo (`definiciones/<modulo>/`, ej. `crm/`), copiar
+   `definiciones/crm/reporte-visitas-historico.ts` y cambiar:
    - `nomenclatura`: la del `TIPO`.
    - `consultar`: `consultarApi("/api/appweb/<endpoint>", filaSchema)`. Recibe
      `fecha_inicio`, `fecha_fin` (`yyyy-MM-dd`), `cod_empresa`, `cod_cc` y el `id` de cada filtro
@@ -47,10 +52,13 @@ reportes/
      función propia consulta y filtra aquí (ver `reporte-visitas-historico.ts`).
    - `columnas`: `{ id, label, valor: (fila) => … }` + `agrupable` (campo de "Personaliza tu
      reporte"), `sumable` (medida del resumen, además de la cantidad), `buscable` (buscador).
-   - Opcional: `filtros` (atajos de `lib/filtros.ts`), `fechas` (`"requeridas"` por defecto,
+   - Opcional: `filtros` (atajos de `lib/filtros.ts`; `multiple: true` = varios valores,
+     `requerido: true` = sin valor no se consulta), `fechas` (`"requeridas"` por defecto,
      `"opcionales"`, `"ninguna"`), `agrupacion` inicial, `Contenido` (gráficas u otra vista en
      lugar de la tabla) y `descargas` (ver abajo).
-3. **Registro**: sumarlo a `REPORTES` en `definiciones/index.ts`.
+3. **Registro**: sumarlo a la lista del módulo (`definiciones/<modulo>/index.ts`, ej.
+   `REPORTES_CRM`). Un módulo nuevo: su carpeta con su `index.ts` y su lista en `REPORTES`
+   (`definiciones/index.ts`).
 
 Si la API devuelve un reporte que no está en el registro, la pantalla dice que aún no está
 configurado. Si está en el registro pero la API no lo devuelve, no se muestra (sin permiso).
@@ -86,7 +94,7 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
     CRM unos tienen Excel, otros PDF y otros ambos): `true` = el detalle con las columnas
     (Excel con `exportarExcel` de `@/shared/lib/excel`; PDF con `usePdfReporte` de
     `@/features/pricing/reportes`); una función = formato propio, que recibe `{ filas, titulo,
-    encabezado, params }` (ej. `excelHistorico` en `reporte-visitas-historico.ts`, el Excel de
+    encabezado, params }` (ej. `excelActividades` en `crm/reporte-visitas-historico.ts`, el Excel de
     Reportes CRM). Sin la clave, no hay botón.
 
 La consulta se guarda con React Query (`["reportes", nomenclatura, params]`) al pulsar
