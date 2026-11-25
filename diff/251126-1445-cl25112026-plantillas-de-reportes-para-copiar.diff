@@ -1,0 +1,597 @@
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+index 44527c7..b355507 100644
+--- a/src/features/reportes/ARQUITECTURA.md
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -10,6 +10,9 @@ reportes/
+     consultar-api.ts          consultarApi(endpoint, schema, { lista, params, nombres, filtrar }) para `consultar`
+   definiciones/                 UNA CARPETA POR MÓDULO
+     index.ts                  REGISTRO: REPORTES = las listas de todos los módulos
++    plantillas/               PLANTILLAS para copiar (no se registran; ver GUIA.md, paso 2):
++                              reporte-basico.ts, reporte-endpoint-distinto.ts,
++                              reporte-personalizado.tsx
+     crm/
+       index.ts                REPORTES_CRM (1 línea por reporte, en orden de correlativo)
+       reporte-visitas-historico.ts  CRM-RVH-01 Reporte de visitas — histórico; plantilla
+diff --git a/src/features/reportes/GUIA.md b/src/features/reportes/GUIA.md
+index eb4a7b3..b882cf7 100644
+--- a/src/features/reportes/GUIA.md
++++ b/src/features/reportes/GUIA.md
+@@ -11,7 +11,7 @@ una, se escribe una función **en el mismo archivo, arriba**, y se pone en su pr
+ 
+ | Propiedad      | Si no se pone / lo de siempre               | Personalizada (función del mismo archivo)    |
+ | -------------- | ------------------------------------------- | -------------------------------------------- |
+-| `consultar`    | (obligatoria) `consultarApi(endpoint, schema)` | `consultar: miConsulta` (ejemplo C)       |
++| `consultar`    | (obligatoria) `consultarApi(endpoint, schema)` | `consultar: miConsulta`                   |
+ | `filtros`      | sin filtros extra                           | atajos (`filtroUsuario`…) o un filtro propio |
+ | `Contenido`    | tabla con las `columnas`                    | `Contenido: MiVista` (archivo `.tsx`)        |
+ | `descargas`    | solo "Excel agrupado"                       | `excel: true` / `pdf: true` o funciones propias |
+@@ -33,7 +33,7 @@ registrarlo, paso 3).
+ ## Checklist
+ 
+ 1. [ ] **Base de datos**: `TIPO` del reporte y su relación con rol/CC/módulo (paso 1).
+-2. [ ] **Archivo** del reporte: copiar el ejemplo A, B o C y cambiarlo (paso 2).
++2. [ ] **Archivo** del reporte: copiar una plantilla y cambiar las líneas `// CAMBIAR` (paso 2).
+ 3. [ ] **Registro**: una línea en `definiciones/<modulo>/index.ts` (paso 3).
+ 4. [ ] `npm run check:nuevos` sin errores (si Biome se queja del formato: `npm run biome:arreglar`).
+ 5. [ ] Probarlo: elegir el módulo y el reporte, pulsar **Consultar**.
+@@ -56,266 +56,30 @@ Sin esto el reporte no aparece en el select, aunque el código esté listo.
+ 
+ ## Paso 2 — Archivo del reporte
+ 
+-Va en la carpeta de su módulo: `definiciones/crm/`, `definiciones/pricing/`… (si el módulo no
+-tiene carpeta, ver el paso 3). Nombre en kebab-case: `reporte-ventas-cliente.ts` (`.tsx` si
+-tiene `Contenido` propio).
++**Copiar una plantilla** de `definiciones/plantillas/` a la carpeta del módulo
++(`definiciones/crm/`, `definiciones/pricing/`…; si no existe, ver el paso 3) con su nombre en
++kebab-case (ej. `reporte-ventas-cliente.ts`) y **cambiar solo las líneas marcadas con
++`// CAMBIAR`**. Los imports no se tocan: las plantillas están a la misma profundidad que las
++carpetas de los módulos.
+ 
+-**Elegir el ejemplo** según el endpoint y lo que necesite el reporte, copiarlo **completo** y
+-cambiar: `nomenclatura`, el endpoint, el schema de la fila (los campos del endpoint), los
+-filtros y las columnas. Los tres compilan y funcionan tal cual (probados con
+-`lista-actividades2`).
++| Plantilla                         | Cuándo                                                                                                   |
++| --------------------------------- | -------------------------------------------------------------------------------------------------------- |
++| `reporte-basico.ts`               | El endpoint responde la lista y recibe `fecha_inicio`, `fecha_fin`, `cod_empresa`, `cod_cc` y los filtros con esos nombres. |
++| `reporte-endpoint-distinto.ts`    | El endpoint trae la lista en otra propiedad, espera otros nombres de parámetros, necesita un parámetro fijo o no filtra algo (ej. fechas). Se borran las opciones `// OPCIONAL` que no hagan falta. |
++| `reporte-personalizado.tsx`       | Hay que juntar varias consultas o agregar campos, o se quiere un filtro, vista, Excel o PDF propios. Para cada pieza `// OPCIONAL` que no se use: borrar su función **y** su línea `← N`; los imports que queden sin usar se quitan con `npx biome check --write --unsafe <archivo>`. |
+ 
+-| El endpoint…                                                                 | Ejemplo |
+-| ---------------------------------------------------------------------------- | ------- |
+-| responde la lista y recibe `fecha_inicio`, `fecha_fin`, `cod_empresa`, `cod_cc` y los filtros con esos nombres | **A**   |
+-| trae la lista en otra propiedad, espera otros nombres de parámetros, necesita un parámetro fijo o no filtra algo (ej. fechas) | **B**   |
+-| hay que juntar varias consultas o agregar campos, o se quiere un filtro, vista, Excel o PDF propios | **C** (solo las piezas que hagan falta) |
++Qué se cambia en las líneas `// CAMBIAR`:
+ 
+-### Ejemplo A — básico
++1. **Nombre de la constante** (`reporteCambiar` → ej. `reporteVentasCliente`).
++2. **`nomenclatura`**: la del `TIPO` (paso 1).
++3. **Schema de la fila**: los campos del endpoint, con sus nombres exactos (ver *Referencia*).
++4. **Endpoint** (`/api/appweb/CAMBIAR`).
++5. **`fechas`**, **`filtros`** y **`columnas`** (ver *Referencia*).
+ 
+-```ts
+-import { z } from "zod";
+-import { consultarApi } from "../../api/consultar-api";
+-import { definirReporte } from "../../lib/definir-reporte";
+-import { filtroEstado } from "../../lib/filtros";
+-
+-/**
+- * EJEMPLO A — BÁSICO: el endpoint responde la lista y recibe los parámetros con los nombres de
+- * la pantalla. No hay funciones propias.
+- */
+-
+-// 1. Cómo viene UNA fila del endpoint (nombres exactos del JSON; solo los que se usan).
+-const filaSchema = z.looseObject({
+-  cod_actividad: z.coerce.number(),
+-  nom_tipo: z.string().nullable().catch(""),
+-  nombre_cliente: z.string().nullable().catch(""),
+-  estado_desc: z.string().nullable().catch(""),
+-});
+-type Fila = z.infer<typeof filaSchema>;
+-
+-// 2. La definición.
+-export const reporteEjemploA = definirReporte<Fila>({
+-  nomenclatura: "CRM-EA-90",
+-  descripcion: "Actividades de la empresa y el centro de costo",
+-  fechas: "ninguna",
+-  filtros: [filtroEstado("ACTIVIDAD", "cod_estado")],
+-  consultar: consultarApi("/api/appweb/lista-actividades2", filaSchema),
+-  columnas: [
+-    { id: "codigo", label: "Código", valor: (f) => f.cod_actividad },
+-    { id: "tipo", label: "Tipo", valor: (f) => f.nom_tipo, agrupable: true },
+-    {
+-      id: "cliente",
+-      label: "Cliente",
+-      valor: (f) => f.nombre_cliente,
+-      agrupable: true,
+-      buscable: true,
+-    },
+-    { id: "estado", label: "Estado", valor: (f) => f.estado_desc, agrupable: true },
+-  ],
+-  agrupacion: { filas: ["tipo"] },
+-  descargas: { excel: true },
+-});
+-```
+-
+-### Ejemplo B — endpoint distinto (sin funciones propias)
+-
+-Todo se resuelve con las opciones de `consultarApi`:
+-
+-| Opción     | Para qué                                                          | Ejemplo                                       |
+-| ---------- | ----------------------------------------------------------------- | --------------------------------------------- |
+-| `lista`    | La lista no viene en `data` (ej. `{ data: { tipo, detalle: [ … ] } }`) | `lista: "detalle"`                     |
+-| `params`   | Parámetro fijo que siempre se manda                               | `params: { tipo: "mensual" }`                 |
+-| `nombres`  | El endpoint espera otro nombre (nombre de la pantalla → del endpoint) | `nombres: { cod_empresa: "cod_emp", fecha_inicio: "fecha_inicial" }` |
+-| `filtrar`  | Lo que el endpoint no filtra (`true` = la fila se queda)          | `filtrar: (f, params) => fechaEnRango(f.fecha, params)` |
+-
+-```ts
+-import { z } from "zod";
+-import { consultarApi } from "../../api/consultar-api";
+-import { definirReporte, fechaEnRango } from "../../lib/definir-reporte";
+-import { filtroUsuario } from "../../lib/filtros";
+-
+-/**
+- * EJEMPLO B — ENDPOINT DISTINTO: se resuelve con las opciones de `consultarApi`, sin funciones
+- * propias. Aquí el endpoint espera el asesor como `cod_asesor` y no filtra por fecha.
+- */
+-
+-const filaSchema = z.looseObject({
+-  cod_actividad: z.coerce.number(),
+-  nom_tipo: z.string().nullable().catch(""),
+-  nombre_cliente: z.string().nullable().catch(""),
+-  fecha_programada: z.string().nullable().catch(""),
+-});
+-type Fila = z.infer<typeof filaSchema>;
+-
+-export const reporteEjemploB = definirReporte<Fila>({
+-  nomenclatura: "CRM-EB-91",
+-  fechas: "requeridas",
+-  filtros: [filtroUsuario("Asesor", "cod_usuario")],
+-  consultar: consultarApi("/api/appweb/lista-actividades2", filaSchema, {
+-    // El filtro se llama cod_usuario, pero el endpoint lo espera como cod_asesor.
+-    nombres: { cod_usuario: "cod_asesor" },
+-    // El endpoint no filtra por fecha: se filtra aquí con el período de la pantalla.
+-    filtrar: (f, params) => fechaEnRango(f.fecha_programada, params),
+-    // Otras opciones (si hicieran falta):
+-    // lista: "detalle",            → la lista viene en data.detalle
+-    // params: { tipo: "mensual" }, → parámetro fijo que siempre se manda
+-  }),
+-  columnas: [
+-    { id: "codigo", label: "Código", valor: (f) => f.cod_actividad },
+-    { id: "tipo", label: "Tipo", valor: (f) => f.nom_tipo, agrupable: true },
+-    { id: "cliente", label: "Cliente", valor: (f) => f.nombre_cliente, agrupable: true },
+-    { id: "fecha", label: "Fecha programada", valor: (f) => f.fecha_programada },
+-  ],
+-});
+-```
+-
+-### Ejemplo C — personalizado (funciones propias)
+-
+-Cada pieza propia es una función **de este mismo archivo** (arriba) y se conecta en su
+-propiedad de la definición (abajo, marcadas con `← 1` … `← 5`). Se dejan solo las que hagan
+-falta: si no se necesita un PDF propio, se borra la función `pdfEjemplo` y `pdf: pdfEjemplo`.
+-
+-```tsx
+-import React from "react";
+-import { z } from "zod";
+-import { empleadosUsuarios, tipos } from "@/features/catalogos";
+-import { http } from "@/shared/api/client";
+-import { parseEnvelope } from "@/shared/api/envelope";
+-import type { ComboboxOption } from "@/shared/components/ui/combobox";
+-import { type CeldaExcel, exportarExcel } from "@/shared/lib/excel";
+-import { TablaReporte } from "../../components/contenido-reporte";
+-import {
+-  type ContenidoReporteProps,
+-  type DescargaReporte,
+-  definirReporte,
+-  type FiltroReporte,
+-  type ParamsReporte,
+-} from "../../lib/definir-reporte";
+-import { descargarPdf, nombreArchivo } from "../../lib/exportar";
+-import { filtroUsuario } from "../../lib/filtros";
+-
+-/**
+- * EJEMPLO C — PERSONALIZADO: cada pieza propia es una función de ESTE archivo (arriba) y se
+- * conecta en su propiedad de la definición (abajo). Lo que no se conecta usa lo de siempre.
+- */
+-
+-const filaSchema = z.looseObject({
+-  cod_actividad: z.coerce.number(),
+-  cod_tipo: z.coerce.number().catch(0),
+-  nom_tipo: z.string().nullable().catch(""),
+-  estado_desc: z.string().nullable().catch(""),
+-  cod_asesor: z.coerce.number().catch(0),
+-});
+-// La fila puede llevar campos que no vienen del endpoint (aquí `asesor`).
+-type Fila = z.infer<typeof filaSchema> & { asesor: string };
+-
+-// ── 1. Consulta propia → se conecta en `consultar` ──
+-// Junta dos consultas y agrega el nombre del asesor a cada fila.
+-async function consultar(params: ParamsReporte): Promise<Fila[]> {
+-  const [actividades, empleados] = await Promise.all([
+-    http
+-      .get<unknown>("/api/appweb/lista-actividades2", {
+-        params: { cod_empresa: params.cod_empresa ?? "", cod_cc: params.cod_cc ?? "" },
+-      })
+-      .then((respuesta) => parseEnvelope(respuesta, filaSchema, "lista-actividades2")),
+-    empleadosUsuarios.fetchLista({}),
+-  ]);
+-  const nombres = new Map(empleados.map((e) => [String(e.codUsuario), e.nombreCompleto]));
+-  return actividades
+-    .filter((a) => !params.cod_tipo || params.cod_tipo.split(",").includes(String(a.cod_tipo)))
+-    .map((a) => ({ ...a, asesor: nombres.get(String(a.cod_asesor)) ?? "" }));
+-}
+-
+-// ── 2. Filtro propio → se conecta en `filtros` ──
+-const filtroTipoActividad: FiltroReporte = {
+-  id: "cod_tipo", // nombre del parámetro que recibe `consultar`
+-  label: "Tipo de actividad",
+-  multiple: true,
+-  depende: ["cod_usuario"], // se limpia al cambiar el asesor
+-  useOpciones: () => {
+-    const { data, isLoading } = tipos.useLista({ tipo_tabla: "ACTIVIDAD" });
+-    const opciones = React.useMemo<ComboboxOption[]>(
+-      () => (data ?? []).map((t) => ({ value: String(t.codTipo), label: t.nomTipo })),
+-      [data],
+-    );
+-    return { opciones, cargando: isLoading };
+-  },
+-};
+-
+-// ── 3. Vista propia → se conecta en `Contenido` (por eso el archivo es .tsx) ──
+-function ContenidoEjemplo(props: ContenidoReporteProps<Fila>) {
+-  const finalizadas = props.filas.filter((f) => f.estado_desc === "FINALIZADO").length;
+-  return (
+-    <div className="space-y-3">
+-      <p className="text-sm">
+-        {finalizadas} de {props.filas.length} actividades finalizadas
+-      </p>
+-      <TablaReporte {...props} />
+-    </div>
+-  );
+-}
+-
+-// ── 4. Excel propio → se conecta en `descargas.excel` ──
+-async function excelEjemplo({ filas, titulo, encabezado }: DescargaReporte<Fila>) {
+-  await exportarExcel({
+-    nombreArchivo: `${nombreArchivo(titulo)}.xlsx`,
+-    titulo,
+-    encabezado,
+-    hojas: [
+-      {
+-        nombre: titulo.slice(0, 31),
+-        mostrarCuadricula: true,
+-        autoFiltro: true,
+-        columnas: ["Código", "Tipo", "Asesor", "Estado"],
+-        filas: filas.map((f): CeldaExcel[] => [
+-          f.cod_actividad,
+-          f.nom_tipo,
+-          f.asesor,
+-          f.estado_desc === "EN PROCESO"
+-            ? { dato: f.estado_desc, fontColor: "FFB30000" }
+-            : f.estado_desc,
+-        ]),
+-      },
+-    ],
+-  });
+-}
+-
+-// ── 5. PDF propio → se conecta en `descargas.pdf` ──
+-function pdfEjemplo({ filas, titulo, encabezado }: DescargaReporte<Fila>) {
+-  return descargarPdf({
+-    titulo,
+-    header: encabezado,
+-    horizontal: true,
+-    contenido: [
+-      { tipo: "titulo", texto: "Resumen" },
+-      { tipo: "texto", texto: `${filas.length} actividades` },
+-      {
+-        tipo: "tabla",
+-        columnas: ["Código", "Tipo", "Asesor"],
+-        filas: filas.map((f) => [f.cod_actividad, f.nom_tipo, f.asesor]),
+-      },
+-    ],
+-  });
+-}
+-
+-// ── La definición: aquí se conecta cada pieza ──
+-export const reporteEjemploC = definirReporte<Fila>({
+-  nomenclatura: "CRM-EC-92",
+-  fechas: "ninguna",
+-  filtros: [filtroUsuario("Asesor", "cod_usuario"), filtroTipoActividad], // ← 2
+-  consultar, // ← 1 (en lugar de consultarApi)
+-  Contenido: ContenidoEjemplo, // ← 3 (en lugar de la tabla)
+-  descargas: { excel: excelEjemplo, pdf: pdfEjemplo }, // ← 4 y 5 (en lugar de true)
+-  columnas: [
+-    { id: "codigo", label: "Código", valor: (f) => f.cod_actividad },
+-    { id: "tipo", label: "Tipo", valor: (f) => f.nom_tipo, agrupable: true },
+-    { id: "asesor", label: "Asesor", valor: (f) => f.asesor, agrupable: true },
+-    { id: "estado", label: "Estado", valor: (f) => f.estado_desc, agrupable: true },
+-  ],
+-});
+-```
++Las plantillas compilan tal cual y no se registran (no aparecen en pantalla); la copia sí se
++registra (paso 3).
+ 
+-Notas de las piezas propias:
++Notas de las piezas de `reporte-personalizado.tsx`:
+ 
+ - **Consulta propia** (`consultar`): recibe los parámetros de la pantalla (`fecha_inicio`,
+   `fecha_fin`, `cod_empresa`, `cod_cc` y el `id` de cada filtro; vacíos = no vienen) y devuelve
+@@ -325,7 +89,8 @@ Notas de las piezas propias:
+   (`@/shared/stores/auth-store`). Un `throw new Error("mensaje")` se muestra en "Reporte".
+ - **Filtro propio** (`FiltroReporte`): `value` siempre es texto (`String(…)`). `useOpciones` (y
+   `useValorInicial`, el valor con el que arranca) son hooks: siguen las reglas de los hooks
+-  (sin `if`). `useOpciones` recibe los valores de los demás filtros (ej. `valores.cod_cc`).
++  (sin `if`). `useOpciones` recibe los valores de los demás filtros (ej. `valores.cod_cc`);
++  `depende: ["cod_cc"]` lo limpia cuando cambia ese filtro; `requerido: true` lo hace obligatorio.
+ - **Vista propia** (`Contenido`): recibe `{ filas, columnas, params }`; `TablaReporte` deja la
+   tabla de siempre. La vista de otro módulo se importa **por su ruta** (ej.
+   `@/features/reportes-crm/components/reporte-objetivos-empleado`), no por su `index`. Datos que
+@@ -419,7 +184,7 @@ las sumas del grupo por `id`. `porcentaje` se importa junto con `definirReporte`
+ 
+ - **Excel agrupado**: siempre (el Resumen agrupado, con el generador de Reportes de pricing).
+ - `descargas: { excel: true }` y/o `pdf: true`: el detalle con las columnas.
+-- `descargas: { excel: miFuncion, pdf: otraFuncion }`: formato propio (ejemplo C).
++- `descargas: { excel: miFuncion, pdf: otraFuncion }`: formato propio (`reporte-personalizado.tsx`).
+ - Sin `descargas`: solo el Excel agrupado.
+ 
+ ### Otras opciones de la definición
+@@ -456,10 +221,10 @@ export const REPORTES_PRI: readonly Reporte[] = [reporteVentasCliente];
+ | Empresa o Centro de costo salen dos veces                   | Se agregaron en `filtros`: quitarlos.                                              |
+ | Error de TypeScript en `valor: (f) => f.algo`               | `algo` no está en el schema de la fila.                                            |
+ | "API response failed schema validation"                     | Un campo del schema no coincide con lo que manda el endpoint (nombre o tipo).      |
+-| Consulta vacía, pero el endpoint sí trae datos              | La lista no viene en `data`: opción `lista` (ejemplo B).                           |
+-| El endpoint ignora un filtro                                | Espera otro nombre de parámetro: opción `nombres` (ejemplo B).                     |
++| Consulta vacía, pero el endpoint sí trae datos              | La lista no viene en `data`: opción `lista` (`reporte-endpoint-distinto.ts`).      |
++| El endpoint ignora un filtro                                | Espera otro nombre de parámetro: opción `nombres` (`reporte-endpoint-distinto.ts`). |
+ | Un porcentaje sale sumado en el resumen                     | Usar `calculada`, no `sumable`.                                                    |
+ | Biome marca formato o imports                               | `npm run biome:arreglar`.                                                          |
+ | Error de JSX en el archivo del reporte                      | Con `Contenido` (o cualquier `<…>`) la extensión es `.tsx`.                        |
+-| La vista de otro módulo hace la pantalla muy pesada         | Importar el componente por su ruta, no por el `index` del módulo (ejemplo C).      |
++| La vista de otro módulo hace la pantalla muy pesada         | Importar el componente por su ruta, no por el `index` del módulo.                  |
+ | "Rendered more hooks…" o error de hooks en un filtro propio | `useOpciones` / `useValorInicial` no pueden tener hooks dentro de un `if`.         |
+diff --git a/src/features/reportes/definiciones/plantillas/reporte-basico.ts b/src/features/reportes/definiciones/plantillas/reporte-basico.ts
+new file mode 100644
+index 0000000..e67a399
+--- /dev/null
++++ b/src/features/reportes/definiciones/plantillas/reporte-basico.ts
+@@ -0,0 +1,39 @@
++import { z } from "zod";
++import { consultarApi } from "../../api/consultar-api";
++import { definirReporte } from "../../lib/definir-reporte";
++import { filtroUsuario } from "../../lib/filtros";
++
++/**
++ * PLANTILLA — REPORTE BÁSICO
++ * Para un endpoint que responde la lista de filas y recibe los parámetros con los nombres de la
++ * pantalla: fecha_inicio, fecha_fin, cod_empresa, cod_cc y el id de cada filtro.
++ *
++ * 1. Copiar este archivo a definiciones/<modulo>/reporte-<nombre>.ts
++ * 2. Cambiar las líneas marcadas con  // CAMBIAR
++ * 3. Registrarlo en definiciones/<modulo>/index.ts (ver GUIA.md, paso 3)
++ */
++
++// Una fila tal como la devuelve el endpoint: nombres EXACTOS del JSON, solo los que se usan.
++const filaSchema = z.looseObject({
++  campo_texto: z.string().nullable().catch(""), // CAMBIAR: campos de texto
++  campo_numero: z.coerce.number().catch(0), // CAMBIAR: campos numéricos
++});
++type Fila = z.infer<typeof filaSchema>;
++
++export const reporteCambiar = definirReporte<Fila>({
++  // CAMBIAR: nombre de la constante (ej. reporteVentasCliente)
++  nomenclatura: "MOD-XX-01", // CAMBIAR: la NOMENCLATURA del TIPO
++  descripcion: "Subtítulo de la sección Reporte", // CAMBIAR
++  fechas: "requeridas", // CAMBIAR: "requeridas" | "opcionales" | "ninguna"
++  filtros: [
++    filtroUsuario("Usuario", "cod_usuario"), // CAMBIAR: filtros del reporte (sin empresa ni CC)
++  ],
++  consultar: consultarApi("/api/appweb/CAMBIAR", filaSchema), // CAMBIAR: endpoint
++  columnas: [
++    // CAMBIAR: una línea por columna de la tabla
++    { id: "texto", label: "Texto", valor: (f) => f.campo_texto, agrupable: true, buscable: true },
++    { id: "numero", label: "Número", valor: (f) => f.campo_numero, sumable: true },
++  ],
++  agrupacion: { filas: ["texto"] }, // CAMBIAR u OPCIONAL: agrupación inicial (ids de columnas)
++  descargas: { excel: true }, // OPCIONAL: Excel y/o PDF del detalle (pdf: true)
++});
+diff --git a/src/features/reportes/definiciones/plantillas/reporte-endpoint-distinto.ts b/src/features/reportes/definiciones/plantillas/reporte-endpoint-distinto.ts
+new file mode 100644
+index 0000000..345482c
+--- /dev/null
++++ b/src/features/reportes/definiciones/plantillas/reporte-endpoint-distinto.ts
+@@ -0,0 +1,47 @@
++import { z } from "zod";
++import { consultarApi } from "../../api/consultar-api";
++import { definirReporte, fechaEnRango } from "../../lib/definir-reporte";
++import { filtroUsuario } from "../../lib/filtros";
++
++/**
++ * PLANTILLA — ENDPOINT DISTINTO (sin funciones propias)
++ * Para un endpoint que trae la lista en otra propiedad, espera otros nombres de parámetros,
++ * necesita un parámetro fijo o no filtra algo (ej. fechas). Todo se configura en las opciones de
++ * consultarApi; las que no hagan falta se borran.
++ *
++ * 1. Copiar este archivo a definiciones/<modulo>/reporte-<nombre>.ts
++ * 2. Cambiar las líneas marcadas con  // CAMBIAR  y borrar las  // OPCIONAL  que no se usen
++ * 3. Registrarlo en definiciones/<modulo>/index.ts (ver GUIA.md, paso 3)
++ */
++
++const filaSchema = z.looseObject({
++  campo_texto: z.string().nullable().catch(""), // CAMBIAR: campos de texto
++  campo_numero: z.coerce.number().catch(0), // CAMBIAR: campos numéricos
++  campo_fecha: z.string().nullable().catch(""), // CAMBIAR: fecha (si se filtra por fecha aquí)
++});
++type Fila = z.infer<typeof filaSchema>;
++
++export const reporteCambiar = definirReporte<Fila>({
++  // CAMBIAR: nombre de la constante
++  nomenclatura: "MOD-XX-01", // CAMBIAR
++  descripcion: "Subtítulo de la sección Reporte", // CAMBIAR
++  fechas: "requeridas", // CAMBIAR
++  filtros: [filtroUsuario("Usuario", "cod_usuario")], // CAMBIAR
++  consultar: consultarApi("/api/appweb/CAMBIAR", filaSchema, {
++    // OPCIONAL: la lista no viene en data, sino en data.<propiedad>
++    lista: "detalle",
++    // OPCIONAL: parámetros fijos que siempre se mandan
++    params: { tipo: "CAMBIAR" },
++    // OPCIONAL: el endpoint espera otros nombres (nombre de la pantalla: nombre del endpoint)
++    nombres: { cod_empresa: "cod_emp", fecha_inicio: "fecha_inicial", fecha_fin: "fecha_final" },
++    // OPCIONAL: lo que el endpoint no filtra se filtra aquí (true = la fila se queda)
++    filtrar: (f, params) => fechaEnRango(f.campo_fecha, params),
++  }),
++  columnas: [
++    // CAMBIAR
++    { id: "texto", label: "Texto", valor: (f) => f.campo_texto, agrupable: true, buscable: true },
++    { id: "numero", label: "Número", valor: (f) => f.campo_numero, sumable: true },
++    { id: "fecha", label: "Fecha", valor: (f) => f.campo_fecha },
++  ],
++  descargas: { excel: true }, // OPCIONAL
++});
+diff --git a/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx b/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx
+new file mode 100644
+index 0000000..d3acfb4
+--- /dev/null
++++ b/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx
+@@ -0,0 +1,138 @@
++import React from "react";
++import { z } from "zod";
++import { empleadosUsuarios, tipos } from "@/features/catalogos";
++import { http } from "@/shared/api/client";
++import { parseEnvelope } from "@/shared/api/envelope";
++import type { ComboboxOption } from "@/shared/components/ui/combobox";
++import { type CeldaExcel, exportarExcel } from "@/shared/lib/excel";
++import { TablaReporte } from "../../components/contenido-reporte";
++import {
++  type ContenidoReporteProps,
++  type DescargaReporte,
++  definirReporte,
++  type FiltroReporte,
++  type ParamsReporte,
++} from "../../lib/definir-reporte";
++import { descargarPdf, nombreArchivo } from "../../lib/exportar";
++import { filtroUsuario } from "../../lib/filtros";
++
++/**
++ * PLANTILLA — REPORTE PERSONALIZADO (funciones propias)
++ * Cada pieza propia es una función de ESTE archivo y se conecta en su propiedad de la
++ * definición (al final, marcadas ← 1 … ← 5). Lo que no se conecta usa lo de siempre.
++ *
++ * 1. Copiar este archivo a definiciones/<modulo>/reporte-<nombre>.tsx
++ * 2. Cambiar las líneas marcadas con  // CAMBIAR
++ * 3. Para cada pieza  OPCIONAL  que no se necesite: borrar su función Y su línea ← N
++ *    Los imports que queden sin usar los quita: npx biome check --write --unsafe <archivo>
++ * 4. Registrarlo en definiciones/<modulo>/index.ts (ver GUIA.md, paso 3)
++ */
++
++const filaSchema = z.looseObject({
++  campo_texto: z.string().nullable().catch(""), // CAMBIAR
++  campo_numero: z.coerce.number().catch(0), // CAMBIAR
++  cod_usuario: z.coerce.number().catch(0), // CAMBIAR: código para buscar el nombre (pieza 1)
++});
++// La fila puede llevar campos que no vienen del endpoint (aquí `usuario`, lo agrega la pieza 1).
++type Fila = z.infer<typeof filaSchema> & { usuario: string };
++
++// ── 1. OPCIONAL — Consulta propia (← 1) ──
++// Para juntar varias consultas o agregar campos. Sin esto: consultar: consultarApi(...).
++async function consultar(params: ParamsReporte): Promise<Fila[]> {
++  const [filas, empleados] = await Promise.all([
++    http
++      .get<unknown>("/api/appweb/CAMBIAR", { params }) // CAMBIAR: endpoint (y params si hace falta)
++      .then((respuesta) => parseEnvelope(respuesta, filaSchema, "CAMBIAR")),
++    empleadosUsuarios.fetchLista({}), // CAMBIAR: otra consulta o catálogo
++  ]);
++  const nombres = new Map(empleados.map((e) => [String(e.codUsuario), e.nombreCompleto]));
++  return filas.map((f) => ({ ...f, usuario: nombres.get(String(f.cod_usuario)) ?? "" }));
++}
++
++// ── 2. OPCIONAL — Filtro propio (← 2) ──
++// Para un filtro que no está en los atajos de lib/filtros.ts.
++const filtroPropio: FiltroReporte = {
++  id: "cod_tipo", // CAMBIAR: nombre del parámetro que recibe la consulta
++  label: "Tipo", // CAMBIAR
++  multiple: true, // OPCIONAL: varios valores ("7,8")
++  useOpciones: () => {
++    const { data, isLoading } = tipos.useLista({ tipo_tabla: "CAMBIAR" }); // CAMBIAR: catálogo
++    const opciones = React.useMemo<ComboboxOption[]>(
++      () => (data ?? []).map((t) => ({ value: String(t.codTipo), label: t.nomTipo })), // CAMBIAR
++      [data],
++    );
++    return { opciones, cargando: isLoading };
++  },
++};
++
++// ── 3. OPCIONAL — Vista propia (← 3) ──
++// En lugar de la tabla (aquí: un texto arriba y la tabla de siempre abajo).
++function VistaPropia(props: ContenidoReporteProps<Fila>) {
++  return (
++    <div className="space-y-3">
++      <p className="text-sm">{props.filas.length} registros</p> {/* CAMBIAR */}
++      <TablaReporte {...props} />
++    </div>
++  );
++}
++
++// ── 4. OPCIONAL — Excel propio (← 4) ──
++// Sin esto: excel: true (el detalle con las columnas) o ninguno.
++async function excelPropio({ filas, titulo, encabezado }: DescargaReporte<Fila>) {
++  await exportarExcel({
++    nombreArchivo: `${nombreArchivo(titulo)}.xlsx`,
++    titulo,
++    encabezado,
++    hojas: [
++      {
++        nombre: titulo.slice(0, 31),
++        mostrarCuadricula: true,
++        autoFiltro: true,
++        columnas: ["Texto", "Usuario", "Número"], // CAMBIAR
++        filas: filas.map((f): CeldaExcel[] => [
++          f.campo_texto, // CAMBIAR: una celda por columna, en el mismo orden
++          f.usuario,
++          // Celda con color: { dato, fontColor } (color ARGB)
++          f.campo_numero < 0 ? { dato: f.campo_numero, fontColor: "FFB30000" } : f.campo_numero,
++        ]),
++      },
++    ],
++  });
++}
++
++// ── 5. OPCIONAL — PDF propio (← 5) ──
++// Con el formato de Reportes de pricing. Sin esto: pdf: true (el detalle) o ninguno.
++function pdfPropio({ filas, titulo, encabezado }: DescargaReporte<Fila>) {
++  return descargarPdf({
++    titulo,
++    header: encabezado,
++    horizontal: true,
++    contenido: [
++      { tipo: "titulo", texto: "Resumen" }, // CAMBIAR: bloques en el orden en que se imprimen
++      { tipo: "texto", texto: `${filas.length} registros` },
++      {
++        tipo: "tabla",
++        columnas: ["Texto", "Usuario", "Número"],
++        filas: filas.map((f) => [f.campo_texto, f.usuario, f.campo_numero]),
++      },
++    ],
++  });
++}
++
++// ── La definición: aquí se conecta cada pieza ──
++export const reporteCambiar = definirReporte<Fila>({
++  // CAMBIAR: nombre de la constante
++  nomenclatura: "MOD-XX-01", // CAMBIAR
++  descripcion: "Subtítulo de la sección Reporte", // CAMBIAR
++  fechas: "requeridas", // CAMBIAR
++  filtros: [filtroUsuario("Usuario", "cod_usuario"), filtroPropio], // ← 2
++  consultar, // ← 1  (sin pieza 1: consultar: consultarApi("/api/appweb/…", filaSchema))
++  Contenido: VistaPropia, // ← 3  (sin pieza 3: borrar la línea)
++  descargas: { excel: excelPropio, pdf: pdfPropio }, // ← 4 y ← 5  (o excel: true / pdf: true)
++  columnas: [
++    // CAMBIAR
++    { id: "texto", label: "Texto", valor: (f) => f.campo_texto, agrupable: true, buscable: true },
++    { id: "usuario", label: "Usuario", valor: (f) => f.usuario, agrupable: true },
++    { id: "numero", label: "Número", valor: (f) => f.campo_numero, sumable: true },
++  ],
++});
