@@ -8,7 +8,8 @@ import type { ColumnaReporte } from "./definir-reporte";
  * Arma el árbol que dibuja `TablaDouble` (mismo formato que `construirTablaKpi` de pricing):
  * un nodo raíz "TOTAL GENERAL" con las filas agrupadas por los niveles elegidos en
  * "Personaliza tu reporte" (`NivelesBuilder`) y columnas por un campo (o ninguna).
- * Medidas: cantidad de registros y la suma de cada columna `sumable` del reporte.
+ * Medidas: cantidad de registros, la suma de cada columna `sumable` y, al final, cada columna
+ * `calculada` (con las sumas de su grupo, ej. HR %).
  */
 
 export interface ConfiguracionResumen {
@@ -81,6 +82,7 @@ export function calcularResumen<TFila>(
     return limpio || SIN_DATO;
   };
   const medidas = medidasDe(columnas);
+  const calculadas = columnas.filter((c) => c.calculada);
   const raiz = nuevoNodo("total", "TOTAL GENERAL");
   const valoresColumna = new Set<string>();
 
@@ -117,7 +119,7 @@ export function calcularResumen<TFila>(
   const etiquetaCampo = porId.get(config.columna)?.label ?? config.columna;
 
   const columnasTabla: ColumnaTabla[] = grupos.flatMap((grupo) =>
-    medidas.map((medida) => ({
+    [...medidas, ...calculadas.map((c) => ({ key: c.id, etiqueta: c.label }))].map((medida) => ({
       key: `${grupo}__${medida.key}`,
       label:
         grupo === CLAVE_TOTAL
@@ -131,12 +133,19 @@ export function calcularResumen<TFila>(
   );
 
   const aTreeNode = (nodo: Nodo): TreeNode => {
-    const values: Record<string, number> = {};
+    const values: Record<string, number | string> = {};
     for (const grupo of grupos) {
       const suma = nodo.sumas.get(grupo);
+      const sumas: Record<string, number> = {};
       medidas.forEach((medida, i) => {
+        sumas[medida.key] = suma?.[i] ?? 0;
         values[`${grupo}__${medida.key}`] = suma?.[i] ?? 0;
       });
+      // Calculadas: con las sumas del grupo ("" = no se puede calcular).
+      for (const c of calculadas) {
+        const valor = c.calculada?.(sumas);
+        values[`${grupo}__${c.id}`] = valor == null || !Number.isFinite(valor) ? "" : valor;
+      }
     }
     return {
       id: nodo.id,

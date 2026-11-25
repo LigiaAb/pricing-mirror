@@ -21,7 +21,8 @@ export function TablaReporte<TFila>({ filas, columnas }: ContenidoReporteProps<T
     [columnas],
   );
   const numericas = React.useMemo(
-    () => columnas.filter((c) => c.numerica ?? c.sumable).map((c) => c.id),
+    () =>
+      columnas.filter((c) => c.numerica ?? (c.sumable || Boolean(c.calculada))).map((c) => c.id),
     [columnas],
   );
   const buscables = React.useMemo(
