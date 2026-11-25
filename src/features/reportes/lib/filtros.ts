@@ -1,5 +1,5 @@
 import React from "react";
-import { centrosCosto, empleadosUsuarios, tipos } from "@/features/catalogos";
+import { centrosCosto, empleadosUsuarios, estados, tipos } from "@/features/catalogos";
 import { useContextoOperativoStore } from "@/features/shell";
 import type { ComboboxOption } from "@/shared/components/ui/combobox";
 import type { FiltroReporte } from "./definir-reporte";
@@ -11,12 +11,18 @@ import type { FiltroReporte } from "./definir-reporte";
  * `filtroLista` (opciones fijas) o un objeto `FiltroReporte` propio.
  */
 
-/** Centro de costo de la empresa del contexto; arranca en el CC del contexto. */
-export function filtroCentroCosto(label = "Centro de costo"): FiltroReporte {
+/**
+ * Centro de costo de la empresa del contexto; arranca en el CC del contexto. Al cambiar,
+ * limpia los filtros de `limpia` (por defecto el usuario, que depende del CC).
+ */
+export function filtroCentroCosto(
+  label = "Centro de costo",
+  limpia: readonly string[] = ["cod_usuario"],
+): FiltroReporte {
   return {
     id: "cod_cc",
     label,
-    limpia: ["cod_usuario"],
+    limpia,
     useValorInicial: () => {
       const cc = useContextoOperativoStore((s) => s.currentCentroCosto?.cod_cc);
       return cc == null ? "" : String(cc);
@@ -36,10 +42,13 @@ export function filtroCentroCosto(label = "Centro de costo"): FiltroReporte {
   };
 }
 
-/** Usuarios (empleados) del CC elegido en `filtroCentroCosto`; sin CC, todos. */
-export function filtroUsuario(label = "Usuario"): FiltroReporte {
+/**
+ * Usuarios (empleados) del CC elegido en `filtroCentroCosto`; sin CC, todos. `id` = nombre
+ * del parámetro que espera el endpoint (ej. `cod_asesor`).
+ */
+export function filtroUsuario(label = "Usuario", id = "cod_usuario"): FiltroReporte {
   return {
-    id: "cod_usuario",
+    id,
     label,
     useOpciones: (valores) => {
       const codCc = valores.cod_cc || undefined;
@@ -61,15 +70,45 @@ export function filtroUsuario(label = "Usuario"): FiltroReporte {
   };
 }
 
-/** Tipos de una tabla del catálogo `TIPO` (ej. `filtroTipo("PAGO", "cod_tipo_pago", "Tipo de pago")`). */
-export function filtroTipo(tipoTabla: string, id: string, label: string): FiltroReporte {
+/**
+ * Tipos de una tabla del catálogo `TIPO` (ej. `filtroTipo("PAGO", "cod_tipo_pago", "Tipo de pago")`).
+ * `solo`: nombres permitidos (sin esto, todos los de la tabla).
+ */
+export function filtroTipo(
+  tipoTabla: string,
+  id: string,
+  label: string,
+  solo?: readonly string[],
+): FiltroReporte {
   return {
     id,
     label,
     useOpciones: () => {
       const { data, isLoading } = tipos.useLista({ tipo_tabla: tipoTabla });
       const opciones = React.useMemo<ComboboxOption[]>(
-        () => (data ?? []).map((t) => ({ value: String(t.codTipo), label: t.nomTipo })),
+        () =>
+          (data ?? [])
+            .filter((t) => !solo || solo.includes(t.nomTipo))
+            .map((t) => ({ value: String(t.codTipo), label: t.nomTipo })),
+        [data],
+      );
+      return { opciones, cargando: isLoading };
+    },
+  };
+}
+
+/** Estados del catálogo de un tipo (ej. `filtroEstado("ACTIVIDAD", "cod_estado")`). */
+export function filtroEstado(nomTipo: string, id: string, label = "Estado"): FiltroReporte {
+  return {
+    id,
+    label,
+    useOpciones: () => {
+      const { data, isLoading } = estados.useLista();
+      const opciones = React.useMemo<ComboboxOption[]>(
+        () =>
+          (data ?? [])
+            .filter((e) => e.nom_tipo === nomTipo)
+            .map((e) => ({ value: String(e.cod_estado), label: e.estado_desc })),
         [data],
       );
       return { opciones, cargando: isLoading };
