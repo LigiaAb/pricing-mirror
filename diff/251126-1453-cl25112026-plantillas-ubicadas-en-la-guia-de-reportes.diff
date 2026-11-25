@@ -1,0 +1,106 @@
+diff --git a/src/features/reportes/GUIA.md b/src/features/reportes/GUIA.md
+index 2943857..9b79147 100644
+--- a/src/features/reportes/GUIA.md
++++ b/src/features/reportes/GUIA.md
+@@ -1,47 +1,20 @@
+ # Guía: agregar un reporte
+ 
+-## Empieza aquí: hay PLANTILLAS para copiar
++Paso a paso para agregar un reporte a la pantalla de Reportes. La arquitectura (qué hace cada
++archivo) está en `ARQUITECTURA.md`; aquí solo lo que hay que hacer.
+ 
+-Un reporte nuevo **no se escribe desde cero**: se copia una de estas 3 plantillas, que están en
++> **Plantillas para copiar** (en `src/features/reportes/definiciones/plantillas/`; cómo usarlas:
++> paso 2): [`reporte-basico.ts`](definiciones/plantillas/reporte-basico.ts) ·
++> [`reporte-endpoint-distinto.ts`](definiciones/plantillas/reporte-endpoint-distinto.ts) ·
++> [`reporte-personalizado.tsx`](definiciones/plantillas/reporte-personalizado.tsx)
+ 
+-```
+-src/features/reportes/definiciones/plantillas/
+-```
+-
+-| Plantilla                      | Usarla cuando…                                                                         |
+-| ------------------------------ | -------------------------------------------------------------------------------------- |
+-| `reporte-basico.ts`            | El endpoint responde la lista de filas y recibe los parámetros con los nombres de la pantalla (lo más común). |
+-| `reporte-endpoint-distinto.ts` | El endpoint trae la lista en otra propiedad, espera otros nombres de parámetros, necesita un parámetro fijo o no filtra algo (ej. fechas). |
+-| `reporte-personalizado.tsx`    | Hay que juntar varias consultas o se quiere un filtro, vista, Excel o PDF propios.      |
+-
+-**Los 5 pasos:**
+-
+-1. **Base de datos**: crear el `TIPO` del reporte y su relación con rol/CC/módulo (paso 1).
+-2. **Copiar** la plantilla a la carpeta del módulo, con otro nombre:
+-   `src/features/reportes/definiciones/plantillas/reporte-basico.ts` →
+-   `src/features/reportes/definiciones/pricing/reporte-ventas-cliente.ts`
+-3. **Cambiar** en la copia solo las líneas marcadas con `// CAMBIAR` (buscar `CAMBIAR` en el
+-   archivo). De dónde sale cada dato: tabla de abajo.
+-4. **Registrar** la copia en `src/features/reportes/definiciones/<modulo>/index.ts` (paso 3).
+-5. `npm run check:nuevos` sin errores y probar: elegir el módulo y el reporte, pulsar
+-   **Consultar**.
+-
+-## De dónde sale cada dato
+-
+-| Dato (línea `// CAMBIAR`)                        | De dónde sacarlo                                                                    |
+-| ------------------------------------------------ | ----------------------------------------------------------------------------------- |
+-| `nomenclatura`                                   | Se inventa con la regla `MÓDULO-INICIALES-CORRELATIVO` (paso 1) y se guarda igual en `TIPO.NOMENCLATURA`. |
+-| Endpoint (`/api/appweb/CAMBIAR`)                 | El nombre de la ruta del backend (`/api/appweb/<nombre>`). Si otra pantalla ya lo usa, buscar el nombre en `src/features/**/api/*.ts` (`http.get("/api/appweb/…")`) o verlo en la pestaña **Network** del navegador en esa pantalla. |
+-| Campos del schema (`campo_texto`, `campo_numero`) | La respuesta del endpoint: pestaña **Network** → la petición → **Response** (copiar los nombres tal cual, en minúsculas). En el backend: los alias del `select` (`… AS NOMBRES` llega como `nombres`). |
+-| Nombres de los parámetros que espera el endpoint | En el backend, la función del endpoint: lo que lee de `campos` (ej. `campos.fecha_inicio`, `campos.cod_cc`). Si son distintos a los de la pantalla (`fecha_inicio`, `fecha_fin`, `cod_empresa`, `cod_cc`), usar `nombres` (plantilla de endpoint distinto). |
+-| Dónde viene la lista (`lista`)                   | La misma respuesta en **Network**: si las filas no están en `data` sino en `data.<algo>`, `lista: "<algo>"`. |
+-| `id` de cada filtro                              | El nombre del parámetro que el backend lee de `campos` para ese filtro (ej. `cod_usuario`, `cod_tipo_pago`). |
+-| `filtroTipo("TIPO_TABLA", …)`                    | La `TIPO_TABLA` de los tipos que se quieren listar (tabla `TIPO`; ej. `ACTIVIDAD`, `TIPO_PAGO`). |
+-| `filtroEstado("NOMBRE", …)`                      | El `nom_tipo` de los estados (catálogo `estados`; ej. `ACTIVIDAD`).                  |
+-| Otros catálogos (consulta o filtro propios)      | Todos los catálogos están en `src/features/catalogos/index.ts` (ej. `empleadosUsuarios`, `tipos`, `empresas`, `roles`, `modulos`). |
+-| `columnas` (`valor: (f) => f.campo`)             | Los campos del schema de la misma copia.                                            |
+-| `ROL_ID`, `MODULO_ID`, `CENCOS_ID`, `EMPRESA_ID` de la relación | Catálogos `roles` (`/api/appweb/lista-rol`), `modulos` (`/api/appweb/listamodulo`, el select Módulo de la pantalla), `centrosCosto` (`/api/appweb/listacentrocosto`) y `empresas` (`/api/appweb/listaempresas`). |
++## Checklist
+ 
++1. [ ] **Base de datos**: `TIPO` del reporte y su relación con rol/CC/módulo (paso 1).
++2. [ ] **Archivo** del reporte: copiar una plantilla y cambiar las líneas `// CAMBIAR` (paso 2).
++3. [ ] **Registro**: una línea en `src/features/reportes/definiciones/<modulo>/index.ts` (paso 3).
++4. [ ] `npm run check:nuevos` sin errores (si Biome se queja del formato: `npm run biome:arreglar`).
++5. [ ] Probarlo: elegir el módulo y el reporte, pulsar **Consultar**.
+ 
+ ## Cómo funciona un reporte por dentro
+ 
+@@ -94,11 +67,11 @@ carpetas de los módulos.
+ 
+ | Plantilla                         | Cuándo                                                                                                   |
+ | --------------------------------- | -------------------------------------------------------------------------------------------------------- |
+-| `reporte-basico.ts`               | El endpoint responde la lista y recibe `fecha_inicio`, `fecha_fin`, `cod_empresa`, `cod_cc` y los filtros con esos nombres. |
+-| `reporte-endpoint-distinto.ts`    | El endpoint trae la lista en otra propiedad, espera otros nombres de parámetros, necesita un parámetro fijo o no filtra algo (ej. fechas). Se borran las opciones `// OPCIONAL` que no hagan falta. |
+-| `reporte-personalizado.tsx`       | Hay que juntar varias consultas o agregar campos, o se quiere un filtro, vista, Excel o PDF propios. Para cada pieza `// OPCIONAL` que no se use: borrar su función **y** su línea `← N`; los imports que queden sin usar se quitan con `npx biome check --write --unsafe <archivo>`. |
++| [`reporte-basico.ts`](definiciones/plantillas/reporte-basico.ts)               | El endpoint responde la lista y recibe `fecha_inicio`, `fecha_fin`, `cod_empresa`, `cod_cc` y los filtros con esos nombres. |
++| [`reporte-endpoint-distinto.ts`](definiciones/plantillas/reporte-endpoint-distinto.ts)    | El endpoint trae la lista en otra propiedad, espera otros nombres de parámetros, necesita un parámetro fijo o no filtra algo (ej. fechas). Se borran las opciones `// OPCIONAL` que no hagan falta. |
++| [`reporte-personalizado.tsx`](definiciones/plantillas/reporte-personalizado.tsx)       | Hay que juntar varias consultas o agregar campos, o se quiere un filtro, vista, Excel o PDF propios. Para cada pieza `// OPCIONAL` que no se use: borrar su función **y** su línea `← N`; los imports que queden sin usar se quitan con `npx biome check --write --unsafe <archivo>`. |
+ 
+-Qué se cambia en las líneas `// CAMBIAR`:
++Qué se cambia en las líneas `// CAMBIAR` (de dónde sacar cada dato: tabla de abajo):
+ 
+ 1. **Nombre de la constante** (`reporteCambiar` → ej. `reporteVentasCliente`).
+ 2. **`nomenclatura`**: la del `TIPO` (paso 1).
+@@ -109,7 +82,24 @@ Qué se cambia en las líneas `// CAMBIAR`:
+ Las plantillas compilan tal cual y no se registran (no aparecen en pantalla); la copia sí se
+ registra (paso 3).
+ 
+-Notas de las piezas de `reporte-personalizado.tsx`:
++### De dónde sale cada dato
++
++| Dato (línea `// CAMBIAR`)                        | De dónde sacarlo                                                                    |
++| ------------------------------------------------ | ----------------------------------------------------------------------------------- |
++| `nomenclatura`                                   | Se inventa con la regla `MÓDULO-INICIALES-CORRELATIVO` (paso 1) y se guarda igual en `TIPO.NOMENCLATURA`. |
++| Endpoint (`/api/appweb/CAMBIAR`)                 | El nombre de la ruta del backend (`/api/appweb/<nombre>`). Si otra pantalla ya lo usa, buscar el nombre en `src/features/**/api/*.ts` (`http.get("/api/appweb/…")`) o verlo en la pestaña **Network** del navegador en esa pantalla. |
++| Campos del schema (`campo_texto`, `campo_numero`) | La respuesta del endpoint: pestaña **Network** → la petición → **Response** (copiar los nombres tal cual, en minúsculas). En el backend: los alias del `select` (`… AS NOMBRES` llega como `nombres`). |
++| Nombres de los parámetros que espera el endpoint | En el backend, la función del endpoint: lo que lee de `campos` (ej. `campos.fecha_inicio`, `campos.cod_cc`). Si son distintos a los de la pantalla (`fecha_inicio`, `fecha_fin`, `cod_empresa`, `cod_cc`), usar `nombres` (plantilla de endpoint distinto). |
++| Dónde viene la lista (`lista`)                   | La misma respuesta en **Network**: si las filas no están en `data` sino en `data.<algo>`, `lista: "<algo>"`. |
++| `id` de cada filtro                              | El nombre del parámetro que el backend lee de `campos` para ese filtro (ej. `cod_usuario`, `cod_tipo_pago`). |
++| `filtroTipo("TIPO_TABLA", …)`                    | La `TIPO_TABLA` de los tipos que se quieren listar (tabla `TIPO`; ej. `ACTIVIDAD`, `TIPO_PAGO`). |
++| `filtroEstado("NOMBRE", …)`                      | El `nom_tipo` de los estados (catálogo `estados`; ej. `ACTIVIDAD`).                  |
++| Otros catálogos (consulta o filtro propios)      | Todos los catálogos están en `src/features/catalogos/index.ts` (ej. `empleadosUsuarios`, `tipos`, `empresas`, `roles`, `modulos`). |
++| `columnas` (`valor: (f) => f.campo`)             | Los campos del schema de la misma copia.                                            |
++| `ROL_ID`, `MODULO_ID`, `CENCOS_ID`, `EMPRESA_ID` de la relación | Catálogos `roles` (`/api/appweb/lista-rol`), `modulos` (`/api/appweb/listamodulo`, el select Módulo de la pantalla), `centrosCosto` (`/api/appweb/listacentrocosto`) y `empresas` (`/api/appweb/listaempresas`). |
++
++### Piezas de `reporte-personalizado.tsx`
++
+ 
+ - **Consulta propia** (`consultar`): recibe los parámetros de la pantalla (`fecha_inicio`,
+   `fecha_fin`, `cod_empresa`, `cod_cc` y el `id` de cada filtro; vacíos = no vienen) y devuelve
