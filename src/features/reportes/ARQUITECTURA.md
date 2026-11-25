@@ -10,6 +10,9 @@ reportes/
     consultar-api.ts          consultarApi(endpoint, schema, { lista, params, nombres, filtrar }) para `consultar`
   definiciones/                 UNA CARPETA POR MÓDULO
     index.ts                  REGISTRO: REPORTES = las listas de todos los módulos
+    plantillas/               PLANTILLAS para copiar (no se registran; ver GUIA.md, paso 2):
+                              reporte-basico.ts, reporte-endpoint-distinto.ts,
+                              reporte-personalizado.tsx
     crm/
       index.ts                REPORTES_CRM (1 línea por reporte, en orden de correlativo)
       reporte-visitas-historico.ts  CRM-RVH-01 Reporte de visitas — histórico; plantilla
