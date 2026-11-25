@@ -7,7 +7,7 @@ la pantalla arma lo demás.
 reportes/
   api/
     reportes-disponibles.ts   reportes del rol + módulo + empresa + CC → select Reporte
-    consultar-api.ts          atajo consultarApi(endpoint, schema, { lista, params }) para `consultar`
+    consultar-api.ts          consultarApi(endpoint, schema, { lista, params, nombres, filtrar }) para `consultar`
   definiciones/                 UNA CARPETA POR MÓDULO
     index.ts                  REGISTRO: REPORTES = las listas de todos los módulos
     crm/
