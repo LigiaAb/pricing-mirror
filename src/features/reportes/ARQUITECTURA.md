@@ -17,6 +17,8 @@ reportes/
                               el Excel del histórico
       reporte-actividades.ts  CRM-A-03 Actividades (calendario PDF, del usuario de la sesión;
                               sin empresa ni CC: `empresaCentroCosto: false`)
+      reporte-objetivos.tsx   CRM-OA-04 Objetivos de actividades (tipo de asignación
+                              `requerido`; sección "Reporte" = la vista de CRM, `Contenido`)
   lib/
     definir-reporte.ts        contrato (DefinicionReporte, ColumnaReporte, FiltroReporte)
     filtros.ts                atajos: filtroUsuario, filtroTipo, filtroEstado, filtroLista;
@@ -39,8 +41,8 @@ reportes/
    (rol, empresa, CC, módulo; `NULL` = todos).
    **Nomenclatura**: `[MÓDULO EN 3 CARACTERES]-[INICIALES DEL REPORTE]-[CORRELATIVO DEL MÓDULO]`,
    con correlativo de 2 dígitos y sin contar "de" en las iniciales. CRM: `CRM-RVH-01` (Reporte de
-   visitas — histórico), `CRM-RV-02` (Reporte de visitas), `CRM-A-03` (Actividades). El siguiente
-   de CRM es `CRM-…-04`.
+   visitas — histórico), `CRM-RV-02` (Reporte de visitas), `CRM-A-03` (Actividades). `CRM-OA-04`
+   (Objetivos de actividades). El siguiente de CRM es `CRM-…-05`.
 2. **Definición**: en la carpeta de su módulo (`definiciones/<modulo>/`, ej. `crm/`), copiar
    `definiciones/crm/reporte-visitas-historico.ts` y cambiar:
    - `nomenclatura`: la del `TIPO`.
@@ -50,7 +52,8 @@ reportes/
      función propia consulta y filtra aquí (ver `reporte-visitas-historico.ts`).
    - `columnas`: `{ id, label, valor: (fila) => … }` + `agrupable` (campo de "Personaliza tu
      reporte"), `sumable` (medida del resumen, además de la cantidad), `buscable` (buscador).
-   - Opcional: `filtros` (atajos de `lib/filtros.ts`), `fechas` (`"requeridas"` por defecto,
+   - Opcional: `filtros` (atajos de `lib/filtros.ts`; `multiple: true` = varios valores,
+     `requerido: true` = sin valor no se consulta), `fechas` (`"requeridas"` por defecto,
      `"opcionales"`, `"ninguna"`), `agrupacion` inicial, `Contenido` (gráficas u otra vista en
      lugar de la tabla) y `descargas` (ver abajo).
 3. **Registro**: sumarlo a la lista del módulo (`definiciones/<modulo>/index.ts`, ej.

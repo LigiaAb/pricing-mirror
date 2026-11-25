@@ -1,0 +1,259 @@
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+index 6e4cce3..eb2785f 100644
+--- a/src/features/reportes/ARQUITECTURA.md
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -17,6 +17,8 @@ reportes/
+                               el Excel del histórico
+       reporte-actividades.ts  CRM-A-03 Actividades (calendario PDF, del usuario de la sesión;
+                               sin empresa ni CC: `empresaCentroCosto: false`)
++      reporte-objetivos.tsx   CRM-OA-04 Objetivos de actividades (tipo de asignación
++                              `requerido`; sección "Reporte" = la vista de CRM, `Contenido`)
+   lib/
+     definir-reporte.ts        contrato (DefinicionReporte, ColumnaReporte, FiltroReporte)
+     filtros.ts                atajos: filtroUsuario, filtroTipo, filtroEstado, filtroLista;
+@@ -39,8 +41,8 @@ reportes/
+    (rol, empresa, CC, módulo; `NULL` = todos).
+    **Nomenclatura**: `[MÓDULO EN 3 CARACTERES]-[INICIALES DEL REPORTE]-[CORRELATIVO DEL MÓDULO]`,
+    con correlativo de 2 dígitos y sin contar "de" en las iniciales. CRM: `CRM-RVH-01` (Reporte de
+-   visitas — histórico), `CRM-RV-02` (Reporte de visitas), `CRM-A-03` (Actividades). El siguiente
+-   de CRM es `CRM-…-04`.
++   visitas — histórico), `CRM-RV-02` (Reporte de visitas), `CRM-A-03` (Actividades). `CRM-OA-04`
++   (Objetivos de actividades). El siguiente de CRM es `CRM-…-05`.
+ 2. **Definición**: en la carpeta de su módulo (`definiciones/<modulo>/`, ej. `crm/`), copiar
+    `definiciones/crm/reporte-visitas-historico.ts` y cambiar:
+    - `nomenclatura`: la del `TIPO`.
+@@ -50,7 +52,8 @@ reportes/
+      función propia consulta y filtra aquí (ver `reporte-visitas-historico.ts`).
+    - `columnas`: `{ id, label, valor: (fila) => … }` + `agrupable` (campo de "Personaliza tu
+      reporte"), `sumable` (medida del resumen, además de la cantidad), `buscable` (buscador).
+-   - Opcional: `filtros` (atajos de `lib/filtros.ts`), `fechas` (`"requeridas"` por defecto,
++   - Opcional: `filtros` (atajos de `lib/filtros.ts`; `multiple: true` = varios valores,
++     `requerido: true` = sin valor no se consulta), `fechas` (`"requeridas"` por defecto,
+      `"opcionales"`, `"ninguna"`), `agrupacion` inicial, `Contenido` (gráficas u otra vista en
+      lugar de la tabla) y `descargas` (ver abajo).
+ 3. **Registro**: sumarlo a la lista del módulo (`definiciones/<modulo>/index.ts`, ej.
+diff --git a/src/features/reportes/components/pantalla-reporte.tsx b/src/features/reportes/components/pantalla-reporte.tsx
+index 5fbb090..e74024d 100644
+--- a/src/features/reportes/components/pantalla-reporte.tsx
++++ b/src/features/reportes/components/pantalla-reporte.tsx
+@@ -101,12 +101,13 @@ function CampoFiltro({
+   return (
+     <CampoSelect
+       id={`filtro-${filtro.id}`}
+-      label={filtro.label}
++      label={filtro.requerido ? `${filtro.label} *` : filtro.label}
+       value={valor}
+       onChange={(nuevo) => onChange(filtro.id, nuevo)}
+       opciones={opciones}
+       cargando={cargando}
+-      placeholder="Todos"
++      placeholder={filtro.requerido ? "Seleccione una opción" : "Todos"}
++      limpiable={!filtro.requerido}
+     />
+   );
+ }
+@@ -205,6 +206,8 @@ export function PantallaReporte({
+   }, [fechas, efectivos]);
+ 
+   const faltanFechas = modoFechas === "requeridas" && (!fechas.inicio || !fechas.fin);
++  /** Filtros obligatorios sin valor: no se puede consultar. */
++  const faltanFiltros = filtros.filter((f) => f.requerido && !efectivos[f.id]).map((f) => f.label);
+ 
+   /** Lo último que se pidió con "Consultar": parámetros y encabezado de las descargas. */
+   const [consultada, setConsultada] = React.useState<{
+@@ -421,7 +424,12 @@ export function PantallaReporte({
+                       <Button
+                         type="button"
+                         className="gap-1.5"
+-                        disabled={!hidratado || faltanFechas || consulta.isFetching}
++                        disabled={
++                          !hidratado ||
++                          faltanFechas ||
++                          faltanFiltros.length > 0 ||
++                          consulta.isFetching
++                        }
+                         onClick={consultar}
+                       >
+                         {consulta.isFetching ? (
+@@ -529,7 +537,9 @@ export function PantallaReporte({
+             <MensajeVacio>
+               {faltanFechas
+                 ? "Seleccione la fecha inicial y la final y pulse «Consultar»."
+-                : "Pulse «Consultar» para cargar el reporte."}
++                : faltanFiltros.length
++                  ? `Seleccione ${faltanFiltros.join(", ")} y pulse «Consultar».`
++                  : "Pulse «Consultar» para cargar el reporte."}
+             </MensajeVacio>
+           ) : consulta.isError ? (
+             <MensajeVacio>
+diff --git a/src/features/reportes/definiciones/crm/index.ts b/src/features/reportes/definiciones/crm/index.ts
+index 98b01a3..8a8ccf6 100644
+--- a/src/features/reportes/definiciones/crm/index.ts
++++ b/src/features/reportes/definiciones/crm/index.ts
+@@ -1,5 +1,6 @@
+ import type { Reporte } from "../../lib/definir-reporte";
+ import { reporteActividades } from "./reporte-actividades";
++import { reporteObjetivos } from "./reporte-objetivos";
+ import { reporteVisitas } from "./reporte-visitas";
+ import { reporteVisitasHistorico } from "./reporte-visitas-historico";
+ 
+@@ -8,4 +9,5 @@ export const REPORTES_CRM: readonly Reporte[] = [
+   reporteVisitasHistorico,
+   reporteVisitas,
+   reporteActividades,
++  reporteObjetivos,
+ ];
+diff --git a/src/features/reportes/definiciones/crm/reporte-objetivos.tsx b/src/features/reportes/definiciones/crm/reporte-objetivos.tsx
+new file mode 100644
+index 0000000..d3f2cb5
+--- /dev/null
++++ b/src/features/reportes/definiciones/crm/reporte-objetivos.tsx
+@@ -0,0 +1,135 @@
++import React from "react";
++import {
++  type ObjetivoReporte,
++  objetivoReporteSchema,
++} from "@/features/reportes-crm/api/objetivos-reporte";
++import { ReporteObjetivos } from "@/features/reportes-crm/components/reporte-objetivos-empleado";
++import { cumpleMeta, etiquetaPeriodo } from "@/features/reportes-crm/lib/objetivos-reporte-vista";
++import { http } from "@/shared/api/client";
++import { parseEnvelope } from "@/shared/api/envelope";
++import { formatearFecha } from "@/shared/lib/date";
++import {
++  type ContenidoReporteProps,
++  definirReporte,
++  type ParamsReporte,
++} from "../../lib/definir-reporte";
++import { filtroTipo } from "../../lib/filtros";
++
++/**
++ * OBJETIVOS DE ACTIVIDADES
++ *
++ * Igual al reporte "Objetivos de actividades" de Reportes CRM: `reporte-objetivos` con empresa,
++ * CC, tipo de asignación (obligatorio) y fechas (obligatorias). La sección "Reporte" es la misma
++ * vista de CRM (`ReporteObjetivos`: tabla por objetivo con sus periodos y el modal de
++ * actividades). Para "Personaliza tu reporte", cada fila es un objetivo × empleado × periodo.
++ */
++
++interface Fila {
++  /** Posición del objetivo en la respuesta, para rearmar la lista de la vista de CRM. */
++  indiceObjetivo: number;
++  objetivo: ObjetivoReporte;
++  empleado: string;
++  numero: number;
++  fecha_inicial: string;
++  fecha_final: string;
++  realizadas: number;
++}
++
++async function consultar(params: ParamsReporte): Promise<Fila[]> {
++  // Mismos parámetros que Reportes CRM.
++  const respuesta = await http.get<unknown>("/api/appweb/reporte-objetivos", {
++    params: {
++      cod_emp: params.cod_empresa ?? "",
++      cod_cc: params.cod_cc ?? "",
++      cod_tipo_asignacion: params.cod_tipo_asignacion ?? "",
++      fecha_inicial: params.fecha_inicio ?? "",
++      fecha_final: params.fecha_fin ?? "",
++    },
++  });
++  const objetivos = parseEnvelope(respuesta, objetivoReporteSchema, "reporte-objetivos");
++  return objetivos.flatMap((objetivo, indiceObjetivo) =>
++    objetivo.empleados.flatMap((empleado) =>
++      empleado.datos.map((periodo) => ({
++        indiceObjetivo,
++        objetivo,
++        empleado: empleado.nombre,
++        numero: periodo.numero,
++        fecha_inicial: periodo.fecha_inicial,
++        fecha_final: periodo.fecha_final,
++        realizadas: periodo.actividades.length,
++      })),
++    ),
++  );
++}
++
++/** Sección "Reporte": la vista de Reportes CRM con los objetivos consultados. */
++function ContenidoObjetivos({ filas }: ContenidoReporteProps<Fila>) {
++  const objetivos = React.useMemo(() => {
++    const porIndice = new Map<number, ObjetivoReporte>();
++    for (const fila of filas) {
++      if (!porIndice.has(fila.indiceObjetivo)) porIndice.set(fila.indiceObjetivo, fila.objetivo);
++    }
++    return [...porIndice.entries()].sort(([a], [b]) => a - b).map(([, objetivo]) => objetivo);
++  }, [filas]);
++  return <ReporteObjetivos datos={objetivos} grafica={false} />;
++}
++
++export const reporteObjetivos = definirReporte<Fila>({
++  nomenclatura: "CRM-OA-04",
++  descripcion: "Cumplimiento de objetivos por empleado y periodo",
++  fechas: "requeridas",
++  filtros: [
++    {
++      ...filtroTipo("ASIGNACION_ENTIDAD", "cod_tipo_asignacion", "Tipo de asignación"),
++      requerido: true,
++    },
++  ],
++  consultar,
++  // Como en Reportes CRM: sin descargas propias (solo el Excel agrupado).
++  Contenido: ContenidoObjetivos,
++  agrupacion: { filas: ["objetivo", "empleado"] },
++  columnas: [
++    {
++      id: "objetivo",
++      label: "Objetivo",
++      valor: (f) => f.objetivo.descripcion,
++      agrupable: true,
++      buscable: true,
++    },
++    {
++      id: "tipo",
++      label: "Tipo de actividad",
++      valor: (f) => f.objetivo.tipo_descripcion,
++      agrupable: true,
++    },
++    {
++      id: "periodicidad",
++      label: "Periodicidad",
++      valor: (f) => f.objetivo.periodicidad_descripcion,
++      agrupable: true,
++    },
++    {
++      id: "empleado",
++      label: "Empleado",
++      valor: (f) => f.empleado,
++      agrupable: true,
++      buscable: true,
++    },
++    {
++      id: "periodo",
++      label: "Periodo",
++      valor: (f) => etiquetaPeriodo(f.objetivo.periodicidad_unidad, f.numero),
++      agrupable: true,
++    },
++    { id: "desde", label: "Desde", valor: (f) => formatearFecha(f.fecha_inicial) },
++    { id: "hasta", label: "Hasta", valor: (f) => formatearFecha(f.fecha_final) },
++    { id: "meta", label: "Meta", valor: (f) => f.objetivo.cantidad, sumable: true },
++    { id: "realizadas", label: "Realizadas", valor: (f) => f.realizadas, sumable: true },
++    {
++      id: "cumple",
++      label: "Cumple",
++      valor: (f) => (cumpleMeta(f.realizadas, f.objetivo.cantidad) ? "SÍ" : "NO"),
++      agrupable: true,
++    },
++  ],
++});
+diff --git a/src/features/reportes/lib/definir-reporte.ts b/src/features/reportes/lib/definir-reporte.ts
+index 6c14234..45cfc0f 100644
+--- a/src/features/reportes/lib/definir-reporte.ts
++++ b/src/features/reportes/lib/definir-reporte.ts
+@@ -53,6 +53,8 @@ export interface FiltroReporte {
+   depende?: readonly string[];
+   /** Selección múltiple (ej. Tipo en Reportes CRM): el valor va separado por comas (`"7,8"`). */
+   multiple?: boolean;
++  /** Obligatorio (ej. Tipo de asignación en Objetivos): sin valor no se puede consultar. */
++  requerido?: boolean;
+ }
+ 
+ export interface ContenidoReporteProps<TFila> {
