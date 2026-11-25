@@ -1,0 +1,270 @@
+diff --git a/src/features/reportes/GUIA.md b/src/features/reportes/GUIA.md
+index 9b79147..5be5ebe 100644
+--- a/src/features/reportes/GUIA.md
++++ b/src/features/reportes/GUIA.md
+@@ -80,7 +80,7 @@ Qué se cambia en las líneas `// CAMBIAR` (de dónde sacar cada dato: tabla de
+ 5. **`fechas`**, **`filtros`** y **`columnas`** (ver *Referencia*).
+ 
+ Las plantillas compilan tal cual y no se registran (no aparecen en pantalla); la copia sí se
+-registra (paso 3).
++registra (paso 3). Cada plantilla ya llenada: **Ejemplos completos** (A, B y C), después de este paso.
+ 
+ ### De dónde sale cada dato
+ 
+@@ -133,6 +133,256 @@ Reportes reales para consultar en `src/features/reportes/definiciones/crm/`:
+ | `reporte-objetivos.tsx`          | Otros nombres de parámetros, datos anidados y vista de CRM              |
+ | `reporte-graficas-objetivos.tsx` | Varias consultas, datos que no son filas y vista con gráficas           |
+ 
++## Ejemplos completos
++
++Las plantillas ya llenadas: reportes completos que compilan y funcionan tal cual (probados con
++`lista-actividades2`), para ver cómo queda cada caso. Equivalen a `reporte-basico.ts` (A),
++`reporte-endpoint-distinto.ts` (B) y `reporte-personalizado.tsx` (C).
++
++### Ejemplo A — básico
++
++```ts
++import { z } from "zod";
++import { consultarApi } from "../../api/consultar-api";
++import { definirReporte } from "../../lib/definir-reporte";
++import { filtroEstado } from "../../lib/filtros";
++
++/**
++ * EJEMPLO A — BÁSICO: el endpoint responde la lista y recibe los parámetros con los nombres de
++ * la pantalla. No hay funciones propias.
++ */
++
++// 1. Cómo viene UNA fila del endpoint (nombres exactos del JSON; solo los que se usan).
++const filaSchema = z.looseObject({
++  cod_actividad: z.coerce.number(),
++  nom_tipo: z.string().nullable().catch(""),
++  nombre_cliente: z.string().nullable().catch(""),
++  estado_desc: z.string().nullable().catch(""),
++});
++type Fila = z.infer<typeof filaSchema>;
++
++// 2. La definición.
++export const reporteEjemploA = definirReporte<Fila>({
++  nomenclatura: "CRM-EA-90",
++  descripcion: "Actividades de la empresa y el centro de costo",
++  fechas: "ninguna",
++  filtros: [filtroEstado("ACTIVIDAD", "cod_estado")],
++  consultar: consultarApi("/api/appweb/lista-actividades2", filaSchema),
++  columnas: [
++    { id: "codigo", label: "Código", valor: (f) => f.cod_actividad },
++    { id: "tipo", label: "Tipo", valor: (f) => f.nom_tipo, agrupable: true },
++    {
++      id: "cliente",
++      label: "Cliente",
++      valor: (f) => f.nombre_cliente,
++      agrupable: true,
++      buscable: true,
++    },
++    { id: "estado", label: "Estado", valor: (f) => f.estado_desc, agrupable: true },
++  ],
++  agrupacion: { filas: ["tipo"] },
++  descargas: { excel: true },
++});
++```
++
++### Ejemplo B — endpoint distinto (sin funciones propias)
++
++Todo se resuelve con las opciones de `consultarApi`:
++
++| Opción     | Para qué                                                          | Ejemplo                                       |
++| ---------- | ----------------------------------------------------------------- | --------------------------------------------- |
++| `lista`    | La lista no viene en `data` (ej. `{ data: { tipo, detalle: [ … ] } }`) | `lista: "detalle"`                     |
++| `params`   | Parámetro fijo que siempre se manda                               | `params: { tipo: "mensual" }`                 |
++| `nombres`  | El endpoint espera otro nombre (nombre de la pantalla → del endpoint) | `nombres: { cod_empresa: "cod_emp", fecha_inicio: "fecha_inicial" }` |
++| `filtrar`  | Lo que el endpoint no filtra (`true` = la fila se queda)          | `filtrar: (f, params) => fechaEnRango(f.fecha, params)` |
++
++```ts
++import { z } from "zod";
++import { consultarApi } from "../../api/consultar-api";
++import { definirReporte, fechaEnRango } from "../../lib/definir-reporte";
++import { filtroUsuario } from "../../lib/filtros";
++
++/**
++ * EJEMPLO B — ENDPOINT DISTINTO: se resuelve con las opciones de `consultarApi`, sin funciones
++ * propias. Aquí el endpoint espera el asesor como `cod_asesor` y no filtra por fecha.
++ */
++
++const filaSchema = z.looseObject({
++  cod_actividad: z.coerce.number(),
++  nom_tipo: z.string().nullable().catch(""),
++  nombre_cliente: z.string().nullable().catch(""),
++  fecha_programada: z.string().nullable().catch(""),
++});
++type Fila = z.infer<typeof filaSchema>;
++
++export const reporteEjemploB = definirReporte<Fila>({
++  nomenclatura: "CRM-EB-91",
++  fechas: "requeridas",
++  filtros: [filtroUsuario("Asesor", "cod_usuario")],
++  consultar: consultarApi("/api/appweb/lista-actividades2", filaSchema, {
++    // El filtro se llama cod_usuario, pero el endpoint lo espera como cod_asesor.
++    nombres: { cod_usuario: "cod_asesor" },
++    // El endpoint no filtra por fecha: se filtra aquí con el período de la pantalla.
++    filtrar: (f, params) => fechaEnRango(f.fecha_programada, params),
++    // Otras opciones (si hicieran falta):
++    // lista: "detalle",            → la lista viene en data.detalle
++    // params: { tipo: "mensual" }, → parámetro fijo que siempre se manda
++  }),
++  columnas: [
++    { id: "codigo", label: "Código", valor: (f) => f.cod_actividad },
++    { id: "tipo", label: "Tipo", valor: (f) => f.nom_tipo, agrupable: true },
++    { id: "cliente", label: "Cliente", valor: (f) => f.nombre_cliente, agrupable: true },
++    { id: "fecha", label: "Fecha programada", valor: (f) => f.fecha_programada },
++  ],
++});
++```
++
++### Ejemplo C — personalizado (funciones propias)
++
++Cada pieza propia es una función **de este mismo archivo** (arriba) y se conecta en su
++propiedad de la definición (abajo, marcadas con `← 1` … `← 5`). Se dejan solo las que hagan
++falta: si no se necesita un PDF propio, se borra la función `pdfEjemplo` y `pdf: pdfEjemplo`.
++
++```tsx
++import React from "react";
++import { z } from "zod";
++import { empleadosUsuarios, tipos } from "@/features/catalogos";
++import { http } from "@/shared/api/client";
++import { parseEnvelope } from "@/shared/api/envelope";
++import type { ComboboxOption } from "@/shared/components/ui/combobox";
++import { type CeldaExcel, exportarExcel } from "@/shared/lib/excel";
++import { TablaReporte } from "../../components/contenido-reporte";
++import {
++  type ContenidoReporteProps,
++  type DescargaReporte,
++  definirReporte,
++  type FiltroReporte,
++  type ParamsReporte,
++} from "../../lib/definir-reporte";
++import { descargarPdf, nombreArchivo } from "../../lib/exportar";
++import { filtroUsuario } from "../../lib/filtros";
++
++/**
++ * EJEMPLO C — PERSONALIZADO: cada pieza propia es una función de ESTE archivo (arriba) y se
++ * conecta en su propiedad de la definición (abajo). Lo que no se conecta usa lo de siempre.
++ */
++
++const filaSchema = z.looseObject({
++  cod_actividad: z.coerce.number(),
++  cod_tipo: z.coerce.number().catch(0),
++  nom_tipo: z.string().nullable().catch(""),
++  estado_desc: z.string().nullable().catch(""),
++  cod_asesor: z.coerce.number().catch(0),
++});
++// La fila puede llevar campos que no vienen del endpoint (aquí `asesor`).
++type Fila = z.infer<typeof filaSchema> & { asesor: string };
++
++// ── 1. Consulta propia → se conecta en `consultar` ──
++// Junta dos consultas y agrega el nombre del asesor a cada fila.
++async function consultar(params: ParamsReporte): Promise<Fila[]> {
++  const [actividades, empleados] = await Promise.all([
++    http
++      .get<unknown>("/api/appweb/lista-actividades2", {
++        params: { cod_empresa: params.cod_empresa ?? "", cod_cc: params.cod_cc ?? "" },
++      })
++      .then((respuesta) => parseEnvelope(respuesta, filaSchema, "lista-actividades2")),
++    empleadosUsuarios.fetchLista({}),
++  ]);
++  const nombres = new Map(empleados.map((e) => [String(e.codUsuario), e.nombreCompleto]));
++  return actividades
++    .filter((a) => !params.cod_tipo || params.cod_tipo.split(",").includes(String(a.cod_tipo)))
++    .map((a) => ({ ...a, asesor: nombres.get(String(a.cod_asesor)) ?? "" }));
++}
++
++// ── 2. Filtro propio → se conecta en `filtros` ──
++const filtroTipoActividad: FiltroReporte = {
++  id: "cod_tipo", // nombre del parámetro que recibe `consultar`
++  label: "Tipo de actividad",
++  multiple: true,
++  depende: ["cod_usuario"], // se limpia al cambiar el asesor
++  useOpciones: () => {
++    const { data, isLoading } = tipos.useLista({ tipo_tabla: "ACTIVIDAD" });
++    const opciones = React.useMemo<ComboboxOption[]>(
++      () => (data ?? []).map((t) => ({ value: String(t.codTipo), label: t.nomTipo })),
++      [data],
++    );
++    return { opciones, cargando: isLoading };
++  },
++};
++
++// ── 3. Vista propia → se conecta en `Contenido` (por eso el archivo es .tsx) ──
++function ContenidoEjemplo(props: ContenidoReporteProps<Fila>) {
++  const finalizadas = props.filas.filter((f) => f.estado_desc === "FINALIZADO").length;
++  return (
++    <div className="space-y-3">
++      <p className="text-sm">
++        {finalizadas} de {props.filas.length} actividades finalizadas
++      </p>
++      <TablaReporte {...props} />
++    </div>
++  );
++}
++
++// ── 4. Excel propio → se conecta en `descargas.excel` ──
++async function excelEjemplo({ filas, titulo, encabezado }: DescargaReporte<Fila>) {
++  await exportarExcel({
++    nombreArchivo: `${nombreArchivo(titulo)}.xlsx`,
++    titulo,
++    encabezado,
++    hojas: [
++      {
++        nombre: titulo.slice(0, 31),
++        mostrarCuadricula: true,
++        autoFiltro: true,
++        columnas: ["Código", "Tipo", "Asesor", "Estado"],
++        filas: filas.map((f): CeldaExcel[] => [
++          f.cod_actividad,
++          f.nom_tipo,
++          f.asesor,
++          f.estado_desc === "EN PROCESO"
++            ? { dato: f.estado_desc, fontColor: "FFB30000" }
++            : f.estado_desc,
++        ]),
++      },
++    ],
++  });
++}
++
++// ── 5. PDF propio → se conecta en `descargas.pdf` ──
++function pdfEjemplo({ filas, titulo, encabezado }: DescargaReporte<Fila>) {
++  return descargarPdf({
++    titulo,
++    header: encabezado,
++    horizontal: true,
++    contenido: [
++      { tipo: "titulo", texto: "Resumen" },
++      { tipo: "texto", texto: `${filas.length} actividades` },
++      {
++        tipo: "tabla",
++        columnas: ["Código", "Tipo", "Asesor"],
++        filas: filas.map((f) => [f.cod_actividad, f.nom_tipo, f.asesor]),
++      },
++    ],
++  });
++}
++
++// ── La definición: aquí se conecta cada pieza ──
++export const reporteEjemploC = definirReporte<Fila>({
++  nomenclatura: "CRM-EC-92",
++  fechas: "ninguna",
++  filtros: [filtroUsuario("Asesor", "cod_usuario"), filtroTipoActividad], // ← 2
++  consultar, // ← 1 (en lugar de consultarApi)
++  Contenido: ContenidoEjemplo, // ← 3 (en lugar de la tabla)
++  descargas: { excel: excelEjemplo, pdf: pdfEjemplo }, // ← 4 y 5 (en lugar de true)
++  columnas: [
++    { id: "codigo", label: "Código", valor: (f) => f.cod_actividad },
++    { id: "tipo", label: "Tipo", valor: (f) => f.nom_tipo, agrupable: true },
++    { id: "asesor", label: "Asesor", valor: (f) => f.asesor, agrupable: true },
++    { id: "estado", label: "Estado", valor: (f) => f.estado_desc, agrupable: true },
++  ],
++});
++```
++
+ ## Referencia
+ 
+ ### Schema de la fila
