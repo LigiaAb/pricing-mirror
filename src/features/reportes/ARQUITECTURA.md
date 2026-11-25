@@ -19,6 +19,8 @@ reportes/
                               sin empresa ni CC: `empresaCentroCosto: false`)
       reporte-objetivos.tsx   CRM-OA-04 Objetivos de actividades (tipo de asignación
                               `requerido`; sección "Reporte" = la vista de CRM, `Contenido`)
+      reporte-graficas-objetivos.tsx  CRM-GOSA-05 Gráficas de objetivos de semana actual
+                              (sin fechas; vista de CRM con serie semanal y medidores)
   lib/
     definir-reporte.ts        contrato (DefinicionReporte, ColumnaReporte, FiltroReporte)
     filtros.ts                atajos: filtroUsuario, filtroTipo, filtroEstado, filtroLista;
@@ -42,7 +44,8 @@ reportes/
    **Nomenclatura**: `[MÓDULO EN 3 CARACTERES]-[INICIALES DEL REPORTE]-[CORRELATIVO DEL MÓDULO]`,
    con correlativo de 2 dígitos y sin contar "de" en las iniciales. CRM: `CRM-RVH-01` (Reporte de
    visitas — histórico), `CRM-RV-02` (Reporte de visitas), `CRM-A-03` (Actividades). `CRM-OA-04`
-   (Objetivos de actividades). El siguiente de CRM es `CRM-…-05`.
+   (Objetivos de actividades), `CRM-GOSA-05` (Gráficas de objetivos de semana actual). El
+   siguiente de CRM es `CRM-…-06`.
 2. **Definición**: en la carpeta de su módulo (`definiciones/<modulo>/`, ej. `crm/`), copiar
    `definiciones/crm/reporte-visitas-historico.ts` y cambiar:
    - `nomenclatura`: la del `TIPO`.
