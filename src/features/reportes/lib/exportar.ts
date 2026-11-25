@@ -7,8 +7,10 @@ import type { ColumnaReporte, ValorCelda } from "./definir-reporte";
 import type { Resumen } from "./resumen-agrupado";
 
 /**
- * DESCARGAS (PDF y Excel) de cualquier reporte, con lo que ya está en pantalla:
- * encabezado (período y filtros elegidos), resumen agrupado y detalle.
+ * DESCARGAS de cualquier reporte, con lo ya consultado. Son dos cosas distintas:
+ * - Excel agrupado: el Resumen agrupado ("Personaliza tu reporte").
+ * - Excel y PDF del reporte: el detalle (o el Excel propio de la definición, `excel`).
+ * Encabezado: período y filtros de la consulta.
  */
 
 export interface TablaExportable {
@@ -55,10 +57,31 @@ export function tablaDetalle<TFila>(
 export const nombreArchivo = (titulo: string) =>
   `${titulo} - ERPWEB - ${format(new Date(), "yyyy_MM_dd_HH_mm_ss")}`;
 
-export async function descargarExcel(opciones: {
+/** Excel agrupado (botón "Excel agrupado"): el Resumen agrupado, como el Excel de pricing. */
+export async function descargarExcelAgrupado(opciones: {
   titulo: string;
   encabezado: Record<string, string>;
   resumen: TablaExportable;
+}): Promise<void> {
+  await exportarExcel({
+    nombreArchivo: `${nombreArchivo(`${opciones.titulo} - Resumen agrupado`)}.xlsx`,
+    titulo: `${opciones.titulo} - Resumen agrupado`,
+    encabezado: opciones.encabezado,
+    hojas: [
+      {
+        nombre: "Resumen agrupado",
+        columnas: opciones.resumen.columnas,
+        filas: opciones.resumen.filas,
+        mostrarCuadricula: true,
+      },
+    ],
+  });
+}
+
+/** Excel del reporte (sin `excel` propio en la definición): el detalle con sus columnas. */
+export async function descargarExcelReporte(opciones: {
+  titulo: string;
+  encabezado: Record<string, string>;
   detalle: TablaExportable;
 }): Promise<void> {
   await exportarExcel({
@@ -67,13 +90,8 @@ export async function descargarExcel(opciones: {
     encabezado: opciones.encabezado,
     hojas: [
       {
-        nombre: "Resumen",
-        columnas: opciones.resumen.columnas,
-        filas: opciones.resumen.filas,
-        mostrarCuadricula: true,
-      },
-      {
-        nombre: "Detalle",
+        // Excel admite 31 caracteres en el nombre de la hoja.
+        nombre: opciones.titulo.slice(0, 31),
         columnas: opciones.detalle.columnas,
         filas: opciones.detalle.filas,
         mostrarCuadricula: true,
@@ -83,13 +101,7 @@ export async function descargarExcel(opciones: {
   });
 }
 
-/** Bloques del PDF: resumen agrupado y, en otra página, el detalle. */
-export function bloquesPdf(resumen: TablaExportable, detalle: TablaExportable): BloquePdf[] {
-  return [
-    { tipo: "titulo", texto: "Resumen agrupado" },
-    { tipo: "tabla", columnas: resumen.columnas, filas: resumen.filas },
-    { tipo: "pagina" },
-    { tipo: "titulo", texto: "Detalle" },
-    { tipo: "tabla", columnas: detalle.columnas, filas: detalle.filas },
-  ];
+/** Bloques del PDF del reporte: el detalle con sus columnas. */
+export function bloquesPdf(detalle: TablaExportable): BloquePdf[] {
+  return [{ tipo: "tabla", columnas: detalle.columnas, filas: detalle.filas }];
 }

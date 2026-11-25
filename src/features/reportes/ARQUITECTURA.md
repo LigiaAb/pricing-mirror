@@ -16,7 +16,7 @@ reportes/
     filtros.ts                atajos: filtroUsuario, filtroTipo, filtroEstado, filtroLista;
                               FILTROS_EMPRESA_CC (filtroEmpresa + filtroCentroCosto, los pone la pantalla)
     resumen-agrupado.ts       tabla dinámica genérica (calcularResumen → árbol de TablaDouble)
-    exportar.ts               PDF y Excel (resumen + detalle) de cualquier reporte
+    exportar.ts               Excel agrupado (resumen) y PDF/Excel genéricos del reporte (detalle)
   components/
     vista-reportes.tsx        "Reportes disponibles" (Módulo → Reporte) + reporte elegido
     pantalla-reporte.tsx      título, filtros y configuración, Consultar, resumen, reporte, descargas
@@ -39,8 +39,8 @@ reportes/
    - `columnas`: `{ id, label, valor: (fila) => … }` + `agrupable` (campo de "Personaliza tu
      reporte"), `sumable` (medida del resumen, además de la cantidad), `buscable` (buscador).
    - Opcional: `filtros` (atajos de `lib/filtros.ts`), `fechas` (`"requeridas"` por defecto,
-     `"opcionales"`, `"ninguna"`), `agrupacion` inicial y `Contenido` (gráficas u otra vista en
-     lugar de la tabla).
+     `"opcionales"`, `"ninguna"`), `agrupacion` inicial, `Contenido` (gráficas u otra vista en
+     lugar de la tabla) y `descargas` (ver abajo).
 3. **Registro**: sumarlo a `REPORTES` en `definiciones/index.ts`.
 
 Si la API devuelve un reporte que no está en el registro, la pantalla dice que aún no está
@@ -54,8 +54,8 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
   como módulo inicial.
   Backend: `docs/backend/reportes-disponibles.js` (el rol lo resuelve el backend).
 - **Filtros y configuración**: fechas (mes actual), "Personaliza tu reporte" (igual que pricing:
-  campo de columnas y niveles con `NivelesBuilder`) y "Filtros" con los botones **Consultar**,
-  **PDF** y **Excel** al final.
+  campo de columnas y niveles con `NivelesBuilder`) y "Filtros" con los botones al final:
+  **Consultar**, las descargas del reporte que tenga (**PDF**, **Excel**) y **Excel agrupado**.
 - **Empresa y Centro de costo**: los pone la pantalla en Filtros (no cada reporte), igual que
   Tarifas y Cotizaciones: con la acción "Filtrar Empresa Centro Costo" de la opción **"Reportes"**
   se muestran (arrancan en el contexto) y mandan en la consulta; sin el permiso no se muestran y
@@ -66,9 +66,15 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
   dibujado con `TablaDouble` (árbol con TOTAL GENERAL, como pricing). Medidas: cantidad y la
   suma de cada columna `sumable`, por cada valor de la columna de desglose y en total.
 - **Reporte**: `Contenido` de la definición o una `DataTable` con las columnas.
-- **Descargas**: encabezado (período, empresa, CC y filtros con nombre), resumen y detalle.
-  PDF con `usePdfReporte` (`@/features/pricing/reportes`); Excel con `exportarExcel`
-  (`@/shared/lib/excel`), hojas "Resumen" y "Detalle".
+- **Descargas**: son dos cosas distintas, con los filtros de la última consulta en el encabezado.
+  - **Excel agrupado** (siempre): el Resumen agrupado, aplanado como el Excel de pricing (una
+    columna por nivel), con "Agrupado por" y "Columnas" en el encabezado.
+  - **Excel / PDF del reporte** (opcionales, `descargas: { excel, pdf }` de la definición; en
+    CRM unos tienen Excel, otros PDF y otros ambos): `true` = el detalle con las columnas
+    (Excel con `exportarExcel` de `@/shared/lib/excel`; PDF con `usePdfReporte` de
+    `@/features/pricing/reportes`); una función = formato propio, que recibe `{ filas, titulo,
+    encabezado, params }` (ej. `excelHistorico` en `reporte-visitas-historico.ts`, el Excel de
+    Reportes CRM). Sin la clave, no hay botón.
 
 La consulta se guarda con React Query (`["reportes", nomenclatura, params]`) al pulsar
 Consultar; el encabezado de las descargas usa los filtros de esa consulta. Al cambiar de reporte, la pantalla se monta de nuevo (`key` = nomenclatura).

@@ -27,7 +27,8 @@ import { Button } from "@/shared/components/ui/button";
 import type { FiltroReporte, ParamsReporte, Reporte, ValoresFiltros } from "../lib/definir-reporte";
 import {
   bloquesPdf,
-  descargarExcel,
+  descargarExcelAgrupado,
+  descargarExcelReporte,
   nombreArchivo,
   tablaDetalle,
   tablaResumen,
@@ -196,9 +197,11 @@ export function PantallaReporte({
 
   // ── Descargas ──
   const pdf = usePdfReporte();
-  const [generandoExcel, setGenerandoExcel] = React.useState(false);
-  const [errorExcel, setErrorExcel] = React.useState<string | null>(null);
+  /** Descarga que se está generando (el PDF genérico lleva su propio estado en `pdf`). */
+  const [generando, setGenerando] = React.useState<"pdf" | "excel" | "agrupado" | null>(null);
+  const [errorDescarga, setErrorDescarga] = React.useState<string | null>(null);
   const sinDatos = filas.length === 0;
+  const descargas = definicion.descargas ?? {};
 
   const encabezado = (): Record<string, string> => {
     const periodo =
@@ -224,7 +227,8 @@ export function PantallaReporte({
   };
 
   // Encabezado de las descargas: los filtros de la consulta, no los que se cambiaron después.
-  const encabezadoDescarga = (): Record<string, string> => {
+  /** Encabezado del Excel agrupado: filtros de la consulta + la agrupación. */
+  const encabezadoAgrupado = (): Record<string, string> => {
     const agrupado = config.niveles.map((n) => n.etiqueta).join(" > ");
     const columna = campos.find((c) => c.campo === config.columna)?.etiqueta;
     return {
@@ -234,37 +238,71 @@ export function PantallaReporte({
     };
   };
 
+  const generarDescarga = async (
+    cual: "pdf" | "excel" | "agrupado",
+    generar: () => Promise<void>,
+  ) => {
+    setGenerando(cual);
+    setErrorDescarga(null);
+    try {
+      await generar();
+    } catch (causa) {
+      setErrorDescarga(causa instanceof Error ? causa.message : "No se pudo generar el archivo.");
+    } finally {
+      setGenerando(null);
+    }
+  };
+
+  /** Lo que reciben las descargas propias de la definición. */
+  const descarga = () => ({
+    filas,
+    titulo,
+    encabezado: consultada?.encabezado ?? {},
+    params: consultada?.params ?? {},
+  });
+
+  // PDF del reporte (si lo tiene): el propio de la definición o el detalle con las columnas.
   const descargarPdf = () => {
+    const propio = descargas.pdf;
+    if (typeof propio === "function") {
+      void generarDescarga("pdf", () => propio(descarga()));
+      return;
+    }
     pdf.generar({
       titulo,
       archivo: `${nombreArchivo(titulo)}.pdf`,
       horizontal: true,
-      header: encabezadoDescarga(),
-      contenido: bloquesPdf(
-        tablaResumen(resumen, config.niveles),
-        tablaDetalle(filas, definicion.columnas),
-      ),
+      header: consultada?.encabezado ?? {},
+      contenido: bloquesPdf(tablaDetalle(filas, definicion.columnas)),
     });
   };
 
-  const descargarXlsx = async () => {
-    setGenerandoExcel(true);
-    setErrorExcel(null);
-    try {
-      await descargarExcel({
-        titulo,
-        encabezado: encabezadoDescarga(),
-        resumen: tablaResumen(resumen, config.niveles),
-        detalle: tablaDetalle(filas, definicion.columnas),
-      });
-    } catch (causa) {
-      setErrorExcel(causa instanceof Error ? causa.message : "No se pudo generar el Excel.");
-    } finally {
-      setGenerandoExcel(false);
-    }
+  // Excel del reporte (si lo tiene): el propio de la definición o el detalle con las columnas.
+  const descargarXlsx = () => {
+    const propio = descargas.excel;
+    return generarDescarga("excel", () =>
+      typeof propio === "function"
+        ? propio(descarga())
+        : descargarExcelReporte({
+            titulo,
+            encabezado: consultada?.encabezado ?? {},
+            detalle: tablaDetalle(filas, definicion.columnas),
+          }),
+    );
   };
 
-  const error = pdf.error ?? errorExcel;
+  // Excel agrupado (siempre): el Resumen agrupado, como el Excel de Reportes de pricing.
+  const descargarXlsxAgrupado = () =>
+    generarDescarga("agrupado", () =>
+      descargarExcelAgrupado({
+        titulo,
+        encabezado: encabezadoAgrupado(),
+        resumen: tablaResumen(resumen, config.niveles),
+      }),
+    );
+
+  const error = pdf.error ?? errorDescarga;
+  const generandoPdf = pdf.generando || generando === "pdf";
   const Contenido = definicion.Contenido ?? TablaReporte;
   const requeridas = modoFechas === "requeridas";
 
@@ -347,31 +385,50 @@ export function PantallaReporte({
                         )}
                         {consulta.isFetching ? "Consultando..." : "Consultar"}
                       </Button>
+                      {descargas.pdf ? (
+                        <Button
+                          type="button"
+                          className="gap-1.5 bg-red-600 text-white hover:bg-red-700"
+                          disabled={generandoPdf || sinDatos}
+                          onClick={descargarPdf}
+                        >
+                          {generandoPdf ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <FileText className="size-4" />
+                          )}
+                          {generandoPdf ? "Generando PDF..." : "PDF"}
+                        </Button>
+                      ) : null}
+                      {descargas.excel ? (
+                        <Button
+                          type="button"
+                          className="gap-1.5 bg-green-600 text-white hover:bg-green-700"
+                          disabled={generando !== null || sinDatos}
+                          onClick={descargarXlsx}
+                        >
+                          {generando === "excel" ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <FileSpreadsheet className="size-4" />
+                          )}
+                          {generando === "excel" ? "Generando Excel..." : "Excel"}
+                        </Button>
+                      ) : null}
                       <Button
                         type="button"
-                        className="gap-1.5 bg-red-600 text-white hover:bg-red-700"
-                        disabled={pdf.generando || sinDatos}
-                        onClick={descargarPdf}
+                        variant="outline"
+                        className="gap-1.5 border-green-600 text-green-700 hover:bg-green-50"
+                        disabled={generando !== null || sinDatos}
+                        onClick={descargarXlsxAgrupado}
+                        title="Excel del Resumen agrupado"
                       >
-                        {pdf.generando ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <FileText className="size-4" />
-                        )}
-                        {pdf.generando ? "Generando PDF..." : "PDF"}
-                      </Button>
-                      <Button
-                        type="button"
-                        className="gap-1.5 bg-green-600 text-white hover:bg-green-700"
-                        disabled={generandoExcel || sinDatos}
-                        onClick={descargarXlsx}
-                      >
-                        {generandoExcel ? (
+                        {generando === "agrupado" ? (
                           <Loader2 className="size-4 animate-spin" />
                         ) : (
                           <FileSpreadsheet className="size-4" />
                         )}
-                        {generandoExcel ? "Generando Excel..." : "Excel"}
+                        {generando === "agrupado" ? "Generando Excel..." : "Excel agrupado"}
                       </Button>
                     </div>
                     {error ? (
