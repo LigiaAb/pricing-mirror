@@ -11,7 +11,7 @@ import { filtroUsuario } from "../../lib/filtros";
  *
  * 1. Copiar este archivo a definiciones/<modulo>/reporte-<nombre>.ts
  * 2. Cambiar las líneas marcadas con  // CAMBIAR  y borrar las  // OPCIONAL  que no se usen
- * 3. Registrarlo en definiciones/<modulo>/index.ts (ver GUIA.md, paso 3)
+ * 3. Registrarlo en definiciones/<modulo>/index.ts (ver GUIA.md, paso 4)
  */
 
 const filaSchema = z.looseObject({

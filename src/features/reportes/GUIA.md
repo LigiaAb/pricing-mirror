@@ -17,10 +17,11 @@ archivo) está en `ARQUITECTURA.md`; aquí solo lo que hay que hacer. La explica
 ## Checklist
 
 1. [ ] **Base de datos**: `TIPO` del reporte y su relación con rol/CC/módulo.
-2. [ ] **Archivo** `definiciones/<modulo>/reporte-<nombre>.ts` (copiar una plantilla, paso 2).
-3. [ ] **Registro**: una línea en `definiciones/<modulo>/index.ts`.
-4. [ ] Biome sin errores: `pnpm exec biome check --write <archivo>`.
-5. [ ] Probarlo: elegir el módulo y el reporte, pulsar **Consultar**.
+2. [ ] **Carpetas del módulo** (opcional, paso 2): `definiciones/<modulo>/` y `contenido/<modulo>/`.
+3. [ ] **Archivo** `definiciones/<modulo>/reporte-<nombre>.ts` (copiar una plantilla, paso 3).
+4. [ ] **Registro**: una línea en `definiciones/<modulo>/index.ts` (paso 4).
+5. [ ] Biome sin errores: `pnpm exec biome check --write <archivo>`.
+6. [ ] Probarlo: elegir el módulo y el reporte, pulsar **Consultar**.
 
 ---
 
@@ -38,10 +39,17 @@ archivo) está en `ARQUITECTURA.md`; aquí solo lo que hay que hacer. La explica
 
 Sin esto el reporte no aparece en el select, aunque el código esté listo.
 
-## Paso 2 — Archivo del reporte
+## Paso 2 — Carpetas del módulo (opcional)
 
-Va en la carpeta de su módulo, `definiciones/<modulo>/`: `definiciones/crm/`, `definiciones/pricing/`… (si el módulo no
-tiene carpeta, ver el paso 3). Nombre en kebab-case: `reporte-ventas-cliente.ts`. Si usa JSX
+Solo si el módulo todavía no las tiene:
+
+- `definiciones/<modulo>/`: los archivos de los reportes (paso 3).
+- `contenido/<modulo>/`: los componentes de las vistas propias (`Contenido`) de sus reportes
+  (ej. `contenido/pricing/hit-rate.tsx`).
+
+## Paso 3 — Archivo del reporte
+
+Va en la carpeta de su módulo, `definiciones/<modulo>/`: `definiciones/crm/`, `definiciones/pricing/`… Nombre en kebab-case: `reporte-ventas-cliente.ts`. Si usa JSX
 (`Contenido` propio) la extensión es `.tsx`.
 
 ### Plantillas
@@ -330,7 +338,14 @@ function VistaAvance(props: ContenidoReporteProps<Fila>) {
 Contenido: VistaAvance, // (I)
 ```
 
-## Paso 3 — Registro
+## Paso 4 — Registro
+
+**Si `definiciones/<modulo>/index.ts` no existe:**
+
+1. Crear `definiciones/<modulo>/index.ts` copiando `definiciones/crm/index.ts` (cambiar el
+   nombre de la lista, ej. `REPORTES_PRI`).
+2. En `definiciones/index.ts`: `import { REPORTES_PRI } from "./pricing";` y
+   `REPORTES = [...REPORTES_CRM, ...REPORTES_PRI]`.
 
 En `definiciones/<modulo>/index.ts`, importar el reporte y sumarlo a la lista (en orden de
 correlativo):
@@ -340,13 +355,6 @@ import { reporteVentasCliente } from "./reporte-ventas-cliente";
 
 export const REPORTES_PRI: readonly Reporte[] = [reporteVentasCliente];
 ```
-
-**Módulo nuevo** (sin carpeta todavía):
-
-1. Crear `definiciones/<modulo>/index.ts` copiando `definiciones/crm/index.ts` (cambiar el
-   nombre de la lista, ej. `REPORTES_PRI`).
-2. En `definiciones/index.ts`: `import { REPORTES_PRI } from "./pricing";` y
-   `REPORTES = [...REPORTES_CRM, ...REPORTES_PRI]`.
 
 ## Ejemplo con todas las piezas
 
