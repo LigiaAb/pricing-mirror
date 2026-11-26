@@ -1,0 +1,198 @@
+diff --git a/src/features/reportes/DOCUMENTACION.md b/src/features/reportes/DOCUMENTACION.md
+index 5369f93..17baecf 100644
+--- a/src/features/reportes/DOCUMENTACION.md
++++ b/src/features/reportes/DOCUMENTACION.md
+@@ -23,10 +23,13 @@ registrarlo, paso 3 de `GUIA.md`).
+ Otras opciones de la definición:
+ 
+ - `descripcion`: subtítulo de la sección "Reporte".
+-- `agrupacion: { filas: ["tipo"], columna: "estado" }`: agrupación inicial de "Personaliza tu
+-  reporte" (ids de columnas `agrupable`).
+ - `empresaCentroCosto: false`: el reporte no usa empresa ni CC (no se muestran ni se mandan).
+ 
++## Nomenclatura (B)
++
++`nomenclatura` = la `NOMENCLATURA` del `TIPO` del reporte, igual (paso 1 de `GUIA.md`). Regla:
++`[MÓDULO EN 3 CARACTERES]-[INICIALES DEL REPORTE]-[CORRELATIVO DEL MÓDULO]` (ej. `PRI-HR-01`).
++
+ ## De dónde sale cada dato
+ 
+ | Dato (línea `// CAMBIAR`)                        | De dónde sacarlo                                                                    |
+@@ -45,7 +48,7 @@ Otras opciones de la definición:
+ 
+ ## Schema de la fila y fechas
+ 
+-### Schema de la fila
++### Schema de la fila (A)
+ 
+ - Mira la respuesta real del endpoint (pestaña Network del navegador o el backend en
+   `docs/backend/`) y copia los nombres **tal cual**.
+@@ -55,7 +58,7 @@ Otras opciones de la definición:
+ - Si un campo no coincide con el schema, en desarrollo sale el error "API response failed
+   schema validation" con el campo: corrige el schema.
+ 
+-### Fechas
++### Fechas (C)
+ 
+ | `fechas`        | Pantalla                                   | Manda                       |
+ | --------------- | ------------------------------------------ | --------------------------- |
+@@ -65,7 +68,7 @@ Otras opciones de la definición:
+ 
+ Formato: `yyyy-MM-dd`.
+ 
+-## Filtros
++## Filtros (D)
+ 
+ Atajos de `src/features/reportes/lib/filtros.ts` (el segundo argumento es el **nombre del parámetro** que se manda):
+ 
+@@ -118,7 +121,7 @@ const filtroTipoActividad: FiltroReporte = {
+ - Se usa igual que un atajo: `filtros: [filtroTipoActividad]`.
+ - Empresa y CC tampoco van aquí: los pone la pantalla.
+ 
+-## Consulta
++## Consulta (E)
+ 
+ Opciones de `consultarApi(endpoint, schema, { … })`:
+ 
+@@ -211,7 +214,7 @@ async function consultar(params: ParamsReporte): Promise<Fila[]> {
+   `@/shared/stores/auth-store`; fuera de un componente se usa `getState()`).
+ - Un `throw new Error("mensaje")` se muestra en la sección "Reporte".
+ 
+-## Columnas
++## Columnas (F)
+ 
+ | Propiedad    | Para qué                                                                       |
+ | ------------ | ------------------------------------------------------------------------------ |
+@@ -240,7 +243,12 @@ las sumas del grupo por `id`. `porcentaje` se importa junto con `definirReporte`
+ },
+ ```
+ 
+-## Vista propia (`Contenido`)
++### Agrupación inicial (G)
++
++`agrupacion: { filas: ["tipo"], columna: "estado" }`: agrupación inicial de "Personaliza tu
++reporte" (ids de columnas `agrupable`; si un id no es de una columna `agrupable`, se ignora).
++
++## Vista propia (`Contenido`) (I)
+ 
+ Un componente (archivo **`.tsx`**) que reemplaza la tabla de la sección "Reporte". Recibe
+ `{ filas, columnas, params }` (`params` = los de la última consulta) y las props del PDF (ver
+@@ -272,7 +280,7 @@ function ContenidoMiReporte(props: ContenidoReporteProps<Fila>) {
+   parámetros y la vista los lee con `params`. Ver `reporte-graficas-objetivos.tsx`
+   (`objetivosConsultados`).
+ 
+-## Descargas
++## Descargas (H)
+ 
+ - **Excel agrupado**: siempre (el Resumen agrupado, con el generador de Reportes de pricing).
+ - `descargas: { excel: true }` y/o `pdf: true`: el detalle con las columnas.
+@@ -357,8 +365,8 @@ directo y abre o descarga el archivo en la misma función.
+ 
+ ### PDF generado por la vista
+ 
+-Cuando el PDF lo arma la propia vista (ej. el Hit Rate con sus gráficas), el botón PDF de la
+-pantalla (el mismo de todos los reportes) se conecta con `pdf: "contenido"`:
++Cuando el PDF lo arma la propia vista (ej. una vista con gráficas que hay que capturar), el botón
++PDF de la pantalla (el mismo de todos los reportes) se conecta con `pdf: "contenido"`:
+ 
+ ```tsx
+ descargas: { excel: true, pdf: "contenido" },
+@@ -372,26 +380,45 @@ El `Contenido` recibe tres props más:
+ | `onGenerandoPdf` | Avisar `true` / `false`: el botón muestra "Generando PDF...".            |
+ | `onErrorPdf`     | Mensaje de error (o `null`): sale junto a los de las demás descargas.    |
+ 
+-Ejemplo (Hit Rate, con la vista oculta que genera el PDF cuando cambia `descargar`):
++Ejemplo:
+ 
+ ```tsx
+-function ContenidoHitRate({ params, solicitudPdf, onGenerandoPdf, onErrorPdf }: ContenidoReporteProps<Fila>) {
+-  // …filtros…
+-  return (
+-    <div className="space-y-4">
+-      <HitRate filtros={filtros} tipo="grafica-usuario" />
+-      <HitRate
+-        filtros={filtros}
+-        tipo="descarga"
+-        descargar={solicitudPdf}
+-        onGenerandoPdf={onGenerandoPdf}
+-        onErrorPdf={onErrorPdf}
+-      />
+-    </div>
+-  );
++import React from "react";
++import { TablaReporte } from "../../components/contenido-reporte";
++import type { ContenidoReporteProps } from "../../lib/definir-reporte";
++import { descargarPdf } from "../../lib/exportar";
++
++function VistaConPdf(props: ContenidoReporteProps<Fila>) {
++  const { filas, solicitudPdf, onGenerandoPdf, onErrorPdf } = props;
++  const ultimaSolicitud = React.useRef(solicitudPdf);
++
++  React.useEffect(() => {
++    // Solo cuando se pulsa PDF (no al abrir la vista).
++    if (solicitudPdf === ultimaSolicitud.current) return;
++    ultimaSolicitud.current = solicitudPdf;
++    onGenerandoPdf(true);
++    onErrorPdf(null);
++    descargarPdf({
++      titulo: "Mi reporte",
++      header: {},
++      contenido: [{ tipo: "texto", texto: `${filas.length} filas` }],
++    })
++      .catch((error) =>
++        onErrorPdf(error instanceof Error ? error.message : "No se pudo generar el PDF."),
++      )
++      .finally(() => onGenerandoPdf(false));
++  }, [solicitudPdf, filas, onGenerandoPdf, onErrorPdf]);
++
++  return <TablaReporte {...props} />;
+ }
++
++// en la definición:  Contenido: VistaConPdf,  descargas: { pdf: "contenido" },
+ ```
+ 
++Si el PDF lo genera un componente que ya existe y se dispara con un número (como la vista de
++descarga de Hit Rate, prop `descargar`), se le pasan las tres props tal cual: ver
++`definiciones/pricing/reporte-hit-rate.tsx`.
++
+ ## Ejemplos
+ 
+ ### Ejemplos completos
+diff --git a/src/features/reportes/GUIA.md b/src/features/reportes/GUIA.md
+index cfe02b1..eaf8a71 100644
+--- a/src/features/reportes/GUIA.md
++++ b/src/features/reportes/GUIA.md
+@@ -10,7 +10,7 @@ archivo) está en `ARQUITECTURA.md`; aquí solo lo que hay que hacer. La explica
+ >   reportes según el permiso "Filtrar Empresa Centro Costo" (opción "Reportes") y siempre los
+ >   manda en la consulta (`cod_empresa`, `cod_cc`). Si el reporte no los usa:
+ >   `empresaCentroCosto: false`.
+-> - **Fechas**: no son un filtro; se configuran con `fechas` ([Fechas](DOCUMENTACION.md#fechas)).
++> - **Fechas**: no son un filtro; se configuran con `fechas` ([Fechas](DOCUMENTACION.md#fechas-c)).
+ > - **Botón Consultar, "Personaliza tu reporte", "Resumen agrupado" y "Excel agrupado"**: salen
+ >   solos para todos los reportes.
+ 
+@@ -95,15 +95,15 @@ Qué va en cada marca, con su explicación:
+ 
+ | Marca | Qué es | Explicación |
+ | ----- | ------ | ----------- |
+-| (A) | Schema de la fila (campos del endpoint) | [Schema de la fila](DOCUMENTACION.md#schema-de-la-fila) · [De dónde sale cada dato](DOCUMENTACION.md#de-dónde-sale-cada-dato) |
+-| (B) | `nomenclatura` | Paso 1 |
+-| (C) | `fechas` | [Fechas](DOCUMENTACION.md#fechas) |
+-| (D) | `filtros` | [Filtros](DOCUMENTACION.md#filtros) |
+-| (E) | `consultar` | [Consulta](DOCUMENTACION.md#consulta) |
+-| (F) | `columnas` | [Columnas](DOCUMENTACION.md#columnas) |
+-| (G) | `agrupacion` | [Columnas](DOCUMENTACION.md#columnas) (ids de columnas `agrupable`) |
+-| (H) | `descargas` | [Descargas](DOCUMENTACION.md#descargas) |
+-| (I) | `Contenido` | [Vista propia](DOCUMENTACION.md#vista-propia-contenido) |
++| (A) | Schema de la fila (campos del endpoint) | [Schema de la fila](DOCUMENTACION.md#schema-de-la-fila-a) · [De dónde sale cada dato](DOCUMENTACION.md#de-dónde-sale-cada-dato) |
++| (B) | `nomenclatura` | Paso 1 · [Nomenclatura](DOCUMENTACION.md#nomenclatura-b) |
++| (C) | `fechas` | [Fechas](DOCUMENTACION.md#fechas-c) |
++| (D) | `filtros` | [Filtros](DOCUMENTACION.md#filtros-d) |
++| (E) | `consultar` | [Consulta](DOCUMENTACION.md#consulta-e) |
++| (F) | `columnas` | [Columnas](DOCUMENTACION.md#columnas-f) |
++| (G) | `agrupacion` | [Agrupación inicial](DOCUMENTACION.md#agrupación-inicial-g) |
++| (H) | `descargas` | [Descargas](DOCUMENTACION.md#descargas-h) |
++| (I) | `Contenido` | [Vista propia](DOCUMENTACION.md#vista-propia-contenido-i) |
+ 
+ Si algo no lo cubre la plantilla básica (otra consulta, un filtro, vista, Excel o PDF propios):
+ [`reporte-personalizado.tsx`](definiciones/plantillas/reporte-personalizado.tsx) y la sección de esa
