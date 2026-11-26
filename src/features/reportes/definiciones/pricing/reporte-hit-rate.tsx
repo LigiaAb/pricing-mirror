@@ -1,24 +1,18 @@
 import { z } from "zod";
-import { consultarApi } from "../../api/consultar-api";
-import { ContenidoReporteProps, definirReporte, DescargaReporte, fechaEnRango } from "../../lib/definir-reporte";
-import { filtroCliente, filtroTipo, filtroUsuario } from "../../lib/filtros";
 import type { Filtros } from "@/features/pricing/reportes/lib/filtros-types";
 import { zId } from "@/shared/lib/zod-scalars";
+import { consultarApi } from "../../api/consultar-api";
 import { HitRate } from "../../contenido/pricing/hit-rate";
-import { tipos } from "@/features/catalogos";
+import { type ContenidoReporteProps, definirReporte, porcentaje } from "../../lib/definir-reporte";
+import { filtroCliente, filtroTipo, filtroUsuario } from "../../lib/filtros";
 
 const texto = z.string().nullable().optional();
 const bandera = z.coerce.number().catch(0);
 
 /**
- * PLANTILLA — ENDPOINT DISTINTO (sin funciones propias)
- * Para un endpoint que trae la lista en otra propiedad, espera otros nombres de parámetros,
- * necesita un parámetro fijo o no filtra algo (ej. fechas). Todo se configura en las opciones de
- * consultarApi; las que no hagan falta se borran.
- *
- * 1. Copiar este archivo a definiciones/<modulo>/reporte-<nombre>.ts
- * 2. Cambiar las líneas marcadas con  // CAMBIAR  y borrar las  // OPCIONAL  que no se usen
- * 3. Registrarlo en definiciones/<modulo>/index.ts (ver GUIA.md, paso 3)
+ * HIT RATE (PRI-HR-01): filas de `report_kpi_cotizaciones` (`reporte: "hit_rate"`) para el
+ * Resumen agrupado; gráficas, tablas y PDF con las vistas de Hit Rate de pricing
+ * (`contenido/pricing/hit-rate.tsx`, que consultan `report_hit_rate`).
  */
 
 const filaSchema = z.looseObject({
@@ -62,73 +56,80 @@ const filaSchema = z.looseObject({
 });
 type Fila = z.infer<typeof filaSchema>;
 
-function ContenidoHitRate({ params }: ContenidoReporteProps<Fila>) {
-  // HitRate elige la gráfica de transporte por el NOMBRE del tipo.
-  const transportes = tipos.useLista({ tipo_tabla: "TRANSPORTE" });
-  const nombreTransporte =
-    transportes.data?.find((t) => String(t.codTipo) === params.cod_tipo_transporte)?.nomTipo ?? "";
-
-  // Vacío = sin filtro (null / undefined), nunca 0.
-  const opcion = (valor: string | undefined, label = "") => (valor ? { value: valor, label } : null);
-  const codigo = (valor: string | undefined) =>
-    valor ? { nombre: "", codigo: Number(valor) } : undefined;
-
-  const filtros: Filtros = {
+/**
+ * Los filtros de la consulta en el formato de las vistas de pricing. Los nombres salen del
+ * encabezado (la clave es el `label` de cada filtro). Vacío = sin filtro (null / undefined).
+ */
+function filtrosPricing(
+  params: ContenidoReporteProps<Fila>["params"],
+  encabezado: Record<string, string>,
+): Filtros {
+  const opcion = (valor: string | undefined, label = "") =>
+    valor ? { value: valor, label } : null;
+  const codigo = (valor: string | undefined, nombre = "") =>
+    valor ? { nombre, codigo: Number(valor) } : undefined;
+  return {
     reporte: { value: "hit-rate", label: "Hit Rate" },
     fecha_inicio: params.fecha_inicio ?? "",
     fecha_fin: params.fecha_fin ?? "",
-    cod_empresa: codigo(params.cod_empresa),
-    cod_cc: codigo(params.cod_cc),
-    cod_usuario: opcion(params.cod_usuario),
-    cod_cliente: opcion(params.cod_cliente),
-    cod_tipo_pago: opcion(params.cod_tipo_pago),
-    cod_tipo_transporte: opcion(params.cod_tipo_transporte, nombreTransporte),
+    cod_empresa: codigo(params.cod_empresa, encabezado.Empresa),
+    cod_cc: codigo(params.cod_cc, encabezado["Centro de costo"]),
+    cod_usuario: opcion(params.cod_usuario, encabezado.Usuario),
+    cod_cliente: opcion(params.cod_cliente, encabezado.Cliente),
+    cod_tipo_pago: opcion(params.cod_tipo_pago, encabezado["Tipo de Pago"]),
+    // HitRate elige la gráfica de transporte por el NOMBRE del tipo.
+    cod_tipo_transporte: opcion(params.cod_tipo_transporte, encabezado.Transporte),
   };
+}
 
+function ContenidoHitRate({
+  params,
+  encabezado,
+  solicitudPdf,
+  onGenerandoPdf,
+  onErrorPdf,
+}: ContenidoReporteProps<Fila>) {
+  const filtros = filtrosPricing(params, encabezado);
   return (
     <div className="space-y-4">
       <HitRate filtros={filtros} tipo="grafica-usuario" />
       <HitRate filtros={filtros} tipo="grafica-transporte" />
       <HitRate filtros={filtros} tipo="grafica-otros" />
+      <HitRate filtros={filtros} tipo="tablas" />
+      {/* Botón PDF de la pantalla (`pdf: "contenido"`): el mismo PDF de Hit Rate de pricing. */}
+      <HitRate
+        filtros={filtros}
+        tipo="descarga"
+        descargar={solicitudPdf}
+        onGenerandoPdf={onGenerandoPdf}
+        onErrorPdf={onErrorPdf}
+      />
     </div>
   );
 }
 
-
-function pdf({filas, titulo, encabezado}: DescargaReporte<Fila>)  {
-
-}
-
 export const reporteHitRate = definirReporte<Fila>({
-  // CAMBIAR: nombre de la constante
-  nomenclatura: "PRI-HR-01", // CAMBIAR
-  descripcion: "Hit Rate", // CAMBIAR
-  fechas: "requeridas", // CAMBIAR
+  nomenclatura: "PRI-HR-01",
+  descripcion: "Hit Rate",
+  fechas: "requeridas",
   filtros: [
-    // (D) opcional; SIN empresa ni CC
     filtroUsuario("Usuario", "cod_usuario"),
-    filtroTipo("TIPO_PAGO", "cod_tipo_pago", "Tipo de Pago"),
-    // hace falta el filtro de clientes
-    filtroCliente('Cliente', 'cod_cliente'),
+    filtroTipo("PAGO", "cod_tipo_pago", "Tipo de Pago"),
+    filtroCliente("Cliente", "cod_cliente"),
     filtroTipo("TRANSPORTE", "cod_tipo_transporte", "Transporte"),
-  ], // CAMBIAR
+  ],
   consultar: consultarApi("/api/appweb/report_kpi_cotizaciones", filaSchema, {
-    // OPCIONAL: la lista no viene en data, sino en data.<propiedad>
     lista: "filas",
-    // OPCIONAL: parámetros fijos que siempre se mandan
     params: { reporte: "hit_rate" },
-    // OPCIONAL: el endpoint espera otros nombres (nombre de la pantalla: nombre del endpoint)
-    // nombres: { cod_empresa: "cod_emp", fecha_inicio: "fecha_inicial", fecha_fin: "fecha_final" },
-    // OPCIONAL: lo que el endpoint no filtra se filtra aquí (true = la fila se queda)
-    // filtrar: (f, params) => fechaEnRango(f.fecha_creacion, params),
   }),
   columnas: [
-    // CAMBIAR
-    // { id: "texto", label: "Texto", valor: (f) => f.campo_texto, agrupable: true, buscable: true },
-    // { id: "numero", label: "Número", valor: (f) => f.campo_numero, sumable: true },
-    // { id: "fecha", label: "Fecha", valor: (f) => f.campo_fecha },
-    
-    { id: "usuario", label: "Usuario", valor: (f) => f.nombres ?? '', agrupable: true, buscable: true },
+    {
+      id: "usuario",
+      label: "Usuario",
+      valor: (f) => f.nombres ?? "",
+      agrupable: true,
+      buscable: true,
+    },
     {
       id: "cc_nombre",
       label: "Centro de Costo",
@@ -139,7 +140,7 @@ export const reporteHitRate = definirReporte<Fila>({
       id: "transporte",
       label: "Tipo de transporte",
       valor: (f) => f.transporte ?? "",
-      agrupable: true, 
+      agrupable: true,
       buscable: true,
     },
     {
@@ -188,8 +189,17 @@ export const reporteHitRate = definirReporte<Fila>({
     // { id: "mes", label: "Mes", valor: (f) => f.mes ?? '' },
     /** Último nivel recomendado: una fila por cotización. */
     { id: "cotizacion", label: "Cotización", valor: (f) => f.cotizacion },
+    // Medidas del Resumen agrupado, como la tabla dinámica de Hit Rate de pricing (`tabla-kpi.ts`).
+    { id: "realizada", label: "Realizadas", valor: (f) => f.realizada, sumable: true },
+    { id: "cerrada", label: "Cerradas", valor: (f) => f.cerrada, sumable: true },
+    {
+      id: "hr",
+      label: "HR %",
+      valor: (f) => porcentaje(f.cerrada, f.realizada),
+      calculada: (s) => porcentaje(s.cerrada, s.realizada),
+    },
   ],
-  agrupacion: { filas: ["usuario"] }, // (G) opcional: agrupación inicial (ids de columnas agrupables)
-  descargas: { excel: true }, // OPCIONAL
-  Contenido: ContenidoHitRate
+  agrupacion: { filas: ["usuario"] },
+  descargas: { excel: true, pdf: "contenido" },
+  Contenido: ContenidoHitRate,
 });

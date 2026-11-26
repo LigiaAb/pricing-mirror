@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
+import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
 import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
 import { Field, FieldLabel } from "@/shared/components/ui/field";
 import { MultiSelect } from "@/shared/components/ui/multi-select";
@@ -72,6 +73,49 @@ export function CampoSelect({
           <BotonLimpiar label={label} onClick={() => onChange("")} className="right-8" />
         ) : null}
       </div>
+    </Field>
+  );
+}
+
+/**
+ * Select que busca en el servidor mientras se escribe (mínimo 2 letras), con "x" para limpiar.
+ * Devuelve la opción elegida (para su nombre); `null` = sin valor.
+ */
+export function CampoBusqueda({
+  id,
+  label,
+  value,
+  onChange,
+  buscar,
+  placeholder = "Todos",
+  limpiable = true,
+}: Readonly<{
+  id: string;
+  label: string;
+  value: ComboboxOption | null;
+  onChange: (opcion: ComboboxOption | null) => void;
+  buscar: (texto: string) => Promise<ComboboxOption[]>;
+  placeholder?: string;
+  limpiable?: boolean;
+}>) {
+  return (
+    <Field className="gap-1">
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <AsyncComboboxInput<ComboboxOption>
+        id={id}
+        value={value}
+        onChange={onChange}
+        fetchOptions={buscar}
+        queryKey={`reportes-${id}`}
+        minSearchLength={2}
+        fetchOnEmpty={false}
+        getOptionValue={(opcion) => opcion.value}
+        getOptionLabel={(opcion) => String(opcion.label)}
+        placeholder={placeholder}
+        searchPlaceholder="Escribe al menos 2 letras..."
+        contentClassName="z-[9999]"
+        clearable={limpiable}
+      />
     </Field>
   );
 }

@@ -75,7 +75,7 @@ Atajos de `src/features/reportes/lib/filtros.ts` (el segundo argumento es el **n
 | Atajo                                        | Qué muestra                                   |
 | -------------------------------------------- | --------------------------------------------- |
 | `filtroUsuario("Asesor", "cod_asesor")`      | Usuarios del CC elegido                       |
-| `filtroCliente("Cliente", "cod_cliente")`    | Clientes activos                              |
+| `filtroCliente("Cliente", "cod_cliente")`    | Clientes por nombre, buscados en el servidor (mínimo 2 letras) |
 | `filtroTipo("TIPO_PAGO", "cod_tipo_pago", "Tipo de pago")` | Catálogo `TIPO` de esa `TIPO_TABLA` |
 | `filtroEstado("ACTIVIDAD", "cod_estado")`    | Estados del catálogo de ese tipo              |
 | `filtroLista("moneda", "Moneda", [{ value: "1", label: "GTQ" }])` | Opciones fijas           |
@@ -119,6 +119,9 @@ const filtroTipoActividad: FiltroReporte = {
 - `useOpciones` y `useValorInicial` son hooks: pueden usar `useLista` de un catálogo, stores,
   etc., y siguen las reglas de los hooks (siempre se llaman, sin `if`).
 - Se usa igual que un atajo: `filtros: [filtroTipoActividad]`.
+- **Lista muy grande** (ej. clientes): en lugar de `useOpciones`, `buscar: async (texto) => opciones`
+  busca en el servidor mientras se escribe (mínimo 2 letras). Ejemplo: `filtroCliente` en
+  `lib/filtros.ts`.
 - Empresa y CC tampoco van aquí: los pone la pantalla.
 
 ## Consulta (E)
