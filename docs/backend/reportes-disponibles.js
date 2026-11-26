@@ -52,6 +52,7 @@ module.exports.lista_reportes_disponibles = async (campos) => {
       .join({ T: "TIPO" }, "T.TIPO_ID", "R.REPORTE_TIPO_ID")
       .where("T.TIPO_TABLA", "REPORTE")
       .where("T.ESTADO_ID", ESTADO_TIPO_ACTIVO)
+      .where("R.ESTADO_ID", 1) //  ESTADO ACTIVO
       .where((q) => q.whereNull("R.ROL_ID").orWhereIn("R.ROL_ID", rolesUsuario))
       .distinct(
         "T.TIPO_ID AS COD_REPORTE",

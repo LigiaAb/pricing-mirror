@@ -47,7 +47,7 @@ import { PersonalizaReporte } from "./personaliza-reporte";
 
 const SIN_FILAS: readonly unknown[] = [];
 /** Opción de permisos de la pantalla de reportes (acción "Filtrar Empresa Centro Costo"). */
-const OPCION_PERMISOS_REPORTES = "Reportes";
+const OPCION_PERMISOS_REPORTES = "reportes";
 const sinValorInicial = () => "";
 const fechaVisible = (iso: string) => (iso ? format(parseISO(iso), "dd/MM/yyyy") : "");
 
