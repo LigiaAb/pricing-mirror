@@ -90,6 +90,8 @@ Al editar, **conservar el final de línea que ya tiene el archivo** (no converti
 
 ## Aplicar diffs (en el proyecto real)
 
+**El proyecto real usa pnpm**: los comandos para prod van con `pnpm` / `pnpm exec` (nunca `npm`/`npx`; los scripts del espejo como `biome:arreglar` no existen allá).
+
 Única forma de aplicar un `diff/`: `scripts/aplicar-diff.mjs`. Adapta el diff al final de línea de cada archivo
 destino y lo deja como estaba (funciona con cualquier `core.autocrlf`). **Nunca** indicar `git apply`, `patch`
 ni copiar carpetas como alternativa.
