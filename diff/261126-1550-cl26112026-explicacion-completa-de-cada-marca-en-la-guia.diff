@@ -1,0 +1,179 @@
+diff --git a/src/features/reportes/GUIA.md b/src/features/reportes/GUIA.md
+index 266ac2a..c075a99 100644
+--- a/src/features/reportes/GUIA.md
++++ b/src/features/reportes/GUIA.md
+@@ -124,10 +124,21 @@ En orden, (A) a (I). Cada marca muestra cómo queda en el
+ [ejemplo con todas las piezas](#ejemplo-con-todas-las-piezas) (un reporte de avance de
+ actividades por asesor).
+ 
+-**(A) Schema de la fila.** Abrir la pantalla que ya usa el endpoint → pestaña **Network** → la
+-petición → **Response**, y copiar solo los campos que se van a usar, con su nombre exacto. Si la
+-fila necesita campos que no manda el endpoint (aquí `asesor` y `finalizada`), se agregan al
+-`type Fila`; los llena la consulta (E).
++**(A) Schema de la fila.** Describe una fila tal como la manda el endpoint; lo que no esté aquí
++no se puede usar en las columnas (F).
++
++- **De dónde sale:** abrir la pantalla que ya usa el endpoint → pestaña **Network** → la
++  petición → **Response**. Copiar solo los campos que se van a usar, con el nombre exacto del
++  JSON (en minúsculas).
++- **Tipo de cada campo:** texto `z.string().nullable().catch("")`; número
++  `z.coerce.number().catch(0)` (también convierte `"12"` y banderas `0/1`). `.catch(…)` es el
++  valor que se usa si viene `null` o algo raro.
++- **Campos que no manda el endpoint:** se agregan al `type Fila` y los llena la consulta (E).
++- **Si un campo no coincide:** en desarrollo sale "API response failed schema validation" con el
++  nombre del campo.
++
++En el ejemplo, `asesor` y `finalizada` van en `type Fila` porque el endpoint no los manda:
++`asesor` sale de otra consulta y `finalizada` se calcula.
+ 
+ ```ts
+ const filaSchema = z.looseObject({
+@@ -142,22 +153,48 @@ const filaSchema = z.looseObject({
+ type Fila = z.infer<typeof filaSchema> & { asesor: string; finalizada: number };
+ ```
+ 
+-**(B) Nomenclatura.** La `NOMENCLATURA` del `TIPO` del paso 1, igual. Aquí "**A**vance de
+-**A**ctividades **P**or **A**sesor", correlativo 93:
++**(B) Nomenclatura.** La clave que une el código con la base de datos: **igual** a la
++`NOMENCLATURA` del `TIPO` del paso 1. Si no coincide, el reporte aparece en el select pero dice
++que todavía no está configurado.
++
++En el ejemplo, "**A**vance de **A**ctividades **P**or **A**sesor", correlativo 93:
+ 
+ ```ts
+ nomenclatura: "CRM-AAPA-93", // (B)
+ ```
+ 
+-**(C) Fechas.** `"requeridas"` (el mes actual por defecto), `"opcionales"` o `"ninguna"`. Si el
+-endpoint no filtra por fecha, se filtra en la consulta (E) con `fechaEnRango`.
++**(C) Fechas.** Si la pantalla pide período:
++
++- `"requeridas"`: fecha inicial y final obligatorias; arranca en el mes actual. Manda
++  `fecha_inicio` y `fecha_fin` (`yyyy-MM-dd`).
++- `"opcionales"`: fechas con "x" para limpiar; solo manda las que tengan valor.
++- `"ninguna"`: sin fechas.
++
++Si no se pone, queda `"requeridas"`. Si el endpoint no filtra por fecha, se filtra en la consulta
++(E) con `fechaEnRango`.
++
++En el ejemplo es `"requeridas"`, pero `lista-actividades2` no filtra por fecha: lo hace la
++consulta (E).
+ 
+ ```ts
+ fechas: "requeridas", // (C)
+ ```
+ 
+-**(D) Filtros.** Un atajo de `lib/filtros.ts` por filtro (sin empresa ni CC). Si no hay atajo,
+-un filtro propio en el mismo archivo. El `id` es el nombre del parámetro que llega a la consulta.
++**(D) Filtros.** Los selects que salen además de empresa, CC y fechas (esos los pone la pantalla
++siempre):
++
++- **Atajos** de `lib/filtros.ts`: `filtroUsuario`, `filtroCliente`, `filtroTipo`, `filtroEstado`,
++  `filtroLista`. El segundo argumento es el `id`.
++- **Filtro propio** (cuando no hay atajo para esa lista): un objeto `FiltroReporte` en el mismo
++  archivo.
++- **`id`:** el nombre del parámetro que llega a la consulta (E) y se manda al endpoint (ej.
++  `cod_usuario`).
++- **Modificadores:** `multiple: true` (llega como `"7,8"`) y `requerido: true`.
++
++Si no se pone, solo salen empresa, CC y fechas.
++
++En el ejemplo, Asesor usa el atajo `filtroUsuario`. Tipo de actividad es propio porque no hay
++atajo para los tipos de actividad; es `multiple`, por eso la consulta lo separa por comas.
+ 
+ ```ts
+ filtros: [filtroUsuario("Asesor", "cod_usuario"), filtroTipoActividad], // (D)
+@@ -179,9 +216,16 @@ const filtroTipoActividad: FiltroReporte = {
+ };
+ ```
+ 
+-**(E) Consulta.** Si el endpoint responde la lista: `consultarApi(endpoint, filaSchema)`. Aquí
+-hace falta una función propia porque junta dos consultas (actividades y empleados), filtra lo que
+-el endpoint no filtra (fechas, asesor, tipo) y agrega `asesor` y `finalizada` a cada fila.
++**(E) Consulta.** Trae las filas. Recibe los parámetros de la pantalla (`fecha_inicio`,
++`fecha_fin`, `cod_empresa`, `cod_cc` y el `id` de cada filtro; los vacíos no vienen):
++
++- `consultarApi(endpoint, filaSchema)`: el endpoint responde la lista y recibe esos nombres.
++- `consultarApi(…, { lista, params, nombres, filtrar })`: la lista viene en otra propiedad, falta
++  un parámetro fijo, el endpoint espera otros nombres o no filtra algo.
++- Una función propia `async (params) => Fila[]`: para juntar varias consultas o agregar campos.
++
++En el ejemplo es propia porque junta dos consultas (actividades y empleados), filtra lo que el
++endpoint no filtra (fechas, asesor y tipo) y agrega `asesor` y `finalizada` a cada fila.
+ 
+ ```ts
+ async function consultar(params: ParamsReporte): Promise<Fila[]> {
+@@ -211,9 +255,17 @@ async function consultar(params: ParamsReporte): Promise<Fila[]> {
+ consultar, // (E)
+ ```
+ 
+-**(F) Columnas.** Una por dato de la tabla. `agrupable` = se puede agrupar por ella; `buscable`
+-= el buscador busca en ella; `sumable` = se suma en el resumen; `calculada` = en el resumen se
+-calcula con las sumas del grupo (un porcentaje no se suma).
++**(F) Columnas.** Una por cada dato que se ve en la tabla, el Excel y el PDF:
++
++- `id`: clave única; se usa en (G) y en `calculada`.
++- `label`: el encabezado.
++- `valor`: qué se muestra, `(f) => f.campo`.
++- Opcionales: `agrupable` (sale en "Personaliza tu reporte"), `buscable` (el buscador busca en
++  ella), `sumable` (se suma en el Resumen agrupado) y `calculada` (en el resumen se calcula con
++  las sumas del grupo; para porcentajes, que no se suman).
++
++En el ejemplo, `finalizada` es `sumable` para contar las finalizadas de cada grupo, y `avance`
++es `calculada` (finalizadas ÷ cantidad) porque sumar porcentajes da un número sin sentido.
+ 
+ ```ts
+ columnas: [
+@@ -232,14 +284,32 @@ columnas: [
+ ],
+ ```
+ 
+-**(G) Agrupación inicial.** Ids de columnas `agrupable`: cómo sale agrupado el resumen al abrir.
++**(G) Agrupación inicial.** Cómo sale agrupado el Resumen al abrir: `filas` (ids de columnas
++para las filas) y `columna` (un id para las columnas). Solo ids de columnas `agrupable`; si un id
++no lo es, se ignora. Si no se pone, el usuario elige la agrupación en "Personaliza tu reporte".
++
++En el ejemplo, por asesor en filas y por tipo en columnas, para ver cuántas actividades de cada
++tipo tiene cada asesor.
+ 
+ ```ts
+ agrupacion: { filas: ["asesor"], columna: "tipo" }, // (G)
+ ```
+ 
+-**(H) Descargas.** `true` = el detalle con las columnas; una función = formato propio;
+-`pdf: "contenido"` = el PDF lo genera la vista (I) con el mismo botón PDF.
++**(H) Descargas.** Opcional. El botón "Excel agrupado" (el Resumen agrupado) sale siempre;
++`descargas` agrega los botones **Excel** y/o **PDF**, que descargan el detalle (las filas).
++`excel` y `pdf` aceptan cada uno:
++
++- `true`: descarga las filas con las columnas de (F), sin formato extra.
++- una función `async ({ filas, titulo, encabezado, params }) => void`: arma el archivo a tu
++  manera (colores, otras columnas, varias hojas). Ver
++  [Excel propio](DOCUMENTACION.md#excel-propio) y [PDF propio](DOCUMENTACION.md#pdf-propio).
++- solo en `pdf`, `"contenido"`: al pulsar PDF, la vista (I) genera el PDF. Sirve cuando el PDF
++  tiene que llevar algo que solo existe en la vista, como una gráfica.
++
++Si no se pone `descargas`, solo sale "Excel agrupado".
++
++En el ejemplo, `excel` es una función (`excelAvance`) porque pinta de rojo el estado de las
++actividades no finalizadas, y `pdf` es `"contenido"` porque el PDF lleva la gráfica de (I).
+ 
+ ```ts
+ descargas: { excel: excelAvance, pdf: "contenido" }, // (H)
+@@ -270,9 +340,13 @@ async function excelAvance({ filas, titulo, encabezado }: DescargaReporte<Fila>)
+ }
+ ```
+ 
+-**(I) Contenido.** Un componente en el mismo archivo (por eso `.tsx`) que recibe las filas y
+-dibuja la sección "Reporte" en lugar de la tabla. Aquí: una gráfica por asesor, la tabla de
+-siempre abajo, y el PDF de (H) cuando se pulsa el botón (`solicitudPdf` cambia), con la gráfica.
++**(I) Contenido.** Un componente que reemplaza la tabla de la sección "Reporte". Recibe
++`filas`, `columnas`, `params` (los de la última consulta) y, si (H) tiene `pdf: "contenido"`, las
++props del PDF. Para dejar también la tabla de siempre: `TablaReporte`. Con JSX el archivo es
++`.tsx`. Si no se pone, se ve la tabla con las columnas (F).
++
++En el ejemplo dibuja una gráfica por asesor con la tabla debajo, y cuando se pulsa PDF
++(`solicitudPdf` cambia) genera el PDF con esa gráfica.
+ 
+ ```tsx
+ function VistaAvance(props: ContenidoReporteProps<Fila>) {
