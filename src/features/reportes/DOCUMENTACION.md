@@ -18,7 +18,7 @@ una, se escribe una función **en el mismo archivo, arriba**, y se pone en su pr
 | `fechas`       | `"requeridas"` (mes actual)                 | `"opcionales"` / `"ninguna"`                 |
 
 Nada de esto se configura en otro lado: no hay que tocar la pantalla ni otros archivos (salvo
-registrarlo, paso 3 de `GUIA.md`).
+registrarlo, [paso 3 de `GUIA.md`](GUIA.md#paso-3--registro)).
 
 Otras opciones de la definición:
 
@@ -27,14 +27,14 @@ Otras opciones de la definición:
 
 ## Nomenclatura (B)
 
-`nomenclatura` = la `NOMENCLATURA` del `TIPO` del reporte, igual (paso 1 de `GUIA.md`). Regla:
+`nomenclatura` = la `NOMENCLATURA` del `TIPO` del reporte, igual ([paso 1 de `GUIA.md`](GUIA.md#paso-1--base-de-datos)). Regla:
 `[MÓDULO EN 3 CARACTERES]-[INICIALES DEL REPORTE]-[CORRELATIVO DEL MÓDULO]` (ej. `PRI-HR-01`).
 
 ## De dónde sale cada dato
 
 | Dato (línea `// CAMBIAR`)                        | De dónde sacarlo                                                                    |
 | ------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| `nomenclatura`                                   | Se inventa con la regla `MÓDULO-INICIALES-CORRELATIVO` (paso 1 de `GUIA.md`) y se guarda igual en `TIPO.NOMENCLATURA`. |
+| `nomenclatura`                                   | Se inventa con la regla `MÓDULO-INICIALES-CORRELATIVO` ([paso 1 de `GUIA.md`](GUIA.md#paso-1--base-de-datos)) y se guarda igual en `TIPO.NOMENCLATURA`. |
 | Endpoint (`/api/appweb/CAMBIAR`)                 | El nombre de la ruta del backend (`/api/appweb/<nombre>`). Si otra pantalla ya lo usa, buscar el nombre en `src/features/**/api/*.ts` (`http.get("/api/appweb/…")`) o verlo en la pestaña **Network** del navegador en esa pantalla. |
 | Campos del schema (`campo_texto`, `campo_numero`) | La respuesta del endpoint: pestaña **Network** → la petición → **Response** (copiar los nombres tal cual, en minúsculas). En el backend: los alias del `select` (`… AS NOMBRES` llega como `nombres`). |
 | Nombres de los parámetros que espera el endpoint | En el backend, la función del endpoint: lo que lee de `campos` (ej. `campos.fecha_inicio`, `campos.cod_cc`). Si son distintos a los de la pantalla (`fecha_inicio`, `fecha_fin`, `cod_empresa`, `cod_cc`), usar `nombres` (plantilla de endpoint distinto). |
@@ -694,7 +694,7 @@ En `src/features/reportes/definiciones/crm/`:
 | Consulta vacía, pero el endpoint sí trae datos              | La lista no viene en `data`: usar `lista` (sección Consulta, opción `lista`).                              |
 | El endpoint ignora un filtro                                | Espera otro nombre de parámetro: cambiar el id del filtro u opción `nombres` (sección Consulta).              |
 | Un porcentaje sale sumado en el resumen                     | Usar `calculada`, no `sumable`.                                                    |
-| Biome marca formato o imports                               | `pnpm exec biome check --write <archivo>` (en el espejo: `npm run biome:arreglar`). |
+| Biome marca formato o imports                               | `pnpm exec biome check --write <archivo>`. |
 | Error de JSX en el archivo del reporte                      | Con `Contenido` (o cualquier `<…>`) la extensión es `.tsx`.                        |
 | La vista de otro módulo hace la pantalla muy pesada         | Importar el componente por su ruta, no por el `index` del módulo (sección Vista propia).             |
 | "Rendered more hooks…" o error de hooks en un filtro propio | `useOpciones` / `useValorInicial` no pueden tener hooks dentro de un `if` (sección Filtros, filtro propio).    |
