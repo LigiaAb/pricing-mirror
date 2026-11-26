@@ -1,0 +1,13 @@
+diff --git a/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx b/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx
+index 66e34ed..80a074a 100644
+--- a/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx
++++ b/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx
+@@ -24,7 +24,7 @@ import { filtroUsuario } from "../../lib/filtros";
+  * 1. Copiar este archivo a definiciones/<modulo>/reporte-<nombre>.tsx
+  * 2. Cambiar las líneas marcadas con  // CAMBIAR
+  * 3. Para cada pieza  OPCIONAL  que no se necesite: borrar su función Y su línea ← N
+- *    Los imports que queden sin usar los quita: npx biome check --write --unsafe <archivo>
++ *    Los imports que queden sin usar los quita: pnpm exec biome check --write --unsafe <archivo>
+  * 4. Registrarlo en definiciones/<modulo>/index.ts (ver GUIA.md, paso 4)
+  */
+ 
