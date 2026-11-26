@@ -23,16 +23,8 @@ import { calcularIcc, type ResumenIcc } from "../lib/reporte-icc";
 const formatoPorcentaje = (valor: number | null) => (valor == null ? "—" : `${valor.toFixed(2)}%`);
 
 /**
- * Reporte ICC (Índice de Cumplimiento Comercial, #194): gráfica de barras ICCa/ICCp/ICCc por
- * persona y tabla con porcentajes (programada / no programada / vencida en `lib/reporte-icc.ts`).
- * - ICCa = visitas programadas realizadas ÷ visitas programadas.
- * - ICCp = llamadas programadas realizadas ÷ llamadas programadas.
- * - ICCc = visitas no programadas realizadas ÷ total de visitas.
- * - Citas sin resultado = visitas finalizadas con `con_resultado = 0`.
- * - Vencidas = llamadas y visitas abiertas sin resultado más de 7 días. Los filtros los pone
- * `ReportesCrmClient`; `params = null` hasta que se pulsa Filtrar. El PDF se arma como el de
- * Hit Rate (`usePdfReporte`): gráfica oculta sin animación + tabla; `encabezado` son los
- * filtros con nombre (empresa, centro de costo, asesor).
+ * Reporte ICC (#194; cálculo en `lib/reporte-icc.ts`): gráfica ICCa/ICCp/ICCc por persona, tabla
+ * con total y PDF. `params = null` hasta que se pulsa Filtrar; `encabezado` = filtros con nombre.
  */
 export function ReporteIcc({
   params,
@@ -44,16 +36,6 @@ export function ReporteIcc({
 
   const filas = consulta.data;
   const resumen = useMemo(() => calcularIcc(filas ?? []), [filas]);
-  const datosGrafica = useMemo<DatoGrafica[]>(
-    () =>
-      resumen.personas.map((persona) => ({
-        nombre: persona.nombre,
-        ICCa: persona.porTipo.VISITA.icc,
-        ICCp: persona.porTipo.LLAMADA.icc,
-        ICCc: persona.porTipo.VISITA.iccNoProgramadas,
-      })),
-    [resumen],
-  );
 
   if (params === null) {
     return (
@@ -86,7 +68,15 @@ export function ReporteIcc({
       },
       { tipo: "pagina" },
       { tipo: "titulo", texto: "Detalle por persona" },
-      { tipo: "tabla", datos: filasPdf(resumen) },
+      {
+        tipo: "tabla",
+        datos: [...resumen.personas, resumen.total].map((r) =>
+          Object.fromEntries([
+            ["Persona", { dato: r.nombre }],
+            ...COLUMNAS_ICC.map((c) => [c.titulo, { dato: celda(c, r), alignFormat: DERECHA }]),
+          ]),
+        ),
+      },
     ];
     pdf.generar({
       titulo: "ICC — Índice de Cumplimiento Comercial",
@@ -119,9 +109,9 @@ export function ReporteIcc({
         </Button>
       </div>
 
-      {datosGrafica.length > 0 && (
+      {resumen.personas.length > 0 && (
         <div className="h-96 rounded-lg border p-3">
-          <GraficaIcc datos={datosGrafica} />
+          <GraficaIcc datos={resumen.personas} />
         </div>
       )}
 
@@ -130,7 +120,7 @@ export function ReporteIcc({
         data={resumen.personas}
         searchKeys={["nombre"]}
         searchPlaceholder="Buscar persona…"
-        numericColumns={COLUMNAS_NUMERICAS}
+        numericColumns={COLUMNAS_ICC.map((c) => c.id)}
         emptyMessage="No hay llamadas ni visitas programadas en el rango."
         footer={resumen.personas.length > 0 && <TotalIcc total={resumen.total} />}
       />
@@ -147,7 +137,7 @@ export function ReporteIcc({
         }}
         ref={graficaPdf}
       >
-        <GraficaIcc datos={datosGrafica} animar={false} />
+        <GraficaIcc datos={resumen.personas} animar={false} />
       </div>
     </div>
   );
@@ -157,17 +147,7 @@ const COLOR_ICCA = "#2563eb";
 const COLOR_ICCP = "#16a34a";
 const COLOR_ICCC = "#ea580c";
 
-type DatoGrafica = {
-  nombre: string;
-  ICCa: number | null;
-  ICCp: number | null;
-  ICCc: number | null;
-};
-
-function GraficaIcc({
-  datos,
-  animar = true,
-}: Readonly<{ datos: DatoGrafica[]; animar?: boolean }>) {
+function GraficaIcc({ datos, animar = true }: Readonly<{ datos: ResumenIcc[]; animar?: boolean }>) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={datos} margin={{ top: 8, right: 12, left: 40, bottom: 8 }}>
@@ -188,21 +168,21 @@ function GraficaIcc({
         <Tooltip formatter={(valor) => formatoPorcentaje(valor == null ? null : Number(valor))} />
         <Legend verticalAlign="top" />
         <Bar
-          dataKey="ICCa"
+          dataKey="icca"
           name="ICCa (visitas)"
           fill={COLOR_ICCA}
           radius={[4, 4, 0, 0]}
           isAnimationActive={animar}
         />
         <Bar
-          dataKey="ICCp"
+          dataKey="iccp"
           name="ICCp (llamadas)"
           fill={COLOR_ICCP}
           radius={[4, 4, 0, 0]}
           isAnimationActive={animar}
         />
         <Bar
-          dataKey="ICCc"
+          dataKey="iccc"
           name="ICCc (visitas no programadas)"
           fill={COLOR_ICCC}
           radius={[4, 4, 0, 0]}
@@ -213,94 +193,61 @@ function GraficaIcc({
   );
 }
 
-/** Filas de la tabla del PDF (mismas columnas que la pantalla) con el TOTAL al final. */
-function filasPdf(resumen: { personas: ResumenIcc[]; total: ResumenIcc }) {
-  const derecha = { horizontal: "right" } as const;
-  return [...resumen.personas, resumen.total].map((r) => ({
-    Persona: { dato: r.nombre },
-    "Visitas prog.": { dato: r.porTipo.VISITA.programadas, alignFormat: derecha },
-    "Visitas real.": { dato: r.porTipo.VISITA.realizadas, alignFormat: derecha },
-    ICCa: { dato: formatoPorcentaje(r.porTipo.VISITA.icc), alignFormat: derecha },
-    "Llamadas prog.": { dato: r.porTipo.LLAMADA.programadas, alignFormat: derecha },
-    "Llamadas real.": { dato: r.porTipo.LLAMADA.realizadas, alignFormat: derecha },
-    ICCp: { dato: formatoPorcentaje(r.porTipo.LLAMADA.icc), alignFormat: derecha },
-    "Visitas no prog. real.": {
-      dato: r.porTipo.VISITA.noProgramadasRealizadas,
-      alignFormat: derecha,
-    },
-    "Total visitas": { dato: r.porTipo.VISITA.total, alignFormat: derecha },
-    ICCc: { dato: formatoPorcentaje(r.porTipo.VISITA.iccNoProgramadas), alignFormat: derecha },
-    "Citas sin resultado": { dato: r.porTipo.VISITA.sinResultado, alignFormat: derecha },
-    Vencidas: { dato: r.vencidas, alignFormat: derecha },
-  }));
-}
+const DERECHA = { horizontal: "right" } as const;
 
-const columna = (
-  id: string,
-  header: string,
-  valor: (resumen: ResumenIcc) => number | null,
-  porcentaje = false,
-): ColumnDef<ResumenIcc> => ({
-  id,
-  header,
-  accessorFn: valor,
-  cell: ({ row }) => {
-    const dato = valor(row.original);
-    return porcentaje ? formatoPorcentaje(dato) : (dato ?? 0);
-  },
-});
+/** Columnas de la tabla y del PDF (después de Persona). */
+const COLUMNAS_ICC: readonly {
+  id: Exclude<keyof ResumenIcc, "nombre">;
+  titulo: string;
+  porcentaje?: true;
+}[] = [
+  { id: "visitasProgramadas", titulo: "Visitas prog." },
+  { id: "visitasRealizadas", titulo: "Visitas real." },
+  { id: "icca", titulo: "ICCa", porcentaje: true },
+  { id: "llamadasProgramadas", titulo: "Llamadas prog." },
+  { id: "llamadasRealizadas", titulo: "Llamadas real." },
+  { id: "iccp", titulo: "ICCp", porcentaje: true },
+  { id: "visitasNoProgramadasRealizadas", titulo: "Visitas no prog. real." },
+  { id: "visitas", titulo: "Total visitas" },
+  { id: "iccc", titulo: "ICCc", porcentaje: true },
+  { id: "sinResultado", titulo: "Citas sin resultado" },
+  { id: "vencidas", titulo: "Vencidas" },
+];
+
+const celda = (columna: (typeof COLUMNAS_ICC)[number], resumen: ResumenIcc) => {
+  const valor = resumen[columna.id];
+  return columna.porcentaje ? formatoPorcentaje(valor) : (valor ?? 0);
+};
 
 const COLUMNAS: ColumnDef<ResumenIcc>[] = [
   { accessorKey: "nombre", header: "Persona" },
-  columna("visitas_programadas", "Visitas prog.", (r) => r.porTipo.VISITA.programadas),
-  columna("visitas_realizadas", "Visitas real.", (r) => r.porTipo.VISITA.realizadas),
-  columna("icca", "ICCa", (r) => r.porTipo.VISITA.icc, true),
-  columna("llamadas_programadas", "Llamadas prog.", (r) => r.porTipo.LLAMADA.programadas),
-  columna("llamadas_realizadas", "Llamadas real.", (r) => r.porTipo.LLAMADA.realizadas),
-  columna("iccp", "ICCp", (r) => r.porTipo.LLAMADA.icc, true),
-  columna(
-    "visitas_no_programadas_realizadas",
-    "Visitas no prog. real.",
-    (r) => r.porTipo.VISITA.noProgramadasRealizadas,
+  ...COLUMNAS_ICC.map(
+    (c): ColumnDef<ResumenIcc> => ({
+      id: c.id,
+      header: c.titulo,
+      accessorFn: (r) => r[c.id],
+      cell: ({ row }) => celda(c, row.original),
+    }),
   ),
-  columna("visitas_total", "Total visitas", (r) => r.porTipo.VISITA.total),
-  columna("iccc", "ICCc", (r) => r.porTipo.VISITA.iccNoProgramadas, true),
-  columna("sin_resultado", "Citas sin resultado", (r) => r.porTipo.VISITA.sinResultado),
-  columna("vencidas", "Vencidas", (r) => r.vencidas),
-];
-
-const COLUMNAS_NUMERICAS = [
-  "visitas_programadas",
-  "visitas_realizadas",
-  "icca",
-  "llamadas_programadas",
-  "llamadas_realizadas",
-  "iccp",
-  "visitas_no_programadas_realizadas",
-  "visitas_total",
-  "iccc",
-  "sin_resultado",
-  "vencidas",
 ];
 
 /** Fila de total debajo de la tabla (el DataTable no tiene pie por columnas). */
 function TotalIcc({ total }: Readonly<{ total: ResumenIcc }>) {
-  const visitas = total.porTipo.VISITA;
-  const llamadas = total.porTipo.LLAMADA;
   return (
     <div className="flex flex-wrap gap-x-6 gap-y-1 border-t bg-muted/50 px-4 py-2 text-sm font-semibold">
       <span>TOTAL</span>
       <span>
-        ICCa: {visitas.realizadas}/{visitas.programadas} ({formatoPorcentaje(visitas.icc)})
+        ICCa: {total.visitasRealizadas}/{total.visitasProgramadas} ({formatoPorcentaje(total.icca)})
       </span>
       <span>
-        ICCp: {llamadas.realizadas}/{llamadas.programadas} ({formatoPorcentaje(llamadas.icc)})
+        ICCp: {total.llamadasRealizadas}/{total.llamadasProgramadas} (
+        {formatoPorcentaje(total.iccp)})
       </span>
       <span>
-        ICCc: {visitas.noProgramadasRealizadas}/{visitas.total} (
-        {formatoPorcentaje(visitas.iccNoProgramadas)})
+        ICCc: {total.visitasNoProgramadasRealizadas}/{total.visitas} (
+        {formatoPorcentaje(total.iccc)})
       </span>
-      <span>Citas sin resultado: {visitas.sinResultado}</span>
+      <span>Citas sin resultado: {total.sinResultado}</span>
       <span>Vencidas: {total.vencidas}</span>
     </div>
   );
