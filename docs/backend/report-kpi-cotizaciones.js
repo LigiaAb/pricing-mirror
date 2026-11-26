@@ -655,6 +655,8 @@ const consultaKpiHitRate = (campos) => {
   if (tiene("cod_cliente")) consulta.where("CC.ENTIDAD_ID", `${campos.cod_cliente}`);
   if (tiene("cod_usuario")) consulta.where("PV.USUARIO_ID", `${campos.cod_usuario}`);
   if (tiene("cod_tipo_pago")) consulta.where("CC.TIPO_PAGO_ID", `${campos.cod_tipo_pago}`);
+  if (tiene("cod_tipo_transporte"))
+    consulta.where("CC.TIPO_TRANSPORTE_ID", `${campos.cod_tipo_transporte}`);
 
   return consulta;
 };
@@ -747,6 +749,8 @@ const consultaKpiRealizacionDePrecio = (campos) => {
   if (tiene("cod_cliente")) consulta.where("CC.ENTIDAD_ID", `${campos.cod_cliente}`);
   if (tiene("cod_usuario")) consulta.where("CD.USUARIO_ID", `${campos.cod_usuario}`);
   if (tiene("cod_tipo_pago")) consulta.where("CC.TIPO_PAGO_ID", `${campos.cod_tipo_pago}`);
+  if (tiene("cod_tipo_transporte"))
+    consulta.where("CC.TIPO_TRANSPORTE_ID", `${campos.cod_tipo_transporte}`);
 
   return consulta;
 };

@@ -3,6 +3,10 @@
 Registro para dar seguimiento a lo hecho en el módulo **pricing**. Entradas nuevas **arriba**, agrupadas por fecha.
 Cada entrada: rama · módulo/submódulo · qué y por qué · diff generado (si aplica).
 
+## 26/11/2026
+
+- **Reportes / General** (`claude/25112026-work-reportes-general`) (#269): **mejora** (backend, no sale en diff): `report_kpi_cotizaciones` (`docs/backend/report-kpi-cotizaciones.js`) acepta **`cod_tipo_transporte`** (`CC.TIPO_TRANSPORTE_ID`), igual que `cod_tipo_pago`, en Hit Rate y en Realización de Precio; pedido de la usuaria para el filtro "Servicio" de su reporte de Hit Rate. Los tipos de transporte son `TIPO_TABLA = 'TRANSPORTE'`. Se integró su commit `4eb1682` (SYNC Y CORRECCION: reporte de Hit Rate en `definiciones/pricing/`, opción de permisos `reportes`, `R.ESTADO_ID` en reportes disponibles). `node --check` OK; `check:nuevos`: 0 errores nuevos de `tsc` (Biome marca 2 en `reporte-hit-rate.ts`, archivo de la usuaria, que ella corrige). Sin diff.
+
 ## 25/11/2026
 
 - **Reportes / General** (`claude/25112026-work-reportes-general`) (#267): **bug** (reporte de la usuaria): la línea `agrupacion` (agrupación inicial, `CAMBIAR u OPCIONAL`) solo estaba en `reporte-basico.ts`; se agrega igual en las plantillas `reporte-endpoint-distinto.ts` y `reporte-personalizado.tsx`. Solo `check:nuevos`: 0 errores nuevos, Biome 0, finales OK. Diff: `251126-1553-cl25112026-agrupacion-en-todas-las-plantillas-de-reportes.diff`.
