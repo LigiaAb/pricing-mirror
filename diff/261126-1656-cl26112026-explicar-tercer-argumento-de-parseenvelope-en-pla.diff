@@ -1,0 +1,44 @@
+diff --git a/src/features/reportes/DOCUMENTACION.md b/src/features/reportes/DOCUMENTACION.md
+index 0090ab6..a4c7771 100644
+--- a/src/features/reportes/DOCUMENTACION.md
++++ b/src/features/reportes/DOCUMENTACION.md
+@@ -179,7 +179,10 @@ Si el backend responde `success: false`, su mensaje se ve en la sección "Report
+ 
+ Una función `async (params) => Fila[]`. Recibe los parámetros de la pantalla (`fecha_inicio`,
+ `fecha_fin`, `cod_empresa`, `cod_cc` y el id de cada filtro; vacíos = no vienen) y devuelve las
+-filas. Dentro se puede hacer lo que haga falta:
++filas. Cada endpoint se lee con `parseEnvelope(respuesta, filaSchema, "<endpoint>")`: el tercero es
++el nombre del endpoint (la última parte de la URL, ej. `"lista-actividades2"`) y solo sirve para
++saber qué consulta falló (sale en el error, o en Sentry en producción, si las filas no cumplen
++`filaSchema`). Dentro se puede hacer lo que haga falta:
+ 
+ ```ts
+ import { empleadosUsuarios } from "@/features/catalogos";
+diff --git a/src/features/reportes/GUIA.md b/src/features/reportes/GUIA.md
+index c075a99..6491f0f 100644
+--- a/src/features/reportes/GUIA.md
++++ b/src/features/reportes/GUIA.md
+@@ -224,6 +224,11 @@ const filtroTipoActividad: FiltroReporte = {
+   un parámetro fijo, el endpoint espera otros nombres o no filtra algo.
+ - Una función propia `async (params) => Fila[]`: para juntar varias consultas o agregar campos.
+ 
++En una función propia, cada endpoint se lee con `parseEnvelope(respuesta, filaSchema, "<endpoint>")`:
++`respuesta` es lo que devuelve `http.get`, `filaSchema` revisa cada fila y el tercero es el nombre del
++endpoint (la última parte de la URL, ej. `"lista-actividades2"`). Ese nombre solo sirve para saber
++qué consulta falló: sale en el error si las filas no cumplen `filaSchema`.
++
+ En el ejemplo es propia porque junta dos consultas (actividades y empleados), filtra lo que el
+ endpoint no filtra (fechas, asesor y tipo) y agrega `asesor` y `finalizada` a cada fila.
+ 
+diff --git a/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx b/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx
+index 80a074a..80100d4 100644
+--- a/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx
++++ b/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx
+@@ -42,6 +42,7 @@ async function consultar(params: ParamsReporte): Promise<Fila[]> {
+   const [filas, empleados] = await Promise.all([
+     http
+       .get<unknown>("/api/appweb/CAMBIAR", { params }) // CAMBIAR: endpoint (y params si hace falta)
++      // CAMBIAR: nombre del endpoint (ej. "report-icc"); sale en el error si las filas no cumplen filaSchema
+       .then((respuesta) => parseEnvelope(respuesta, filaSchema, "CAMBIAR")),
+     empleadosUsuarios.fetchLista({}), // CAMBIAR: otra consulta o catálogo
+   ]);

@@ -42,6 +42,7 @@ async function consultar(params: ParamsReporte): Promise<Fila[]> {
   const [filas, empleados] = await Promise.all([
     http
       .get<unknown>("/api/appweb/CAMBIAR", { params }) // CAMBIAR: endpoint (y params si hace falta)
+      // CAMBIAR: nombre del endpoint (ej. "report-icc"); sale en el error si las filas no cumplen filaSchema
       .then((respuesta) => parseEnvelope(respuesta, filaSchema, "CAMBIAR")),
     empleadosUsuarios.fetchLista({}), // CAMBIAR: otra consulta o catálogo
   ]);
