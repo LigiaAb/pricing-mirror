@@ -1,0 +1,145 @@
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+index b355507..a428f77 100644
+--- a/src/features/reportes/ARQUITECTURA.md
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -10,7 +10,7 @@ reportes/
+     consultar-api.ts          consultarApi(endpoint, schema, { lista, params, nombres, filtrar }) para `consultar`
+   definiciones/                 UNA CARPETA POR MÓDULO
+     index.ts                  REGISTRO: REPORTES = las listas de todos los módulos
+-    plantillas/               PLANTILLAS para copiar (no se registran; ver GUIA.md, paso 2):
++    plantillas/               PLANTILLAS para copiar (no se registran; ver GUIA.md, paso 3):
+                               reporte-basico.ts, reporte-endpoint-distinto.ts,
+                               reporte-personalizado.tsx
+     crm/
+@@ -24,6 +24,8 @@ reportes/
+                               `requerido`; sección "Reporte" = la vista de CRM, `Contenido`)
+       reporte-graficas-objetivos.tsx  CRM-GOSA-05 Gráficas de objetivos de semana actual
+                               (sin fechas; vista de CRM con serie semanal y medidores)
++  contenido/                  UNA CARPETA POR MÓDULO: componentes de las vistas propias
++                              (`Contenido`) de sus reportes (ej. pricing/hit-rate.tsx)
+   lib/
+     definir-reporte.ts        contrato (DefinicionReporte, ColumnaReporte, FiltroReporte)
+     filtros.ts                atajos: filtroUsuario, filtroTipo, filtroEstado, filtroLista;
+diff --git a/src/features/reportes/DOCUMENTACION.md b/src/features/reportes/DOCUMENTACION.md
+index 7b72a83..5f21e2a 100644
+--- a/src/features/reportes/DOCUMENTACION.md
++++ b/src/features/reportes/DOCUMENTACION.md
+@@ -18,7 +18,7 @@ una, se escribe una función **en el mismo archivo, arriba**, y se pone en su pr
+ | `fechas`       | `"requeridas"` (mes actual)                 | `"opcionales"` / `"ninguna"`                 |
+ 
+ Nada de esto se configura en otro lado: no hay que tocar la pantalla ni otros archivos (salvo
+-registrarlo, [paso 3 de `GUIA.md`](GUIA.md#paso-3--registro)).
++registrarlo, [paso 4 de `GUIA.md`](GUIA.md#paso-4--registro)).
+ 
+ Otras opciones de la definición:
+ 
+diff --git a/src/features/reportes/GUIA.md b/src/features/reportes/GUIA.md
+index a046d30..266ac2a 100644
+--- a/src/features/reportes/GUIA.md
++++ b/src/features/reportes/GUIA.md
+@@ -17,10 +17,11 @@ archivo) está en `ARQUITECTURA.md`; aquí solo lo que hay que hacer. La explica
+ ## Checklist
+ 
+ 1. [ ] **Base de datos**: `TIPO` del reporte y su relación con rol/CC/módulo.
+-2. [ ] **Archivo** `definiciones/<modulo>/reporte-<nombre>.ts` (copiar una plantilla, paso 2).
+-3. [ ] **Registro**: una línea en `definiciones/<modulo>/index.ts`.
+-4. [ ] Biome sin errores: `pnpm exec biome check --write <archivo>`.
+-5. [ ] Probarlo: elegir el módulo y el reporte, pulsar **Consultar**.
++2. [ ] **Carpetas del módulo** (opcional, paso 2): `definiciones/<modulo>/` y `contenido/<modulo>/`.
++3. [ ] **Archivo** `definiciones/<modulo>/reporte-<nombre>.ts` (copiar una plantilla, paso 3).
++4. [ ] **Registro**: una línea en `definiciones/<modulo>/index.ts` (paso 4).
++5. [ ] Biome sin errores: `pnpm exec biome check --write <archivo>`.
++6. [ ] Probarlo: elegir el módulo y el reporte, pulsar **Consultar**.
+ 
+ ---
+ 
+@@ -38,10 +39,17 @@ archivo) está en `ARQUITECTURA.md`; aquí solo lo que hay que hacer. La explica
+ 
+ Sin esto el reporte no aparece en el select, aunque el código esté listo.
+ 
+-## Paso 2 — Archivo del reporte
++## Paso 2 — Carpetas del módulo (opcional)
+ 
+-Va en la carpeta de su módulo, `definiciones/<modulo>/`: `definiciones/crm/`, `definiciones/pricing/`… (si el módulo no
+-tiene carpeta, ver el paso 3). Nombre en kebab-case: `reporte-ventas-cliente.ts`. Si usa JSX
++Solo si el módulo todavía no las tiene:
++
++- `definiciones/<modulo>/`: los archivos de los reportes (paso 3).
++- `contenido/<modulo>/`: los componentes de las vistas propias (`Contenido`) de sus reportes
++  (ej. `contenido/pricing/hit-rate.tsx`).
++
++## Paso 3 — Archivo del reporte
++
++Va en la carpeta de su módulo, `definiciones/<modulo>/`: `definiciones/crm/`, `definiciones/pricing/`… Nombre en kebab-case: `reporte-ventas-cliente.ts`. Si usa JSX
+ (`Contenido` propio) la extensión es `.tsx`.
+ 
+ ### Plantillas
+@@ -330,7 +338,14 @@ function VistaAvance(props: ContenidoReporteProps<Fila>) {
+ Contenido: VistaAvance, // (I)
+ ```
+ 
+-## Paso 3 — Registro
++## Paso 4 — Registro
++
++**Si `definiciones/<modulo>/index.ts` no existe:**
++
++1. Crear `definiciones/<modulo>/index.ts` copiando `definiciones/crm/index.ts` (cambiar el
++   nombre de la lista, ej. `REPORTES_PRI`).
++2. En `definiciones/index.ts`: `import { REPORTES_PRI } from "./pricing";` y
++   `REPORTES = [...REPORTES_CRM, ...REPORTES_PRI]`.
+ 
+ En `definiciones/<modulo>/index.ts`, importar el reporte y sumarlo a la lista (en orden de
+ correlativo):
+@@ -341,13 +356,6 @@ import { reporteVentasCliente } from "./reporte-ventas-cliente";
+ export const REPORTES_PRI: readonly Reporte[] = [reporteVentasCliente];
+ ```
+ 
+-**Módulo nuevo** (sin carpeta todavía):
+-
+-1. Crear `definiciones/<modulo>/index.ts` copiando `definiciones/crm/index.ts` (cambiar el
+-   nombre de la lista, ej. `REPORTES_PRI`).
+-2. En `definiciones/index.ts`: `import { REPORTES_PRI } from "./pricing";` y
+-   `REPORTES = [...REPORTES_CRM, ...REPORTES_PRI]`.
+-
+ ## Ejemplo con todas las piezas
+ 
+ El reporte de [Cómo llenar cada marca](#cómo-llenar-cada-marca), completo: compila y funciona tal
+diff --git a/src/features/reportes/definiciones/plantillas/reporte-basico.ts b/src/features/reportes/definiciones/plantillas/reporte-basico.ts
+index e67a399..1ac3183 100644
+--- a/src/features/reportes/definiciones/plantillas/reporte-basico.ts
++++ b/src/features/reportes/definiciones/plantillas/reporte-basico.ts
+@@ -10,7 +10,7 @@ import { filtroUsuario } from "../../lib/filtros";
+  *
+  * 1. Copiar este archivo a definiciones/<modulo>/reporte-<nombre>.ts
+  * 2. Cambiar las líneas marcadas con  // CAMBIAR
+- * 3. Registrarlo en definiciones/<modulo>/index.ts (ver GUIA.md, paso 3)
++ * 3. Registrarlo en definiciones/<modulo>/index.ts (ver GUIA.md, paso 4)
+  */
+ 
+ // Una fila tal como la devuelve el endpoint: nombres EXACTOS del JSON, solo los que se usan.
+diff --git a/src/features/reportes/definiciones/plantillas/reporte-endpoint-distinto.ts b/src/features/reportes/definiciones/plantillas/reporte-endpoint-distinto.ts
+index eddd0a5..30f7e45 100644
+--- a/src/features/reportes/definiciones/plantillas/reporte-endpoint-distinto.ts
++++ b/src/features/reportes/definiciones/plantillas/reporte-endpoint-distinto.ts
+@@ -11,7 +11,7 @@ import { filtroUsuario } from "../../lib/filtros";
+  *
+  * 1. Copiar este archivo a definiciones/<modulo>/reporte-<nombre>.ts
+  * 2. Cambiar las líneas marcadas con  // CAMBIAR  y borrar las  // OPCIONAL  que no se usen
+- * 3. Registrarlo en definiciones/<modulo>/index.ts (ver GUIA.md, paso 3)
++ * 3. Registrarlo en definiciones/<modulo>/index.ts (ver GUIA.md, paso 4)
+  */
+ 
+ const filaSchema = z.looseObject({
+diff --git a/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx b/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx
+index 097afda..66e34ed 100644
+--- a/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx
++++ b/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx
+@@ -25,7 +25,7 @@ import { filtroUsuario } from "../../lib/filtros";
+  * 2. Cambiar las líneas marcadas con  // CAMBIAR
+  * 3. Para cada pieza  OPCIONAL  que no se necesite: borrar su función Y su línea ← N
+  *    Los imports que queden sin usar los quita: npx biome check --write --unsafe <archivo>
+- * 4. Registrarlo en definiciones/<modulo>/index.ts (ver GUIA.md, paso 3)
++ * 4. Registrarlo en definiciones/<modulo>/index.ts (ver GUIA.md, paso 4)
+  */
+ 
+ const filaSchema = z.looseObject({

@@ -10,7 +10,7 @@ reportes/
     consultar-api.ts          consultarApi(endpoint, schema, { lista, params, nombres, filtrar }) para `consultar`
   definiciones/                 UNA CARPETA POR MÓDULO
     index.ts                  REGISTRO: REPORTES = las listas de todos los módulos
-    plantillas/               PLANTILLAS para copiar (no se registran; ver GUIA.md, paso 2):
+    plantillas/               PLANTILLAS para copiar (no se registran; ver GUIA.md, paso 3):
                               reporte-basico.ts, reporte-endpoint-distinto.ts,
                               reporte-personalizado.tsx
     crm/
@@ -24,6 +24,8 @@ reportes/
                               `requerido`; sección "Reporte" = la vista de CRM, `Contenido`)
       reporte-graficas-objetivos.tsx  CRM-GOSA-05 Gráficas de objetivos de semana actual
                               (sin fechas; vista de CRM con serie semanal y medidores)
+  contenido/                  UNA CARPETA POR MÓDULO: componentes de las vistas propias
+                              (`Contenido`) de sus reportes (ej. pricing/hit-rate.tsx)
   lib/
     definir-reporte.ts        contrato (DefinicionReporte, ColumnaReporte, FiltroReporte)
     filtros.ts                atajos: filtroUsuario, filtroTipo, filtroEstado, filtroLista;

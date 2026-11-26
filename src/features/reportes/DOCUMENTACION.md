@@ -18,7 +18,7 @@ una, se escribe una función **en el mismo archivo, arriba**, y se pone en su pr
 | `fechas`       | `"requeridas"` (mes actual)                 | `"opcionales"` / `"ninguna"`                 |
 
 Nada de esto se configura en otro lado: no hay que tocar la pantalla ni otros archivos (salvo
-registrarlo, [paso 3 de `GUIA.md`](GUIA.md#paso-3--registro)).
+registrarlo, [paso 4 de `GUIA.md`](GUIA.md#paso-4--registro)).
 
 Otras opciones de la definición:
 

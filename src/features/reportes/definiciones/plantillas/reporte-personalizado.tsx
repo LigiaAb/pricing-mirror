@@ -25,7 +25,7 @@ import { filtroUsuario } from "../../lib/filtros";
  * 2. Cambiar las líneas marcadas con  // CAMBIAR
  * 3. Para cada pieza  OPCIONAL  que no se necesite: borrar su función Y su línea ← N
  *    Los imports que queden sin usar los quita: npx biome check --write --unsafe <archivo>
- * 4. Registrarlo en definiciones/<modulo>/index.ts (ver GUIA.md, paso 3)
+ * 4. Registrarlo en definiciones/<modulo>/index.ts (ver GUIA.md, paso 4)
  */
 
 const filaSchema = z.looseObject({
