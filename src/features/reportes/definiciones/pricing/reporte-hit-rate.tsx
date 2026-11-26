@@ -1,9 +1,11 @@
 import { z } from "zod";
 import { consultarApi } from "../../api/consultar-api";
-import { ContenidoReporteProps, definirReporte, fechaEnRango } from "../../lib/definir-reporte";
+import { ContenidoReporteProps, definirReporte, DescargaReporte, fechaEnRango } from "../../lib/definir-reporte";
 import { filtroCliente, filtroTipo, filtroUsuario } from "../../lib/filtros";
+import type { Filtros } from "@/features/pricing/reportes/lib/filtros-types";
 import { zId } from "@/shared/lib/zod-scalars";
 import { HitRate } from "../../contenido/pricing/hit-rate";
+import { tipos } from "@/features/catalogos";
 
 const texto = z.string().nullable().optional();
 const bandera = z.coerce.number().catch(0);
@@ -60,21 +62,41 @@ const filaSchema = z.looseObject({
 });
 type Fila = z.infer<typeof filaSchema>;
 
-const Contenido = (props: ContenidoReporteProps<Fila>) => {
-  const filtros ={
-    reporte:  {label: '', value:'hit-rate'} ,
-    cod_cc: {nombre: '', codigo:Number(`${props.params.cod_cc ?? '0'}`)},
-    cod_empresa: {nombre: '', codigo:Number(`${props.params.cod_empresa ?? '0'}`)},
-    cod_tipo_transporte: props.params.cod_tipo_transporte ? {label: '', value:props.params.cod_tipo_transporte ?? 0} :null,
-    fecha_fin: props.params.fecha_fin|| new Date().toString(),
-    fecha_inicio: props.params.fecha_inicio|| new Date().toString(),
-  }
-  return <>
-    <HitRate filtros={filtros} tipo='descarga' onErrorPdf={alert} onGenerandoPdf={alert} />
-    <HitRate filtros={filtros} tipo='grafica-otros' onErrorPdf={alert} onGenerandoPdf={alert} />
-    <HitRate filtros={filtros} tipo='grafica-usuario' onErrorPdf={alert} onGenerandoPdf={alert} />
-    <HitRate filtros={filtros} tipo='grafica-transporte' onErrorPdf={alert} onGenerandoPdf={alert} />
-  </>
+function ContenidoHitRate({ params }: ContenidoReporteProps<Fila>) {
+  // HitRate elige la gráfica de transporte por el NOMBRE del tipo.
+  const transportes = tipos.useLista({ tipo_tabla: "TRANSPORTE" });
+  const nombreTransporte =
+    transportes.data?.find((t) => String(t.codTipo) === params.cod_tipo_transporte)?.nomTipo ?? "";
+
+  // Vacío = sin filtro (null / undefined), nunca 0.
+  const opcion = (valor: string | undefined, label = "") => (valor ? { value: valor, label } : null);
+  const codigo = (valor: string | undefined) =>
+    valor ? { nombre: "", codigo: Number(valor) } : undefined;
+
+  const filtros: Filtros = {
+    reporte: { value: "hit-rate", label: "Hit Rate" },
+    fecha_inicio: params.fecha_inicio ?? "",
+    fecha_fin: params.fecha_fin ?? "",
+    cod_empresa: codigo(params.cod_empresa),
+    cod_cc: codigo(params.cod_cc),
+    cod_usuario: opcion(params.cod_usuario),
+    cod_cliente: opcion(params.cod_cliente),
+    cod_tipo_pago: opcion(params.cod_tipo_pago),
+    cod_tipo_transporte: opcion(params.cod_tipo_transporte, nombreTransporte),
+  };
+
+  return (
+    <div className="space-y-4">
+      <HitRate filtros={filtros} tipo="grafica-usuario" />
+      <HitRate filtros={filtros} tipo="grafica-transporte" />
+      <HitRate filtros={filtros} tipo="grafica-otros" />
+    </div>
+  );
+}
+
+
+function pdf({filas, titulo, encabezado}: DescargaReporte<Fila>)  {
+
 }
 
 export const reporteHitRate = definirReporte<Fila>({
@@ -169,5 +191,5 @@ export const reporteHitRate = definirReporte<Fila>({
   ],
   agrupacion: { filas: ["usuario"] }, // (G) opcional: agrupación inicial (ids de columnas agrupables)
   descargas: { excel: true }, // OPCIONAL
-  Contenido: Contenido
+  Contenido: ContenidoHitRate
 });
