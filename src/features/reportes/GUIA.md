@@ -10,7 +10,7 @@ archivo) está en `ARQUITECTURA.md`; aquí solo lo que hay que hacer. La explica
 >   reportes según el permiso "Filtrar Empresa Centro Costo" (opción "Reportes") y siempre los
 >   manda en la consulta (`cod_empresa`, `cod_cc`). Si el reporte no los usa:
 >   `empresaCentroCosto: false`.
-> - **Fechas**: no son un filtro; se configuran con `fechas` ([Fechas](DOCUMENTACION.md#fechas)).
+> - **Fechas**: no son un filtro; se configuran con `fechas` ([Fechas](DOCUMENTACION.md#fechas-c)).
 > - **Botón Consultar, "Personaliza tu reporte", "Resumen agrupado" y "Excel agrupado"**: salen
 >   solos para todos los reportes.
 
@@ -95,15 +95,15 @@ Qué va en cada marca, con su explicación:
 
 | Marca | Qué es | Explicación |
 | ----- | ------ | ----------- |
-| (A) | Schema de la fila (campos del endpoint) | [Schema de la fila](DOCUMENTACION.md#schema-de-la-fila) · [De dónde sale cada dato](DOCUMENTACION.md#de-dónde-sale-cada-dato) |
-| (B) | `nomenclatura` | Paso 1 |
-| (C) | `fechas` | [Fechas](DOCUMENTACION.md#fechas) |
-| (D) | `filtros` | [Filtros](DOCUMENTACION.md#filtros) |
-| (E) | `consultar` | [Consulta](DOCUMENTACION.md#consulta) |
-| (F) | `columnas` | [Columnas](DOCUMENTACION.md#columnas) |
-| (G) | `agrupacion` | [Columnas](DOCUMENTACION.md#columnas) (ids de columnas `agrupable`) |
-| (H) | `descargas` | [Descargas](DOCUMENTACION.md#descargas) |
-| (I) | `Contenido` | [Vista propia](DOCUMENTACION.md#vista-propia-contenido) |
+| (A) | Schema de la fila (campos del endpoint) | [Schema de la fila](DOCUMENTACION.md#schema-de-la-fila-a) · [De dónde sale cada dato](DOCUMENTACION.md#de-dónde-sale-cada-dato) |
+| (B) | `nomenclatura` | Paso 1 · [Nomenclatura](DOCUMENTACION.md#nomenclatura-b) |
+| (C) | `fechas` | [Fechas](DOCUMENTACION.md#fechas-c) |
+| (D) | `filtros` | [Filtros](DOCUMENTACION.md#filtros-d) |
+| (E) | `consultar` | [Consulta](DOCUMENTACION.md#consulta-e) |
+| (F) | `columnas` | [Columnas](DOCUMENTACION.md#columnas-f) |
+| (G) | `agrupacion` | [Agrupación inicial](DOCUMENTACION.md#agrupación-inicial-g) |
+| (H) | `descargas` | [Descargas](DOCUMENTACION.md#descargas-h) |
+| (I) | `Contenido` | [Vista propia](DOCUMENTACION.md#vista-propia-contenido-i) |
 
 Si algo no lo cubre la plantilla básica (otra consulta, un filtro, vista, Excel o PDF propios):
 [`reporte-personalizado.tsx`](definiciones/plantillas/reporte-personalizado.tsx) y la sección de esa
