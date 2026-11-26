@@ -19,7 +19,7 @@ archivo) está en `ARQUITECTURA.md`; aquí solo lo que hay que hacer. La explica
 1. [ ] **Base de datos**: `TIPO` del reporte y su relación con rol/CC/módulo.
 2. [ ] **Archivo** `definiciones/<modulo>/reporte-<nombre>.ts` (copiar una plantilla, paso 2).
 3. [ ] **Registro**: una línea en `definiciones/<modulo>/index.ts`.
-4. [ ] Biome sin errores: `pnpm exec biome check --write <archivo>` (en el espejo: `npm run check:nuevos`).
+4. [ ] Biome sin errores: `pnpm exec biome check --write <archivo>`.
 5. [ ] Probarlo: elegir el módulo y el reporte, pulsar **Consultar**.
 
 ---
@@ -40,14 +40,14 @@ Sin esto el reporte no aparece en el select, aunque el código esté listo.
 
 ## Paso 2 — Archivo del reporte
 
-Va en la carpeta de su módulo: `definiciones/crm/`, `definiciones/pricing/`… (si el módulo no
+Va en la carpeta de su módulo, `definiciones/<modulo>/`: `definiciones/crm/`, `definiciones/pricing/`… (si el módulo no
 tiene carpeta, ver el paso 3). Nombre en kebab-case: `reporte-ventas-cliente.ts`. Si usa JSX
 (`Contenido` propio) la extensión es `.tsx`.
 
 ### Plantillas
 
-Copiar una plantilla de `src/features/reportes/definiciones/plantillas/` y cambiar las líneas
-marcadas `// CAMBIAR`:
+Copiar una plantilla de `src/features/reportes/definiciones/plantillas/` y llenar las líneas
+que llevan el comentario `// CAMBIAR`. Cuál plantilla usar:
 
 | Plantilla                         | Cuándo                                                                                                   |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -110,13 +110,442 @@ Si algo no lo cubre la plantilla básica (otra consulta, un filtro, vista, Excel
 pieza en la documentación. Ejemplos completos: [Ejemplos](DOCUMENTACION.md#ejemplos). Si algo
 falla: [Errores comunes](DOCUMENTACION.md#errores-comunes).
 
-### Ejemplos completos
+### Cómo llenar cada marca
+
+En orden, (A) a (I). Cada marca muestra cómo queda en el
+[ejemplo con todas las piezas](#ejemplo-con-todas-las-piezas) (un reporte de avance de
+actividades por asesor).
+
+**(A) Schema de la fila.** Abrir la pantalla que ya usa el endpoint → pestaña **Network** → la
+petición → **Response**, y copiar solo los campos que se van a usar, con su nombre exacto. Si la
+fila necesita campos que no manda el endpoint (aquí `asesor` y `finalizada`), se agregan al
+`type Fila`; los llena la consulta (E).
+
+```ts
+const filaSchema = z.looseObject({
+  cod_actividad: z.coerce.number(),
+  cod_tipo: z.coerce.number().catch(0),
+  nom_tipo: z.string().nullable().catch(""),
+  nombre_cliente: z.string().nullable().catch(""),
+  estado_desc: z.string().nullable().catch(""),
+  cod_asesor: z.coerce.number().catch(0),
+  fecha_programada: z.string().nullable().catch(""),
+});
+type Fila = z.infer<typeof filaSchema> & { asesor: string; finalizada: number };
+```
+
+**(B) Nomenclatura.** La `NOMENCLATURA` del `TIPO` del paso 1, igual. Aquí "**A**vance de
+**A**ctividades **P**or **A**sesor", correlativo 93:
+
+```ts
+nomenclatura: "CRM-AAPA-93", // (B)
+```
+
+**(C) Fechas.** `"requeridas"` (el mes actual por defecto), `"opcionales"` o `"ninguna"`. Si el
+endpoint no filtra por fecha, se filtra en la consulta (E) con `fechaEnRango`.
+
+```ts
+fechas: "requeridas", // (C)
+```
+
+**(D) Filtros.** Un atajo de `lib/filtros.ts` por filtro (sin empresa ni CC). Si no hay atajo,
+un filtro propio en el mismo archivo. El `id` es el nombre del parámetro que llega a la consulta.
+
+```ts
+filtros: [filtroUsuario("Asesor", "cod_usuario"), filtroTipoActividad], // (D)
+```
+
+```tsx
+const filtroTipoActividad: FiltroReporte = {
+  id: "cod_tipo",
+  label: "Tipo de actividad",
+  multiple: true,
+  useOpciones: () => {
+    const { data, isLoading } = tipos.useLista({ tipo_tabla: "ACTIVIDAD" });
+    const opciones = React.useMemo<ComboboxOption[]>(
+      () => (data ?? []).map((t) => ({ value: String(t.codTipo), label: t.nomTipo })),
+      [data],
+    );
+    return { opciones, cargando: isLoading };
+  },
+};
+```
+
+**(E) Consulta.** Si el endpoint responde la lista: `consultarApi(endpoint, filaSchema)`. Aquí
+hace falta una función propia porque junta dos consultas (actividades y empleados), filtra lo que
+el endpoint no filtra (fechas, asesor, tipo) y agrega `asesor` y `finalizada` a cada fila.
+
+```ts
+async function consultar(params: ParamsReporte): Promise<Fila[]> {
+  const [actividades, empleados] = await Promise.all([
+    http
+      .get<unknown>("/api/appweb/lista-actividades2", {
+        params: { cod_empresa: params.cod_empresa ?? "", cod_cc: params.cod_cc ?? "" },
+      })
+      .then((respuesta) => parseEnvelope(respuesta, filaSchema, "lista-actividades2")),
+    empleadosUsuarios.fetchLista({}),
+  ]);
+  const nombres = new Map(empleados.map((e) => [String(e.codUsuario), e.nombreCompleto]));
+  const tiposElegidos = params.cod_tipo ? params.cod_tipo.split(",") : [];
+  return actividades
+    .filter((a) => fechaEnRango(a.fecha_programada, params))
+    .filter((a) => !params.cod_usuario || String(a.cod_asesor) === params.cod_usuario)
+    .filter((a) => tiposElegidos.length === 0 || tiposElegidos.includes(String(a.cod_tipo)))
+    .map((a) => ({
+      ...a,
+      asesor: nombres.get(String(a.cod_asesor)) ?? "",
+      finalizada: a.estado_desc === "FINALIZADO" ? 1 : 0,
+    }));
+}
+```
+
+```ts
+consultar, // (E)
+```
+
+**(F) Columnas.** Una por dato de la tabla. `agrupable` = se puede agrupar por ella; `buscable`
+= el buscador busca en ella; `sumable` = se suma en el resumen; `calculada` = en el resumen se
+calcula con las sumas del grupo (un porcentaje no se suma).
+
+```ts
+columnas: [
+  { id: "codigo", label: "Código", valor: (f) => f.cod_actividad },
+  { id: "tipo", label: "Tipo", valor: (f) => f.nom_tipo, agrupable: true },
+  { id: "asesor", label: "Asesor", valor: (f) => f.asesor, agrupable: true, buscable: true },
+  { id: "cliente", label: "Cliente", valor: (f) => f.nombre_cliente, buscable: true },
+  { id: "estado", label: "Estado", valor: (f) => f.estado_desc, agrupable: true },
+  { id: "finalizada", label: "Finalizadas", valor: (f) => f.finalizada, sumable: true },
+  {
+    id: "avance",
+    label: "Avance %",
+    valor: (f) => f.finalizada * 100,
+    calculada: (sumas) => porcentaje(sumas.finalizada, sumas.cantidad),
+  },
+],
+```
+
+**(G) Agrupación inicial.** Ids de columnas `agrupable`: cómo sale agrupado el resumen al abrir.
+
+```ts
+agrupacion: { filas: ["asesor"], columna: "tipo" }, // (G)
+```
+
+**(H) Descargas.** `true` = el detalle con las columnas; una función = formato propio;
+`pdf: "contenido"` = el PDF lo genera la vista (I) con el mismo botón PDF.
+
+```ts
+descargas: { excel: excelAvance, pdf: "contenido" }, // (H)
+```
+
+```ts
+async function excelAvance({ filas, titulo, encabezado }: DescargaReporte<Fila>) {
+  await exportarExcel({
+    nombreArchivo: `${nombreArchivo(titulo)}.xlsx`,
+    titulo,
+    encabezado,
+    hojas: [
+      {
+        nombre: titulo.slice(0, 31),
+        mostrarCuadricula: true,
+        autoFiltro: true,
+        columnas: ["Código", "Tipo", "Asesor", "Cliente", "Estado"],
+        filas: filas.map((f): CeldaExcel[] => [
+          f.cod_actividad,
+          f.nom_tipo,
+          f.asesor,
+          f.nombre_cliente,
+          f.finalizada ? f.estado_desc : { dato: f.estado_desc, fontColor: "FFB30000" },
+        ]),
+      },
+    ],
+  });
+}
+```
+
+**(I) Contenido.** Un componente en el mismo archivo (por eso `.tsx`) que recibe las filas y
+dibuja la sección "Reporte" en lugar de la tabla. Aquí: una gráfica por asesor, la tabla de
+siempre abajo, y el PDF de (H) cuando se pulsa el botón (`solicitudPdf` cambia), con la gráfica.
+
+```tsx
+function VistaAvance(props: ContenidoReporteProps<Fila>) {
+  const { filas, solicitudPdf, onGenerandoPdf, onErrorPdf } = props;
+  const grafica = React.useRef<HTMLDivElement>(null);
+
+  const porAsesor = React.useMemo(() => {
+    const grupos = new Map<string, { asesor: string; total: number; finalizadas: number }>();
+    for (const f of filas) {
+      const grupo = grupos.get(f.asesor) ?? { asesor: f.asesor, total: 0, finalizadas: 0 };
+      grupo.total += 1;
+      grupo.finalizadas += f.finalizada;
+      grupos.set(f.asesor, grupo);
+    }
+    return [...grupos.values()];
+  }, [filas]);
+
+  const ultimaSolicitud = React.useRef(solicitudPdf);
+  React.useEffect(() => {
+    if (solicitudPdf === ultimaSolicitud.current) return;
+    ultimaSolicitud.current = solicitudPdf;
+    onGenerandoPdf(true);
+    onErrorPdf(null);
+    descargarPdf({
+      titulo: "Avance de actividades por asesor",
+      header: {},
+      horizontal: true,
+      contenido: [
+        { tipo: "grafica", elemento: grafica.current },
+        {
+          tipo: "tabla",
+          columnas: ["Asesor", "Actividades", "Finalizadas"],
+          filas: porAsesor.map((g) => [g.asesor, g.total, g.finalizadas]),
+        },
+      ],
+    })
+      .catch((error) =>
+        onErrorPdf(error instanceof Error ? error.message : "No se pudo generar el PDF."),
+      )
+      .finally(() => onGenerandoPdf(false));
+  }, [solicitudPdf, porAsesor, onGenerandoPdf, onErrorPdf]);
+
+  return (
+    <div className="space-y-4">
+      <div ref={grafica} className="rounded-lg border p-3">
+        <BarChart width={720} height={300} data={porAsesor}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="asesor" />
+          <YAxis allowDecimals={false} />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="total" name="Actividades" fill="#94a3b8" />
+          <Bar dataKey="finalizadas" name="Finalizadas" fill="#16a34a" />
+        </BarChart>
+      </div>
+      <TablaReporte {...props} />
+    </div>
+  );
+}
+```
+
+```ts
+Contenido: VistaAvance, // (I)
+```
+
+## Paso 3 — Registro
+
+En `definiciones/<modulo>/index.ts`, importar el reporte y sumarlo a la lista (en orden de
+correlativo):
+
+```ts
+import { reporteVentasCliente } from "./reporte-ventas-cliente";
+
+export const REPORTES_PRI: readonly Reporte[] = [reporteVentasCliente];
+```
+
+**Módulo nuevo** (sin carpeta todavía):
+
+1. Crear `definiciones/<modulo>/index.ts` copiando `definiciones/crm/index.ts` (cambiar el
+   nombre de la lista, ej. `REPORTES_PRI`).
+2. En `definiciones/index.ts`: `import { REPORTES_PRI } from "./pricing";` y
+   `REPORTES = [...REPORTES_CRM, ...REPORTES_PRI]`.
+
+## Ejemplo con todas las piezas
+
+El reporte de [Cómo llenar cada marca](#cómo-llenar-cada-marca), completo: compila y funciona tal
+cual (probado con `lista-actividades2`). Usa todas las marcas (A) a (I) a la vez.
+
+```tsx
+import React from "react";
+import { Bar, BarChart, CartesianGrid, Legend, Tooltip, XAxis, YAxis } from "recharts";
+import { z } from "zod";
+import { empleadosUsuarios, tipos } from "@/features/catalogos";
+import { http } from "@/shared/api/client";
+import { parseEnvelope } from "@/shared/api/envelope";
+import type { ComboboxOption } from "@/shared/components/ui/combobox";
+import { type CeldaExcel, exportarExcel } from "@/shared/lib/excel";
+import { TablaReporte } from "../../components/contenido-reporte";
+import {
+  type ContenidoReporteProps,
+  type DescargaReporte,
+  definirReporte,
+  type FiltroReporte,
+  fechaEnRango,
+  type ParamsReporte,
+  porcentaje,
+} from "../../lib/definir-reporte";
+import { descargarPdf, nombreArchivo } from "../../lib/exportar";
+import { filtroUsuario } from "../../lib/filtros";
+
+// (A) Schema de la fila
+const filaSchema = z.looseObject({
+  cod_actividad: z.coerce.number(),
+  cod_tipo: z.coerce.number().catch(0),
+  nom_tipo: z.string().nullable().catch(""),
+  nombre_cliente: z.string().nullable().catch(""),
+  estado_desc: z.string().nullable().catch(""),
+  cod_asesor: z.coerce.number().catch(0),
+  fecha_programada: z.string().nullable().catch(""),
+});
+type Fila = z.infer<typeof filaSchema> & { asesor: string; finalizada: number };
+
+// (D) Filtro propio
+const filtroTipoActividad: FiltroReporte = {
+  id: "cod_tipo",
+  label: "Tipo de actividad",
+  multiple: true,
+  useOpciones: () => {
+    const { data, isLoading } = tipos.useLista({ tipo_tabla: "ACTIVIDAD" });
+    const opciones = React.useMemo<ComboboxOption[]>(
+      () => (data ?? []).map((t) => ({ value: String(t.codTipo), label: t.nomTipo })),
+      [data],
+    );
+    return { opciones, cargando: isLoading };
+  },
+};
+
+// (E) Consulta propia
+async function consultar(params: ParamsReporte): Promise<Fila[]> {
+  const [actividades, empleados] = await Promise.all([
+    http
+      .get<unknown>("/api/appweb/lista-actividades2", {
+        params: { cod_empresa: params.cod_empresa ?? "", cod_cc: params.cod_cc ?? "" },
+      })
+      .then((respuesta) => parseEnvelope(respuesta, filaSchema, "lista-actividades2")),
+    empleadosUsuarios.fetchLista({}),
+  ]);
+  const nombres = new Map(empleados.map((e) => [String(e.codUsuario), e.nombreCompleto]));
+  const tiposElegidos = params.cod_tipo ? params.cod_tipo.split(",") : [];
+  return actividades
+    .filter((a) => fechaEnRango(a.fecha_programada, params))
+    .filter((a) => !params.cod_usuario || String(a.cod_asesor) === params.cod_usuario)
+    .filter((a) => tiposElegidos.length === 0 || tiposElegidos.includes(String(a.cod_tipo)))
+    .map((a) => ({
+      ...a,
+      asesor: nombres.get(String(a.cod_asesor)) ?? "",
+      finalizada: a.estado_desc === "FINALIZADO" ? 1 : 0,
+    }));
+}
+
+// (H) Excel propio
+async function excelAvance({ filas, titulo, encabezado }: DescargaReporte<Fila>) {
+  await exportarExcel({
+    nombreArchivo: `${nombreArchivo(titulo)}.xlsx`,
+    titulo,
+    encabezado,
+    hojas: [
+      {
+        nombre: titulo.slice(0, 31),
+        mostrarCuadricula: true,
+        autoFiltro: true,
+        columnas: ["Código", "Tipo", "Asesor", "Cliente", "Estado"],
+        filas: filas.map((f): CeldaExcel[] => [
+          f.cod_actividad,
+          f.nom_tipo,
+          f.asesor,
+          f.nombre_cliente,
+          f.finalizada ? f.estado_desc : { dato: f.estado_desc, fontColor: "FFB30000" },
+        ]),
+      },
+    ],
+  });
+}
+
+// (I) Vista propia (+ el PDF de (H))
+function VistaAvance(props: ContenidoReporteProps<Fila>) {
+  const { filas, solicitudPdf, onGenerandoPdf, onErrorPdf } = props;
+  const grafica = React.useRef<HTMLDivElement>(null);
+
+  const porAsesor = React.useMemo(() => {
+    const grupos = new Map<string, { asesor: string; total: number; finalizadas: number }>();
+    for (const f of filas) {
+      const grupo = grupos.get(f.asesor) ?? { asesor: f.asesor, total: 0, finalizadas: 0 };
+      grupo.total += 1;
+      grupo.finalizadas += f.finalizada;
+      grupos.set(f.asesor, grupo);
+    }
+    return [...grupos.values()];
+  }, [filas]);
+
+  const ultimaSolicitud = React.useRef(solicitudPdf);
+  React.useEffect(() => {
+    if (solicitudPdf === ultimaSolicitud.current) return;
+    ultimaSolicitud.current = solicitudPdf;
+    onGenerandoPdf(true);
+    onErrorPdf(null);
+    descargarPdf({
+      titulo: "Avance de actividades por asesor",
+      header: {},
+      horizontal: true,
+      contenido: [
+        { tipo: "grafica", elemento: grafica.current },
+        {
+          tipo: "tabla",
+          columnas: ["Asesor", "Actividades", "Finalizadas"],
+          filas: porAsesor.map((g) => [g.asesor, g.total, g.finalizadas]),
+        },
+      ],
+    })
+      .catch((error) =>
+        onErrorPdf(error instanceof Error ? error.message : "No se pudo generar el PDF."),
+      )
+      .finally(() => onGenerandoPdf(false));
+  }, [solicitudPdf, porAsesor, onGenerandoPdf, onErrorPdf]);
+
+  return (
+    <div className="space-y-4">
+      <div ref={grafica} className="rounded-lg border p-3">
+        <BarChart width={720} height={300} data={porAsesor}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="asesor" />
+          <YAxis allowDecimals={false} />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="total" name="Actividades" fill="#94a3b8" />
+          <Bar dataKey="finalizadas" name="Finalizadas" fill="#16a34a" />
+        </BarChart>
+      </div>
+      <TablaReporte {...props} />
+    </div>
+  );
+}
+
+export const reporteAvanceActividades = definirReporte<Fila>({
+  nomenclatura: "CRM-AAPA-93", // (B)
+  descripcion: "Actividades finalizadas de cada asesor en el período",
+  fechas: "requeridas", // (C)
+  filtros: [filtroUsuario("Asesor", "cod_usuario"), filtroTipoActividad], // (D)
+  consultar, // (E)
+  columnas: [
+    // (F)
+    { id: "codigo", label: "Código", valor: (f) => f.cod_actividad },
+    { id: "tipo", label: "Tipo", valor: (f) => f.nom_tipo, agrupable: true },
+    { id: "asesor", label: "Asesor", valor: (f) => f.asesor, agrupable: true, buscable: true },
+    { id: "cliente", label: "Cliente", valor: (f) => f.nombre_cliente, buscable: true },
+    { id: "estado", label: "Estado", valor: (f) => f.estado_desc, agrupable: true },
+    { id: "finalizada", label: "Finalizadas", valor: (f) => f.finalizada, sumable: true },
+    {
+      id: "avance",
+      label: "Avance %",
+      valor: (f) => f.finalizada * 100,
+      calculada: (sumas) => porcentaje(sumas.finalizada, sumas.cantidad),
+    },
+  ],
+  agrupacion: { filas: ["asesor"], columna: "tipo" }, // (G)
+  descargas: { excel: excelAvance, pdf: "contenido" }, // (H)
+  Contenido: VistaAvance, // (I)
+});
+```
+
+## Ejemplos completos
 
 Las plantillas ya llenadas: reportes completos que compilan y funcionan tal cual (probados con
-`lista-actividades2`), para ver cómo queda cada caso. Equivalen a `reporte-basico.ts` (A),
-`reporte-endpoint-distinto.ts` (B) y `reporte-personalizado.tsx` (C).
+`lista-actividades2`), para ver cómo queda cada caso. Equivalen a `reporte-basico.ts` (Ejemplo A),
+`reporte-endpoint-distinto.ts` (Ejemplo B) y `reporte-personalizado.tsx` (Ejemplo C).
 
-#### Ejemplo A — básico
+### Ejemplo A — básico
+
+**Cuándo es tu caso:** el endpoint responde la lista y recibe los parámetros con los nombres de
+la pantalla. **En qué fijarte:** no hay ninguna función propia; solo schema, filtros, columnas,
+agrupación y descargas.
 
 ```ts
 import { z } from "zod";
@@ -162,7 +591,11 @@ export const reporteEjemploA = definirReporte<Fila>({
 });
 ```
 
-#### Ejemplo B — endpoint distinto (sin funciones propias)
+### Ejemplo B — endpoint distinto (sin funciones propias)
+
+**Cuándo es tu caso:** el endpoint espera otros nombres de parámetros, trae la lista en otra
+propiedad o no filtra algo (aquí, la fecha). **En qué fijarte:** las opciones de `consultarApi`
+(`nombres: { cod_usuario: "cod_asesor" }` y `filtrar`).
 
 Todo se resuelve con las opciones de `consultarApi`:
 
@@ -214,7 +647,10 @@ export const reporteEjemploB = definirReporte<Fila>({
 });
 ```
 
-#### Ejemplo C — personalizado (funciones propias)
+### Ejemplo C — personalizado (funciones propias)
+
+**Cuándo es tu caso:** hay que juntar consultas o agregar campos, o se quiere un filtro, vista,
+Excel o PDF propios. **En qué fijarte:** cada función de arriba y su línea `← N` en la definición.
 
 Cada pieza propia es una función **de este mismo archivo** (arriba) y se conecta en su
 propiedad de la definición (abajo, marcadas con `← 1` … `← 5`). Se dejan solo las que hagan
@@ -359,21 +795,3 @@ export const reporteEjemploC = definirReporte<Fila>({
   ],
 });
 ```
-
-## Paso 3 — Registro
-
-En `definiciones/<modulo>/index.ts`, importar el reporte y sumarlo a la lista (en orden de
-correlativo):
-
-```ts
-import { reporteVentasCliente } from "./reporte-ventas-cliente";
-
-export const REPORTES_PRI: readonly Reporte[] = [reporteVentasCliente];
-```
-
-**Módulo nuevo** (sin carpeta todavía):
-
-1. Crear `definiciones/<modulo>/index.ts` copiando `definiciones/crm/index.ts` (cambiar el
-   nombre de la lista, ej. `REPORTES_PRI`).
-2. En `definiciones/index.ts`: `import { REPORTES_PRI } from "./pricing";` y
-   `REPORTES = [...REPORTES_CRM, ...REPORTES_PRI]`.
