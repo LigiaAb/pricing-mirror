@@ -24,11 +24,22 @@ reportes/
                               `requerido`; sección "Reporte" = la vista de CRM, `Contenido`)
       reporte-graficas-objetivos.tsx  CRM-GOSA-05 Gráficas de objetivos de semana actual
                               (sin fechas; vista de CRM con serie semanal y medidores)
+      reporte-seguimiento.ts  CRM-S-06 Seguimiento (historial de seguimientos del cliente;
+                              cliente `requerido`, sin fechas)
+    pricing/
+      index.ts                REPORTES_PRICING
+      reporte-hit-rate.tsx    PRI-HR-01 Hit Rate (filas de report_kpi_cotizaciones para el
+                              resumen; gráficas, tablas y PDF con `contenido/pricing/hit-rate.tsx`)
+      reporte-realizacion-de-precio.tsx  PRI-RP-02 Realización de Precio (igual, con
+                              `contenido/pricing/realizacion-de-precio.tsx`)
   contenido/                  UNA CARPETA POR MÓDULO: componentes de las vistas propias
-                              (`Contenido`) de sus reportes (ej. pricing/hit-rate.tsx)
+                              (`Contenido`) de sus reportes (ej. pricing/hit-rate.tsx,
+                              pricing/realizacion-de-precio.tsx: copias de las vistas de
+                              pricing/reportes)
   lib/
     definir-reporte.ts        contrato (DefinicionReporte, ColumnaReporte, FiltroReporte)
-    filtros.ts                atajos: filtroUsuario, filtroTipo, filtroEstado, filtroLista;
+    filtros.ts                atajos: filtroUsuario, filtroCliente (busca en el servidor),
+                              filtroTipo, filtroEstado, filtroLista;
                               FILTROS_EMPRESA_CC (filtroEmpresa + filtroCentroCosto, los pone la pantalla)
     resumen-agrupado.ts       tabla dinámica genérica (calcularResumen → árbol de TablaDouble)
     exportar.ts               Excel agrupado (resumen) y PDF/Excel genéricos del reporte (detalle)
@@ -38,7 +49,7 @@ reportes/
     pantalla-reporte.tsx      título, filtros y configuración, Consultar, resumen, reporte, descargas
     personaliza-reporte.tsx   "Personaliza tu reporte" (igual que pricing: Select + NivelesBuilder)
     contenido-reporte.tsx     tabla por defecto de la sección "Reporte"
-    campos.tsx / panel.tsx    select, fecha, panel y encabezados
+    campos.tsx / panel.tsx    select, select con búsqueda en servidor, fecha, panel y encabezados
 ```
 
 ## Agregar un reporte

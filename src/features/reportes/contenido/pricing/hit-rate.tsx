@@ -14,6 +14,15 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { usePdfReporte } from "@/features/pricing/reportes";
+import {
+  type HitRateCentroCosto,
+  type HitRateUsuario,
+  useHitRate,
+} from "@/features/pricing/reportes/api/hit-rate";
+import { useObjetivoHitRate } from "@/features/pricing/reportes/api/objetivo-hit-rate";
+import type { Filtros } from "@/features/pricing/reportes/lib/filtros-types";
+import type { BloquePdf } from "@/features/pricing/reportes/lib/pdf-reporte";
 import { NOMBRE_TRANSPORTE, normalizarNombre } from "@/features/pricing/shared";
 import { Loader } from "@/shared/components/ui/loader";
 import {
@@ -25,11 +34,6 @@ import {
   TableRow,
 } from "@/shared/components/ui/table";
 import { cn } from "@/shared/lib/utils";
-import { type HitRateCentroCosto, type HitRateUsuario, useHitRate } from "@/features/pricing/reportes/api/hit-rate";
-import { Filtros } from "@/features/pricing/reportes/lib/filtros-types";
-import { usePdfReporte } from "@/features/pricing/reportes";
-import { useObjetivoHitRate } from "@/features/pricing/reportes/api/objetivo-hit-rate";
-import type { BloquePdf } from "@/features/pricing/reportes/lib/pdf-reporte";
 
 const COLORES = ["#2563eb", "#16a34a", "#ea580c", "#9333ea", "#0891b2", "#dc2626"];
 const color = (indice: number) => COLORES[indice % COLORES.length] ?? "#2563eb";

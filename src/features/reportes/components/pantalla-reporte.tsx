@@ -24,6 +24,7 @@ import {
   AccordionTrigger,
 } from "@/shared/components/ui/accordion";
 import { Button } from "@/shared/components/ui/button";
+import type { ComboboxOption } from "@/shared/components/ui/combobox";
 import { useExcelJS } from "@/shared/hooks/use-dynamic-libraries";
 import type { FiltroReporte, ParamsReporte, Reporte, ValoresFiltros } from "../lib/definir-reporte";
 import {
@@ -40,7 +41,7 @@ import {
   calcularResumen,
   camposAgrupables,
 } from "../lib/resumen-agrupado";
-import { CampoFecha, CampoMultiSelect, CampoSelect } from "./campos";
+import { CampoBusqueda, CampoFecha, CampoMultiSelect, CampoSelect } from "./campos";
 import { TablaReporte } from "./contenido-reporte";
 import { EncabezadoPanel, MensajeVacio, Panel, TituloReporte } from "./panel";
 import { PersonalizaReporte } from "./personaliza-reporte";
@@ -49,6 +50,8 @@ const SIN_FILAS: readonly unknown[] = [];
 /** Opción de permisos de la pantalla de reportes (acción "Filtrar Empresa Centro Costo"). */
 const OPCION_PERMISOS_REPORTES = "reportes";
 const sinValorInicial = () => "";
+const SIN_OPCIONES: { opciones: readonly ComboboxOption[]; cargando?: boolean } = { opciones: [] };
+const sinOpciones = () => SIN_OPCIONES;
 const fechaVisible = (iso: string) => (iso ? format(parseISO(iso), "dd/MM/yyyy") : "");
 
 /** Un filtro de la definición; su hook de opciones vive en este componente. */
@@ -63,19 +66,24 @@ function CampoFiltro({
   onChange: (id: string, valor: string) => void;
   onEtiqueta: (label: string, valor: string) => void;
 }>) {
-  const { opciones, cargando } = filtro.useOpciones(valores);
+  const usarOpciones = filtro.useOpciones ?? sinOpciones;
+  const { opciones, cargando } = usarOpciones(valores);
   const usarValorInicial = filtro.useValorInicial ?? sinValorInicial;
   const inicial = usarValorInicial();
   const valor = valores[filtro.id] ?? inicial;
+  // Filtro con `buscar`: la opción elegida (su nombre no está en `opciones`).
+  const [elegido, setElegido] = React.useState<ComboboxOption | null>(null);
   const etiqueta = !valor
     ? ""
-    : filtro.multiple
-      ? // Como Reportes CRM: los nombres en el orden de las opciones, separados por ", ".
-        opciones
-          .filter((o) => valor.split(",").includes(o.value))
-          .map((o) => o.label)
-          .join(", ")
-      : (opciones.find((o) => o.value === valor)?.label ?? valor);
+    : filtro.buscar
+      ? (elegido?.label ?? valor)
+      : filtro.multiple
+        ? // Como Reportes CRM: los nombres en el orden de las opciones, separados por ", ".
+          opciones
+            .filter((o) => valor.split(",").includes(o.value))
+            .map((o) => o.label)
+            .join(", ")
+        : (opciones.find((o) => o.value === valor)?.label ?? valor);
 
   // El valor inicial (ej. CC del contexto) pasa a los filtros cuando llega.
   React.useEffect(() => {
@@ -87,6 +95,23 @@ function CampoFiltro({
     onEtiqueta(filtro.label, String(etiqueta));
   }, [onEtiqueta, filtro.label, etiqueta]);
 
+  if (filtro.buscar) {
+    return (
+      <CampoBusqueda
+        id={`filtro-${filtro.id}`}
+        label={filtro.requerido ? `${filtro.label} *` : filtro.label}
+        // Si el valor se limpia desde fuera (ej. depende), el select queda vacío.
+        value={valor && elegido?.value === valor ? elegido : null}
+        onChange={(opcion) => {
+          setElegido(opcion);
+          onChange(filtro.id, opcion?.value ?? "");
+        }}
+        buscar={filtro.buscar}
+        placeholder={filtro.requerido ? "Buscar…" : "Todos"}
+        limpiable={!filtro.requerido}
+      />
+    );
+  }
   if (filtro.multiple) {
     return (
       <CampoMultiSelect
@@ -564,6 +589,7 @@ export function PantallaReporte({
               filas={filas}
               columnas={definicion.columnas}
               params={consultada.params}
+              encabezado={consultada.encabezado}
               solicitudPdf={solicitudPdf}
               onGenerandoPdf={setGenerandoPdfContenido}
               onErrorPdf={setErrorPdfContenido}

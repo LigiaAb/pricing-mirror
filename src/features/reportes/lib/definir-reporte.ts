@@ -69,10 +69,15 @@ export interface FiltroReporte {
    * Hook con las opciones del select. Recibe los valores actuales de los filtros, por si
    * depende de otro (ej. usuarios del CC elegido). Ver los atajos de `lib/filtros.ts`.
    */
-  useOpciones: (valores: ValoresFiltros) => {
+  useOpciones?: (valores: ValoresFiltros) => {
     opciones: readonly ComboboxOption[];
     cargando?: boolean | undefined;
   };
+  /**
+   * En lugar de `useOpciones`: busca en el servidor mientras se escribe (mínimo 2 letras), para
+   * listas muy grandes (ej. clientes). Ver `filtroCliente`.
+   */
+  buscar?: (texto: string) => Promise<ComboboxOption[]>;
   /** Valor inicial (ej. el CC del contexto operativo). Sin esto, "" (todos). */
   useValorInicial?: () => string;
   /** Este filtro se limpia cuando cambia alguno de estos (ej. usuario depende de `cod_cc`). */
@@ -87,6 +92,11 @@ export interface ContenidoReporteProps<TFila> {
   filas: readonly TFila[];
   columnas: readonly ColumnaReporte<TFila>[];
   params: ParamsReporte;
+  /**
+   * Filtros de la última consulta con nombre (Período, Empresa, Centro de costo y el `label` de
+   * cada filtro → el nombre elegido), los mismos del encabezado de las descargas.
+   */
+  encabezado: Record<string, string>;
   /**
    * Con `descargas: { pdf: "contenido" }`: sube cada vez que se pulsa el botón PDF; el
    * `Contenido` genera el PDF cuando cambia (ej. `descargar` de una vista de pricing).

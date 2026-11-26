@@ -1,0 +1,1233 @@
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+index a428f77..d044574 100644
+--- a/src/features/reportes/ARQUITECTURA.md
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -24,11 +24,22 @@ reportes/
+                               `requerido`; sección "Reporte" = la vista de CRM, `Contenido`)
+       reporte-graficas-objetivos.tsx  CRM-GOSA-05 Gráficas de objetivos de semana actual
+                               (sin fechas; vista de CRM con serie semanal y medidores)
++      reporte-seguimiento.ts  CRM-S-06 Seguimiento (historial de seguimientos del cliente;
++                              cliente `requerido`, sin fechas)
++    pricing/
++      index.ts                REPORTES_PRICING
++      reporte-hit-rate.tsx    PRI-HR-01 Hit Rate (filas de report_kpi_cotizaciones para el
++                              resumen; gráficas, tablas y PDF con `contenido/pricing/hit-rate.tsx`)
++      reporte-realizacion-de-precio.tsx  PRI-RP-02 Realización de Precio (igual, con
++                              `contenido/pricing/realizacion-de-precio.tsx`)
+   contenido/                  UNA CARPETA POR MÓDULO: componentes de las vistas propias
+-                              (`Contenido`) de sus reportes (ej. pricing/hit-rate.tsx)
++                              (`Contenido`) de sus reportes (ej. pricing/hit-rate.tsx,
++                              pricing/realizacion-de-precio.tsx: copias de las vistas de
++                              pricing/reportes)
+   lib/
+     definir-reporte.ts        contrato (DefinicionReporte, ColumnaReporte, FiltroReporte)
+-    filtros.ts                atajos: filtroUsuario, filtroTipo, filtroEstado, filtroLista;
++    filtros.ts                atajos: filtroUsuario, filtroCliente (busca en el servidor),
++                              filtroTipo, filtroEstado, filtroLista;
+                               FILTROS_EMPRESA_CC (filtroEmpresa + filtroCentroCosto, los pone la pantalla)
+     resumen-agrupado.ts       tabla dinámica genérica (calcularResumen → árbol de TablaDouble)
+     exportar.ts               Excel agrupado (resumen) y PDF/Excel genéricos del reporte (detalle)
+@@ -38,7 +49,7 @@ reportes/
+     pantalla-reporte.tsx      título, filtros y configuración, Consultar, resumen, reporte, descargas
+     personaliza-reporte.tsx   "Personaliza tu reporte" (igual que pricing: Select + NivelesBuilder)
+     contenido-reporte.tsx     tabla por defecto de la sección "Reporte"
+-    campos.tsx / panel.tsx    select, fecha, panel y encabezados
++    campos.tsx / panel.tsx    select, select con búsqueda en servidor, fecha, panel y encabezados
+ ```
+ 
+ ## Agregar un reporte
+diff --git a/src/features/reportes/DOCUMENTACION.md b/src/features/reportes/DOCUMENTACION.md
+index 5f21e2a..0090ab6 100644
+--- a/src/features/reportes/DOCUMENTACION.md
++++ b/src/features/reportes/DOCUMENTACION.md
+@@ -75,7 +75,7 @@ Atajos de `src/features/reportes/lib/filtros.ts` (el segundo argumento es el **n
+ | Atajo                                        | Qué muestra                                   |
+ | -------------------------------------------- | --------------------------------------------- |
+ | `filtroUsuario("Asesor", "cod_asesor")`      | Usuarios del CC elegido                       |
+-| `filtroCliente("Cliente", "cod_cliente")`    | Clientes activos                              |
++| `filtroCliente("Cliente", "cod_cliente")`    | Clientes por nombre, buscados en el servidor (mínimo 2 letras) |
+ | `filtroTipo("TIPO_PAGO", "cod_tipo_pago", "Tipo de pago")` | Catálogo `TIPO` de esa `TIPO_TABLA` |
+ | `filtroEstado("ACTIVIDAD", "cod_estado")`    | Estados del catálogo de ese tipo              |
+ | `filtroLista("moneda", "Moneda", [{ value: "1", label: "GTQ" }])` | Opciones fijas           |
+@@ -119,6 +119,9 @@ const filtroTipoActividad: FiltroReporte = {
+ - `useOpciones` y `useValorInicial` son hooks: pueden usar `useLista` de un catálogo, stores,
+   etc., y siguen las reglas de los hooks (siempre se llaman, sin `if`).
+ - Se usa igual que un atajo: `filtros: [filtroTipoActividad]`.
++- **Lista muy grande** (ej. clientes): en lugar de `useOpciones`, `buscar: async (texto) => opciones`
++  busca en el servidor mientras se escribe (mínimo 2 letras). Ejemplo: `filtroCliente` en
++  `lib/filtros.ts`.
+ - Empresa y CC tampoco van aquí: los pone la pantalla.
+ 
+ ## Consulta (E)
+diff --git a/src/features/reportes/components/campos.tsx b/src/features/reportes/components/campos.tsx
+index 578030d..e88fca2 100644
+--- a/src/features/reportes/components/campos.tsx
++++ b/src/features/reportes/components/campos.tsx
+@@ -1,6 +1,7 @@
+ "use client";
+ 
+ import { X } from "lucide-react";
++import { AsyncComboboxInput } from "@/shared/components/form/fields/async-combobox-input";
+ import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
+ import { Field, FieldLabel } from "@/shared/components/ui/field";
+ import { MultiSelect } from "@/shared/components/ui/multi-select";
+@@ -76,6 +77,49 @@ export function CampoSelect({
+   );
+ }
+ 
++/**
++ * Select que busca en el servidor mientras se escribe (mínimo 2 letras), con "x" para limpiar.
++ * Devuelve la opción elegida (para su nombre); `null` = sin valor.
++ */
++export function CampoBusqueda({
++  id,
++  label,
++  value,
++  onChange,
++  buscar,
++  placeholder = "Todos",
++  limpiable = true,
++}: Readonly<{
++  id: string;
++  label: string;
++  value: ComboboxOption | null;
++  onChange: (opcion: ComboboxOption | null) => void;
++  buscar: (texto: string) => Promise<ComboboxOption[]>;
++  placeholder?: string;
++  limpiable?: boolean;
++}>) {
++  return (
++    <Field className="gap-1">
++      <FieldLabel htmlFor={id}>{label}</FieldLabel>
++      <AsyncComboboxInput<ComboboxOption>
++        id={id}
++        value={value}
++        onChange={onChange}
++        fetchOptions={buscar}
++        queryKey={`reportes-${id}`}
++        minSearchLength={2}
++        fetchOnEmpty={false}
++        getOptionValue={(opcion) => opcion.value}
++        getOptionLabel={(opcion) => String(opcion.label)}
++        placeholder={placeholder}
++        searchPlaceholder="Escribe al menos 2 letras..."
++        contentClassName="z-[9999]"
++        clearable={limpiable}
++      />
++    </Field>
++  );
++}
++
+ /** Select de selección múltiple (chips) con "x" para limpiar; el valor va separado por comas. */
+ export function CampoMultiSelect({
+   id,
+diff --git a/src/features/reportes/components/pantalla-reporte.tsx b/src/features/reportes/components/pantalla-reporte.tsx
+index ea9b1cb..4db0248 100644
+--- a/src/features/reportes/components/pantalla-reporte.tsx
++++ b/src/features/reportes/components/pantalla-reporte.tsx
+@@ -24,6 +24,7 @@ import {
+   AccordionTrigger,
+ } from "@/shared/components/ui/accordion";
+ import { Button } from "@/shared/components/ui/button";
++import type { ComboboxOption } from "@/shared/components/ui/combobox";
+ import { useExcelJS } from "@/shared/hooks/use-dynamic-libraries";
+ import type { FiltroReporte, ParamsReporte, Reporte, ValoresFiltros } from "../lib/definir-reporte";
+ import {
+@@ -40,7 +41,7 @@ import {
+   calcularResumen,
+   camposAgrupables,
+ } from "../lib/resumen-agrupado";
+-import { CampoFecha, CampoMultiSelect, CampoSelect } from "./campos";
++import { CampoBusqueda, CampoFecha, CampoMultiSelect, CampoSelect } from "./campos";
+ import { TablaReporte } from "./contenido-reporte";
+ import { EncabezadoPanel, MensajeVacio, Panel, TituloReporte } from "./panel";
+ import { PersonalizaReporte } from "./personaliza-reporte";
+@@ -49,6 +50,8 @@ const SIN_FILAS: readonly unknown[] = [];
+ /** Opción de permisos de la pantalla de reportes (acción "Filtrar Empresa Centro Costo"). */
+ const OPCION_PERMISOS_REPORTES = "reportes";
+ const sinValorInicial = () => "";
++const SIN_OPCIONES: { opciones: readonly ComboboxOption[]; cargando?: boolean } = { opciones: [] };
++const sinOpciones = () => SIN_OPCIONES;
+ const fechaVisible = (iso: string) => (iso ? format(parseISO(iso), "dd/MM/yyyy") : "");
+ 
+ /** Un filtro de la definición; su hook de opciones vive en este componente. */
+@@ -63,19 +66,24 @@ function CampoFiltro({
+   onChange: (id: string, valor: string) => void;
+   onEtiqueta: (label: string, valor: string) => void;
+ }>) {
+-  const { opciones, cargando } = filtro.useOpciones(valores);
++  const usarOpciones = filtro.useOpciones ?? sinOpciones;
++  const { opciones, cargando } = usarOpciones(valores);
+   const usarValorInicial = filtro.useValorInicial ?? sinValorInicial;
+   const inicial = usarValorInicial();
+   const valor = valores[filtro.id] ?? inicial;
++  // Filtro con `buscar`: la opción elegida (su nombre no está en `opciones`).
++  const [elegido, setElegido] = React.useState<ComboboxOption | null>(null);
+   const etiqueta = !valor
+     ? ""
+-    : filtro.multiple
+-      ? // Como Reportes CRM: los nombres en el orden de las opciones, separados por ", ".
+-        opciones
+-          .filter((o) => valor.split(",").includes(o.value))
+-          .map((o) => o.label)
+-          .join(", ")
+-      : (opciones.find((o) => o.value === valor)?.label ?? valor);
++    : filtro.buscar
++      ? (elegido?.label ?? valor)
++      : filtro.multiple
++        ? // Como Reportes CRM: los nombres en el orden de las opciones, separados por ", ".
++          opciones
++            .filter((o) => valor.split(",").includes(o.value))
++            .map((o) => o.label)
++            .join(", ")
++        : (opciones.find((o) => o.value === valor)?.label ?? valor);
+ 
+   // El valor inicial (ej. CC del contexto) pasa a los filtros cuando llega.
+   React.useEffect(() => {
+@@ -87,6 +95,23 @@ function CampoFiltro({
+     onEtiqueta(filtro.label, String(etiqueta));
+   }, [onEtiqueta, filtro.label, etiqueta]);
+ 
++  if (filtro.buscar) {
++    return (
++      <CampoBusqueda
++        id={`filtro-${filtro.id}`}
++        label={filtro.requerido ? `${filtro.label} *` : filtro.label}
++        // Si el valor se limpia desde fuera (ej. depende), el select queda vacío.
++        value={valor && elegido?.value === valor ? elegido : null}
++        onChange={(opcion) => {
++          setElegido(opcion);
++          onChange(filtro.id, opcion?.value ?? "");
++        }}
++        buscar={filtro.buscar}
++        placeholder={filtro.requerido ? "Buscar…" : "Todos"}
++        limpiable={!filtro.requerido}
++      />
++    );
++  }
+   if (filtro.multiple) {
+     return (
+       <CampoMultiSelect
+@@ -564,6 +589,7 @@ export function PantallaReporte({
+               filas={filas}
+               columnas={definicion.columnas}
+               params={consultada.params}
++              encabezado={consultada.encabezado}
+               solicitudPdf={solicitudPdf}
+               onGenerandoPdf={setGenerandoPdfContenido}
+               onErrorPdf={setErrorPdfContenido}
+diff --git a/src/features/reportes/contenido/pricing/hit-rate.tsx b/src/features/reportes/contenido/pricing/hit-rate.tsx
+index c0c9f7e..405bc2e 100644
+--- a/src/features/reportes/contenido/pricing/hit-rate.tsx
++++ b/src/features/reportes/contenido/pricing/hit-rate.tsx
+@@ -14,6 +14,15 @@ import {
+   XAxis,
+   YAxis,
+ } from "recharts";
++import { usePdfReporte } from "@/features/pricing/reportes";
++import {
++  type HitRateCentroCosto,
++  type HitRateUsuario,
++  useHitRate,
++} from "@/features/pricing/reportes/api/hit-rate";
++import { useObjetivoHitRate } from "@/features/pricing/reportes/api/objetivo-hit-rate";
++import type { Filtros } from "@/features/pricing/reportes/lib/filtros-types";
++import type { BloquePdf } from "@/features/pricing/reportes/lib/pdf-reporte";
+ import { NOMBRE_TRANSPORTE, normalizarNombre } from "@/features/pricing/shared";
+ import { Loader } from "@/shared/components/ui/loader";
+ import {
+@@ -25,11 +34,6 @@ import {
+   TableRow,
+ } from "@/shared/components/ui/table";
+ import { cn } from "@/shared/lib/utils";
+-import { type HitRateCentroCosto, type HitRateUsuario, useHitRate } from "@/features/pricing/reportes/api/hit-rate";
+-import { Filtros } from "@/features/pricing/reportes/lib/filtros-types";
+-import { usePdfReporte } from "@/features/pricing/reportes";
+-import { useObjetivoHitRate } from "@/features/pricing/reportes/api/objetivo-hit-rate";
+-import type { BloquePdf } from "@/features/pricing/reportes/lib/pdf-reporte";
+ 
+ const COLORES = ["#2563eb", "#16a34a", "#ea580c", "#9333ea", "#0891b2", "#dc2626"];
+ const color = (indice: number) => COLORES[indice % COLORES.length] ?? "#2563eb";
+diff --git a/src/features/reportes/contenido/pricing/realizacion-de-precio.tsx b/src/features/reportes/contenido/pricing/realizacion-de-precio.tsx
+new file mode 100644
+index 0000000..494b6c0
+--- /dev/null
++++ b/src/features/reportes/contenido/pricing/realizacion-de-precio.tsx
+@@ -0,0 +1,375 @@
++"use client";
++
++import { format } from "date-fns";
++import React from "react";
++import { Bar, BarChart, CartesianGrid, Legend, Tooltip, XAxis, YAxis } from "recharts";
++import { usePdfReporte } from "@/features/pricing/reportes";
++import {
++  type ReporteRealizacionDePrecio,
++  useRealizacionDePrecio,
++} from "@/features/pricing/reportes/api/realizacion-de-precio";
++import type { Filtros } from "@/features/pricing/reportes/lib/filtros-types";
++import { Loader } from "@/shared/components/ui/loader";
++import {
++  Table,
++  TableBody,
++  TableCell,
++  TableHead,
++  TableHeader,
++  TableRow,
++} from "@/shared/components/ui/table";
++import { cn } from "@/shared/lib/utils";
++
++const COLORES = ["#2563eb", "#16a34a", "#ea580c", "#9333ea", "#0891b2", "#dc2626"];
++const color = (indice: number) => COLORES[indice % COLORES.length] ?? "#2563eb";
++const clase = "bg-card border rounded-md p-2";
++
++type BarCharObj = {
++  seccion: string;
++  [nombre: string]: string | number;
++};
++
++function GenerarTabla({ data }: { data: BarCharObj[] }) {
++  const columnas = [
++    {
++      accessorKey: "name",
++      header: "Nombre",
++    },
++    ...data.map(({ seccion }) => ({
++      accessorKey: seccion,
++      header: seccion,
++    })),
++  ];
++
++  const datosTabla = Object.values(
++    data.reduce<Record<string, Record<string, string | number>>>(
++      (acc, { seccion, ...usuarios }: BarCharObj) => {
++        Object.entries(usuarios).forEach(([nombre, total]) => {
++          acc[nombre] ??= { name: nombre };
++          acc[nombre][seccion] = total;
++        });
++
++        return acc;
++      },
++      {},
++    ),
++  );
++
++  return (
++    <div className="px-5 w-full">
++      <Table>
++        <TableHeader className="rounded-lg bg-transparent">
++          <TableRow className="rounded-lg bg-transparent">
++            {columnas.map((columna) => (
++              <TableHead key={columna.accessorKey}>{columna.header}</TableHead>
++            ))}
++          </TableRow>
++        </TableHeader>
++        <TableBody>
++          {datosTabla.map((fila) => (
++            <TableRow key={fila.name}>
++              {columnas.map((columna) => {
++                const valor = fila[columna.accessorKey];
++                const numero =
++                  columna.accessorKey === "name" || valor === undefined ? null : Number(valor);
++
++                return (
++                  <TableCell
++                    key={columna.accessorKey}
++                    className={columna.accessorKey !== "name" ? "text-right" : ""}
++                  >
++                    {columna.accessorKey === "name" ? (
++                      valor
++                    ) : numero !== null ? (
++                      <pre>{(numero * 100).toFixed(2)}%</pre>
++                    ) : (
++                      "-"
++                    )}
++                  </TableCell>
++                );
++              })}
++            </TableRow>
++          ))}
++        </TableBody>
++      </Table>
++    </div>
++  );
++}
++
++const SimpleBarChart = ({
++  data,
++  titulo,
++  ref,
++  isAnimationActive = true,
++  maxHeight = "20rem",
++  maxWidth = "50rem",
++}: {
++  data: BarCharObj[];
++  isAnimationActive?: boolean;
++  titulo: string;
++  ref?: React.Ref<HTMLDivElement>;
++  maxHeight?: number | string;
++  maxWidth?: number | string;
++}) => {
++  const nombres = [
++    ...new Set(data.flatMap((grupo) => Object.keys(grupo).filter((clave) => clave !== "seccion"))),
++  ];
++
++  const ticks = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
++
++  return (
++    <div
++      style={{
++        textAlign: "center",
++        width: "100%",
++        aspectRatio: 1.618,
++        maxHeight,
++        maxWidth,
++      }}
++      className="mx-auto"
++      ref={ref}
++    >
++      <h2 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "10px" }}>{titulo}</h2>
++      <BarChart
++        style={{ width: "100%", maxHeight, maxWidth, aspectRatio: 1.618 }}
++        className="mx-auto"
++        responsive
++        data={data}
++        margin={{
++          top: 5,
++          right: 5,
++          left: 5,
++          bottom: 5,
++        }}
++      >
++        <CartesianGrid yAxisId="left" horizontalValues={ticks} vertical={false} />
++        <YAxis
++          yAxisId="left"
++          orientation="left"
++          domain={[0, 1]}
++          ticks={ticks}
++          allowDataOverflow
++          tickFormatter={(value: number) => `${(value * 100).toFixed(0)}%`}
++        />
++        <XAxis
++          dataKey="seccion"
++          interval={0}
++          angle={-45}
++          textAnchor="end"
++          tick={{ fontSize: 11 }}
++        />
++        <Legend />
++        <Tooltip formatter={(value) => `${(Number(value ?? 0) * 100).toFixed(2)}%`} />
++        {nombres.map((nombre, indice) => (
++          <Bar
++            key={nombre}
++            yAxisId="left"
++            dataKey={nombre}
++            name={nombre}
++            radius={[5, 5, 0, 0]}
++            fill={`${color(indice)}DA`}
++            maxBarSize={50}
++            isAnimationActive={isAnimationActive}
++            minPointSize={0.5}
++          />
++        ))}
++      </BarChart>
++    </div>
++  );
++};
++
++/** Vistas que monta ListaReportes; "descarga" es la única que genera el PDF. */
++export type TipoVistaRealizacionDePrecio =
++  | "descarga"
++  | "tablas"
++  | "grafica-usuario"
++  | "grafica-transporte"
++  | "grafica-otros";
++
++/** Proporción por usuario de cada grupo (RdPs, RdPd, RdPp) respecto a su total global. */
++function formatearRealizacionDePrecio(data: ReporteRealizacionDePrecio | undefined): BarCharObj[] {
++  const totalesPorUsuario = new Map(
++    (data?.global_by_user ?? []).map((item) => [item.usuario, Number(item.total)]),
++  );
++
++  const grupos = {
++    RdPs: data?.by_user_alto ?? [],
++    RdPd: data?.by_user_bajo ?? [],
++    RdPp: data?.by_user_original ?? [],
++  };
++
++  return Object.entries(grupos).map(([seccion, registros]) => ({
++    seccion,
++    ...Object.fromEntries(
++      registros.map((item) => {
++        const totalUsuario = totalesPorUsuario.get(item.usuario) ?? 0;
++        const proporcion = totalUsuario > 0 ? Number(item.total) / totalUsuario : 0;
++        return [
++          `${item.nombres ?? ""} ${item.apellidos ?? ""}`.trim(),
++          Number(proporcion.toFixed(4)),
++        ];
++      }),
++    ),
++  }));
++}
++
++/** Consulta y transforma el reporte una vez por cambio de data. */
++function useDatosRealizacionDePrecio(filtros: Filtros) {
++  const consulta = useRealizacionDePrecio(filtros);
++  const { data } = consulta;
++  const datosFormateados = React.useMemo(() => formatearRealizacionDePrecio(data), [data]);
++  return { consulta, datosFormateados };
++}
++
++/** Instancia oculta: monta la gráfica sin animación y genera el PDF al cambiar descargar. */
++function RealizacionDePrecioDescarga({
++  filtros,
++  descargar,
++  onErrorPdf,
++  onGenerandoPdf,
++}: {
++  filtros: Filtros;
++  descargar: number;
++  onErrorPdf?: ((mensaje: string | null) => void) | undefined;
++  onGenerandoPdf?: ((generando: boolean) => void) | undefined;
++}) {
++  const ref = React.useRef<HTMLDivElement>(null);
++  const ultimaDescarga = React.useRef(descargar);
++
++  const { generar, generando: generandoPdf } = usePdfReporte({
++    onError: onErrorPdf,
++    onGenerando: onGenerandoPdf,
++  });
++
++  const {
++    consulta: { data, isLoading, error },
++    datosFormateados,
++  } = useDatosRealizacionDePrecio(filtros);
++
++  const generarPdf = React.useCallback(() => {
++    if (generandoPdf) return;
++    if (!data) {
++      onErrorPdf?.("Espera a que termine la consulta antes de descargar.");
++      return;
++    }
++    const nombres = [
++      ...new Set(datosFormateados.flatMap(({ seccion, ...usuarios }) => Object.keys(usuarios))),
++    ];
++    generar({
++      titulo: "Realizacion de Precio (RdP)",
++      archivo: `realizacion-de-precio-${format(new Date(), "ddMMyyyyHHmmss")}.pdf`,
++      horizontal: true,
++      header: {
++        Período: `${format(filtros.fecha_inicio, "dd-MM-yyyy")} al ${format(filtros.fecha_fin, "dd-MM-yyyy")}`,
++        Empresa: filtros.cod_empresa?.nombre,
++        "Centro de Costo": filtros.cod_cc?.nombre,
++        ...(filtros.cod_usuario ? { Usuario: filtros.cod_usuario?.label } : {}),
++        ...(filtros.cod_tipo_pago ? { "Tipo de pago": filtros.cod_tipo_pago?.label } : {}),
++      },
++      // Tabla, gráfica y leyenda ocupan el ancho útil. Mueve los bloques para cambiar el orden.
++      contenido: [
++        {
++          tipo: "tabla",
++          columnas: ["Nombre", ...datosFormateados.map(({ seccion }) => seccion)],
++          filas: nombres.map((nombre) => [
++            nombre,
++            ...datosFormateados.map((fila) =>
++              fila[nombre] !== undefined ? `${(Number(fila[nombre]) * 100).toFixed(2)}%` : "-",
++            ),
++          ]),
++        },
++        { tipo: "pagina" },
++        { tipo: "grafica", elemento: ref.current },
++        {
++          tipo: "leyenda",
++          entradas: nombres.map((nombre, indice) => ({ texto: nombre, color: color(indice) })),
++        },
++      ],
++    });
++  }, [filtros, data, datosFormateados, generandoPdf, onErrorPdf, generar]);
++
++  React.useEffect(() => {
++    if (descargar === ultimaDescarga.current || !data) return;
++    ultimaDescarga.current = descargar;
++    generarPdf();
++  }, [descargar, data, generarPdf]);
++
++  if (isLoading || error) return null;
++
++  return (
++    <div
++      aria-hidden="true"
++      style={{
++        position: "absolute",
++        left: "-100000px",
++        top: 0,
++        width: "1200px",
++        pointerEvents: "none",
++      }}
++    >
++      <SimpleBarChart data={datosFormateados} titulo="" ref={ref} isAnimationActive={false} />
++    </div>
++  );
++}
++
++/** Vistas en pantalla: solo renderizan lo visible (el PDF lo genera la instancia de descarga). */
++function RealizacionDePrecioVista({
++  filtros,
++  tipo,
++}: {
++  filtros: Filtros;
++  tipo: TipoVistaRealizacionDePrecio;
++}) {
++  const {
++    consulta: { isLoading, error },
++    datosFormateados,
++  } = useDatosRealizacionDePrecio(filtros);
++
++  if (isLoading) return <Loader />;
++
++  if (error) return <div>Error</div>;
++
++  return (
++    <div className="flex flex-1 flex-col bg-background">
++      <div className="flex flex-1 flex-col bg-background gap-5">
++        {tipo === "tablas" && (
++          <div className={cn(clase, "flex size-full")}>
++            <GenerarTabla data={datosFormateados} />
++          </div>
++        )}
++        {tipo.startsWith("grafica") && (
++          <div className={cn(clase, "flex size-full")}>
++            {tipo === "grafica-usuario" && <SimpleBarChart data={datosFormateados} titulo="" />}
++          </div>
++        )}
++      </div>
++    </div>
++  );
++}
++
++function RealizacionDePrecio({
++  filtros,
++  tipo,
++  descargar = 0,
++  onErrorPdf,
++  onGenerandoPdf,
++}: {
++  filtros: Filtros;
++  tipo: TipoVistaRealizacionDePrecio;
++  descargar?: number;
++  onErrorPdf?: (mensaje: string | null) => void;
++  onGenerandoPdf?: (generando: boolean) => void;
++}) {
++  return tipo === "descarga" ? (
++    <RealizacionDePrecioDescarga
++      filtros={filtros}
++      descargar={descargar}
++      onErrorPdf={onErrorPdf}
++      onGenerandoPdf={onGenerandoPdf}
++    />
++  ) : (
++    <RealizacionDePrecioVista filtros={filtros} tipo={tipo} />
++  );
++}
++
++export default RealizacionDePrecio;
+diff --git a/src/features/reportes/definiciones/crm/index.ts b/src/features/reportes/definiciones/crm/index.ts
+index dbf06f5..d47ebd9 100644
+--- a/src/features/reportes/definiciones/crm/index.ts
++++ b/src/features/reportes/definiciones/crm/index.ts
+@@ -2,6 +2,7 @@ import type { Reporte } from "../../lib/definir-reporte";
+ import { reporteActividades } from "./reporte-actividades";
+ import { reporteGraficasObjetivos } from "./reporte-graficas-objetivos";
+ import { reporteObjetivos } from "./reporte-objetivos";
++import { reporteSeguimiento } from "./reporte-seguimiento";
+ import { reporteVisitas } from "./reporte-visitas";
+ import { reporteVisitasHistorico } from "./reporte-visitas-historico";
+ 
+@@ -12,4 +13,5 @@ export const REPORTES_CRM: readonly Reporte[] = [
+   reporteActividades,
+   reporteObjetivos,
+   reporteGraficasObjetivos,
++  reporteSeguimiento,
+ ];
+diff --git a/src/features/reportes/definiciones/crm/reporte-seguimiento.ts b/src/features/reportes/definiciones/crm/reporte-seguimiento.ts
+new file mode 100644
+index 0000000..4f7338f
+--- /dev/null
++++ b/src/features/reportes/definiciones/crm/reporte-seguimiento.ts
+@@ -0,0 +1,80 @@
++import {
++  type HistorialActividad,
++  historialActividadSchema,
++} from "@/features/actividades/api/historial-actividades";
++import { empresas } from "@/features/catalogos";
++import { http } from "@/shared/api/client";
++import { parseEnvelope } from "@/shared/api/envelope";
++import { formatearFechaHora } from "@/shared/lib/date";
++import { definirReporte, type ParamsReporte } from "../../lib/definir-reporte";
++import { filtroCliente } from "../../lib/filtros";
++
++/**
++ * SEGUIMIENTO (historial de seguimientos de un cliente)
++ *
++ * Igual al "Seguimiento" de Reportes CRM: `historial-actividades` del cliente elegido, solo de la
++ * empresa y el centro de costo de la consulta, de la más reciente a la más antigua.
++ */
++async function consultar(params: ParamsReporte): Promise<HistorialActividad[]> {
++  if (!params.cod_cliente) return [];
++  const [filas, listaEmpresas] = await Promise.all([
++    http
++      .get<unknown>("/api/appweb/historial-actividades", {
++        params: { entidad_id: params.cod_cliente },
++      })
++      .then((respuesta) =>
++        parseEnvelope(respuesta, historialActividadSchema, "historial-actividades"),
++      ),
++    params.cod_empresa ? empresas.fetchLista() : Promise.resolve([]),
++  ]);
++  // Respaldo del legacy: filas sin `cod_empresa` se comparan por nombre de empresa.
++  const empresaNombre =
++    listaEmpresas.find((e) => String(e.cod_empresa) === params.cod_empresa)?.nombre_emp ?? "";
++  return filas
++    .filter(
++      (fila) =>
++        (!params.cod_empresa ||
++          (fila.cod_empresa
++            ? String(fila.cod_empresa) === params.cod_empresa
++            : fila.nombre_empresa === empresaNombre)) &&
++        (!params.cod_cc || String(fila.cod_cenco ?? "") === params.cod_cc),
++    )
++    .sort(
++      (a, b) => new Date(b.fecha_programada).getTime() - new Date(a.fecha_programada).getTime(),
++    );
++}
++
++export const reporteSeguimiento = definirReporte<HistorialActividad>({
++  nomenclatura: "CRM-S-06",
++  descripcion: "Historial de seguimientos del cliente",
++  fechas: "ninguna",
++  filtros: [{ ...filtroCliente("Cliente", "cod_cliente"), requerido: true }],
++  consultar,
++  columnas: [
++    {
++      id: "departamento",
++      label: "Departamento",
++      valor: (f) => f.nombre_cenco,
++      agrupable: true,
++      buscable: true,
++    },
++    {
++      id: "seguimiento",
++      label: "Seguimiento",
++      valor: (f) => f.nom_tipo,
++      agrupable: true,
++      buscable: true,
++    },
++    {
++      id: "responsable",
++      label: "Responsable",
++      valor: (f) => f.nombre_usuario,
++      agrupable: true,
++      buscable: true,
++    },
++    { id: "fecha", label: "Fecha", valor: (f) => formatearFechaHora(f.fecha_programada) },
++    { id: "descripcion", label: "Descripción", valor: (f) => f.descripcion, buscable: true },
++    { id: "resultado", label: "Resultado", valor: (f) => f.resultado, buscable: true },
++  ],
++  descargas: { excel: true },
++});
+diff --git a/src/features/reportes/definiciones/pricing/index.ts b/src/features/reportes/definiciones/pricing/index.ts
+index 77145f0..cb60e1c 100644
+--- a/src/features/reportes/definiciones/pricing/index.ts
++++ b/src/features/reportes/definiciones/pricing/index.ts
+@@ -1,5 +1,6 @@
+ import type { Reporte } from "../../lib/definir-reporte";
+ import { reporteHitRate } from "./reporte-hit-rate";
++import { reporteRealizacionDePrecio } from "./reporte-realizacion-de-precio";
+ 
+-/** Reportes del módulo CRM (nomenclatura `CRM-…`), en orden de correlativo. */
+-export const REPORTES_PRICING: readonly Reporte[] = [reporteHitRate];
++/** Reportes del módulo Pricing (nomenclatura `PRI-…`), en orden de correlativo. */
++export const REPORTES_PRICING: readonly Reporte[] = [reporteHitRate, reporteRealizacionDePrecio];
+diff --git a/src/features/reportes/definiciones/pricing/reporte-hit-rate.tsx b/src/features/reportes/definiciones/pricing/reporte-hit-rate.tsx
+index 47313d9..4a5d2f6 100644
+--- a/src/features/reportes/definiciones/pricing/reporte-hit-rate.tsx
++++ b/src/features/reportes/definiciones/pricing/reporte-hit-rate.tsx
+@@ -1,24 +1,18 @@
+ import { z } from "zod";
+-import { consultarApi } from "../../api/consultar-api";
+-import { ContenidoReporteProps, definirReporte, DescargaReporte, fechaEnRango } from "../../lib/definir-reporte";
+-import { filtroCliente, filtroTipo, filtroUsuario } from "../../lib/filtros";
+ import type { Filtros } from "@/features/pricing/reportes/lib/filtros-types";
+ import { zId } from "@/shared/lib/zod-scalars";
++import { consultarApi } from "../../api/consultar-api";
+ import { HitRate } from "../../contenido/pricing/hit-rate";
+-import { tipos } from "@/features/catalogos";
++import { type ContenidoReporteProps, definirReporte, porcentaje } from "../../lib/definir-reporte";
++import { filtroCliente, filtroTipo, filtroUsuario } from "../../lib/filtros";
+ 
+ const texto = z.string().nullable().optional();
+ const bandera = z.coerce.number().catch(0);
+ 
+ /**
+- * PLANTILLA — ENDPOINT DISTINTO (sin funciones propias)
+- * Para un endpoint que trae la lista en otra propiedad, espera otros nombres de parámetros,
+- * necesita un parámetro fijo o no filtra algo (ej. fechas). Todo se configura en las opciones de
+- * consultarApi; las que no hagan falta se borran.
+- *
+- * 1. Copiar este archivo a definiciones/<modulo>/reporte-<nombre>.ts
+- * 2. Cambiar las líneas marcadas con  // CAMBIAR  y borrar las  // OPCIONAL  que no se usen
+- * 3. Registrarlo en definiciones/<modulo>/index.ts (ver GUIA.md, paso 3)
++ * HIT RATE (PRI-HR-01): filas de `report_kpi_cotizaciones` (`reporte: "hit_rate"`) para el
++ * Resumen agrupado; gráficas, tablas y PDF con las vistas de Hit Rate de pricing
++ * (`contenido/pricing/hit-rate.tsx`, que consultan `report_hit_rate`).
+  */
+ 
+ const filaSchema = z.looseObject({
+@@ -62,73 +56,80 @@ const filaSchema = z.looseObject({
+ });
+ type Fila = z.infer<typeof filaSchema>;
+ 
+-function ContenidoHitRate({ params }: ContenidoReporteProps<Fila>) {
+-  // HitRate elige la gráfica de transporte por el NOMBRE del tipo.
+-  const transportes = tipos.useLista({ tipo_tabla: "TRANSPORTE" });
+-  const nombreTransporte =
+-    transportes.data?.find((t) => String(t.codTipo) === params.cod_tipo_transporte)?.nomTipo ?? "";
+-
+-  // Vacío = sin filtro (null / undefined), nunca 0.
+-  const opcion = (valor: string | undefined, label = "") => (valor ? { value: valor, label } : null);
+-  const codigo = (valor: string | undefined) =>
+-    valor ? { nombre: "", codigo: Number(valor) } : undefined;
+-
+-  const filtros: Filtros = {
++/**
++ * Los filtros de la consulta en el formato de las vistas de pricing. Los nombres salen del
++ * encabezado (la clave es el `label` de cada filtro). Vacío = sin filtro (null / undefined).
++ */
++function filtrosPricing(
++  params: ContenidoReporteProps<Fila>["params"],
++  encabezado: Record<string, string>,
++): Filtros {
++  const opcion = (valor: string | undefined, label = "") =>
++    valor ? { value: valor, label } : null;
++  const codigo = (valor: string | undefined, nombre = "") =>
++    valor ? { nombre, codigo: Number(valor) } : undefined;
++  return {
+     reporte: { value: "hit-rate", label: "Hit Rate" },
+     fecha_inicio: params.fecha_inicio ?? "",
+     fecha_fin: params.fecha_fin ?? "",
+-    cod_empresa: codigo(params.cod_empresa),
+-    cod_cc: codigo(params.cod_cc),
+-    cod_usuario: opcion(params.cod_usuario),
+-    cod_cliente: opcion(params.cod_cliente),
+-    cod_tipo_pago: opcion(params.cod_tipo_pago),
+-    cod_tipo_transporte: opcion(params.cod_tipo_transporte, nombreTransporte),
++    cod_empresa: codigo(params.cod_empresa, encabezado.Empresa),
++    cod_cc: codigo(params.cod_cc, encabezado["Centro de costo"]),
++    cod_usuario: opcion(params.cod_usuario, encabezado.Usuario),
++    cod_cliente: opcion(params.cod_cliente, encabezado.Cliente),
++    cod_tipo_pago: opcion(params.cod_tipo_pago, encabezado["Tipo de Pago"]),
++    // HitRate elige la gráfica de transporte por el NOMBRE del tipo.
++    cod_tipo_transporte: opcion(params.cod_tipo_transporte, encabezado.Transporte),
+   };
++}
+ 
++function ContenidoHitRate({
++  params,
++  encabezado,
++  solicitudPdf,
++  onGenerandoPdf,
++  onErrorPdf,
++}: ContenidoReporteProps<Fila>) {
++  const filtros = filtrosPricing(params, encabezado);
+   return (
+     <div className="space-y-4">
+       <HitRate filtros={filtros} tipo="grafica-usuario" />
+       <HitRate filtros={filtros} tipo="grafica-transporte" />
+       <HitRate filtros={filtros} tipo="grafica-otros" />
++      <HitRate filtros={filtros} tipo="tablas" />
++      {/* Botón PDF de la pantalla (`pdf: "contenido"`): el mismo PDF de Hit Rate de pricing. */}
++      <HitRate
++        filtros={filtros}
++        tipo="descarga"
++        descargar={solicitudPdf}
++        onGenerandoPdf={onGenerandoPdf}
++        onErrorPdf={onErrorPdf}
++      />
+     </div>
+   );
+ }
+ 
+-
+-function pdf({filas, titulo, encabezado}: DescargaReporte<Fila>)  {
+-
+-}
+-
+ export const reporteHitRate = definirReporte<Fila>({
+-  // CAMBIAR: nombre de la constante
+-  nomenclatura: "PRI-HR-01", // CAMBIAR
+-  descripcion: "Hit Rate", // CAMBIAR
+-  fechas: "requeridas", // CAMBIAR
++  nomenclatura: "PRI-HR-01",
++  descripcion: "Hit Rate",
++  fechas: "requeridas",
+   filtros: [
+-    // (D) opcional; SIN empresa ni CC
+     filtroUsuario("Usuario", "cod_usuario"),
+-    filtroTipo("TIPO_PAGO", "cod_tipo_pago", "Tipo de Pago"),
+-    // hace falta el filtro de clientes
+-    filtroCliente('Cliente', 'cod_cliente'),
++    filtroTipo("PAGO", "cod_tipo_pago", "Tipo de Pago"),
++    filtroCliente("Cliente", "cod_cliente"),
+     filtroTipo("TRANSPORTE", "cod_tipo_transporte", "Transporte"),
+-  ], // CAMBIAR
++  ],
+   consultar: consultarApi("/api/appweb/report_kpi_cotizaciones", filaSchema, {
+-    // OPCIONAL: la lista no viene en data, sino en data.<propiedad>
+     lista: "filas",
+-    // OPCIONAL: parámetros fijos que siempre se mandan
+     params: { reporte: "hit_rate" },
+-    // OPCIONAL: el endpoint espera otros nombres (nombre de la pantalla: nombre del endpoint)
+-    // nombres: { cod_empresa: "cod_emp", fecha_inicio: "fecha_inicial", fecha_fin: "fecha_final" },
+-    // OPCIONAL: lo que el endpoint no filtra se filtra aquí (true = la fila se queda)
+-    // filtrar: (f, params) => fechaEnRango(f.fecha_creacion, params),
+   }),
+   columnas: [
+-    // CAMBIAR
+-    // { id: "texto", label: "Texto", valor: (f) => f.campo_texto, agrupable: true, buscable: true },
+-    // { id: "numero", label: "Número", valor: (f) => f.campo_numero, sumable: true },
+-    // { id: "fecha", label: "Fecha", valor: (f) => f.campo_fecha },
+-    
+-    { id: "usuario", label: "Usuario", valor: (f) => f.nombres ?? '', agrupable: true, buscable: true },
++    {
++      id: "usuario",
++      label: "Usuario",
++      valor: (f) => f.nombres ?? "",
++      agrupable: true,
++      buscable: true,
++    },
+     {
+       id: "cc_nombre",
+       label: "Centro de Costo",
+@@ -139,7 +140,7 @@ export const reporteHitRate = definirReporte<Fila>({
+       id: "transporte",
+       label: "Tipo de transporte",
+       valor: (f) => f.transporte ?? "",
+-      agrupable: true, 
++      agrupable: true,
+       buscable: true,
+     },
+     {
+@@ -188,8 +189,17 @@ export const reporteHitRate = definirReporte<Fila>({
+     // { id: "mes", label: "Mes", valor: (f) => f.mes ?? '' },
+     /** Último nivel recomendado: una fila por cotización. */
+     { id: "cotizacion", label: "Cotización", valor: (f) => f.cotizacion },
++    // Medidas del Resumen agrupado, como la tabla dinámica de Hit Rate de pricing (`tabla-kpi.ts`).
++    { id: "realizada", label: "Realizadas", valor: (f) => f.realizada, sumable: true },
++    { id: "cerrada", label: "Cerradas", valor: (f) => f.cerrada, sumable: true },
++    {
++      id: "hr",
++      label: "HR %",
++      valor: (f) => porcentaje(f.cerrada, f.realizada),
++      calculada: (s) => porcentaje(s.cerrada, s.realizada),
++    },
+   ],
+-  agrupacion: { filas: ["usuario"] }, // (G) opcional: agrupación inicial (ids de columnas agrupables)
+-  descargas: { excel: true }, // OPCIONAL
+-  Contenido: ContenidoHitRate
++  agrupacion: { filas: ["usuario"] },
++  descargas: { excel: true, pdf: "contenido" },
++  Contenido: ContenidoHitRate,
+ });
+diff --git a/src/features/reportes/definiciones/pricing/reporte-realizacion-de-precio.tsx b/src/features/reportes/definiciones/pricing/reporte-realizacion-de-precio.tsx
+new file mode 100644
+index 0000000..f4faaaa
+--- /dev/null
++++ b/src/features/reportes/definiciones/pricing/reporte-realizacion-de-precio.tsx
+@@ -0,0 +1,214 @@
++import { z } from "zod";
++import type { Filtros } from "@/features/pricing/reportes/lib/filtros-types";
++import { zId } from "@/shared/lib/zod-scalars";
++import { consultarApi } from "../../api/consultar-api";
++import RealizacionDePrecio from "../../contenido/pricing/realizacion-de-precio";
++import { type ContenidoReporteProps, definirReporte, porcentaje } from "../../lib/definir-reporte";
++import { filtroCliente, filtroTipo, filtroUsuario } from "../../lib/filtros";
++
++const texto = z.string().nullable().optional();
++const bandera = z.coerce.number().catch(0);
++
++/**
++ * REALIZACIÓN DE PRECIO (PRI-RP-02): filas de `report_kpi_cotizaciones`
++ * (`reporte: "realizacion_de_precio"`) para el Resumen agrupado; gráfica, tablas y PDF con las
++ * vistas de Realización de Precio de pricing (`contenido/pricing/realizacion-de-precio.tsx`, que
++ * consultan `report_realizacion_de_precio`). Mismo schema y columnas que `reporte-hit-rate.tsx`.
++ */
++
++const filaSchema = z.looseObject({
++  cotizacion: zId,
++  fecha_creacion: texto,
++  fecha_aprobacion: texto,
++  usuario: zId,
++  nombres: texto,
++  apellidos: texto,
++  cc: zId.nullable().optional(),
++  cc_nombre: texto,
++  transporte: texto,
++  tipo_pago: texto,
++  cliente: texto,
++  /** Para buscar la cabecera completa en la ficha (filtros de lista-cotizacion-cabecera). */
++  cod_cliente: zId.nullable().optional(),
++  cod_empresa: zId.nullable().optional(),
++  estado: texto,
++  /**
++   * Origen y destino de la cabecera: nombre y código del punto de enlace o, si no hay
++   * (terrestre), de la ciudad; el país, del punto de enlace o de la ciudad.
++   */
++  origen: texto,
++  origen_codigo: texto,
++  origen_pais: texto,
++  destino: texto,
++  destino_codigo: texto,
++  destino_pais: texto,
++  /** Proveedores de los rubros de flete de la versión activa ("A / B" si hay varios). */
++  carrier: texto,
++  realizada: bandera,
++  cerrada: bandera,
++  /**
++   * Solo Realización de Precio, en las cerradas (igual que report_realizacion_de_precio):
++   * sin Spot activo; con algún Spot de venta menor a la original; con alguno mayor.
++   * Una cotización puede tener `spot_bajo` y `spot_alto` a la vez.
++   */
++  sin_spot: bandera,
++  spot_bajo: bandera,
++  spot_alto: bandera,
++});
++type Fila = z.infer<typeof filaSchema>;
++
++/**
++ * Los filtros de la consulta en el formato de las vistas de pricing. Los nombres salen del
++ * encabezado (la clave es el `label` de cada filtro). Vacío = sin filtro (null / undefined).
++ */
++function filtrosPricing(
++  params: ContenidoReporteProps<Fila>["params"],
++  encabezado: Record<string, string>,
++): Filtros {
++  const opcion = (valor: string | undefined, label = "") =>
++    valor ? { value: valor, label } : null;
++  const codigo = (valor: string | undefined, nombre = "") =>
++    valor ? { nombre, codigo: Number(valor) } : undefined;
++  return {
++    reporte: { value: "realizacion-de-precio", label: "Realización de Precio" },
++    fecha_inicio: params.fecha_inicio ?? "",
++    fecha_fin: params.fecha_fin ?? "",
++    cod_empresa: codigo(params.cod_empresa, encabezado.Empresa),
++    cod_cc: codigo(params.cod_cc, encabezado["Centro de costo"]),
++    cod_usuario: opcion(params.cod_usuario, encabezado.Usuario),
++    cod_cliente: opcion(params.cod_cliente, encabezado.Cliente),
++    cod_tipo_pago: opcion(params.cod_tipo_pago, encabezado["Tipo de Pago"]),
++    cod_tipo_transporte: null,
++  };
++}
++
++function ContenidoRealizacionDePrecio({
++  params,
++  encabezado,
++  solicitudPdf,
++  onGenerandoPdf,
++  onErrorPdf,
++}: ContenidoReporteProps<Fila>) {
++  const filtros = filtrosPricing(params, encabezado);
++  return (
++    <div className="space-y-4">
++      <RealizacionDePrecio filtros={filtros} tipo="grafica-usuario" />
++      <RealizacionDePrecio filtros={filtros} tipo="tablas" />
++      {/* Botón PDF de la pantalla (`pdf: "contenido"`): el mismo PDF de RdP de pricing. */}
++      <RealizacionDePrecio
++        filtros={filtros}
++        tipo="descarga"
++        descargar={solicitudPdf}
++        onGenerandoPdf={onGenerandoPdf}
++        onErrorPdf={onErrorPdf}
++      />
++    </div>
++  );
++}
++
++export const reporteRealizacionDePrecio = definirReporte<Fila>({
++  nomenclatura: "PRI-RP-02",
++  descripcion: "Realización de Precio",
++  fechas: "requeridas",
++  filtros: [
++    filtroUsuario("Usuario", "cod_usuario"),
++    filtroTipo("PAGO", "cod_tipo_pago", "Tipo de Pago"),
++    filtroCliente("Cliente", "cod_cliente"),
++  ],
++  consultar: consultarApi("/api/appweb/report_kpi_cotizaciones", filaSchema, {
++    lista: "filas",
++    params: { reporte: "realizacion_de_precio" },
++  }),
++  columnas: [
++    {
++      id: "usuario",
++      label: "Usuario",
++      valor: (f) => f.nombres ?? "",
++      agrupable: true,
++      buscable: true,
++    },
++    {
++      id: "cc_nombre",
++      label: "Centro de Costo",
++      valor: (f) => f.cc_nombre ?? "",
++      agrupable: true,
++    },
++    {
++      id: "transporte",
++      label: "Tipo de transporte",
++      valor: (f) => f.transporte ?? "",
++      agrupable: true,
++      buscable: true,
++    },
++    {
++      id: "cliente",
++      label: "Cliente",
++      valor: (f) => f.cliente ?? "",
++      agrupable: true,
++      buscable: true,
++    },
++    {
++      id: "tipo_pago",
++      label: "Tipo de pago",
++      valor: (f) => f.tipo_pago ?? "",
++      agrupable: true,
++      buscable: true,
++    },
++    {
++      id: "estado",
++      label: "Estado",
++      valor: (f) => f.estado ?? "",
++      agrupable: true,
++      buscable: true,
++    },
++    {
++      id: "origen",
++      label: "Origen",
++      valor: (f) => f.origen ?? "",
++      agrupable: true,
++      buscable: true,
++    },
++    {
++      id: "destino",
++      label: "Destino",
++      valor: (f) => f.destino ?? "",
++      agrupable: true,
++      buscable: true,
++    },
++    {
++      id: "carrier",
++      label: "Carrier",
++      valor: (f) => f.carrier ?? "",
++      agrupable: true,
++      buscable: true,
++    },
++    /** Último nivel recomendado: una fila por cotización. */
++    { id: "cotizacion", label: "Cotización", valor: (f) => f.cotizacion },
++    // Medidas del Resumen agrupado, como la tabla dinámica de RdP de pricing (`tabla-kpi.ts`).
++    { id: "realizada", label: "Realizadas", valor: (f) => f.realizada, sumable: true },
++    { id: "spot_alto", label: "Sobre tarifa", valor: (f) => f.spot_alto, sumable: true },
++    {
++      id: "rdps",
++      label: "RdPs %",
++      valor: (f) => porcentaje(f.spot_alto, f.realizada),
++      calculada: (s) => porcentaje(s.spot_alto, s.realizada),
++    },
++    { id: "spot_bajo", label: "Spot", valor: (f) => f.spot_bajo, sumable: true },
++    {
++      id: "rdpd",
++      label: "RdPd %",
++      valor: (f) => porcentaje(f.spot_bajo, f.realizada),
++      calculada: (s) => porcentaje(s.spot_bajo, s.realizada),
++    },
++    { id: "sin_spot", label: "Tarifa publicada", valor: (f) => f.sin_spot, sumable: true },
++    {
++      id: "rdpp",
++      label: "RdPp %",
++      valor: (f) => porcentaje(f.sin_spot, f.realizada),
++      calculada: (s) => porcentaje(s.sin_spot, s.realizada),
++    },
++  ],
++  agrupacion: { filas: ["usuario"] },
++  descargas: { excel: true, pdf: "contenido" },
++  Contenido: ContenidoRealizacionDePrecio,
++});
+diff --git a/src/features/reportes/lib/definir-reporte.ts b/src/features/reportes/lib/definir-reporte.ts
+index 37df940..8e558b2 100644
+--- a/src/features/reportes/lib/definir-reporte.ts
++++ b/src/features/reportes/lib/definir-reporte.ts
+@@ -69,10 +69,15 @@ export interface FiltroReporte {
+    * Hook con las opciones del select. Recibe los valores actuales de los filtros, por si
+    * depende de otro (ej. usuarios del CC elegido). Ver los atajos de `lib/filtros.ts`.
+    */
+-  useOpciones: (valores: ValoresFiltros) => {
++  useOpciones?: (valores: ValoresFiltros) => {
+     opciones: readonly ComboboxOption[];
+     cargando?: boolean | undefined;
+   };
++  /**
++   * En lugar de `useOpciones`: busca en el servidor mientras se escribe (mínimo 2 letras), para
++   * listas muy grandes (ej. clientes). Ver `filtroCliente`.
++   */
++  buscar?: (texto: string) => Promise<ComboboxOption[]>;
+   /** Valor inicial (ej. el CC del contexto operativo). Sin esto, "" (todos). */
+   useValorInicial?: () => string;
+   /** Este filtro se limpia cuando cambia alguno de estos (ej. usuario depende de `cod_cc`). */
+@@ -87,6 +92,11 @@ export interface ContenidoReporteProps<TFila> {
+   filas: readonly TFila[];
+   columnas: readonly ColumnaReporte<TFila>[];
+   params: ParamsReporte;
++  /**
++   * Filtros de la última consulta con nombre (Período, Empresa, Centro de costo y el `label` de
++   * cada filtro → el nombre elegido), los mismos del encabezado de las descargas.
++   */
++  encabezado: Record<string, string>;
+   /**
+    * Con `descargas: { pdf: "contenido" }`: sube cada vez que se pulsa el botón PDF; el
+    * `Contenido` genera el PDF cuando cambia (ej. `descargar` de una vista de pricing).
+diff --git a/src/features/reportes/lib/filtros.ts b/src/features/reportes/lib/filtros.ts
+index eef40e8..bae9593 100644
+--- a/src/features/reportes/lib/filtros.ts
++++ b/src/features/reportes/lib/filtros.ts
+@@ -1,6 +1,6 @@
+ import React from "react";
+ import { centrosCosto, empleadosUsuarios, empresas, estados, tipos } from "@/features/catalogos";
+-import { useFetchEntidades } from "@/features/entidades";
++import { buscarClientesTarifa } from "@/features/pricing/tarifas/api/buscar-entidad";
+ import { useContextoOperativoStore } from "@/features/shell";
+ import type { ComboboxOption } from "@/shared/components/ui/combobox";
+ import type { FiltroReporte } from "./definir-reporte";
+@@ -93,22 +93,19 @@ export function filtroUsuario(label = "Usuario", id = "cod_usuario"): FiltroRepo
+ }
+ 
+ /**
+- * Clientes activos (entidades `CLIENTE`, como Seguimiento de cliente de Reportes CRM).
++ * Cliente por nombre (mínimo 2 letras), buscado en el servidor con la búsqueda de Tarifas
++ * (`busqueda-entidad-x-criterio`, CLIENTE y PRE-CLIENTE); `value` = ENTIDAD_ID.
+  * `id` = nombre del parámetro que espera el endpoint (ej. `cod_cliente`).
+  */
+ export function filtroCliente(label = "Cliente", id = "cod_cliente"): FiltroReporte {
+   return {
+     id,
+     label,
+-    useOpciones: () => {
+-      const { data, isLoading } = useFetchEntidades({ tipo_entidad: "CLIENTE", cod_estado: 1 });
+-      // Miles de clientes: opciones memoizadas (el Combobox virtualiza más de 1000).
+-      const opciones = React.useMemo<ComboboxOption[]>(() => {
+-        const clientes: Array<{ entidad_id: string | number; entidad_nombre: string }> = data ?? [];
+-        return clientes.map((c) => ({ value: String(c.entidad_id), label: c.entidad_nombre }));
+-      }, [data]);
+-      return { opciones, cargando: Boolean(isLoading) };
+-    },
++    buscar: async (texto) =>
++      (await buscarClientesTarifa(texto)).map((c) => ({
++        value: String(c.entidad_id),
++        label: c.entidad_nombre,
++      })),
+   };
+ }
+ 
