@@ -1,0 +1,115 @@
+diff --git a/src/features/reportes/DOCUMENTACION.md b/src/features/reportes/DOCUMENTACION.md
+index da15133..f6123b6 100644
+--- a/src/features/reportes/DOCUMENTACION.md
++++ b/src/features/reportes/DOCUMENTACION.md
+@@ -429,6 +429,8 @@ las sumas del grupo por `id`. `porcentaje` se importa junto con `definirReporte`
+ - **Excel agrupado**: siempre (el Resumen agrupado, con el generador de Reportes de pricing).
+ - `descargas: { excel: true }` y/o `pdf: true`: el detalle con las columnas.
+ - `descargas: { excel: miFuncion, pdf: otraFuncion }`: formato propio (`reporte-personalizado.tsx`).
++- `descargas: { pdf: "contenido" }`: el PDF lo genera el `Contenido` (ej. gráficas); con el mismo
++  botón PDF, el `Contenido` recibe `solicitudPdf` (sube en cada clic), `onGenerandoPdf` y `onErrorPdf`.
+ - Sin `descargas`: solo el Excel agrupado.
+ 
+ ### Otras opciones de la definición
+diff --git a/src/features/reportes/GUIA.md b/src/features/reportes/GUIA.md
+index cc907d8..2b5fc9f 100644
+--- a/src/features/reportes/GUIA.md
++++ b/src/features/reportes/GUIA.md
+@@ -198,6 +198,8 @@ las sumas del grupo por `id`:
+ - `descargas: { excel: true }` y/o `pdf: true`: el detalle con las columnas.
+ - `descargas: { excel: miFuncion }` / `pdf: miFuncion`: formato propio (ver **Reportes
+   personalizados**, P4 y P5).
++- `descargas: { pdf: "contenido" }`: el PDF lo genera el `Contenido` (ej. gráficas); con el mismo
++  botón PDF, el `Contenido` recibe `solicitudPdf` (sube en cada clic), `onGenerandoPdf` y `onErrorPdf`.
+ - Sin `descargas`: solo el Excel agrupado.
+ 
+ ### Otras opciones
+diff --git a/src/features/reportes/components/pantalla-reporte.tsx b/src/features/reportes/components/pantalla-reporte.tsx
+index d725ec1..ea9b1cb 100644
+--- a/src/features/reportes/components/pantalla-reporte.tsx
++++ b/src/features/reportes/components/pantalla-reporte.tsx
+@@ -233,6 +233,10 @@ export function PantallaReporte({
+   /** Descarga que se está generando (el PDF genérico lleva su propio estado en `pdf`). */
+   const [generando, setGenerando] = React.useState<"pdf" | "excel" | "agrupado" | null>(null);
+   const [errorDescarga, setErrorDescarga] = React.useState<string | null>(null);
++  // PDF que genera el `Contenido` (`descargas: { pdf: "contenido" }`).
++  const [solicitudPdf, setSolicitudPdf] = React.useState(0);
++  const [generandoPdfContenido, setGenerandoPdfContenido] = React.useState(false);
++  const [errorPdfContenido, setErrorPdfContenido] = React.useState<string | null>(null);
+   const sinDatos = filas.length === 0;
+   const descargas = definicion.descargas ?? {};
+ 
+@@ -310,6 +314,11 @@ export function PantallaReporte({
+   // PDF del reporte (si lo tiene): el propio de la definición o el detalle con las columnas.
+   const descargarPdf = () => {
+     const propio = descargas.pdf;
++    if (propio === "contenido") {
++      setErrorPdfContenido(null);
++      setSolicitudPdf((n) => n + 1);
++      return;
++    }
+     if (typeof propio === "function") {
+       void generarDescarga("pdf", () => propio(descarga()));
+       return;
+@@ -350,8 +359,8 @@ export function PantallaReporte({
+       }),
+     );
+ 
+-  const error = pdf.error ?? errorDescarga;
+-  const generandoPdf = pdf.generando || generando === "pdf";
++  const error = pdf.error ?? errorDescarga ?? errorPdfContenido;
++  const generandoPdf = pdf.generando || generando === "pdf" || generandoPdfContenido;
+   const Contenido = definicion.Contenido ?? TablaReporte;
+   const requeridas = modoFechas === "requeridas";
+ 
+@@ -551,7 +560,14 @@ export function PantallaReporte({
+           ) : consulta.isLoading ? (
+             <MensajeVacio>Cargando…</MensajeVacio>
+           ) : (
+-            <Contenido filas={filas} columnas={definicion.columnas} params={consultada.params} />
++            <Contenido
++              filas={filas}
++              columnas={definicion.columnas}
++              params={consultada.params}
++              solicitudPdf={solicitudPdf}
++              onGenerandoPdf={setGenerandoPdfContenido}
++              onErrorPdf={setErrorPdfContenido}
++            />
+           )}
+         </div>
+       </Panel>
+diff --git a/src/features/reportes/lib/definir-reporte.ts b/src/features/reportes/lib/definir-reporte.ts
+index c93d30d..37df940 100644
+--- a/src/features/reportes/lib/definir-reporte.ts
++++ b/src/features/reportes/lib/definir-reporte.ts
+@@ -87,6 +87,15 @@ export interface ContenidoReporteProps<TFila> {
+   filas: readonly TFila[];
+   columnas: readonly ColumnaReporte<TFila>[];
+   params: ParamsReporte;
++  /**
++   * Con `descargas: { pdf: "contenido" }`: sube cada vez que se pulsa el botón PDF; el
++   * `Contenido` genera el PDF cuando cambia (ej. `descargar` de una vista de pricing).
++   */
++  solicitudPdf: number;
++  /** Avisa al botón PDF que se está generando ("Generando PDF..."). */
++  onGenerandoPdf: (generando: boolean) => void;
++  /** Muestra el error del PDF junto a los de las demás descargas (`null` = sin error). */
++  onErrorPdf: (mensaje: string | null) => void;
+ }
+ 
+ /** Lo que recibe una descarga propia de un reporte (`descargas` de la definición). */
+@@ -128,11 +137,12 @@ export interface DefinicionReporte<TFila> {
+   /**
+    * Descargas del reporte (opcionales: sin esto no tiene ninguna; en CRM unos tienen Excel,
+    * otros PDF y otros ambos). `true` = el detalle con las columnas; una función = formato
+-   * propio (p. ej. el del legacy). El "Excel agrupado" (Resumen agrupado) está siempre.
++   * propio (p. ej. el del legacy). En `pdf`, `"contenido"` = lo genera el `Contenido` del
++   * reporte con `solicitudPdf` (mismo botón PDF). El "Excel agrupado" está siempre.
+    */
+   descargas?: {
+     excel?: true | ((descarga: DescargaReporte<TFila>) => Promise<void>);
+-    pdf?: true | ((descarga: DescargaReporte<TFila>) => Promise<void>);
++    pdf?: true | "contenido" | ((descarga: DescargaReporte<TFila>) => Promise<void>);
+   };
+   /**
+    * Contenido propio de la sección "Reporte" (gráficas, tarjetas…). Sin esto, una tabla

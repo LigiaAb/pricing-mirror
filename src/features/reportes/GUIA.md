@@ -198,6 +198,8 @@ las sumas del grupo por `id`:
 - `descargas: { excel: true }` y/o `pdf: true`: el detalle con las columnas.
 - `descargas: { excel: miFuncion }` / `pdf: miFuncion`: formato propio (ver **Reportes
   personalizados**, P4 y P5).
+- `descargas: { pdf: "contenido" }`: el PDF lo genera el `Contenido` (ej. gráficas); con el mismo
+  botón PDF, el `Contenido` recibe `solicitudPdf` (sube en cada clic), `onGenerandoPdf` y `onErrorPdf`.
 - Sin `descargas`: solo el Excel agrupado.
 
 ### Otras opciones

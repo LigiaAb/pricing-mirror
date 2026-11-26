@@ -233,6 +233,10 @@ export function PantallaReporte({
   /** Descarga que se está generando (el PDF genérico lleva su propio estado en `pdf`). */
   const [generando, setGenerando] = React.useState<"pdf" | "excel" | "agrupado" | null>(null);
   const [errorDescarga, setErrorDescarga] = React.useState<string | null>(null);
+  // PDF que genera el `Contenido` (`descargas: { pdf: "contenido" }`).
+  const [solicitudPdf, setSolicitudPdf] = React.useState(0);
+  const [generandoPdfContenido, setGenerandoPdfContenido] = React.useState(false);
+  const [errorPdfContenido, setErrorPdfContenido] = React.useState<string | null>(null);
   const sinDatos = filas.length === 0;
   const descargas = definicion.descargas ?? {};
 
@@ -310,6 +314,11 @@ export function PantallaReporte({
   // PDF del reporte (si lo tiene): el propio de la definición o el detalle con las columnas.
   const descargarPdf = () => {
     const propio = descargas.pdf;
+    if (propio === "contenido") {
+      setErrorPdfContenido(null);
+      setSolicitudPdf((n) => n + 1);
+      return;
+    }
     if (typeof propio === "function") {
       void generarDescarga("pdf", () => propio(descarga()));
       return;
@@ -350,8 +359,8 @@ export function PantallaReporte({
       }),
     );
 
-  const error = pdf.error ?? errorDescarga;
-  const generandoPdf = pdf.generando || generando === "pdf";
+  const error = pdf.error ?? errorDescarga ?? errorPdfContenido;
+  const generandoPdf = pdf.generando || generando === "pdf" || generandoPdfContenido;
   const Contenido = definicion.Contenido ?? TablaReporte;
   const requeridas = modoFechas === "requeridas";
 
@@ -551,7 +560,14 @@ export function PantallaReporte({
           ) : consulta.isLoading ? (
             <MensajeVacio>Cargando…</MensajeVacio>
           ) : (
-            <Contenido filas={filas} columnas={definicion.columnas} params={consultada.params} />
+            <Contenido
+              filas={filas}
+              columnas={definicion.columnas}
+              params={consultada.params}
+              solicitudPdf={solicitudPdf}
+              onGenerandoPdf={setGenerandoPdfContenido}
+              onErrorPdf={setErrorPdfContenido}
+            />
           )}
         </div>
       </Panel>

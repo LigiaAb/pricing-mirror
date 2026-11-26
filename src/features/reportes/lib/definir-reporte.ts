@@ -87,6 +87,15 @@ export interface ContenidoReporteProps<TFila> {
   filas: readonly TFila[];
   columnas: readonly ColumnaReporte<TFila>[];
   params: ParamsReporte;
+  /**
+   * Con `descargas: { pdf: "contenido" }`: sube cada vez que se pulsa el botón PDF; el
+   * `Contenido` genera el PDF cuando cambia (ej. `descargar` de una vista de pricing).
+   */
+  solicitudPdf: number;
+  /** Avisa al botón PDF que se está generando ("Generando PDF..."). */
+  onGenerandoPdf: (generando: boolean) => void;
+  /** Muestra el error del PDF junto a los de las demás descargas (`null` = sin error). */
+  onErrorPdf: (mensaje: string | null) => void;
 }
 
 /** Lo que recibe una descarga propia de un reporte (`descargas` de la definición). */
@@ -128,11 +137,12 @@ export interface DefinicionReporte<TFila> {
   /**
    * Descargas del reporte (opcionales: sin esto no tiene ninguna; en CRM unos tienen Excel,
    * otros PDF y otros ambos). `true` = el detalle con las columnas; una función = formato
-   * propio (p. ej. el del legacy). El "Excel agrupado" (Resumen agrupado) está siempre.
+   * propio (p. ej. el del legacy). En `pdf`, `"contenido"` = lo genera el `Contenido` del
+   * reporte con `solicitudPdf` (mismo botón PDF). El "Excel agrupado" está siempre.
    */
   descargas?: {
     excel?: true | ((descarga: DescargaReporte<TFila>) => Promise<void>);
-    pdf?: true | ((descarga: DescargaReporte<TFila>) => Promise<void>);
+    pdf?: true | "contenido" | ((descarga: DescargaReporte<TFila>) => Promise<void>);
   };
   /**
    * Contenido propio de la sección "Reporte" (gráficas, tarjetas…). Sin esto, una tabla
