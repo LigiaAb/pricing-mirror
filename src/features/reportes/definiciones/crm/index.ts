@@ -15,5 +15,5 @@ export const REPORTES_CRM: readonly Reporte[] = [
   reporteObjetivos,
   reporteGraficasObjetivos,
   reporteSeguimiento,
-  reporteIndiceDeCumplimiento
+  reporteIndiceDeCumplimiento,
 ];

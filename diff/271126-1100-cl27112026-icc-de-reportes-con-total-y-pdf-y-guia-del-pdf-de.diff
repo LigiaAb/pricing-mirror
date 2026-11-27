@@ -1,0 +1,421 @@
+diff --git a/src/features/reportes/DOCUMENTACION.md b/src/features/reportes/DOCUMENTACION.md
+index a4c7771..1682db0 100644
+--- a/src/features/reportes/DOCUMENTACION.md
++++ b/src/features/reportes/DOCUMENTACION.md
+@@ -282,6 +282,10 @@ function ContenidoMiReporte(props: ContenidoReporteProps<Fila>) {
+ - **Vista de otro módulo**: importar su componente **por su ruta** (ej.
+   `@/features/reportes-crm/components/reporte-objetivos-empleado`), no por el `index` del módulo
+   (el `index` trae todo el módulo).
++- **Totales**: si `consultar` ya agrupa (ej. una fila por persona), el total no llega aparte: se
++  saca en la vista sumando `filas` con `useMemo` (ej. `totalIcc` en `lib/crm/reporte-icc.ts`).
++  A una tabla se le pasa `filas` sin copiar (`[...filas]` es un arreglo nuevo en cada render y la
++  tabla vuelve a la página 1).
+ - **Datos que no son filas** (ej. los objetivos de las gráficas): `consultar` los guarda por
+   parámetros y la vista los lee con `params`. Ver `reporte-graficas-objetivos.tsx`
+   (`objetivosConsultados`).
+@@ -395,7 +399,7 @@ import type { ContenidoReporteProps } from "../../lib/definir-reporte";
+ import { descargarPdf } from "../../lib/exportar";
+ 
+ function VistaConPdf(props: ContenidoReporteProps<Fila>) {
+-  const { filas, solicitudPdf, onGenerandoPdf, onErrorPdf } = props;
++  const { filas, encabezado, solicitudPdf, onGenerandoPdf, onErrorPdf } = props;
+   const ultimaSolicitud = React.useRef(solicitudPdf);
+ 
+   React.useEffect(() => {
+@@ -406,14 +410,14 @@ function VistaConPdf(props: ContenidoReporteProps<Fila>) {
+     onErrorPdf(null);
+     descargarPdf({
+       titulo: "Mi reporte",
+-      header: {},
++      header: encabezado, // Período, Empresa, Centro de costo y cada filtro, ya armados
+       contenido: [{ tipo: "texto", texto: `${filas.length} filas` }],
+     })
+       .catch((error) =>
+         onErrorPdf(error instanceof Error ? error.message : "No se pudo generar el PDF."),
+       )
+       .finally(() => onGenerandoPdf(false));
+-  }, [solicitudPdf, filas, onGenerandoPdf, onErrorPdf]);
++  }, [solicitudPdf, filas, encabezado, onGenerandoPdf, onErrorPdf]);
+ 
+   return <TablaReporte {...props} />;
+ }
+@@ -421,6 +425,13 @@ function VistaConPdf(props: ContenidoReporteProps<Fila>) {
+ // en la definición:  Contenido: VistaConPdf,  descargas: { pdf: "contenido" },
+ ```
+ 
++- **`header: encabezado`**: el encabezado del PDF (Período, Empresa, Centro de costo y cada filtro
++  con su nombre) ya viene armado; no hace falta leer las fechas de `params`.
++- **Con `usePdfReporte`** (el PDF de Reportes de pricing, con gráficas y leyendas): se le pasan las
++  props al crearlo, `usePdfReporte({ onGenerando: onGenerandoPdf, onError: onErrorPdf })`, y dentro
++  del `useEffect` se llama su `generar` (el hook avisa "Generando PDF..." y el error solo). Un solo
++  `usePdfReporte` por vista. Caso real: `contenido/crm/icc.tsx`.
++
+ Si el PDF lo genera un componente que ya existe y se dispara con un número (como la vista de
+ descarga de Hit Rate, prop `descargar`), se le pasan las tres props tal cual: ver
+ `definiciones/pricing/reporte-hit-rate.tsx`.
+@@ -687,6 +698,7 @@ En `src/features/reportes/definiciones/crm/`:
+ | `reporte-actividades.ts`         | `consultar` del usuario de la sesión, PDF propio (calendario), sin empresa/CC |
+ | `reporte-objetivos.tsx`          | Parámetros con otros nombres, datos anidados y vista de CRM             |
+ | `reporte-graficas-objetivos.tsx` | Varias consultas, datos que no son filas y vista con gráficas           |
++| `reporte-icc.tsx`                | `consultar` que agrupa por persona, vista con gráfica, total y PDF (`pdf: "contenido"`, `usePdfReporte`) |
+ 
+ ## Errores comunes
+ 
+diff --git a/src/features/reportes/GUIA.md b/src/features/reportes/GUIA.md
+index 6491f0f..0f6f61a 100644
+--- a/src/features/reportes/GUIA.md
++++ b/src/features/reportes/GUIA.md
+@@ -353,9 +353,29 @@ props del PDF. Para dejar también la tabla de siempre: `TablaReporte`. Con JSX
+ En el ejemplo dibuja una gráfica por asesor con la tabla debajo, y cuando se pulsa PDF
+ (`solicitudPdf` cambia) genera el PDF con esa gráfica.
+ 
++**Cómo funciona el PDF de la vista** (con `pdf: "contenido"` en (H)):
++
++1. Cada clic en el botón PDF de la pantalla sube `solicitudPdf` (1, 2, 3…).
++2. La vista guarda el último valor en un `useRef` y genera el PDF en un `useEffect` solo cuando
++   `solicitudPdf` cambia. Así no se genera al abrir la vista.
++3. `onGenerandoPdf(true)` y luego `onGenerandoPdf(false)`: el botón muestra "Generando PDF...".
++   `onErrorPdf(mensaje)`: el error sale junto al botón (`onErrorPdf(null)` lo limpia). Si el PDF
++   se arma con `usePdfReporte` (el PDF de Reportes de pricing, con gráficas y leyendas), se le
++   pasan al crearlo y el hook los llama solo:
++   `usePdfReporte({ onGenerando: onGenerandoPdf, onError: onErrorPdf })`, y se usa su `generar`.
++4. `header: encabezado`: el encabezado del PDF (Período, Empresa, Centro de costo y cada filtro
++   con su nombre) ya viene armado. No hace falta leer las fechas de `params`.
++
++**Totales en la vista.** La vista recibe en `filas` lo que devuelve `consultar`. Si `consultar`
++ya agrupa (ej. una fila por persona), el total no llega aparte: se saca en la vista sumando
++`filas` con `useMemo` y se usa en la pantalla y en el PDF. Caso real: el ICC
++(`contenido/crm/icc.tsx`, con `totalIcc` de `lib/crm/reporte-icc.ts`). Para pasar `filas` a una
++tabla, no copiarlas (`[...filas]`): cada render sería un arreglo nuevo y la tabla volvería a la
++página 1.
++
+ ```tsx
+ function VistaAvance(props: ContenidoReporteProps<Fila>) {
+-  const { filas, solicitudPdf, onGenerandoPdf, onErrorPdf } = props;
++  const { filas, encabezado, solicitudPdf, onGenerandoPdf, onErrorPdf } = props;
+   const grafica = React.useRef<HTMLDivElement>(null);
+ 
+   const porAsesor = React.useMemo(() => {
+@@ -377,7 +397,7 @@ function VistaAvance(props: ContenidoReporteProps<Fila>) {
+     onErrorPdf(null);
+     descargarPdf({
+       titulo: "Avance de actividades por asesor",
+-      header: {},
++      header: encabezado, // Período, Empresa, Centro de costo y cada filtro, ya armados
+       horizontal: true,
+       contenido: [
+         { tipo: "grafica", elemento: grafica.current },
+@@ -392,7 +412,7 @@ function VistaAvance(props: ContenidoReporteProps<Fila>) {
+         onErrorPdf(error instanceof Error ? error.message : "No se pudo generar el PDF."),
+       )
+       .finally(() => onGenerandoPdf(false));
+-  }, [solicitudPdf, porAsesor, onGenerandoPdf, onErrorPdf]);
++  }, [solicitudPdf, porAsesor, encabezado, onGenerandoPdf, onErrorPdf]);
+ 
+   return (
+     <div className="space-y-4">
+@@ -538,7 +558,7 @@ async function excelAvance({ filas, titulo, encabezado }: DescargaReporte<Fila>)
+ 
+ // (I) Vista propia (+ el PDF de (H))
+ function VistaAvance(props: ContenidoReporteProps<Fila>) {
+-  const { filas, solicitudPdf, onGenerandoPdf, onErrorPdf } = props;
++  const { filas, encabezado, solicitudPdf, onGenerandoPdf, onErrorPdf } = props;
+   const grafica = React.useRef<HTMLDivElement>(null);
+ 
+   const porAsesor = React.useMemo(() => {
+@@ -560,7 +580,7 @@ function VistaAvance(props: ContenidoReporteProps<Fila>) {
+     onErrorPdf(null);
+     descargarPdf({
+       titulo: "Avance de actividades por asesor",
+-      header: {},
++      header: encabezado, // Período, Empresa, Centro de costo y cada filtro, ya armados
+       horizontal: true,
+       contenido: [
+         { tipo: "grafica", elemento: grafica.current },
+@@ -575,7 +595,7 @@ function VistaAvance(props: ContenidoReporteProps<Fila>) {
+         onErrorPdf(error instanceof Error ? error.message : "No se pudo generar el PDF."),
+       )
+       .finally(() => onGenerandoPdf(false));
+-  }, [solicitudPdf, porAsesor, onGenerandoPdf, onErrorPdf]);
++  }, [solicitudPdf, porAsesor, encabezado, onGenerandoPdf, onErrorPdf]);
+ 
+   return (
+     <div className="space-y-4">
+diff --git a/src/features/reportes/contenido/crm/icc.tsx b/src/features/reportes/contenido/crm/icc.tsx
+index 10ed118..98e4486 100644
+--- a/src/features/reportes/contenido/crm/icc.tsx
++++ b/src/features/reportes/contenido/crm/icc.tsx
+@@ -1,8 +1,7 @@
+ "use client";
+ 
+ import { format } from "date-fns";
+-import { FileDown, Loader2 } from "lucide-react";
+-import { useMemo, useRef } from "react";
++import { useEffect, useMemo, useRef } from "react";
+ import {
+   Bar,
+   BarChart,
+@@ -15,12 +14,11 @@ import {
+ } from "recharts";
+ import { type BloquePdf, usePdfReporte } from "@/features/pricing/reportes";
+ import { DataTable } from "@/shared/components/data-table/data-table";
+-import { Button } from "@/shared/components/ui/button";
+ import type { ColumnDef } from "@/shared/lib/tanstack-table";
+-import { TablaReporte } from "../../components/contenido-reporte";
+ import type { ResumenIcc } from "../../definiciones/crm/reporte-icc";
+-import { calcularIcc } from "../../lib/crm/reporte-icc";
++import { totalIcc } from "../../lib/crm/reporte-icc";
+ import type { ContenidoReporteProps } from "../../lib/definir-reporte";
++
+ // import { type ParamsReporteIcc, useReporteIcc } from "../api/reporte-icc";
+ 
+ const formatoPorcentaje = (valor: number | null) => (valor == null ? "—" : `${valor.toFixed(2)}%`);
+@@ -266,16 +264,23 @@ function TotalIcc({ total }: Readonly<{ total: ResumenIcc }>) {
+   );
+ }
+ 
++/**
++ * Vista del ICC: gráfica, tabla con TOTAL y PDF. `filas` son las filas por persona que arma
++ * `consultar` (definiciones/crm/reporte-icc.tsx); el TOTAL se saca de ellas (`totalIcc`). Con
++ * `descargas: { pdf: "contenido" }`, cada clic en PDF sube `solicitudPdf` y aquí se genera.
++ */
+ export function VistaIcc(props: ContenidoReporteProps<ResumenIcc>) {
+-  const pdf = usePdfReporte();
++  const { filas, encabezado, solicitudPdf, onGenerandoPdf, onErrorPdf } = props;
+   const graficaPdf = useRef<HTMLDivElement>(null);
+-  const { generar, generando: generandoPdf } = usePdfReporte({
+-    onError: props.onErrorPdf,
+-    onGenerando: props.onGenerandoPdf,
+-  });
+-  
+-  const generarPdf = () => {
+-    const fecha = (valor: string) => valor.split("-").reverse().join("-");
++  // onError / onGenerando: el botón PDF de la pantalla muestra "Generando PDF..." y el error.
++  const { generar } = usePdfReporte({ onError: onErrorPdf, onGenerando: onGenerandoPdf });
++  const total = useMemo(() => totalIcc(filas), [filas]);
++
++  // Genera el PDF cuando se pulsa el botón (solicitudPdf cambia), no al abrir la vista.
++  const ultimaSolicitud = useRef(solicitudPdf);
++  useEffect(() => {
++    if (solicitudPdf === ultimaSolicitud.current) return;
++    ultimaSolicitud.current = solicitudPdf;
+     const contenido: BloquePdf[] = [
+       { tipo: "titulo", texto: "ICCa / ICCp / ICCc por persona" },
+       { tipo: "grafica", elemento: graficaPdf.current },
+@@ -291,7 +296,7 @@ export function VistaIcc(props: ContenidoReporteProps<ResumenIcc>) {
+       { tipo: "titulo", texto: "Detalle por persona" },
+       {
+         tipo: "tabla",
+-        datos: [...props.filas, /* resumen.total */].map((r) =>
++        datos: [...filas, total].map((r) =>
+           Object.fromEntries([
+             ["Persona", { dato: r.nombre }],
+             ...COLUMNAS_ICC.map((c) => [c.titulo, { dato: celda(c, r), alignFormat: DERECHA }]),
+@@ -299,37 +304,32 @@ export function VistaIcc(props: ContenidoReporteProps<ResumenIcc>) {
+         ),
+       },
+     ];
+-    pdf.generar({
++    generar({
+       titulo: "ICC — Índice de Cumplimiento Comercial",
+       archivo: `icc-${format(new Date(), "ddMMyyyyHHmmss")}.pdf`,
+       horizontal: true,
+-      header: {
+-        Período: `${fecha(props.encabezado.fecha_inicio)} al ${fecha(props.encabezado.fecha_fin)}`,
+-        ...props.encabezado,
+-      },
++      header: encabezado, // ya trae Período, Empresa, Centro de costo y los filtros con nombre
+       contenido,
+     });
+-  };
++  }, [solicitudPdf, filas, total, encabezado, generar]);
+ 
+   return (
+     <div className="space-y-3">
+       {/* <pre>{JSON.stringify({ props }, null, 2)}</pre> */}
+-      
+-      {props.filas.length > 0 && (
++      {filas.length > 0 && (
+         <div className="h-96 rounded-lg border p-3">
+-          <GraficaIcc datos={props.filas as ResumenIcc[]} />
++          <GraficaIcc datos={filas as ResumenIcc[]} />
+         </div>
+       )}
+-      <p className="text-sm">{props.filas.length} registros</p> {/* CAMBIAR */}
+-      
++      <p className="text-sm">{filas.length} registros</p> {/* CAMBIAR */}
+       <DataTable
+         columns={COLUMNAS}
+-        data={props.filas as ResumenIcc[]}
++        data={filas as ResumenIcc[]}
+         searchKeys={["nombre"]}
+         searchPlaceholder="Buscar persona…"
+         numericColumns={COLUMNAS_ICC.map((c) => c.id)}
+         emptyMessage="No hay llamadas ni visitas programadas en el rango."
+-        // footer={props.filas.length > 0 && <TotalIcc total={resumen.total} />}
++        footer={filas.length > 0 && <TotalIcc total={total} />}
+       />
+       <div
+         aria-hidden="true"
+@@ -343,7 +343,7 @@ export function VistaIcc(props: ContenidoReporteProps<ResumenIcc>) {
+         }}
+         ref={graficaPdf}
+       >
+-        <GraficaIcc datos={props.filas as ResumenIcc[]} animar={false} />
++        <GraficaIcc datos={filas as ResumenIcc[]} animar={false} />
+       </div>
+     </div>
+   );
+diff --git a/src/features/reportes/definiciones/crm/index.ts b/src/features/reportes/definiciones/crm/index.ts
+index 34177fb..056ef60 100644
+--- a/src/features/reportes/definiciones/crm/index.ts
++++ b/src/features/reportes/definiciones/crm/index.ts
+@@ -15,5 +15,5 @@ export const REPORTES_CRM: readonly Reporte[] = [
+   reporteObjetivos,
+   reporteGraficasObjetivos,
+   reporteSeguimiento,
+-  reporteIndiceDeCumplimiento
++  reporteIndiceDeCumplimiento,
+ ];
+diff --git a/src/features/reportes/definiciones/crm/reporte-icc.tsx b/src/features/reportes/definiciones/crm/reporte-icc.tsx
+index ebc4813..9db8392 100644
+--- a/src/features/reportes/definiciones/crm/reporte-icc.tsx
++++ b/src/features/reportes/definiciones/crm/reporte-icc.tsx
+@@ -4,18 +4,15 @@ import { tipos } from "@/features/catalogos";
+ import { http } from "@/shared/api/client";
+ import { parseEnvelope } from "@/shared/api/envelope";
+ import type { ComboboxOption } from "@/shared/components/ui/combobox";
+-import { type CeldaExcel, exportarExcel } from "@/shared/lib/excel";
+ import { zId } from "@/shared/lib/zod-scalars";
+ import { VistaIcc } from "../../contenido/crm/icc";
+ import { calcularIcc } from "../../lib/crm/reporte-icc";
+ import {
+   type ContenidoReporteProps,
+-  type DescargaReporte,
+   definirReporte,
+   type FiltroReporte,
+   type ParamsReporte,
+ } from "../../lib/definir-reporte";
+-import { descargarPdf, nombreArchivo } from "../../lib/exportar";
+ import { filtroUsuario } from "../../lib/filtros";
+ 
+ const texto = z
+@@ -123,56 +120,8 @@ const filtroPropio: FiltroReporte = {
+ 
+ // ── 3. OPCIONAL — Vista propia (← 3) ──
+ // En lugar de la tabla (aquí: un texto arriba y la tabla de siempre abajo).
+-function ContenidoHitRate({...props
+-}: ContenidoReporteProps<Fila>) {
+-  const {  params,
+-  encabezado,
+-  solicitudPdf,
+-  onGenerandoPdf,
+-  onErrorPdf,} = props
+-  return <VistaIcc<Fila> {...props}/>;
+-}
+-
+-// ── 4. OPCIONAL — Excel propio (← 4) ──
+-// Sin esto: excel: true (el detalle con las columnas) o ninguno.
+-async function excelPropio({ filas, titulo, encabezado }: DescargaReporte<Fila>) {
+-  await exportarExcel({
+-    nombreArchivo: `${nombreArchivo(titulo)}.xlsx`,
+-    titulo,
+-    encabezado,
+-    hojas: [
+-      {
+-        nombre: titulo.slice(0, 31),
+-        mostrarCuadricula: true,
+-        autoFiltro: true,
+-        columnas: ["Texto", "Usuario", "Número"], // CAMBIAR
+-        filas: filas.map((f): CeldaExcel[] => [
+-          f.nombre, // CAMBIAR: una celda por columna, en el mismo orden
+-          // Celda con color: { dato, fontColor } (color ARGB)
+-          // f.campo_numero < 0 ? { dato: f.campo_numero, fontColor: "FFB30000" } : f.campo_numero,
+-        ]),
+-      },
+-    ],
+-  });
+-}
+-
+-// ── 5. OPCIONAL — PDF propio (← 5) ──
+-// Con el formato de Reportes de pricing. Sin esto: pdf: true (el detalle) o ninguno.
+-function pdfPropio({ filas, titulo, encabezado }: DescargaReporte<Fila>) {
+-  return descargarPdf({
+-    titulo,
+-    header: encabezado,
+-    horizontal: true,
+-    contenido: [
+-      { tipo: "titulo", texto: "Resumen" }, // CAMBIAR: bloques en el orden en que se imprimen
+-      { tipo: "texto", texto: `${filas.length} registros` },
+-      {
+-        tipo: "tabla",
+-        columnas: ["Texto", "Usuario", "Número"],
+-        filas: filas.map((f) => [f.nombre, ]),
+-      },
+-    ],
+-  });
++function ContenidoHitRate(props: ContenidoReporteProps<Fila>) {
++  return <VistaIcc {...props} />;
+ }
+ 
+ // ── La definición: aquí se conecta cada pieza ──
+@@ -184,7 +133,7 @@ export const reporteIndiceDeCumplimiento = definirReporte<Fila>({
+   filtros: [filtroUsuario("Usuario", "cod_usuario"), filtroPropio], // ← 2
+   consultar, // ← 1  (sin pieza 1: consultar: consultarApi("/api/appweb/…", filaSchema))
+   Contenido: ContenidoHitRate, // ← 3  (sin pieza 3: borrar la línea)
+-  descargas: {  pdf: 'contenido' }, // ← 4 y ← 5  (o excel: true / pdf: true)
++  descargas: { pdf: "contenido" }, // ← 4 y ← 5  (o excel: true / pdf: true)
+   columnas: [
+     { id: "nombre", label: "Persona", valor: (f) => f.nombre, agrupable: true, buscable: true },
+     {
+diff --git a/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx b/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx
+index 34a7a71..4f3328d 100644
+--- a/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx
++++ b/src/features/reportes/definiciones/plantillas/reporte-personalizado.tsx
+@@ -71,6 +71,8 @@ const filtroPropio: FiltroReporte = {
+ 
+ // ── 3. OPCIONAL — Vista propia (← 3) ──
+ // En lugar de la tabla (aquí: un texto arriba y la tabla de siempre abajo).
++// Con descargas: { pdf: "contenido" } esta vista también genera el PDF y saca los totales que
++// necesite: ver GUIA.md, (I) Contenido ("Cómo funciona el PDF de la vista" y "Totales").
+ function VistaPropia(props: ContenidoReporteProps<Fila>) {
+   return (
+     <div className="space-y-3">
+diff --git a/src/features/reportes/lib/crm/reporte-icc.ts b/src/features/reportes/lib/crm/reporte-icc.ts
+index 18ac8eb..a60ec03 100644
+--- a/src/features/reportes/lib/crm/reporte-icc.ts
++++ b/src/features/reportes/lib/crm/reporte-icc.ts
+@@ -54,6 +54,33 @@ export function resumirIcc(nombre: string, filas: readonly FilaIcc[]): ResumenIc
+   };
+ }
+ 
++/**
++ * Fila de TOTAL a partir de las filas por persona (lo que recibe la vista): suma los conteos y
++ * saca los porcentajes de esas sumas (da lo mismo que `resumirIcc` sobre todas las actividades).
++ */
++export function totalIcc(personas: readonly ResumenIcc[]): ResumenIcc {
++  const suma = {
++    visitas_programadas: 0,
++    visitas_realizadas: 0,
++    llamadas_programadas: 0,
++    llamadas_realizadas: 0,
++    visitas_no_programadas_realizadas: 0,
++    visitas_total: 0,
++    sin_resultado: 0,
++    vencidas: 0,
++  };
++  for (const persona of personas) {
++    for (const campo of Object.keys(suma) as (keyof typeof suma)[]) suma[campo] += persona[campo];
++  }
++  return {
++    nombre: "TOTAL",
++    ...suma,
++    icca: porcentajeIcc(suma.visitas_realizadas, suma.visitas_programadas),
++    iccp: porcentajeIcc(suma.llamadas_realizadas, suma.llamadas_programadas),
++    iccc: porcentajeIcc(suma.visitas_no_programadas_realizadas, suma.visitas_total),
++  };
++}
++
+ /** Una fila por usuario (ordenadas por nombre) y la fila de total. */
+ export function calcularIcc(filas: readonly FilaIcc[]): {
+   personas: ResumenIcc[];
