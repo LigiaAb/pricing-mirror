@@ -16,9 +16,9 @@
  *
  * La fecha programada es la que ubica la actividad en el rango.
  *
- * Banderas por actividad (definiciones del usuario, #194; los días se cuentan en hora de
- * Guatemala; las anuladas, ESTADO_DESCRIPCION = 'ANULADO', valen 0 en todas menos FINALIZADA y
- * CON_RESULTADO):
+ * Banderas por actividad (definiciones del usuario, #194; los días se cuentan con DATEDIFF(DAY)
+ * sobre las fechas como están en la base; las anuladas, ESTADO_DESCRIPCION = 'ANULADO', valen 0
+ * en todas menos FINALIZADA y CON_RESULTADO):
  *  - CON_RESULTADO           = 1 si tiene al menos una fila en ACTIVIDAD_RESULTADO. Se usa EXISTS:
  *                              una actividad puede tener varios resultados y un JOIN la duplicaría.
  *  - FINALIZADA              = 1 si ACTIVIDAD.ESTADO_ID es el estado finalizado (24) = realizada.
@@ -33,9 +33,9 @@
  *                              programado hasta hoy (si es sábado, tiene hasta el sábado
  *                              siguiente; el domingo ya está vencida).
  *
- * Fechas: la base las guarda en UTC. El rango se toma en días de Guatemala (UTC-6, sin
- * horario de verano; igual Honduras y El Salvador): una actividad del 31/12 a las 20:57
- * (01/01 02:57 UTC) cae en el 31/12.
+ * Fechas: ACTIVIDAD_FECHA y ACTIVIDAD_FECHA_PROGRAMACION son datetime. El rango se filtra igual
+ * que report_kpi_cotizaciones (Hit Rate): desde CONVERT(date, fecha_inicio, 23) hasta antes del
+ * día siguiente a fecha_fin.
  */
 
 // ── INICIO ───────────────────────────────────────────────────────────────────
@@ -55,25 +55,17 @@ const MAX_DIAS_ATRAS_NO_PROGRAMADA = 15;
 /** Días que tiene una actividad abierta para registrar su resultado. */
 const DIAS_PARA_VENCER = 7;
 
-/**
- * Fecha (UTC) en hora de Guatemala, para contar días con DATEDIFF(DAY, ...). TRY_CONVERT: si un
- * valor no se puede convertir a fecha, NULL (la bandera queda en 0) en lugar de error
- * ("Conversion failed when converting date and/or time from character string"); 127 = ISO 8601
- * con "Z".
- */
-const local = (columna) =>
-  `DATEADD(HOUR, -${HORAS_UTC_LOCAL}, COALESCE(TRY_CONVERT(datetime2, ${columna}), TRY_CONVERT(datetime2, ${columna}, 127)))`;
-
 /** Condiciones de las banderas (sin parámetros del usuario: solo constantes de este archivo). */
 const NO_ANULADA = "UPPER(LTRIM(RTRIM(ISNULL(E.ESTADO_DESCRIPCION, '')))) <> 'ANULADO'";
 const FINALIZADA = `A.ESTADO_ID = ${ESTADO_ACTIVIDAD_FINALIZADA}`;
 const SIN_RESULTADO =
   "NOT EXISTS (SELECT 1 FROM ACTIVIDAD_RESULTADO AR WHERE AR.ACTIVIDAD_ID = A.ACTIVIDAD_ID)";
 /** Días de la creación a la programación (NULL si falta una fecha: la bandera queda en 0). */
-const DIAS_CREACION_A_PROGRAMACION = `DATEDIFF(DAY, ${local("A.ACTIVIDAD_FECHA")}, ${local("A.ACTIVIDAD_FECHA_PROGRAMACION")})`;
+const DIAS_CREACION_A_PROGRAMACION =
+  "DATEDIFF(DAY, A.ACTIVIDAD_FECHA, A.ACTIVIDAD_FECHA_PROGRAMACION)";
 const PROGRAMADA = `${DIAS_CREACION_A_PROGRAMACION} >= 1`;
 const NO_PROGRAMADA = `${DIAS_CREACION_A_PROGRAMACION} BETWEEN -${MAX_DIAS_ATRAS_NO_PROGRAMADA} AND 0`;
-const VENCIDA = `ISNULL(A.ESTADO_ID, 0) <> ${ESTADO_ACTIVIDAD_FINALIZADA} AND ${SIN_RESULTADO} AND DATEDIFF(DAY, ${local("A.ACTIVIDAD_FECHA_PROGRAMACION")}, DATEADD(HOUR, -${HORAS_UTC_LOCAL}, GETUTCDATE())) > ${DIAS_PARA_VENCER}`;
+const VENCIDA = `ISNULL(A.ESTADO_ID, 0) <> ${ESTADO_ACTIVIDAD_FINALIZADA} AND ${SIN_RESULTADO} AND DATEDIFF(DAY, A.ACTIVIDAD_FECHA_PROGRAMACION, GETDATE()) > ${DIAS_PARA_VENCER}`;
 
 /** `CASE WHEN <condiciones> THEN 1 ELSE 0 END AS <nombre>`. */
 const bandera = (nombre, ...condiciones) =>
@@ -119,8 +111,8 @@ const consultaIcc = (campos) => {
     .whereIn("T.TIPO_DESCRIPCION", TIPOS_ICC)
     .whereNotNull("A.USUARIO_ID")
     .whereRaw(
-      "(A.ACTIVIDAD_FECHA_PROGRAMACION >= DATEADD(HOUR, ?, CONVERT(datetime, ?, 23)) AND A.ACTIVIDAD_FECHA_PROGRAMACION < DATEADD(HOUR, ?, DATEADD(DAY, 1, CONVERT(datetime, ?, 23))))",
-      [HORAS_UTC_LOCAL, campos.fecha_inicio, HORAS_UTC_LOCAL, campos.fecha_fin],
+      "(A.ACTIVIDAD_FECHA_PROGRAMACION >= CONVERT(date, ?, 23) AND A.ACTIVIDAD_FECHA_PROGRAMACION < DATEADD(DAY, 1, CONVERT(date, ?, 23)))",
+      [campos.fecha_inicio, campos.fecha_fin],
     )
     .select(
       "A.ACTIVIDAD_ID AS ACTIVIDAD",
