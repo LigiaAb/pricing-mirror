@@ -75,6 +75,8 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
 - **Filtros y configuración**: fechas (mes actual), "Personaliza tu reporte" (igual que pricing:
   campo de columnas y niveles con `NivelesBuilder`) y "Filtros" con los botones al final:
   **Consultar**, las descargas del reporte que tenga (**PDF**, **Excel**) y **Excel agrupado**.
+  Un reporte con `agrupado: false` no tiene vista agrupada: sin "Personaliza tu reporte", sin
+  **Resumen agrupado** y sin **Excel agrupado** (solo Filtros, la tabla y sus descargas).
 - **Empresa y Centro de costo**: los pone la pantalla en Filtros (no cada reporte), igual que
   Tarifas y Cotizaciones: con la acción "Filtrar Empresa Centro Costo" de la opción **"Reportes"**
   se muestran (arrancan en el contexto) y mandan en la consulta; sin el permiso no se muestran y

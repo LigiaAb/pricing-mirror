@@ -12,7 +12,8 @@ archivo) está en `ARQUITECTURA.md`; aquí solo lo que hay que hacer. La explica
 >   `empresaCentroCosto: false`.
 > - **Fechas**: no son un filtro; se configuran con `fechas` ([Fechas](DOCUMENTACION.md#fechas-c)).
 > - **Botón Consultar, "Personaliza tu reporte", "Resumen agrupado" y "Excel agrupado"**: salen
->   solos para todos los reportes.
+>   solos para todos los reportes. Un reporte sin vista agrupada (solo la tabla y sus descargas)
+>   lleva `agrupado: false`: no salen "Personaliza tu reporte", el Resumen ni el "Excel agrupado".
 
 ## Checklist
 

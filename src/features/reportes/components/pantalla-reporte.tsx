@@ -174,6 +174,8 @@ export function PantallaReporte({
   });
   const [valores, setValores] = React.useState<ValoresFiltros>({});
   const etiquetas = React.useRef<Record<string, string>>({});
+  // `agrupado: false`: sin "Personaliza tu reporte", "Resumen agrupado" ni "Excel agrupado".
+  const agrupado = definicion.agrupado !== false;
   const campos = React.useMemo(() => camposAgrupables(definicion.columnas), [definicion.columnas]);
   const [config, setConfig] = React.useState<ConfiguracionResumen>(() => ({
     niveles: campos.filter((c) => definicion.agrupacion?.filas?.includes(c.campo)),
@@ -426,15 +428,17 @@ export function PantallaReporte({
                 </div>
               )}
 
-              <div className="grid gap-5 md:grid-cols-2">
-                <Panel>
-                  <EncabezadoPanel
-                    icono={<SlidersHorizontal />}
-                    titulo="Personaliza tu reporte"
-                    subtitulo="Define cómo se agrupan y desglosan los datos"
-                  />
-                  <PersonalizaReporte campos={campos} config={config} onChange={setConfig} />
-                </Panel>
+              <div className={agrupado ? "grid gap-5 md:grid-cols-2" : "grid gap-5"}>
+                {agrupado ? (
+                  <Panel>
+                    <EncabezadoPanel
+                      icono={<SlidersHorizontal />}
+                      titulo="Personaliza tu reporte"
+                      subtitulo="Define cómo se agrupan y desglosan los datos"
+                    />
+                    <PersonalizaReporte campos={campos} config={config} onChange={setConfig} />
+                  </Panel>
+                ) : null}
 
                 <Panel>
                   <EncabezadoPanel
@@ -503,21 +507,23 @@ export function PantallaReporte({
                           {generando === "excel" ? "Generando Excel..." : "Excel"}
                         </Button>
                       ) : null}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="gap-1.5 border-green-600 text-green-700 hover:bg-green-50"
-                        disabled={generando !== null || sinDatos}
-                        onClick={descargarXlsxAgrupado}
-                        title="Excel del Resumen agrupado"
-                      >
-                        {generando === "agrupado" ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <FileSpreadsheet className="size-4" />
-                        )}
-                        {generando === "agrupado" ? "Generando Excel..." : "Excel agrupado"}
-                      </Button>
+                      {agrupado ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="gap-1.5 border-green-600 text-green-700 hover:bg-green-50"
+                          disabled={generando !== null || sinDatos}
+                          onClick={descargarXlsxAgrupado}
+                          title="Excel del Resumen agrupado"
+                        >
+                          {generando === "agrupado" ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <FileSpreadsheet className="size-4" />
+                          )}
+                          {generando === "agrupado" ? "Generando Excel..." : "Excel agrupado"}
+                        </Button>
+                      ) : null}
                     </div>
                     {error ? (
                       <p role="alert" className="text-right text-sm text-destructive">
@@ -533,35 +539,37 @@ export function PantallaReporte({
       </Panel>
 
       {/* ── Resumen agrupado ── */}
-      <Panel>
-        <EncabezadoPanel
-          icono={<Table2 />}
-          titulo="Resumen agrupado"
-          subtitulo="Agrupado según «Personaliza tu reporte»"
-        />
-        <div className="p-4">
-          {consultada === null ? (
-            <MensajeVacio>Pulse «Consultar» para cargar el reporte.</MensajeVacio>
-          ) : consulta.isLoading ? (
-            <MensajeVacio>Cargando…</MensajeVacio>
-          ) : resumen.data.length === 0 ? (
-            <MensajeVacio>No hay datos para agrupar.</MensajeVacio>
-          ) : (
-            <TablaDouble
-              // Se vuelve a montar al cambiar datos o agrupación para expandir el total general.
-              key={`${consulta.dataUpdatedAt}-${config.columna}-${config.niveles.map((n) => n.campo).join(",")}`}
-              data={resumen.data}
-              columns={resumen.columnas}
-              rowKey="id"
-              showTotals={false}
-              mostrarColumnaTotal={false}
-              mostrarTotalesPie={false}
-              firstColumnWidth={280}
-              nivelExpandidoInicial={1}
-            />
-          )}
-        </div>
-      </Panel>
+      {agrupado ? (
+        <Panel>
+          <EncabezadoPanel
+            icono={<Table2 />}
+            titulo="Resumen agrupado"
+            subtitulo="Agrupado según «Personaliza tu reporte»"
+          />
+          <div className="p-4">
+            {consultada === null ? (
+              <MensajeVacio>Pulse «Consultar» para cargar el reporte.</MensajeVacio>
+            ) : consulta.isLoading ? (
+              <MensajeVacio>Cargando…</MensajeVacio>
+            ) : resumen.data.length === 0 ? (
+              <MensajeVacio>No hay datos para agrupar.</MensajeVacio>
+            ) : (
+              <TablaDouble
+                // Se vuelve a montar al cambiar datos o agrupación para expandir el total general.
+                key={`${consulta.dataUpdatedAt}-${config.columna}-${config.niveles.map((n) => n.campo).join(",")}`}
+                data={resumen.data}
+                columns={resumen.columnas}
+                rowKey="id"
+                showTotals={false}
+                mostrarColumnaTotal={false}
+                mostrarTotalesPie={false}
+                firstColumnWidth={280}
+                nivelExpandidoInicial={1}
+              />
+            )}
+          </div>
+        </Panel>
+      ) : null}
 
       {/* ── Reporte ── */}
       <Panel>

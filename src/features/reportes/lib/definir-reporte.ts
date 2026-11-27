@@ -145,10 +145,17 @@ export interface DefinicionReporte<TFila> {
   /** Agrupación inicial de "Personaliza tu reporte" (ids de columnas agrupables). */
   agrupacion?: { filas?: readonly string[]; columna?: string };
   /**
+   * `false`: reporte sin vista agrupada (solo la tabla del reporte y sus descargas): no muestra
+   * "Personaliza tu reporte", ni el "Resumen agrupado", ni el botón "Excel agrupado". Por
+   * defecto, sí.
+   */
+  agrupado?: boolean;
+  /**
    * Descargas del reporte (opcionales: sin esto no tiene ninguna; en CRM unos tienen Excel,
    * otros PDF y otros ambos). `true` = el detalle con las columnas; una función = formato
    * propio (p. ej. el del legacy). En `pdf`, `"contenido"` = lo genera el `Contenido` del
-   * reporte con `solicitudPdf` (mismo botón PDF). El "Excel agrupado" está siempre.
+   * reporte con `solicitudPdf` (mismo botón PDF). El "Excel agrupado" está siempre (salvo
+   * `agrupado: false`).
    */
   descargas?: {
     excel?: true | ((descarga: DescargaReporte<TFila>) => Promise<void>);
