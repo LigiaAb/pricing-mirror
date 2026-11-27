@@ -1,0 +1,3 @@
+import { build } from "esbuild";
+await build({ entryPoints: ["/tmp/claude-0/-home-user-pricing-mirror/6e2e8e09-6e9f-5909-b102-23fdfd153612/scratchpad/t3.tsx"], bundle: true, platform: "node", format: "esm", outfile: "/tmp/claude-0/-home-user-pricing-mirror/6e2e8e09-6e9f-5909-b102-23fdfd153612/scratchpad/t3.mjs", jsx: "automatic", tsconfig: "tsconfig.json", external: ["react", "react-dom", "zod", "date-fns"], logLevel: "error",
+  plugins: [{ name: "s", setup(b) { b.onResolve({ filter: /consultar-api$/ }, () => ({ path: "/tmp/claude-0/-home-user-pricing-mirror/6e2e8e09-6e9f-5909-b102-23fdfd153612/scratchpad/stub/consultar-api.ts" })); } }] });

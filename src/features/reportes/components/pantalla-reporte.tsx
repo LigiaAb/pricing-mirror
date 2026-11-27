@@ -41,7 +41,7 @@ import {
   calcularResumen,
   camposAgrupables,
 } from "../lib/resumen-agrupado";
-import { CampoBusqueda, CampoFecha, CampoMultiSelect, CampoSelect } from "./campos";
+import { CampoBusqueda, CampoFecha, CampoMultiSelect, CampoSelect, CampoTexto } from "./campos";
 import { TablaReporte } from "./contenido-reporte";
 import { EncabezadoPanel, MensajeVacio, Panel, TituloReporte } from "./panel";
 import { PersonalizaReporte } from "./personaliza-reporte";
@@ -95,6 +95,17 @@ function CampoFiltro({
     onEtiqueta(filtro.label, String(etiqueta));
   }, [onEtiqueta, filtro.label, etiqueta]);
 
+  if (filtro.texto) {
+    return (
+      <CampoTexto
+        id={`filtro-${filtro.id}`}
+        label={filtro.requerido ? `${filtro.label} *` : filtro.label}
+        value={valor}
+        onChange={(nuevo) => onChange(filtro.id, nuevo)}
+        limpiable={!filtro.requerido}
+      />
+    );
+  }
   if (filtro.buscar) {
     return (
       <CampoBusqueda

@@ -190,7 +190,9 @@ siempre):
   archivo.
 - **`id`:** el nombre del parámetro que llega a la consulta (E) y se manda al endpoint (ej.
   `cod_usuario`).
-- **Modificadores:** `multiple: true` (llega como `"7,8"`) y `requerido: true`.
+- **Modificadores:** `multiple: true` (llega como `"7,8"`), `requerido: true` y `texto: true`
+  (campo de texto libre en lugar de select, sin opciones; ej. número de coordinación en
+  `EMB-DE-03`).
 
 Si no se pone, solo salen empresa, CC y fechas.
 

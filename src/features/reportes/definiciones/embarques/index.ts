@@ -1,4 +1,5 @@
 import type { Reporte } from "../../lib/definir-reporte";
+import { reporteDetalleEmbarque } from "./reporte-detalle-embarque";
 import { reporteEmbarquesFclTransitoGt } from "./reporte-embarques-fcl-transito-gt";
 import { reporteEmbarquesNoAsignadosHk } from "./reporte-embarques-no-asignados-hk";
 
@@ -6,4 +7,5 @@ import { reporteEmbarquesNoAsignadosHk } from "./reporte-embarques-no-asignados-
 export const REPORTES_EMBARQUES: readonly Reporte[] = [
   reporteEmbarquesFclTransitoGt,
   reporteEmbarquesNoAsignadosHk,
+  reporteDetalleEmbarque,
 ];
