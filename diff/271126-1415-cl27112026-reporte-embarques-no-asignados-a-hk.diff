@@ -1,0 +1,92 @@
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+index 715bb4a..e9a680a 100644
+--- a/src/features/reportes/ARQUITECTURA.md
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -32,6 +32,8 @@ reportes/
+                               fijo en Oracle, sin parámetros: sin fechas, filtros, empresa ni
+                               CC; `agrupado: false`; Excel del detalle con vacíos en amarillo,
+                               `colorFondoCelda` de `descargarExcelReporte`)
++      reporte-embarques-no-asignados-hk.ts  EMB-ENAHK-02 Embarques no asignados a HK (SQL fijo
++                              en Oracle, sin parámetros; `agrupado: false`; `excel: true`)
+     pricing/
+       index.ts                REPORTES_PRICING
+       reporte-hit-rate.tsx    PRI-HR-01 Hit Rate (filas de report_kpi_cotizaciones para el
+diff --git a/src/features/reportes/definiciones/embarques/index.ts b/src/features/reportes/definiciones/embarques/index.ts
+index d93af57..18a994f 100644
+--- a/src/features/reportes/definiciones/embarques/index.ts
++++ b/src/features/reportes/definiciones/embarques/index.ts
+@@ -1,5 +1,9 @@
+ import type { Reporte } from "../../lib/definir-reporte";
+ import { reporteEmbarquesFclTransitoGt } from "./reporte-embarques-fcl-transito-gt";
++import { reporteEmbarquesNoAsignadosHk } from "./reporte-embarques-no-asignados-hk";
+ 
+ /** Reportes del módulo Embarques (nomenclatura `EMB-…`), en orden de correlativo. */
+-export const REPORTES_EMBARQUES: readonly Reporte[] = [reporteEmbarquesFclTransitoGt];
++export const REPORTES_EMBARQUES: readonly Reporte[] = [
++  reporteEmbarquesFclTransitoGt,
++  reporteEmbarquesNoAsignadosHk,
++];
+diff --git a/src/features/reportes/definiciones/embarques/reporte-embarques-no-asignados-hk.ts b/src/features/reportes/definiciones/embarques/reporte-embarques-no-asignados-hk.ts
+new file mode 100644
+index 0000000..b91e668
+--- /dev/null
++++ b/src/features/reportes/definiciones/embarques/reporte-embarques-no-asignados-hk.ts
+@@ -0,0 +1,58 @@
++import { format } from "date-fns";
++import { z } from "zod";
++import { consultarApi } from "../../api/consultar-api";
++import { type ColumnaReporte, definirReporte } from "../../lib/definir-reporte";
++
++/**
++ * EMB-ENAHK-02 Embarques no asignados a HK.
++ * Endpoint con un SQL fijo en Oracle (`reportes_embarques_transito.js` del back): no recibe
++ * parámetros (empresa, departamento, cliente y producto van dentro del SQL), por eso no lleva
++ * fechas, filtros, empresa ni CC. Las fechas llegan como texto local `YYYY-MM-DDTHH:mm:ss`. Las
++ * claves llegan en minúsculas (el cliente HTTP las normaliza), aunque Oracle las devuelva en
++ * mayúsculas.
++ */
++const texto = z.string().nullable().catch(null);
++const filaSchema = z.looseObject({
++  coordinacion: z.union([z.string(), z.number()]).transform(String).nullable().catch(null),
++  doc_embarque: texto,
++  proveedor_origen: texto,
++  orden_compra: texto,
++  etd: texto,
++  atd: texto,
++  eta: texto,
++  ata: texto,
++});
++type Fila = z.infer<typeof filaSchema>;
++
++/** `YYYY-MM-DDTHH:mm:ss` (hora local) → `dd/MM/yyyy`; vacía o inválida → null. */
++const fecha = (valor: string | null): string | null => {
++  const dia = valor ? new Date(valor) : null;
++  return dia && !Number.isNaN(dia.getTime()) ? format(dia, "dd/MM/yyyy") : null;
++};
++
++const columnas: readonly ColumnaReporte<Fila>[] = [
++  { id: "coordinacion", label: "Coordinación", valor: (f) => f.coordinacion, buscable: true },
++  { id: "doc_embarque", label: "Doc. embarque", valor: (f) => f.doc_embarque, buscable: true },
++  {
++    id: "proveedor_origen",
++    label: "Proveedor origen",
++    valor: (f) => f.proveedor_origen,
++    buscable: true,
++  },
++  { id: "orden_compra", label: "Orden de compra", valor: (f) => f.orden_compra, buscable: true },
++  { id: "etd", label: "ETD", valor: (f) => fecha(f.etd) },
++  { id: "atd", label: "ATD", valor: (f) => fecha(f.atd) },
++  { id: "eta", label: "ETA", valor: (f) => fecha(f.eta) },
++  { id: "ata", label: "ATA", valor: (f) => fecha(f.ata) },
++];
++
++export const reporteEmbarquesNoAsignadosHk = definirReporte<Fila>({
++  nomenclatura: "EMB-ENAHK-02",
++  descripcion: "Embarques de importación no asignados a HK (sin coordinación relacionada)",
++  fechas: "ninguna",
++  empresaCentroCosto: false,
++  agrupado: false,
++  consultar: consultarApi("/api/appweb/reporte-emb-no-asignados-hk", filaSchema),
++  columnas,
++  descargas: { excel: true },
++});
