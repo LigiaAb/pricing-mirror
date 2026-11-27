@@ -58,14 +58,18 @@ export function agruparActividadesPorTipo(actividades: Actividad[]): Actividades
 
 /** Matriz lunes-domingo que cubre por completo el mes visible. */
 /**
- * Días (YYYY-MM-DD, ambos inclusive) que dibuja la vista: semana completa en "semana" y la
- * rejilla del mes (con los días de las semanas vecinas) en "mes" y "dia". Se consulta solo ese
- * rango en lugar de todas las actividades.
+ * Días (YYYY-MM-DD, ambos inclusive) que dibuja la vista: la rejilla del mes en "mes" (con los
+ * días de las semanas vecinas que también se ven), la semana en "semana" y solo el día en "dia".
+ * Se consulta solo ese rango en lugar de todas las actividades.
  */
 export function rangoConsultaCalendario(
   fecha: Date,
   vista: "mes" | "semana" | "dia",
 ): { fecha_inicio: string; fecha_fin: string } {
+  if (vista === "dia") {
+    const dia = format(fecha, "yyyy-MM-dd");
+    return { fecha_inicio: dia, fecha_fin: dia };
+  }
   const inicio =
     vista === "semana" ? startOfWeek(fecha, LUNES) : startOfWeek(startOfMonth(fecha), LUNES);
   const fin = vista === "semana" ? endOfWeek(fecha, LUNES) : endOfWeek(endOfMonth(fecha), LUNES);
