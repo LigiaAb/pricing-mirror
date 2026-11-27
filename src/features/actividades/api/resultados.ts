@@ -3,7 +3,7 @@ import { z } from "zod";
 import { http } from "@/shared/api/client";
 import { parseEnvelope } from "@/shared/api/envelope";
 import { zIdSafeNull } from "@/shared/lib/zod-scalars";
-import { actividades } from "./actividades";
+import { actividades, fechaActividad } from "./actividades";
 
 const texto = z
   .string()
@@ -18,8 +18,8 @@ const resultadoActividadSchema = z.looseObject({
   nom_tipo_resultado: texto,
   nom_tipo: texto,
   descripcion: texto,
-  fecha_creada: texto,
-  fecha_programada: texto,
+  fecha_creada: fechaActividad,
+  fecha_programada: fechaActividad,
   referencia: texto,
 });
 

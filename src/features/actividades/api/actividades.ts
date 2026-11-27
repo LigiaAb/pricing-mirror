@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createCatalogo } from "@/features/catalogos";
 import { CACHE_DYNAMIC } from "@/shared/api/cache";
+import { quitarZonaHoraria } from "@/shared/lib/date";
 import { zIdSafe, zIdSafeNull } from "@/shared/lib/zod-scalars";
 
 const texto = z
@@ -9,11 +10,17 @@ const texto = z
   .optional()
   .transform((value) => value ?? "");
 
+/**
+ * Fecha de ACTIVIDAD (`datetime` en hora de Guatemala). La API la devuelve con "Z"
+ * (`2026-11-27T08:00:00.000Z` = 08:00 en Guatemala): sin la zona se lee como hora local.
+ */
+export const fechaActividad = texto.transform(quitarZonaHoraria);
+
 /** Contrato de `lista-actividades`, normalizado por el cliente HTTP. */
 export const actividadSchema = z.looseObject({
   cod_actividad: zIdSafe,
-  fecha_creada: texto,
-  fecha_programada: texto,
+  fecha_creada: fechaActividad,
+  fecha_programada: fechaActividad,
   asunto: texto,
   descripcion: texto,
   cod_tipo: zIdSafe,

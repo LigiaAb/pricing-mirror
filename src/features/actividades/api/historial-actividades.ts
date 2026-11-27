@@ -3,6 +3,7 @@ import { z } from "zod";
 import { http } from "@/shared/api/client";
 import { parseEnvelope } from "@/shared/api/envelope";
 import { zIdSafe } from "@/shared/lib/zod-scalars";
+import { fechaActividad } from "./actividades";
 
 const texto = z
   .string()
@@ -12,11 +13,11 @@ const texto = z
 
 export const historialActividadSchema = z.looseObject({
   cod_actividad: zIdSafe,
-  fecha_creada: texto,
+  fecha_creada: fechaActividad,
   asunto: texto,
   descripcion: texto,
   nom_tipo: texto,
-  fecha_programada: texto,
+  fecha_programada: fechaActividad,
   cod_cenco: zIdSafe.optional(),
   nombre_cenco: texto,
   cod_empresa: zIdSafe.optional(),

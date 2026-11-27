@@ -1,0 +1,95 @@
+diff --git a/src/features/actividades/api/actividades.ts b/src/features/actividades/api/actividades.ts
+index 33381ce..fe3be2f 100644
+--- a/src/features/actividades/api/actividades.ts
++++ b/src/features/actividades/api/actividades.ts
+@@ -1,6 +1,7 @@
+ import { z } from "zod";
+ import { createCatalogo } from "@/features/catalogos";
+ import { CACHE_DYNAMIC } from "@/shared/api/cache";
++import { quitarZonaHoraria } from "@/shared/lib/date";
+ import { zIdSafe, zIdSafeNull } from "@/shared/lib/zod-scalars";
+ 
+ const texto = z
+@@ -9,11 +10,17 @@ const texto = z
+   .optional()
+   .transform((value) => value ?? "");
+ 
++/**
++ * Fecha de ACTIVIDAD (`datetime` en hora de Guatemala). La API la devuelve con "Z"
++ * (`2026-11-27T08:00:00.000Z` = 08:00 en Guatemala): sin la zona se lee como hora local.
++ */
++export const fechaActividad = texto.transform(quitarZonaHoraria);
++
+ /** Contrato de `lista-actividades`, normalizado por el cliente HTTP. */
+ export const actividadSchema = z.looseObject({
+   cod_actividad: zIdSafe,
+-  fecha_creada: texto,
+-  fecha_programada: texto,
++  fecha_creada: fechaActividad,
++  fecha_programada: fechaActividad,
+   asunto: texto,
+   descripcion: texto,
+   cod_tipo: zIdSafe,
+diff --git a/src/features/actividades/api/historial-actividades.ts b/src/features/actividades/api/historial-actividades.ts
+index f26565e..601540b 100644
+--- a/src/features/actividades/api/historial-actividades.ts
++++ b/src/features/actividades/api/historial-actividades.ts
+@@ -3,6 +3,7 @@ import { z } from "zod";
+ import { http } from "@/shared/api/client";
+ import { parseEnvelope } from "@/shared/api/envelope";
+ import { zIdSafe } from "@/shared/lib/zod-scalars";
++import { fechaActividad } from "./actividades";
+ 
+ const texto = z
+   .string()
+@@ -12,11 +13,11 @@ const texto = z
+ 
+ export const historialActividadSchema = z.looseObject({
+   cod_actividad: zIdSafe,
+-  fecha_creada: texto,
++  fecha_creada: fechaActividad,
+   asunto: texto,
+   descripcion: texto,
+   nom_tipo: texto,
+-  fecha_programada: texto,
++  fecha_programada: fechaActividad,
+   cod_cenco: zIdSafe.optional(),
+   nombre_cenco: texto,
+   cod_empresa: zIdSafe.optional(),
+diff --git a/src/features/actividades/api/resultados.ts b/src/features/actividades/api/resultados.ts
+index b848e7b..8be4b7e 100644
+--- a/src/features/actividades/api/resultados.ts
++++ b/src/features/actividades/api/resultados.ts
+@@ -3,7 +3,7 @@ import { z } from "zod";
+ import { http } from "@/shared/api/client";
+ import { parseEnvelope } from "@/shared/api/envelope";
+ import { zIdSafeNull } from "@/shared/lib/zod-scalars";
+-import { actividades } from "./actividades";
++import { actividades, fechaActividad } from "./actividades";
+ 
+ const texto = z
+   .string()
+@@ -18,8 +18,8 @@ const resultadoActividadSchema = z.looseObject({
+   nom_tipo_resultado: texto,
+   nom_tipo: texto,
+   descripcion: texto,
+-  fecha_creada: texto,
+-  fecha_programada: texto,
++  fecha_creada: fechaActividad,
++  fecha_programada: fechaActividad,
+   referencia: texto,
+ });
+ 
+diff --git a/src/features/actividades/components/detalle/actividad-detalle.tsx b/src/features/actividades/components/detalle/actividad-detalle.tsx
+index 10c41bb..f73eafc 100644
+--- a/src/features/actividades/components/detalle/actividad-detalle.tsx
++++ b/src/features/actividades/components/detalle/actividad-detalle.tsx
+@@ -120,7 +120,7 @@ function Informacion({
+         />
+         <CampoDetalle
+           etiqueta="Programada"
+-          valor={actividad.fecha_programada || "Sin fecha"}
++          valor={formatearFechaHora(actividad.fecha_programada) || "Sin fecha"}
+           icono={<CalendarClock className="size-4" />}
+         />
+         <CampoDetalle

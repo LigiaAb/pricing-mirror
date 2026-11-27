@@ -120,7 +120,7 @@ function Informacion({
         />
         <CampoDetalle
           etiqueta="Programada"
-          valor={actividad.fecha_programada || "Sin fecha"}
+          valor={formatearFechaHora(actividad.fecha_programada) || "Sin fecha"}
           icono={<CalendarClock className="size-4" />}
         />
         <CampoDetalle
