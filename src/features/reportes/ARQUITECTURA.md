@@ -49,7 +49,8 @@ reportes/
                               FILTROS_EMPRESA_CC (filtroEmpresa + filtroCentroCosto, los pone la pantalla)
     resumen-agrupado.ts       tabla dinámica genérica (calcularResumen → árbol de TablaDouble)
     exportar.ts               Excel agrupado (resumen) y PDF/Excel genéricos del reporte (detalle)
-    excel-reporte.ts          COPIA del generador de Excel de Reportes de pricing (Excel agrupado)
+    excel-reporte.ts          COPIA del generador de Excel de Reportes de pricing (Excel agrupado
+                              y Excel del reporte, `excel: true`; `colorFondoCelda` rellena celdas)
   components/
     vista-reportes.tsx        "Reportes disponibles" (Módulo → Reporte) + reporte elegido
     pantalla-reporte.tsx      título, filtros y configuración, Consultar, resumen, reporte, descargas
@@ -105,7 +106,8 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
     negrita y `#,##0`.
   - **Excel / PDF del reporte** (opcionales, `descargas: { excel, pdf }` de la definición; en
     CRM unos tienen Excel, otros PDF y otros ambos): `true` = el detalle con las columnas
-    (Excel con `exportarExcel` de `@/shared/lib/excel`; PDF con `usePdfReporte` de
+    (Excel con el **mismo generador que el Excel agrupado**, `agregarHojaReporte`, sin agrupar:
+    `descargarExcelReporte`, con `colorFondoCelda` opcional para rellenar celdas; PDF con `usePdfReporte` de
     `@/features/pricing/reportes`); una función = formato propio, que recibe `{ filas, titulo,
     encabezado, params }` (ej. `excelActividades` en `crm/reporte-visitas-historico.ts`, el Excel de
     Reportes CRM). Sin la clave, no hay botón.
