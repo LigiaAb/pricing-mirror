@@ -1,10 +1,18 @@
 export const TODOS = "todos";
 
+/** Usuario por el que se consultan las actividades: el asignado (asesor) o el creador. */
+export type TipoUsuario = "asignado" | "creador";
+
+export const OPCIONES_TIPO_USUARIO: { value: TipoUsuario; label: string }[] = [
+  { value: "asignado", label: "Asignado" },
+  { value: "creador", label: "Creador" },
+];
+
 export interface FiltroActividades {
   codEmp: string;
   codCc: string;
-  codAsesor: string;
-  codCreador: string;
+  tipoUsuario: TipoUsuario;
+  codUsuario: string;
   codEstado: string;
   fechaInicio: string;
   fechaFin: string;
@@ -25,14 +33,12 @@ export function construirFiltrosActividades(
   if (filtro.codEstado !== TODOS) resultado.cod_estado = Number(filtro.codEstado);
   if (filtro.fechaInicio) resultado.fecha_inicio = filtro.fechaInicio;
   if (filtro.fechaFin) resultado.fecha_fin = filtro.fechaFin;
-  if (filtro.codCreador && filtro.codCreador !== TODOS) {
-    resultado.cod_creador = Number(filtro.codCreador);
-  }
 
   if (!opciones.sinAsignar) {
-    const asesor = opciones.puedeVerTodo ? filtro.codAsesor : opciones.codUsuario;
-    if (asesor !== null && asesor !== TODOS && asesor !== "") {
-      resultado.cod_asesor = Number(asesor);
+    const usuario = opciones.puedeVerTodo ? filtro.codUsuario : opciones.codUsuario;
+    if (usuario !== null && usuario !== TODOS && usuario !== "") {
+      resultado.cod_usuario = Number(usuario);
+      resultado.tipo_usuario = filtro.tipoUsuario;
     }
   }
 

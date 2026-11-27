@@ -9,7 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { type FiltroActividades, TODOS } from "../../lib/actividad-filtros";
+import {
+  type FiltroActividades,
+  OPCIONES_TIPO_USUARIO,
+  type TipoUsuario,
+  TODOS,
+} from "../../lib/actividad-filtros";
 
 interface FiltrosActividadesProps {
   filtro: FiltroActividades;
@@ -21,6 +26,7 @@ interface FiltrosActividadesProps {
   puedeFiltrarContexto: boolean;
   puedeVerTodo: boolean;
   mostrarEstado?: boolean;
+  mostrarTipoUsuario?: boolean;
 }
 
 export function FiltrosActividades({
@@ -33,6 +39,7 @@ export function FiltrosActividades({
   puedeFiltrarContexto,
   puedeVerTodo,
   mostrarEstado = true,
+  mostrarTipoUsuario = true,
 }: Readonly<FiltrosActividadesProps>) {
   const centrosFiltrados = centrosCosto.filter(
     (centro) => filtro.codEmp === TODOS || String(centro.codEmpresaCc) === filtro.codEmp,
@@ -70,27 +77,23 @@ export function FiltrosActividades({
           />
         </>
       )}
-      {puedeVerTodo && (
+      {mostrarTipoUsuario && (
         <CampoSelect
-          id="actividad-asesor"
-          label="Asesor"
-          value={filtro.codAsesor}
-          onValueChange={(codAsesor) => onCambiar({ ...filtro, codAsesor })}
-          opciones={[
-            { value: TODOS, label: "Todos" },
-            ...empleados.map((empleado) => ({
-              value: String(empleado.codUsuario),
-              label: empleado.nombreCompleto || empleado.usuario || String(empleado.codUsuario),
-            })),
-          ]}
+          id="actividad-tipo-usuario"
+          label="Ver por"
+          value={filtro.tipoUsuario}
+          onValueChange={(tipoUsuario) =>
+            onCambiar({ ...filtro, tipoUsuario: tipoUsuario as TipoUsuario })
+          }
+          opciones={OPCIONES_TIPO_USUARIO}
         />
       )}
       {puedeVerTodo && (
         <CampoSelect
-          id="actividad-creador"
-          label="Creador"
-          value={filtro.codCreador}
-          onValueChange={(codCreador) => onCambiar({ ...filtro, codCreador })}
+          id="actividad-usuario"
+          label="Usuario"
+          value={filtro.codUsuario}
+          onValueChange={(codUsuario) => onCambiar({ ...filtro, codUsuario })}
           opciones={[
             { value: TODOS, label: "Todos" },
             ...empleados.map((empleado) => ({

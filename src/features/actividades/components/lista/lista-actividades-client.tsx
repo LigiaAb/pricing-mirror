@@ -12,6 +12,7 @@ import { actividadesSinAsignar, type ResumenAsignacion } from "../../api/activid
 import {
   construirFiltrosActividades,
   type FiltroActividades,
+  type TipoUsuario,
   TODOS,
 } from "../../lib/actividad-filtros";
 import { actividadesColumns } from "./actividades-columns";
@@ -23,6 +24,8 @@ interface ListaActividadesClientProps {
   puedeVerTodo?: boolean;
   puedeAsignar?: boolean;
   puedeFiltrarContexto?: boolean;
+  /** Usuario por el que se consulta al abrir (asignado o creador); el filtro "Ver por" lo cambia. */
+  usuarioPorDefecto?: TipoUsuario;
 }
 
 export function ListaActividadesClient({
@@ -30,6 +33,7 @@ export function ListaActividadesClient({
   puedeVerTodo = false,
   puedeAsignar = false,
   puedeFiltrarContexto = false,
+  usuarioPorDefecto = "asignado",
 }: Readonly<ListaActividadesClientProps>) {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
@@ -45,8 +49,8 @@ export function ListaActividadesClient({
   const filtro: FiltroActividades = filtroElegido ?? {
     codEmp: currentEmpresa ? String(currentEmpresa.cod_empresa) : TODOS,
     codCc: currentCentroCosto ? String(currentCentroCosto.cod_cc) : TODOS,
-    codAsesor: sinAsignar ? TODOS : String(codUsuario ?? TODOS),
-    codCreador: sinAsignar ? TODOS : String(codUsuario ?? TODOS),
+    tipoUsuario: usuarioPorDefecto,
+    codUsuario: sinAsignar ? TODOS : String(codUsuario ?? TODOS),
     codEstado: TODOS,
     fechaInicio: "",
     fechaFin: "",
@@ -133,11 +137,7 @@ export function ListaActividadesClient({
       )}
       <DataTable
         key={consulta.data?.map((item) => item.cod_actividad).join(",")}
-        data={(consulta.data ?? [])?.filter((item) =>
-          filtrosServidor.cod_creador
-            ? item.cod_creador === Number(filtrosServidor.cod_creador)
-            : true,
-        )}
+        data={consulta.data ?? []}
         columns={columns}
         searchKeys={["asunto"]}
         searchPlaceholder="Buscar actividad..."
@@ -158,6 +158,7 @@ export function ListaActividadesClient({
               puedeFiltrarContexto={puedeFiltrarContexto}
               puedeVerTodo={!sinAsignar && puedeVerTodo}
               mostrarEstado={!sinAsignar}
+              mostrarTipoUsuario={!sinAsignar}
             />
             {sinAsignar && puedeAsignar && (
               <Button

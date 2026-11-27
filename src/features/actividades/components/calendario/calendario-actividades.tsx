@@ -1,7 +1,7 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
-import { addDays, addMonths, addWeeks, format, isSameMonth } from "date-fns";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { addDays, addMonths, addWeeks, endOfMonth, format, isSameMonth } from "date-fns";
 import { Download, Plus, RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -18,12 +18,13 @@ import { Loader } from "@/shared/components/ui/loader";
 import { useAuthStore } from "@/shared/stores/auth-store";
 import { actividades } from "../../api/actividades";
 import { useConteoActividades } from "../../api/conteo-actividades";
+import type { TipoUsuario } from "../../lib/actividad-filtros";
 import {
   filtrarActividadesCalendario,
   filtrosCalendarioDesdeUrl,
   filtrosCalendarioUrl,
 } from "../../lib/calendario-filtros";
-import { actividadesDelDia } from "../../lib/calendario-rejilla";
+import { actividadesDelDia, rangoConsultaCalendario } from "../../lib/calendario-rejilla";
 import { AgendaDia } from "./agenda-dia";
 import { DialogoExportarActividades } from "./dialogo-exportar-actividades";
 import { FiltrosCalendario } from "./filtros-calendario";
@@ -48,7 +49,12 @@ function vistaDesdeUrl(valor: string | null): VistaCalendario {
 const NOMBRE_OPCION_CALENDARIO = "Calendario";
 const NOMBRE_ACCION_VER_CXC_FACTURAS = "ver-cxc-facturas";
 
-export function CalendarioActividades() {
+export function CalendarioActividades({
+  usuarioPorDefecto = "asignado",
+}: Readonly<{
+  /** Usuario por el que se consulta al abrir (asignado o creador); el filtro "Ver por" lo cambia. */
+  usuarioPorDefecto?: TipoUsuario;
+}> = {}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -65,28 +71,46 @@ export function CalendarioActividades() {
   const contextoHidratado = useContextoOperativoStore((state) => state._hasHydrated);
   const [dialogoExportar, setDialogoExportar] = useState(false);
   const [filterByUser, setFilterByUser] = useState(false);
+  const [tipoUsuario, setTipoUsuario] = useState<TipoUsuario>(usuarioPorDefecto);
   const fecha = fechaDesdeUrl(searchParams.get("fecha"));
   const vista = vistaDesdeUrl(searchParams.get("vista"));
   const diaUrl = fechaDesdeUrl(searchParams.get("dia"));
   const dia = vista === "mes" && !isSameMonth(diaUrl, fecha) ? fecha : diaUrl;
   const codUsuario = user?.cod_usuario;
+  // Con "ver todo" solo se filtra por usuario si marca "Filtrar para mi usuario".
+  const filtraPorUsuario = !permisosLista.puedeVerTodo || filterByUser;
+  const filtroUsuario = useMemo(
+    () => (filtraPorUsuario ? { cod_usuario: Number(codUsuario), tipo_usuario: tipoUsuario } : {}),
+    [filtraPorUsuario, codUsuario, tipoUsuario],
+  );
+  const { fecha_inicio, fecha_fin } = rangoConsultaCalendario(vista === "dia" ? dia : fecha, vista);
   const filtrosServidor = useMemo(() => {
     return {
-      ...(permisosLista.puedeVerTodo
-        ? {}
-        : { cod_asesor: codUsuario, cod_cc: currentCentroCosto?.cod_cc }),
+      ...filtroUsuario,
+      ...(permisosLista.puedeVerTodo ? {} : { cod_cc: currentCentroCosto?.cod_cc }),
+      fecha_inicio,
+      fecha_fin,
     };
-  }, [codUsuario, currentCentroCosto?.cod_cc, permisosLista.puedeVerTodo]);
+  }, [
+    filtroUsuario,
+    currentCentroCosto?.cod_cc,
+    permisosLista.puedeVerTodo,
+    fecha_inicio,
+    fecha_fin,
+  ]);
   const habilitada =
     authHidratado && contextoHidratado && Boolean(currentCentroCosto) && Boolean(codUsuario);
-  const consulta = actividades.useLista(filtrosServidor, { enabled: habilitada });
+  // Una consulta por rango visible; mientras llega el nuevo se sigue viendo el anterior.
+  const consulta = useQuery({
+    ...actividades.listaOptions(filtrosServidor),
+    enabled: habilitada,
+    placeholderData: keepPreviousData,
+  });
   const conteo = useConteoActividades(
     {
-      ...((permisosLista.puedeVerTodo && filterByUser) || !permisosLista.puedeVerTodo
-        ? { cod_usuario: Number(codUsuario) }
-        : {}),
+      ...filtroUsuario,
       fecha_inicial: format(fecha, "yyyy-MM-01"),
-      fecha_final: format(addMonths(fecha, 1), "yyyy-MM-01"),
+      fecha_final: format(endOfMonth(fecha), "yyyy-MM-dd"),
     },
     habilitada,
   );
@@ -101,25 +125,14 @@ export function CalendarioActividades() {
   );
   const tiposActividad = useMemo(() => configuraciones, [configuraciones]);
   const filtros = useMemo(
-    () => ({
-      ...filtrosCalendarioDesdeUrl(
+    () =>
+      filtrosCalendarioDesdeUrl(
         searchParams.get("estado"),
         searchParams.get("tipo"),
         estadosActividad.map((estado) => Number(estado.cod_estado)),
         tiposActividad.map((tipo) => Number(tipo.cod_tipo_actividad)),
       ),
-      ...((permisosLista.puedeVerTodo && filterByUser) || !permisosLista.puedeVerTodo
-        ? { codUsuario: Number(codUsuario) }
-        : {}),
-    }),
-    [
-      estadosActividad,
-      searchParams,
-      tiposActividad,
-      codUsuario,
-      permisosLista.puedeVerTodo,
-      filterByUser,
-    ],
+    [estadosActividad, searchParams, tiposActividad],
   );
   const actividadesFiltradas = useMemo(
     () => filtrarActividadesCalendario(consulta.data ?? [], filtros),
@@ -225,6 +238,8 @@ export function CalendarioActividades() {
         setFilterByUser={setFilterByUser}
         filterByUser={filterByUser}
         puedeVerTodo={permisosLista.puedeVerTodo}
+        tipoUsuario={filtraPorUsuario ? tipoUsuario : null}
+        onCambiarTipoUsuario={setTipoUsuario}
         estados={estadosActividad}
         filtros={filtros}
         onCambiar={cambiarFiltros}

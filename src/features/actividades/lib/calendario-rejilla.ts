@@ -1,4 +1,12 @@
-import { addDays, endOfMonth, endOfWeek, isSameDay, startOfMonth, startOfWeek } from "date-fns";
+import {
+  addDays,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isSameDay,
+  startOfMonth,
+  startOfWeek,
+} from "date-fns";
 import type { Actividad } from "../api/actividades";
 
 const LUNES = { weekStartsOn: 1 as const };
@@ -49,6 +57,21 @@ export function agruparActividadesPorTipo(actividades: Actividad[]): Actividades
 }
 
 /** Matriz lunes-domingo que cubre por completo el mes visible. */
+/**
+ * Días (YYYY-MM-DD, ambos inclusive) que dibuja la vista: semana completa en "semana" y la
+ * rejilla del mes (con los días de las semanas vecinas) en "mes" y "dia". Se consulta solo ese
+ * rango en lugar de todas las actividades.
+ */
+export function rangoConsultaCalendario(
+  fecha: Date,
+  vista: "mes" | "semana" | "dia",
+): { fecha_inicio: string; fecha_fin: string } {
+  const inicio =
+    vista === "semana" ? startOfWeek(fecha, LUNES) : startOfWeek(startOfMonth(fecha), LUNES);
+  const fin = vista === "semana" ? endOfWeek(fecha, LUNES) : endOfWeek(endOfMonth(fecha), LUNES);
+  return { fecha_inicio: format(inicio, "yyyy-MM-dd"), fecha_fin: format(fin, "yyyy-MM-dd") };
+}
+
 export function crearRejillaMes(fecha: Date, actividades: Actividad[]): DiaCalendario[][] {
   const inicio = startOfWeek(startOfMonth(fecha), LUNES);
   const fin = endOfWeek(endOfMonth(fecha), LUNES);

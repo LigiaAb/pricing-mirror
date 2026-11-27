@@ -5,8 +5,16 @@ import type { Dispatch, ReactNode, SetStateAction } from "react";
 import type { Estado } from "@/features/catalogos";
 import { Button } from "@/shared/components/ui/button";
 import { Checkbox } from "@/shared/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { cn } from "@/shared/lib/utils";
 import type { ConteoActividades } from "../../api/conteo-actividades";
+import { OPCIONES_TIPO_USUARIO, type TipoUsuario } from "../../lib/actividad-filtros";
 import { iconoActividad } from "../../lib/actividad-iconos";
 import type { FiltrosCalendario as EstadoFiltrosCalendario } from "../../lib/calendario-filtros";
 
@@ -26,6 +34,9 @@ interface FiltrosCalendarioProps {
   setFilterByUser: Dispatch<SetStateAction<boolean>>;
   filterByUser: boolean;
   puedeVerTodo: boolean;
+  /** `null` = no se filtra por usuario (ver todo sin "Filtrar para mi usuario"). */
+  tipoUsuario: TipoUsuario | null;
+  onCambiarTipoUsuario: (tipoUsuario: TipoUsuario) => void;
 }
 
 function GrupoFiltros({
@@ -146,6 +157,8 @@ export function FiltrosCalendario({
   setFilterByUser,
   filterByUser,
   puedeVerTodo,
+  tipoUsuario,
+  onCambiarTipoUsuario,
 }: Readonly<FiltrosCalendarioProps>) {
   const tiposUnicos = [...new Map(tipos.map((tipo) => [tipo.cod_tipo_actividad, tipo])).values()];
   const valores: Set<number> = new Set([...(filterByUser ? [1] : [])]);
@@ -159,6 +172,26 @@ export function FiltrosCalendario({
           <SlidersHorizontal aria-hidden="true" className="size-3.5" />
         </span>
         <p className="text-sm font-semibold">Filtrar actividades</p>
+        {tipoUsuario && (
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Ver por</span>
+            <Select
+              value={tipoUsuario}
+              onValueChange={(valor) => onCambiarTipoUsuario(valor as TipoUsuario)}
+            >
+              <SelectTrigger aria-label="Ver por" className="h-8 w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {OPCIONES_TIPO_USUARIO.map((opcion) => (
+                  <SelectItem key={opcion.value} value={opcion.value}>
+                    {opcion.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
       <div className="grid gap-4 xl:grid-cols-[minmax(16rem,0.8fr)_minmax(28rem,1.5fr)] xl:gap-6">
         <GrupoFiltros

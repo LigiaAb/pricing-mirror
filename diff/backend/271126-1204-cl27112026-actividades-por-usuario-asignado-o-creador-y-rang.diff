@@ -1,0 +1,156 @@
+diff --git a/app/controllers/actividades/actividades.js b/app/controllers/actividades/actividades.js
+index aeccd91..62afbc4 100644
+--- a/app/controllers/actividades/actividades.js
++++ b/app/controllers/actividades/actividades.js
+@@ -5,6 +5,47 @@ const { api_validar_token_larabel } = require("../servicios_externos/rutas_exter
+ const { insertar_actividad_bitacora } = require("./actividades_bitacora");
+ const  axios = require("axios");
+ const { ahoraGuatemala, fechaHoraValida, FORMATO_SQL } = require("../../utils/rangoFechaGuatemala");
++const dayjs = require("dayjs");
++
++/**
++ * Filtro por usuario. `cod_usuario` se aplica al asignado (`USUARIO_ID`) o al creador
++ * (`USUARIO_CREADOR_ID`) según `tipo_usuario` ("asignado" por defecto). `cod_asesor` y
++ * `cod_creador` filtran directo cada columna.
++ */
++const filtrarPorUsuario = (consulta, campos) => {
++    if(('cod_asesor' in campos)){
++        consulta.where('AC.USUARIO_ID', campos.cod_asesor)
++    }
++    if(('cod_creador' in campos)){
++        consulta.where('AC.USUARIO_CREADOR_ID', campos.cod_creador)
++    }
++    if(('cod_usuario' in campos)){
++        const columna = campos.tipo_usuario === 'creador' ? 'AC.USUARIO_CREADOR_ID' : 'AC.USUARIO_ID'
++        consulta.where(columna, campos.cod_usuario)
++    }
++}
++
++/** Día (YYYY-MM-DD) de una fecha del filtro; error si no es válida. */
++const diaDelFiltro = (valor, campo) => {
++    const fecha = fechaHoraValida(valor)
++    if(!fecha) throw new Error(`La fecha del filtro ${campo} no es válida, verifique`)
++    return fecha.slice(0, 10)
++}
++
++/**
++ * Rango de días (ambos inclusive) sobre ACTIVIDAD_FECHA_PROGRAMACION, en hora de Guatemala.
++ * Compara la columna sin CAST (>= inicio del primer día y < inicio del día siguiente al
++ * último) para que SQL Server pueda usar un índice sobre la fecha.
++ */
++const filtrarPorFechaProgramada = (consulta, campoInicio, campoFin, campos) => {
++    if((campoInicio in campos) && campos[campoInicio] !== ''){
++        consulta.where('AC.ACTIVIDAD_FECHA_PROGRAMACION', '>=', `${diaDelFiltro(campos[campoInicio], campoInicio)}T00:00:00`)
++    }
++    if((campoFin in campos) && campos[campoFin] !== ''){
++        const siguiente = dayjs(diaDelFiltro(campos[campoFin], campoFin)).add(1, 'day').format('YYYY-MM-DD')
++        consulta.where('AC.ACTIVIDAD_FECHA_PROGRAMACION', '<', `${siguiente}T00:00:00`)
++    }
++}
+ 
+ module.exports.getdatos_actividad = async (campos) => {
+     const estructuraConsulta =  azureSqlClient({"AC": "ACTIVIDAD"})  
+@@ -38,17 +79,12 @@ module.exports.getdatos_actividad = async (campos) => {
+     if(('cod_cc' in campos)){
+         estructuraConsulta.where('AC.CENCOS_ID',`${campos.cod_cc}`)
+     }
+-    if(('cod_asesor' in campos)){
+-        estructuraConsulta.where('AC.USUARIO_ID',`${campos.cod_asesor}`)
+-    }
++    filtrarPorUsuario(estructuraConsulta, campos)
+     if(('cod_estado' in campos)){
+         estructuraConsulta.where('AC.ESTADO_ID',`${campos.cod_estado}`)
+     }
+-    if(('fecha_programada' in campos)){
+-        const date = new Date(campos.fecha_programada);
+-        const formattedDate = date.toISOString().split('T')[0];
+-        estructuraConsulta.whereRaw('CAST(AC.ACTIVIDAD_FECHA_PROGRAMACION AS DATE) = ?', [formattedDate])
+-    }
++    filtrarPorFechaProgramada(estructuraConsulta, 'fecha_programada', 'fecha_programada', campos)
++    filtrarPorFechaProgramada(estructuraConsulta, 'fecha_inicio', 'fecha_fin', campos)
+     if(('cod_documento' in campos)){
+         estructuraConsulta.whereLike('AC.ACTIVIDAD_COD_DOCUMENTO',`%${campos.cod_documento}%`)
+     }
+@@ -104,9 +140,7 @@ module.exports.getdatos_actividades_vencidas = async (campos) => {
+     if(('cod_cc' in campos)){
+         estructuraConsulta.where('AC.CENCOS_ID',`${campos.cod_cc}`)
+     }
+-    if(('cod_asesor' in campos)){
+-        estructuraConsulta.where('AC.USUARIO_ID',`${campos.cod_asesor}`)
+-    }
++    filtrarPorUsuario(estructuraConsulta, campos)
+     
+     const endOfDay = ahoraGuatemala().subtract(1, "day").format(FORMATO_SQL);
+ 
+@@ -158,9 +192,7 @@ module.exports.getdatos_actividades_en_curso = async (campos) => {
+     if(('cod_cc' in campos)){
+         estructuraConsulta.where('AC.CENCOS_ID',`${campos.cod_cc}`)
+     }
+-    if(('cod_asesor' in campos)){
+-        estructuraConsulta.where('AC.USUARIO_ID',`${campos.cod_asesor}`)
+-    }
++    filtrarPorUsuario(estructuraConsulta, campos)
+ 
+     estructuraConsulta.whereIn('AC.ESTADO_ID', [23, 25, 36])
+ 
+@@ -212,9 +244,7 @@ module.exports.getdatos_actividades_finalizadas = async (campos) => {
+     if(('cod_cc' in campos)){
+         estructuraConsulta.where('AC.CENCOS_ID',`${campos.cod_cc}`)
+     }
+-    if(('cod_asesor' in campos)){
+-        estructuraConsulta.where('AC.USUARIO_ID',`${campos.cod_asesor}`)
+-    }
++    filtrarPorUsuario(estructuraConsulta, campos)
+    
+     estructuraConsulta.whereIn('AC.ESTADO_ID', [24, 35, 26])
+ 
+@@ -261,6 +291,7 @@ module.exports.getdatos_actividad_sin_asignar = async (campos) => {
+     }
+ 
+     estructuraConsulta.where('AC.USUARIO_ID', null)
++    filtrarPorFechaProgramada(estructuraConsulta, 'fecha_inicio', 'fecha_fin', campos)
+ 
+     const data = await estructuraConsulta.select(
+         "AC.ACTIVIDAD_ID AS COD_ACTIVIDAD",
+@@ -746,15 +777,9 @@ module.exports.getdatos_actividad_2 = async (campos) => {
+         this.on( 'TO.TIPO_ID', '=', 'AC.OBJETIVO_TIPO_ID');
+     })
+ 
+-    if(('cod_asesor' in campos)){
+-        estructuraConsulta.where('AC.USUARIO_ID',`${campos.cod_asesor}`)
+-    }
++    filtrarPorUsuario(estructuraConsulta, campos)
+ 
+-    if(('fecha_programada' in campos)){
+-        const date = new Date(campos.fecha_programada);
+-        const formattedDate = date.toISOString().split('T')[0];
+-        estructuraConsulta.whereRaw('CAST(AC.ACTIVIDAD_FECHA_PROGRAMACION AS DATE) = ?', [formattedDate])
+-    }
++    filtrarPorFechaProgramada(estructuraConsulta, 'fecha_programada', 'fecha_programada', campos)
+     if(('cod_estado' in campos)){
+         estructuraConsulta.where('AC.ESTADO_ID',`${campos.cod_estado}`)
+     }
+@@ -849,21 +874,8 @@ module.exports.conteo_actividades = async (campos) => {
+         this.on( 'TI.TIPO_ID', '=', 'AC.TIPO_ID');
+     })
+ 
+-    if(('cod_usuario' in campos)){
+-        estructuraConsulta.where('AC.USUARIO_ID',`${campos.cod_usuario}`)
+-    }
+-
+-    if(('fecha_inicial' in campos)){
+-        const date = new Date(campos.fecha_inicial);
+-        const formattedDate = date.toISOString().split('T')[0];
+-        estructuraConsulta.whereRaw('CAST(AC.ACTIVIDAD_FECHA_PROGRAMACION AS DATE) >= ?', [formattedDate])
+-    }
+-
+-    if(('fecha_final' in campos)){
+-        const date = new Date(campos.fecha_final);
+-        const formattedDate = date.toISOString().split('T')[0];
+-        estructuraConsulta.whereRaw('CAST(AC.ACTIVIDAD_FECHA_PROGRAMACION AS DATE) <= ?', [formattedDate])
+-    }
++    filtrarPorUsuario(estructuraConsulta, campos)
++    filtrarPorFechaProgramada(estructuraConsulta, 'fecha_inicial', 'fecha_final', campos)
+ 
+     const data = await estructuraConsulta.select(
+         "AC.ACTIVIDAD_ID",
