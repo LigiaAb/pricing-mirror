@@ -1,0 +1,84 @@
+diff --git a/app/controllers/reportes/reportes_embarques_transito.js b/app/controllers/reportes/reportes_embarques_transito.js
+index 3472801..b7b0cec 100644
+--- a/app/controllers/reportes/reportes_embarques_transito.js
++++ b/app/controllers/reportes/reportes_embarques_transito.js
+@@ -1,8 +1,8 @@
+ const dayjs = require("dayjs");
+ 
+ /**
+- * Reportes de embarques con consulta fija en Oracle. Parámetros opcionales: `cod_cliente`
+- * (ENTIDAD_ID de Azure; sin él, el cliente 1843) y `fecha_inicio` / `fecha_fin` (ETD):
++ * Reportes de embarques con consulta fija en Oracle. EMB-EFCLTGT-01 y EMB-ENAHK-02 reciben
++ * `cod_cliente` (ENTIDAD_ID de Azure, requerido):
+  * - EMB-EFCLTGT-01 Embarques FCL en tránsito GT: coordinaciones FCL de importación sin ATA, con
+  *   contenedor, booking, orden de compra, POD, nave y fechas ETD / ATD / ETA.
+  * - EMB-ENAHK-02 Embarques no asignados a HK: coordinaciones de importación (producto 13) sin
+@@ -16,15 +16,12 @@ const FECHAS = ["ETD", "ATD", "ETA"];
+ /** Columnas fecha de EMB-ENAHK-02. */
+ const FECHAS_NO_ASIGNADOS_HK = ["ETD", "ATD", "ETA", "ATA"];
+ 
+-/** VICLI_CODIGO cuando no viene cliente en el filtro. */
+-const CLIENTE_POR_DEFECTO = "1843";
+-
+ /**
+  * ENTIDAD_ID de Azure (`cod_cliente` del filtro) → código del cliente en Oracle (COD_CROPA,
+- * identificación 12 de ENTIDAD_IDENTIFICACION); sin cliente, `CLIENTE_POR_DEFECTO`.
++ * identificación 12 de ENTIDAD_IDENTIFICACION); sin cliente, error.
+  */
+ const codigoClienteOracle = async (codCliente) => {
+-  if (!codCliente) return CLIENTE_POR_DEFECTO;
++  if (!codCliente) throw new Error('Seleccione el cliente');
+   const fila = await azureSqlClient('ENTIDAD_IDENTIFICACION')
+     .where('ENTIDAD_ID', codCliente)
+     .where('IDENTIFICACION_ID', 12) // COD_CROPA
+@@ -34,24 +31,6 @@ const codigoClienteOracle = async (codCliente) => {
+   return codigo;
+ };
+ 
+-/** Fecha del filtro: `YYYY-MM-DD` o vacía; otra cosa → error. */
+-const fechaFiltro = (valor) => {
+-  if (!valor) return null;
+-  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) throw new Error(`Fecha inválida: ${valor}`);
+-  return valor;
+-};
+-
+-/**
+- * Período del filtro sobre la ETD (`.modify(filtrarPorEtd, campos)`): desde el día inicial y
+- * antes del día siguiente al final (incluye todo el último día); cada una es opcional.
+- */
+-function filtrarPorEtd(consulta, campos) {
+-  const inicio = fechaFiltro(campos?.fecha_inicio);
+-  const fin = fechaFiltro(campos?.fecha_fin);
+-  if (inicio) consulta.where('CO.COORD_ETD', '>=', oracleClient.raw("TO_DATE(?, 'YYYY-MM-DD')", [inicio]));
+-  if (fin) consulta.where('CO.COORD_ETD', '<', oracleClient.raw("TO_DATE(?, 'YYYY-MM-DD') + 1", [fin]));
+-}
+-
+ /**
+  * DATE de Oracle → texto `YYYY-MM-DDTHH:mm:ss` con la misma hora que leyó el driver, sin pasarla
+  * a UTC (con `Date` el JSON la mandaría con "Z" y el navegador la correría).
+@@ -126,7 +105,6 @@ const consultarEmbFclTransitoGt = async (campos) => {
+   })
+   .whereNotIn('CO.COORD_ESTADO', [9, 5, 3, 70])
+   .whereNull('CO.COORD_ATA')
+-  .modify(filtrarPorEtd, campos)
+   .orderBy([
+     // 'CS.CORRELATIVO',
+     'CT.COORD_TRAS_CORR',
+@@ -164,8 +142,7 @@ const consultarEmbNoAsignadosHk = async (campos) => {
+       'CO.VICLI_CODIGO': cliente,
+       'CO.PRODPAN_CODIGO': 13,
+     })
+-    .whereNull('CO.COORD_REL_CODIGO') // no asignados
+-    .modify(filtrarPorEtd, campos);
++    .whereNull('CO.COORD_REL_CODIGO'); // no asignados
+ 
+   return filas.map((fila) => {
+     const copia = { ...fila };
+@@ -294,6 +271,7 @@ const consultarDetalleEmbarque = async (campos) => {
+       if (contenedor) {
+         consulta.whereExists(function () {
+           this.select(oracleClient.raw('1'))
++            .withSchema('CROPA')
+             .from('COORDINACION_CONTENEDOR as FC')
+             .whereRaw('FC.EMP_CODIGO = CO.EMP_CODIGO')
+             .whereRaw('FC.DEPORG_CODIGO = CO.DEPORG_CODIGO')

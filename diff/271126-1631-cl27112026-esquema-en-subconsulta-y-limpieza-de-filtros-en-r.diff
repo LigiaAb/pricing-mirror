@@ -1,0 +1,48 @@
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+index 17c11f9..702b813 100644
+--- a/src/features/reportes/ARQUITECTURA.md
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -30,11 +30,11 @@ reportes/
+     embarques/
+       index.ts                REPORTES_EMBARQUES
+       reporte-embarques-fcl-transito-gt.ts  EMB-EFCLTGT-01 Embarques FCL en tránsito GT (SQL
+-                              fijo en Oracle; fechas opcionales (ETD) y cliente (sin él, 1843);
++                              fijo en Oracle; cliente requerido, sin fechas;
+                               sin empresa ni CC; `agrupado: false`; Excel del detalle con vacíos en amarillo,
+                               `colorFondoCelda` de `descargarExcelReporte`)
+       reporte-embarques-no-asignados-hk.ts  EMB-ENAHK-02 Embarques no asignados a HK (SQL fijo
+-                              en Oracle; fechas opcionales (ETD) y cliente (sin él, 1843);
++                              en Oracle; cliente requerido, sin fechas;
+                               `agrupado: false`; `excel: true`)
+       reporte-detalle-embarque.tsx  EMB-DE-03 Detalle de embarque (SQL fijo en Oracle por
+                               coordinación, booking o contenedor (filtros `texto`, al menos uno); un árbol por coordinación
+diff --git a/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts b/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts
+index 4a706c7..5d1f070 100644
+--- a/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts
++++ b/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts
+@@ -9,8 +9,8 @@ import { filtroCliente } from "../../lib/filtros";
+ /**
+  * EMB-EFCLTGT-01 Embarques FCL en tránsito GT.
+  * Endpoint con un SQL fijo en Oracle (`reportes_embarques_transito.js` del back): empresa y
+- * departamento van dentro del SQL (sin empresa ni CC). Filtros opcionales: cliente (sin él, el
+- * back usa el 1843) y período sobre la ETD. Las fechas llegan como texto local
++ * departamento van dentro del SQL (sin empresa ni CC). Filtro: cliente (requerido), sin fechas.
++ * Las fechas llegan como texto local
+  * `YYYY-MM-DDTHH:mm:ss`. Las claves llegan en minúsculas (el cliente HTTP las normaliza), aunque
+  * Oracle las devuelva en mayúsculas.
+  */
+diff --git a/src/features/reportes/definiciones/embarques/reporte-embarques-no-asignados-hk.ts b/src/features/reportes/definiciones/embarques/reporte-embarques-no-asignados-hk.ts
+index 220c6c4..8cfdecd 100644
+--- a/src/features/reportes/definiciones/embarques/reporte-embarques-no-asignados-hk.ts
++++ b/src/features/reportes/definiciones/embarques/reporte-embarques-no-asignados-hk.ts
+@@ -7,8 +7,8 @@ import { filtroCliente } from "../../lib/filtros";
+ /**
+  * EMB-ENAHK-02 Embarques no asignados a HK.
+  * Endpoint con un SQL fijo en Oracle (`reportes_embarques_transito.js` del back): empresa,
+- * departamento y producto van dentro del SQL (sin empresa ni CC). Filtros opcionales: cliente
+- * (sin él, el back usa el 1843) y período sobre la ETD. Las fechas llegan como texto local
++ * departamento y producto van dentro del SQL (sin empresa ni CC). Filtro: cliente (requerido),
++ * sin fechas. Las fechas llegan como texto local
+  * `YYYY-MM-DDTHH:mm:ss`. Las claves llegan en minúsculas (el cliente HTTP las normaliza), aunque
+  * Oracle las devuelva en mayúsculas.
+  */

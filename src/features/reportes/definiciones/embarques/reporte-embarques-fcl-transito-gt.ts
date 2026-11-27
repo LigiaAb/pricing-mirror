@@ -9,8 +9,8 @@ import { filtroCliente } from "../../lib/filtros";
 /**
  * EMB-EFCLTGT-01 Embarques FCL en tránsito GT.
  * Endpoint con un SQL fijo en Oracle (`reportes_embarques_transito.js` del back): empresa y
- * departamento van dentro del SQL (sin empresa ni CC). Filtros opcionales: cliente (sin él, el
- * back usa el 1843) y período sobre la ETD. Las fechas llegan como texto local
+ * departamento van dentro del SQL (sin empresa ni CC). Filtro: cliente (requerido), sin fechas.
+ * Las fechas llegan como texto local
  * `YYYY-MM-DDTHH:mm:ss`. Las claves llegan en minúsculas (el cliente HTTP las normaliza), aunque
  * Oracle las devuelva en mayúsculas.
  */
