@@ -1,13 +1,18 @@
 const dayjs = require("dayjs");
 
 /**
- * EMB-EFCLTGT-01 Embarques FCL en tránsito GT.
- * Consulta fija en Oracle (sin parámetros): coordinaciones FCL de importación del cliente 1843
- * sin ATA, con contenedor, booking, orden de compra, POD, nave y fechas ETD / ATD / ETA.
+ * Reportes de embarques del cliente 1843 con consulta fija en Oracle (sin parámetros):
+ * - EMB-EFCLTGT-01 Embarques FCL en tránsito GT: coordinaciones FCL de importación sin ATA, con
+ *   contenedor, booking, orden de compra, POD, nave y fechas ETD / ATD / ETA.
+ * - EMB-ENAHK-02 Embarques no asignados a HK: coordinaciones de importación (producto 13) sin
+ *   coordinación relacionada, con documento de embarque, proveedor, orden de compra y fechas.
  */
 
 /** Columnas fecha de la consulta. */
 const FECHAS = ["ETD", "ATD", "ETA"];
+
+/** Columnas fecha de EMB-ENAHK-02. */
+const FECHAS_NO_ASIGNADOS_HK = ["ETD", "ATD", "ETA", "ATA"];
 
 /**
  * DATE de Oracle → texto `YYYY-MM-DDTHH:mm:ss` con la misma hora que leyó el driver, sin pasarla
@@ -95,6 +100,43 @@ const consultarEmbFclTransitoGt = async () => {
     for (const campo of FECHAS) copia[campo] = textoFecha(copia[campo]);
     return copia;
   });
+};
+
+/** EMB-ENAHK-02: consulta en Oracle y devuelve sus filas, con las fechas como texto local. */
+const consultarEmbNoAsignadosHk = async () => {
+  const filas = await oracleClient('CROPA.COORDINACION as CO')
+    .select([
+      'CO.COORD_CODIGO as COORDINACION',
+      oracleClient.raw('TRIM(CO.COORD_HAWBBLCP) AS DOC_EMBARQUE'),
+      'SH.SHIPPER_NOMBRE as PROVEEDOR_ORIGEN',
+      oracleClient.raw('TRIM(CO.COORD_OCOMPRA) AS ORDEN_COMPRA'),
+      'CO.COORD_ETD as ETD',
+      'CO.COORD_ATD as ATD',
+      'CO.COORD_ETA as ETA',
+      'CO.COORD_ATA as ATA',
+    ])
+    .leftJoin('SHIPPER as SH', 'CO.COORD_SHIPPER', 'SH.SHIPPER_CODIGO')
+    .where({
+      'CO.EMP_CODIGO': 2,
+      'CO.DEPORG_CODIGO': 'IMP',
+      'CO.VICLI_CODIGO': '1843',
+      'CO.PRODPAN_CODIGO': 13,
+    })
+    .whereNull('CO.COORD_REL_CODIGO'); // no asignados
+
+  return filas.map((fila) => {
+    const copia = { ...fila };
+    for (const campo of FECHAS_NO_ASIGNADOS_HK) copia[campo] = textoFecha(copia[campo]);
+    return copia;
+  });
+};
+
+module.exports.reporte_emb_no_asignados_hk = async () => {
+  try {
+    return await consultarEmbNoAsignadosHk();
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
 };
 
 module.exports.reporte_emb_fcl_transito_gt = async () => {

@@ -32,6 +32,8 @@ reportes/
                               fijo en Oracle, sin parámetros: sin fechas, filtros, empresa ni
                               CC; `agrupado: false`; Excel del detalle con vacíos en amarillo,
                               `colorFondoCelda` de `descargarExcelReporte`)
+      reporte-embarques-no-asignados-hk.ts  EMB-ENAHK-02 Embarques no asignados a HK (SQL fijo
+                              en Oracle, sin parámetros; `agrupado: false`; `excel: true`)
     pricing/
       index.ts                REPORTES_PRICING
       reporte-hit-rate.tsx    PRI-HR-01 Hit Rate (filas de report_kpi_cotizaciones para el

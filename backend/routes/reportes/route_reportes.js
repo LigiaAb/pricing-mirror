@@ -1,6 +1,6 @@
 const { lista_reportes_disponibles } = require("../../app/controllers/reportes/reportes");
 const { reporte_embarques_por_cliente_expo, reporte_embarques_por_cliente_expo_oracle, reporte_embarques_por_cliente_impo_oracle, reporte_embarques_por_cliente_impo, reporte_embarques_por_cliente_tropicargo_oracle, reporte_contenedores, reporte_embarques_por_cliente_azure } = require("../../app/controllers/reportes/reportes_embarques_expo");
-const { reporte_emb_fcl_transito_gt } = require("../../app/controllers/reportes/reportes_embarques_transito");
+const { reporte_emb_fcl_transito_gt, reporte_emb_no_asignados_hk } = require("../../app/controllers/reportes/reportes_embarques_transito");
 
 module.exports.AppCloudRoutesModuloReportes = (app) => {
     // Consulta de Reports Disponibles
@@ -57,6 +57,13 @@ module.exports.AppCloudRoutesModuloReportes = (app) => {
     // EMB-EFCLTGT-01 Embarques FCL en transito GT (SQL fijo en Oracle)
     app.get("/reporte-emb-fcl-transito-gt", (req, res) => {
         reporte_emb_fcl_transito_gt(req.query)
+        .then((i) => {res.apiResponse(i)})
+        .catch(e => res.apiResponse(undefined,e.message,404));
+    });
+
+    // EMB-ENAHK-02 Embarques no asignados a HK (SQL fijo en Oracle)
+    app.get("/reporte-emb-no-asignados-hk", (req, res) => {
+        reporte_emb_no_asignados_hk(req.query)
         .then((i) => {res.apiResponse(i)})
         .catch(e => res.apiResponse(undefined,e.message,404));
     });
