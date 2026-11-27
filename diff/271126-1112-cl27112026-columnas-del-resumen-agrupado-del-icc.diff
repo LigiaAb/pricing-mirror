@@ -1,0 +1,73 @@
+diff --git a/src/features/reportes/definiciones/crm/reporte-icc.tsx b/src/features/reportes/definiciones/crm/reporte-icc.tsx
+index 6e4950f..61709be 100644
+--- a/src/features/reportes/definiciones/crm/reporte-icc.tsx
++++ b/src/features/reportes/definiciones/crm/reporte-icc.tsx
+@@ -4,7 +4,7 @@ import { parseEnvelope } from "@/shared/api/envelope";
+ import { zId } from "@/shared/lib/zod-scalars";
+ import { VistaIcc } from "../../contenido/crm/icc";
+ import { calcularIcc } from "../../lib/crm/reporte-icc";
+-import { definirReporte, type ParamsReporte } from "../../lib/definir-reporte";
++import { definirReporte, type ParamsReporte, porcentaje } from "../../lib/definir-reporte";
+ import { filtroUsuario } from "../../lib/filtros";
+ 
+ const texto = z
+@@ -92,7 +92,7 @@ export const reporteIndiceDeCumplimiento = definirReporte<Fila>({
+       id: "visitas_programadas",
+       label: "Visitas prog.",
+       valor: (f) => f.visitas_programadas,
+-      agrupable: true,
++      sumable: true,
+     },
+     {
+       id: "visitas_realizadas",
+@@ -100,7 +100,13 @@ export const reporteIndiceDeCumplimiento = definirReporte<Fila>({
+       valor: (f) => f.visitas_realizadas,
+       sumable: true,
+     },
+-    { id: "icca", label: "ICCa", valor: (f) => formatoPorcentaje(f.icca), sumable: true },
++    // ICCa, ICCp e ICCc: en el Resumen agrupado se calculan con las sumas de cada grupo.
++    {
++      id: "icca",
++      label: "ICCa",
++      valor: (f) => formatoPorcentaje(f.icca),
++      calculada: (s) => porcentaje(s.visitas_realizadas, s.visitas_programadas),
++    },
+     {
+       id: "llamadas_programadas",
+       label: "Llamadas prog.",
+@@ -113,7 +119,12 @@ export const reporteIndiceDeCumplimiento = definirReporte<Fila>({
+       valor: (f) => f.llamadas_realizadas,
+       sumable: true,
+     },
+-    { id: "iccp", label: "ICCp", valor: (f) => formatoPorcentaje(f.iccp), sumable: true },
++    {
++      id: "iccp",
++      label: "ICCp",
++      valor: (f) => formatoPorcentaje(f.iccp),
++      calculada: (s) => porcentaje(s.llamadas_realizadas, s.llamadas_programadas),
++    },
+     {
+       id: "visitas_no_programadas_realizadas",
+       label: "Visitas no prog. real.",
+@@ -121,14 +132,19 @@ export const reporteIndiceDeCumplimiento = definirReporte<Fila>({
+       sumable: true,
+     },
+     { id: "visitas_total", label: "Total visitas", valor: (f) => f.visitas_total, sumable: true },
+-    { id: "iccc", label: "ICCc", valor: (f) => formatoPorcentaje(f.iccc), sumable: true },
++    {
++      id: "iccc",
++      label: "ICCc",
++      valor: (f) => formatoPorcentaje(f.iccc),
++      calculada: (s) => porcentaje(s.visitas_no_programadas_realizadas, s.visitas_total),
++    },
+     {
+       id: "sin_resultado",
+       label: "Citas sin resultado",
+       valor: (f) => f.sin_resultado,
+       sumable: true,
+     },
+-    { id: "vencidas", label: "vencidas", valor: (f) => f.vencidas, sumable: true },
++    { id: "vencidas", label: "Vencidas", valor: (f) => f.vencidas, sumable: true },
+   ],
+   agrupacion: { filas: ["nombre"] },
+ });
