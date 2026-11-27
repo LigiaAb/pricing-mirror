@@ -9,13 +9,13 @@ Un reporte es **un solo archivo** que exporta `definirReporte({ … })`. Cada pr
 objeto es una parte de la pantalla. Las que **no** se ponen usan lo de siempre; para cambiar
 una, se escribe una función **en el mismo archivo, arriba**, y se pone en su propiedad:
 
-| Propiedad      | Si no se pone / lo de siempre               | Personalizada (función del mismo archivo)    |
-| -------------- | ------------------------------------------- | -------------------------------------------- |
-| `consultar`    | (obligatoria) `consultarApi(endpoint, schema)` | `consultar: miConsulta`                   |
-| `filtros`      | sin filtros extra                           | atajos (`filtroUsuario`…) o un filtro propio |
-| `Contenido`    | tabla con las `columnas`                    | `Contenido: MiVista` (archivo `.tsx`)        |
-| `descargas`    | solo "Excel agrupado"                       | `excel: true` / `pdf: true` o funciones propias |
-| `fechas`       | `"requeridas"` (mes actual)                 | `"opcionales"` / `"ninguna"`                 |
+| Propiedad   | Si no se pone / lo de siempre                  | Personalizada (función del mismo archivo)       |
+| ----------- | ---------------------------------------------- | ----------------------------------------------- |
+| `consultar` | (obligatoria) `consultarApi(endpoint, schema)` | `consultar: miConsulta`                         |
+| `filtros`   | sin filtros extra                              | atajos (`filtroUsuario`…) o un filtro propio    |
+| `Contenido` | tabla con las `columnas`                       | `Contenido: MiVista` (archivo `.tsx`)           |
+| `descargas` | solo "Excel agrupado"                          | `excel: true` / `pdf: true` o funciones propias |
+| `fechas`    | `"requeridas"` (mes actual)                    | `"opcionales"` / `"ninguna"`                    |
 
 Nada de esto se configura en otro lado: no hay que tocar la pantalla ni otros archivos (salvo
 registrarlo, [paso 4 de `GUIA.md`](GUIA.md#paso-4--registro)).
@@ -32,19 +32,19 @@ Otras opciones de la definición:
 
 ## De dónde sale cada dato
 
-| Dato (línea `// CAMBIAR`)                        | De dónde sacarlo                                                                    |
-| ------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| `nomenclatura`                                   | Se inventa con la regla `MÓDULO-INICIALES-CORRELATIVO` ([paso 1 de `GUIA.md`](GUIA.md#paso-1--base-de-datos)) y se guarda igual en `TIPO.NOMENCLATURA`. |
-| Endpoint (`/api/appweb/CAMBIAR`)                 | El nombre de la ruta del backend (`/api/appweb/<nombre>`). Si otra pantalla ya lo usa, buscar el nombre en `src/features/**/api/*.ts` (`http.get("/api/appweb/…")`) o verlo en la pestaña **Network** del navegador en esa pantalla. |
-| Campos del schema (`campo_texto`, `campo_numero`) | La respuesta del endpoint: pestaña **Network** → la petición → **Response** (copiar los nombres tal cual, en minúsculas). En el backend: los alias del `select` (`… AS NOMBRES` llega como `nombres`). |
-| Nombres de los parámetros que espera el endpoint | En el backend, la función del endpoint: lo que lee de `campos` (ej. `campos.fecha_inicio`, `campos.cod_cc`). Si son distintos a los de la pantalla (`fecha_inicio`, `fecha_fin`, `cod_empresa`, `cod_cc`), usar `nombres` (plantilla de endpoint distinto). |
-| Dónde viene la lista (`lista`)                   | La misma respuesta en **Network**: si las filas no están en `data` sino en `data.<algo>`, `lista: "<algo>"`. |
-| `id` de cada filtro                              | El nombre del parámetro que el backend lee de `campos` para ese filtro (ej. `cod_usuario`, `cod_tipo_pago`). |
-| `filtroTipo("TIPO_TABLA", …)`                    | La `TIPO_TABLA` de los tipos que se quieren listar (tabla `TIPO`; ej. `ACTIVIDAD`, `TIPO_PAGO`). |
-| `filtroEstado("NOMBRE", …)`                      | El `nom_tipo` de los estados (catálogo `estados`; ej. `ACTIVIDAD`).                  |
-| Otros catálogos (consulta o filtro propios)      | Todos los catálogos están en `src/features/catalogos/index.ts` (ej. `empleadosUsuarios`, `tipos`, `empresas`, `roles`, `modulos`). |
-| `columnas` (`valor: (f) => f.campo`)             | Los campos del schema de la misma copia.                                            |
-| `ROL_ID`, `MODULO_ID`, `CENCOS_ID`, `EMPRESA_ID` de la relación | Catálogos `roles` (`/api/appweb/lista-rol`), `modulos` (`/api/appweb/listamodulo`, el select Módulo de la pantalla), `centrosCosto` (`/api/appweb/listacentrocosto`) y `empresas` (`/api/appweb/listaempresas`). |
+| Dato (línea `// CAMBIAR`)                                       | De dónde sacarlo                                                                                                                                                                                                                                            |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `nomenclatura`                                                  | Se inventa con la regla `MÓDULO-INICIALES-CORRELATIVO` ([paso 1 de `GUIA.md`](GUIA.md#paso-1--base-de-datos)) y se guarda igual en `TIPO.NOMENCLATURA`.                                                                                                     |
+| Endpoint (`/api/appweb/CAMBIAR`)                                | El nombre de la ruta del backend (`/api/appweb/<nombre>`). Si otra pantalla ya lo usa, buscar el nombre en `src/features/**/api/*.ts` (`http.get("/api/appweb/…")`) o verlo en la pestaña **Network** del navegador en esa pantalla.                        |
+| Campos del schema (`campo_texto`, `campo_numero`)               | La respuesta del endpoint: pestaña **Network** → la petición → **Response** (copiar los nombres tal cual, en minúsculas). En el backend: los alias del `select` (`… AS NOMBRES` llega como `nombres`).                                                      |
+| Nombres de los parámetros que espera el endpoint                | En el backend, la función del endpoint: lo que lee de `campos` (ej. `campos.fecha_inicio`, `campos.cod_cc`). Si son distintos a los de la pantalla (`fecha_inicio`, `fecha_fin`, `cod_empresa`, `cod_cc`), usar `nombres` (plantilla de endpoint distinto). |
+| Dónde viene la lista (`lista`)                                  | La misma respuesta en **Network**: si las filas no están en `data` sino en `data.<algo>`, `lista: "<algo>"`.                                                                                                                                                |
+| `id` de cada filtro                                             | El nombre del parámetro que el backend lee de `campos` para ese filtro (ej. `cod_usuario`, `cod_tipo_pago`).                                                                                                                                                |
+| `filtroTipo("TIPO_TABLA", …)`                                   | La `TIPO_TABLA` de los tipos que se quieren listar (tabla `TIPO`; ej. `ACTIVIDAD`, `TIPO_PAGO`).                                                                                                                                                            |
+| `filtroEstado("NOMBRE", …)`                                     | El `nom_tipo` de los estados (catálogo `estados`; ej. `ACTIVIDAD`).                                                                                                                                                                                         |
+| Otros catálogos (consulta o filtro propios)                     | Todos los catálogos están en `src/features/catalogos/index.ts` (ej. `empleadosUsuarios`, `tipos`, `empresas`, `roles`, `modulos`).                                                                                                                          |
+| `columnas` (`valor: (f) => f.campo`)                            | Los campos del schema de la misma copia.                                                                                                                                                                                                                    |
+| `ROL_ID`, `MODULO_ID`, `CENCOS_ID`, `EMPRESA_ID` de la relación | Catálogos `roles` (`/api/appweb/lista-rol`), `modulos` (`/api/appweb/listamodulo`, el select Módulo de la pantalla), `centrosCosto` (`/api/appweb/listacentrocosto`) y `empresas` (`/api/appweb/listaempresas`).                                            |
 
 ## Schema de la fila y fechas
 
@@ -60,11 +60,11 @@ Otras opciones de la definición:
 
 ### Fechas (C)
 
-| `fechas`        | Pantalla                                   | Manda                       |
-| --------------- | ------------------------------------------ | --------------------------- |
-| `"requeridas"`  | Fecha inicial y final con `*` (mes actual) | `fecha_inicio`, `fecha_fin` |
-| `"opcionales"`  | Fechas con "x" para limpiar                | solo las que tengan valor   |
-| `"ninguna"`     | Sin fechas                                 | nada                        |
+| `fechas`       | Pantalla                                   | Manda                       |
+| -------------- | ------------------------------------------ | --------------------------- |
+| `"requeridas"` | Fecha inicial y final con `*` (mes actual) | `fecha_inicio`, `fecha_fin` |
+| `"opcionales"` | Fechas con "x" para limpiar                | solo las que tengan valor   |
+| `"ninguna"`    | Sin fechas                                 | nada                        |
 
 Formato: `yyyy-MM-dd`.
 
@@ -72,13 +72,13 @@ Formato: `yyyy-MM-dd`.
 
 Atajos de `src/features/reportes/lib/filtros.ts` (el segundo argumento es el **nombre del parámetro** que se manda):
 
-| Atajo                                        | Qué muestra                                   |
-| -------------------------------------------- | --------------------------------------------- |
-| `filtroUsuario("Asesor", "cod_asesor")`      | Usuarios del CC elegido                       |
-| `filtroCliente("Cliente", "cod_cliente")`    | Clientes por nombre, buscados en el servidor (mínimo 2 letras) |
-| `filtroTipo("TIPO_PAGO", "cod_tipo_pago", "Tipo de pago")` | Catálogo `TIPO` de esa `TIPO_TABLA` |
-| `filtroEstado("ACTIVIDAD", "cod_estado")`    | Estados del catálogo de ese tipo              |
-| `filtroLista("moneda", "Moneda", [{ value: "1", label: "GTQ" }])` | Opciones fijas           |
+| Atajo                                                             | Qué muestra                                                    |
+| ----------------------------------------------------------------- | -------------------------------------------------------------- |
+| `filtroUsuario("Asesor", "cod_asesor")`                           | Usuarios del CC elegido                                        |
+| `filtroCliente("Cliente", "cod_cliente")`                         | Clientes por nombre, buscados en el servidor (mínimo 2 letras) |
+| `filtroTipo("TIPO_PAGO", "cod_tipo_pago", "Tipo de pago")`        | Catálogo `TIPO` de esa `TIPO_TABLA`                            |
+| `filtroEstado("ACTIVIDAD", "cod_estado")`                         | Estados del catálogo de ese tipo                               |
+| `filtroLista("moneda", "Moneda", [{ value: "1", label: "GTQ" }])` | Opciones fijas                                                 |
 
 Modificadores (se escriben así: `{ ...filtroTipo(…), multiple: true }`):
 
@@ -128,12 +128,12 @@ const filtroTipoActividad: FiltroReporte = {
 
 Opciones de `consultarApi(endpoint, schema, { … })`:
 
-| Opción     | Para qué                                                          | Ejemplo                                       |
-| ---------- | ----------------------------------------------------------------- | --------------------------------------------- |
-| `lista`    | La lista no viene en `data` (ej. `{ data: { tipo, detalle: [ … ] } }`) | `lista: "detalle"`                     |
-| `params`   | Parámetro fijo que siempre se manda                               | `params: { tipo: "mensual" }`                 |
-| `nombres`  | El endpoint espera otro nombre (nombre de la pantalla → del endpoint) | `nombres: { cod_empresa: "cod_emp", fecha_inicio: "fecha_inicial" }` |
-| `filtrar`  | Lo que el endpoint no filtra (`true` = la fila se queda)          | `filtrar: (f, params) => fechaEnRango(f.fecha, params)` |
+| Opción    | Para qué                                                               | Ejemplo                                                              |
+| --------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `lista`   | La lista no viene en `data` (ej. `{ data: { tipo, detalle: [ … ] } }`) | `lista: "detalle"`                                                   |
+| `params`  | Parámetro fijo que siempre se manda                                    | `params: { tipo: "mensual" }`                                        |
+| `nombres` | El endpoint espera otro nombre (nombre de la pantalla → del endpoint)  | `nombres: { cod_empresa: "cod_emp", fecha_inicio: "fecha_inicial" }` |
+| `filtrar` | Lo que el endpoint no filtra (`true` = la fila se queda)               | `filtrar: (f, params) => fechaEnRango(f.fecha, params)`              |
 
 ### Según cómo responde el endpoint
 
@@ -222,16 +222,16 @@ async function consultar(params: ParamsReporte): Promise<Fila[]> {
 
 ## Columnas (F)
 
-| Propiedad    | Para qué                                                                       |
-| ------------ | ------------------------------------------------------------------------------ |
-| `id`         | Clave única (sin espacios). Se usa en `agrupacion` y en `calculada`.           |
-| `label`      | Encabezado en pantalla, Excel y PDF.                                           |
-| `valor`      | Qué se ve en cada fila: `(f) => f.campo`. Puede formatear o combinar campos.   |
-| `agrupable`  | Aparece en "Personaliza tu reporte" (filas o columnas del resumen).            |
-| `sumable`    | Se suma en el Resumen agrupado (además de la Cantidad).                        |
-| `calculada`  | Medida del resumen calculada con las sumas del grupo (porcentajes).            |
-| `buscable`   | El buscador de la tabla busca en ella.                                         |
-| `numerica`   | Alineada a la derecha (por defecto, si es `sumable` o `calculada`).            |
+| Propiedad   | Para qué                                                                     |
+| ----------- | ---------------------------------------------------------------------------- |
+| `id`        | Clave única (sin espacios). Se usa en `agrupacion` y en `calculada`.         |
+| `label`     | Encabezado en pantalla, Excel y PDF.                                         |
+| `valor`     | Qué se ve en cada fila: `(f) => f.campo`. Puede formatear o combinar campos. |
+| `agrupable` | Aparece en "Personaliza tu reporte" (filas o columnas del resumen).          |
+| `sumable`   | Se suma en el Resumen agrupado (además de la Cantidad).                      |
+| `calculada` | Medida del resumen calculada con las sumas del grupo (porcentajes).          |
+| `buscable`  | El buscador de la tabla busca en ella.                                       |
+| `numerica`  | Alineada a la derecha (por defecto, si es `sumable` o `calculada`).          |
 
 **Porcentajes** (ej. % de ofertas ganadas = ganadas / ofertas): NO marcarlos `sumable` (sumar
 porcentajes no tiene sentido). Las partes son `sumable` y el porcentaje `calculada`, que recibe
@@ -258,7 +258,7 @@ reporte" (ids de columnas `agrupable`; si un id no es de una columna `agrupable`
 
 Un componente (archivo **`.tsx`**) que reemplaza la tabla de la sección "Reporte". Recibe
 `{ filas, columnas, params }` (`params` = los de la última consulta) y las props del PDF (ver
-*PDF generado por la vista* en Descargas). Para dejar también la tabla de siempre, `TablaReporte`:
+_PDF generado por la vista_ en Descargas). Para dejar también la tabla de siempre, `TablaReporte`:
 
 ```tsx
 import { TablaReporte } from "../../components/contenido-reporte";
@@ -294,8 +294,8 @@ function ContenidoMiReporte(props: ContenidoReporteProps<Fila>) {
 
 - **Excel agrupado**: siempre (el Resumen agrupado, con el generador de Reportes de pricing).
 - `descargas: { excel: true }` y/o `pdf: true`: el detalle con las columnas.
-- `descargas: { excel: miFuncion }` / `pdf: miFuncion`: formato propio (ver *Excel propio* y *PDF propio*).
-- `descargas: { pdf: "contenido" }`: el PDF lo genera el `Contenido` (ver *PDF generado por la vista*).
+- `descargas: { excel: miFuncion }` / `pdf: miFuncion`: formato propio (ver _Excel propio_ y _PDF propio_).
+- `descargas: { pdf: "contenido" }`: el PDF lo genera el `Contenido` (ver _PDF generado por la vista_).
 - Sin `descargas`: solo el Excel agrupado.
 
 ### Excel propio
@@ -324,7 +324,9 @@ async function excelMiReporte({ filas, titulo, encabezado }: DescargaReporte<Fil
           f.cod_actividad,
           f.nom_tipo,
           // celda con formato: { dato, fontColor } (color ARGB)
-          f.estado_desc === "EN PROCESO" ? { dato: f.estado_desc, fontColor: "FFB30000" } : f.estado_desc,
+          f.estado_desc === "EN PROCESO"
+            ? { dato: f.estado_desc, fontColor: "FFB30000" }
+            : f.estado_desc,
         ]),
       },
     ],
@@ -494,12 +496,12 @@ export const reporteEjemploA = definirReporte<Fila>({
 
 Todo se resuelve con las opciones de `consultarApi`:
 
-| Opción     | Para qué                                                          | Ejemplo                                       |
-| ---------- | ----------------------------------------------------------------- | --------------------------------------------- |
-| `lista`    | La lista no viene en `data` (ej. `{ data: { tipo, detalle: [ … ] } }`) | `lista: "detalle"`                     |
-| `params`   | Parámetro fijo que siempre se manda                               | `params: { tipo: "mensual" }`                 |
-| `nombres`  | El endpoint espera otro nombre (nombre de la pantalla → del endpoint) | `nombres: { cod_empresa: "cod_emp", fecha_inicio: "fecha_inicial" }` |
-| `filtrar`  | Lo que el endpoint no filtra (`true` = la fila se queda)          | `filtrar: (f, params) => fechaEnRango(f.fecha, params)` |
+| Opción    | Para qué                                                               | Ejemplo                                                              |
+| --------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `lista`   | La lista no viene en `data` (ej. `{ data: { tipo, detalle: [ … ] } }`) | `lista: "detalle"`                                                   |
+| `params`  | Parámetro fijo que siempre se manda                                    | `params: { tipo: "mensual" }`                                        |
+| `nombres` | El endpoint espera otro nombre (nombre de la pantalla → del endpoint)  | `nombres: { cod_empresa: "cod_emp", fecha_inicio: "fecha_inicial" }` |
+| `filtrar` | Lo que el endpoint no filtra (`true` = la fila se queda)               | `filtrar: (f, params) => fechaEnRango(f.fecha, params)`              |
 
 ```ts
 import { z } from "zod";
@@ -692,27 +694,27 @@ export const reporteEjemploC = definirReporte<Fila>({
 
 En `src/features/reportes/definiciones/crm/`:
 
-| Archivo                          | Qué personaliza                                                         |
-| -------------------------------- | ----------------------------------------------------------------------- |
-| `reporte-visitas-historico.ts`   | `consultar` (2 endpoints, fechas y tipo en el front) y Excel del legacy |
-| `reporte-actividades.ts`         | `consultar` del usuario de la sesión, PDF propio (calendario), sin empresa/CC |
-| `reporte-objetivos.tsx`          | Parámetros con otros nombres, datos anidados y vista de CRM             |
-| `reporte-graficas-objetivos.tsx` | Varias consultas, datos que no son filas y vista con gráficas           |
+| Archivo                          | Qué personaliza                                                                                          |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `reporte-visitas-historico.ts`   | `consultar` (2 endpoints, fechas y tipo en el front) y Excel del legacy                                  |
+| `reporte-actividades.ts`         | `consultar` del usuario de la sesión, PDF propio (calendario), sin empresa/CC                            |
+| `reporte-objetivos.tsx`          | Parámetros con otros nombres, datos anidados y vista de CRM                                              |
+| `reporte-graficas-objetivos.tsx` | Varias consultas, datos que no son filas y vista con gráficas                                            |
 | `reporte-icc.tsx`                | `consultar` que agrupa por persona, vista con gráfica, total y PDF (`pdf: "contenido"`, `usePdfReporte`) |
 
 ## Errores comunes
 
-| Síntoma                                                     | Causa / solución                                                                   |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| El reporte no aparece en el select                          | Falta el `TIPO` o la relación con el rol/CC/módulo, o el `ESTADO_ID` no es 1.      |
-| "El reporte «…» (…) todavía no está configurado"            | La `NOMENCLATURA` del `TIPO` no coincide con `nomenclatura`, o falta el registro.  |
-| Empresa o Centro de costo salen dos veces                   | Se agregaron en `filtros`: quitarlos.                                              |
-| Error de TypeScript en `valor: (f) => f.algo`               | `algo` no está en el schema de la fila.                                        |
-| "API response failed schema validation"                     | Un campo del schema no coincide con lo que manda el endpoint (nombre o tipo).      |
-| Consulta vacía, pero el endpoint sí trae datos              | La lista no viene en `data`: usar `lista` (sección Consulta, opción `lista`).                              |
-| El endpoint ignora un filtro                                | Espera otro nombre de parámetro: cambiar el id del filtro u opción `nombres` (sección Consulta).              |
-| Un porcentaje sale sumado en el resumen                     | Usar `calculada`, no `sumable`.                                                    |
-| Biome marca formato o imports                               | `pnpm exec biome check --write <archivo>`. |
-| Error de JSX en el archivo del reporte                      | Con `Contenido` (o cualquier `<…>`) la extensión es `.tsx`.                        |
-| La vista de otro módulo hace la pantalla muy pesada         | Importar el componente por su ruta, no por el `index` del módulo (sección Vista propia).             |
-| "Rendered more hooks…" o error de hooks en un filtro propio | `useOpciones` / `useValorInicial` no pueden tener hooks dentro de un `if` (sección Filtros, filtro propio).    |
+| Síntoma                                                     | Causa / solución                                                                                            |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| El reporte no aparece en el select                          | Falta el `TIPO` o la relación con el rol/CC/módulo, o el `ESTADO_ID` no es 1.                               |
+| "El reporte «…» (…) todavía no está configurado"            | La `NOMENCLATURA` del `TIPO` no coincide con `nomenclatura`, o falta el registro.                           |
+| Empresa o Centro de costo salen dos veces                   | Se agregaron en `filtros`: quitarlos.                                                                       |
+| Error de TypeScript en `valor: (f) => f.algo`               | `algo` no está en el schema de la fila.                                                                     |
+| "API response failed schema validation"                     | Un campo del schema no coincide con lo que manda el endpoint (nombre o tipo).                               |
+| Consulta vacía, pero el endpoint sí trae datos              | La lista no viene en `data`: usar `lista` (sección Consulta, opción `lista`).                               |
+| El endpoint ignora un filtro                                | Espera otro nombre de parámetro: cambiar el id del filtro u opción `nombres` (sección Consulta).            |
+| Un porcentaje sale sumado en el resumen                     | Usar `calculada`, no `sumable`.                                                                             |
+| Biome marca formato o imports                               | `pnpm exec biome check --write <archivo>`.                                                                  |
+| Error de JSX en el archivo del reporte                      | Con `Contenido` (o cualquier `<…>`) la extensión es `.tsx`.                                                 |
+| La vista de otro módulo hace la pantalla muy pesada         | Importar el componente por su ruta, no por el `index` del módulo (sección Vista propia).                    |
+| "Rendered more hooks…" o error de hooks en un filtro propio | `useOpciones` / `useValorInicial` no pueden tener hooks dentro de un `if` (sección Filtros, filtro propio). |

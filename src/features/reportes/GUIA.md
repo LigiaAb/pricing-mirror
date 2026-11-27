@@ -58,10 +58,10 @@ Va en la carpeta de su módulo, `definiciones/<modulo>/`: `definiciones/crm/`, `
 Copiar una plantilla de `src/features/reportes/definiciones/plantillas/` y llenar las líneas
 que llevan el comentario `// CAMBIAR`. Cuál plantilla usar:
 
-| Plantilla                         | Cuándo                                                                                                   |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| [`reporte-basico.ts`](definiciones/plantillas/reporte-basico.ts)               | El endpoint responde la lista y recibe `fecha_inicio`, `fecha_fin`, `cod_empresa`, `cod_cc` y los filtros con esos nombres. |
-| [`reporte-endpoint-distinto.ts`](definiciones/plantillas/reporte-endpoint-distinto.ts)    | El endpoint trae la lista en otra propiedad, espera otros nombres de parámetros, necesita un parámetro fijo o no filtra algo (ej. fechas). Se borran las opciones `// OPCIONAL` que no hagan falta. |
+| Plantilla                                                                              | Cuándo                                                                                                                                                                                                                                                                                      |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`reporte-basico.ts`](definiciones/plantillas/reporte-basico.ts)                       | El endpoint responde la lista y recibe `fecha_inicio`, `fecha_fin`, `cod_empresa`, `cod_cc` y los filtros con esos nombres.                                                                                                                                                                 |
+| [`reporte-endpoint-distinto.ts`](definiciones/plantillas/reporte-endpoint-distinto.ts) | El endpoint trae la lista en otra propiedad, espera otros nombres de parámetros, necesita un parámetro fijo o no filtra algo (ej. fechas). Se borran las opciones `// OPCIONAL` que no hagan falta.                                                                                         |
 | [`reporte-personalizado.tsx`](definiciones/plantillas/reporte-personalizado.tsx)       | Hay que juntar varias consultas o agregar campos, o se quiere un filtro, vista, Excel o PDF propios. Para cada pieza `// OPCIONAL` que no se use: borrar su función **y** su línea `← N`; los imports que queden sin usar se quitan con `pnpm exec biome check --write --unsafe <archivo>`. |
 
 La plantilla, con cada parte marcada:
@@ -102,17 +102,17 @@ export const reporteNOMBRE = definirReporte<Fila>({
 
 Qué va en cada marca, con su explicación:
 
-| Marca | Qué es | Explicación |
-| ----- | ------ | ----------- |
-| (A) | Schema de la fila (campos del endpoint) | [Schema de la fila](DOCUMENTACION.md#schema-de-la-fila-a) · [De dónde sale cada dato](DOCUMENTACION.md#de-dónde-sale-cada-dato) |
-| (B) | `nomenclatura` | Paso 1 · [Nomenclatura](DOCUMENTACION.md#nomenclatura-b) |
-| (C) | `fechas` | [Fechas](DOCUMENTACION.md#fechas-c) |
-| (D) | `filtros` | [Filtros](DOCUMENTACION.md#filtros-d) |
-| (E) | `consultar` | [Consulta](DOCUMENTACION.md#consulta-e) |
-| (F) | `columnas` | [Columnas](DOCUMENTACION.md#columnas-f) |
-| (G) | `agrupacion` | [Agrupación inicial](DOCUMENTACION.md#agrupación-inicial-g) |
-| (H) | `descargas` | [Descargas](DOCUMENTACION.md#descargas-h) |
-| (I) | `Contenido` | [Vista propia](DOCUMENTACION.md#vista-propia-contenido-i) |
+| Marca | Qué es                                  | Explicación                                                                                                                     |
+| ----- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| (A)   | Schema de la fila (campos del endpoint) | [Schema de la fila](DOCUMENTACION.md#schema-de-la-fila-a) · [De dónde sale cada dato](DOCUMENTACION.md#de-dónde-sale-cada-dato) |
+| (B)   | `nomenclatura`                          | Paso 1 · [Nomenclatura](DOCUMENTACION.md#nomenclatura-b)                                                                        |
+| (C)   | `fechas`                                | [Fechas](DOCUMENTACION.md#fechas-c)                                                                                             |
+| (D)   | `filtros`                               | [Filtros](DOCUMENTACION.md#filtros-d)                                                                                           |
+| (E)   | `consultar`                             | [Consulta](DOCUMENTACION.md#consulta-e)                                                                                         |
+| (F)   | `columnas`                              | [Columnas](DOCUMENTACION.md#columnas-f)                                                                                         |
+| (G)   | `agrupacion`                            | [Agrupación inicial](DOCUMENTACION.md#agrupación-inicial-g)                                                                     |
+| (H)   | `descargas`                             | [Descargas](DOCUMENTACION.md#descargas-h)                                                                                       |
+| (I)   | `Contenido`                             | [Vista propia](DOCUMENTACION.md#vista-propia-contenido-i)                                                                       |
 
 Si algo no lo cubre la plantilla básica (otra consulta, un filtro, vista, Excel o PDF propios):
 [`reporte-personalizado.tsx`](definiciones/plantillas/reporte-personalizado.tsx) y la sección de esa
@@ -717,12 +717,12 @@ propiedad o no filtra algo (aquí, la fecha). **En qué fijarte:** las opciones 
 
 Todo se resuelve con las opciones de `consultarApi`:
 
-| Opción     | Para qué                                                          | Ejemplo                                       |
-| ---------- | ----------------------------------------------------------------- | --------------------------------------------- |
-| `lista`    | La lista no viene en `data` (ej. `{ data: { tipo, detalle: [ … ] } }`) | `lista: "detalle"`                     |
-| `params`   | Parámetro fijo que siempre se manda                               | `params: { tipo: "mensual" }`                 |
-| `nombres`  | El endpoint espera otro nombre (nombre de la pantalla → del endpoint) | `nombres: { cod_empresa: "cod_emp", fecha_inicio: "fecha_inicial" }` |
-| `filtrar`  | Lo que el endpoint no filtra (`true` = la fila se queda)          | `filtrar: (f, params) => fechaEnRango(f.fecha, params)` |
+| Opción    | Para qué                                                               | Ejemplo                                                              |
+| --------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `lista`   | La lista no viene en `data` (ej. `{ data: { tipo, detalle: [ … ] } }`) | `lista: "detalle"`                                                   |
+| `params`  | Parámetro fijo que siempre se manda                                    | `params: { tipo: "mensual" }`                                        |
+| `nombres` | El endpoint espera otro nombre (nombre de la pantalla → del endpoint)  | `nombres: { cod_empresa: "cod_emp", fecha_inicio: "fecha_inicial" }` |
+| `filtrar` | Lo que el endpoint no filtra (`true` = la fila se queda)               | `filtrar: (f, params) => fechaEnRango(f.fecha, params)`              |
 
 ```ts
 import { z } from "zod";

@@ -44,7 +44,6 @@ const columnas: readonly ColumnaReporte<Fila>[] = [
     label: "Coordinación",
     valor: (f) => f.coordinacion,
     buscable: true,
-    celda: celdaResaltandoVacia,
   },
   {
     id: "contenedor",
@@ -65,9 +64,8 @@ const columnas: readonly ColumnaReporte<Fila>[] = [
     label: "Orden de compra",
     valor: (f) => f.orden_compra,
     buscable: true,
-    celda: celdaResaltandoVacia,
   },
-  { id: "pod", label: "POD", valor: (f) => f.pod, buscable: true, celda: celdaResaltandoVacia },
+  { id: "pod", label: "POD", valor: (f) => f.pod, buscable: true },
   {
     id: "nave",
     label: "Transbordo / nave",
@@ -75,16 +73,16 @@ const columnas: readonly ColumnaReporte<Fila>[] = [
     buscable: true,
     celda: celdaResaltandoVacia,
   },
-  { id: "etd", label: "ETD", valor: (f) => fecha(f.etd), celda: celdaResaltandoVacia },
-  { id: "atd", label: "ATD", valor: (f) => fecha(f.atd), celda: celdaResaltandoVacia },
-  { id: "eta", label: "ETA", valor: (f) => fecha(f.eta), celda: celdaResaltandoVacia },
+  { id: "etd", label: "ETD", valor: (f) => fecha(f.etd) },
+  { id: "atd", label: "ATD", valor: (f) => fecha(f.atd) },
+  { id: "eta", label: "ETA", valor: (f) => fecha(f.eta) },
 ];
 
 export const reporteEmbarquesFclTransitoGt = definirReporte<Fila>({
   nomenclatura: "EMB-EFCLTGT-01",
   descripcion: "Embarques FCL de importación en tránsito (sin ATA)",
-  fechas: "opcionales",
-  filtros: [filtroCliente()],
+  fechas: "ninguna",
+  filtros: [{ ...filtroCliente(), requerido: true }],
   empresaCentroCosto: false,
   agrupado: false,
   consultar: consultarApi("/api/appweb/reporte-emb-fcl-transito-gt", filaSchema),
@@ -96,7 +94,8 @@ export const reporteEmbarquesFclTransitoGt = definirReporte<Fila>({
         titulo,
         encabezado,
         detalle: tablaDetalle(filas, columnas),
-        colorFondoCelda: (valor) => (valorVacio(valor) ? AMARILLO : undefined),
+        colorFondoCelda: (valor, ind) =>
+          [1, 2, 5].includes(ind) ? (valorVacio(valor) ? AMARILLO : undefined) : undefined,
       }),
   },
 });

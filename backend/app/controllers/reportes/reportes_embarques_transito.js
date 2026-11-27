@@ -63,7 +63,7 @@ const textoFecha = (valor) =>
 const consultarEmbFclTransitoGt = async (campos) => {
   const cliente = await codigoClienteOracle(campos?.cod_cliente);
   const resultado = await oracleClient('COORDINACION as CO')
-  // .withSchema('CROPA')
+  .withSchema('CROPA')
   .select([
     'CO.COORD_CODIGO as COORDINACION',
     oracleClient.raw('TRIM(CC.coordcont_numcont) AS NUMERO_CONTENEDOR'),
@@ -146,6 +146,7 @@ const consultarEmbFclTransitoGt = async (campos) => {
 const consultarEmbNoAsignadosHk = async (campos) => {
   const cliente = await codigoClienteOracle(campos?.cod_cliente);
   const filas = await oracleClient('COORDINACION as CO')
+    .withSchema('CROPA')
     .select([
       'CO.COORD_CODIGO as COORDINACION',
       oracleClient.raw('TRIM(CO.COORD_HAWBBLCP) AS DOC_EMBARQUE'),
@@ -207,6 +208,7 @@ const consultarDetalleEmbarque = async (campos) => {
   }
 
   const filas = await oracleClient('COORDINACION as CO')
+    .withSchema('CROPA')
     .select([
       // COORDINACION - EMBARQUE
       'CO.COORD_CODIGO', // CODIGO INTERNO

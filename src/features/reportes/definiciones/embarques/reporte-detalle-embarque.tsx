@@ -21,7 +21,7 @@ import {
  * en minúsculas (el cliente HTTP las normaliza).
  */
 const valor = z.union([z.string(), z.number()]).transform(String).nullable().catch(null);
-/** Schema con `valor` (texto o null) en cada clave. */
+/* Schema con `valor` (texto o null) en cada clave. */
 const campos = <const K extends string>(claves: readonly K[]) =>
   Object.fromEntries(claves.map((clave) => [clave, valor])) as Record<K, typeof valor>;
 

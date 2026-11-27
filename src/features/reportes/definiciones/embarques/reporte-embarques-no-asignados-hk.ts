@@ -50,8 +50,8 @@ const columnas: readonly ColumnaReporte<Fila>[] = [
 export const reporteEmbarquesNoAsignadosHk = definirReporte<Fila>({
   nomenclatura: "EMB-ENAHK-02",
   descripcion: "Embarques de importación no asignados a HK (sin coordinación relacionada)",
-  fechas: "opcionales",
-  filtros: [filtroCliente()],
+  fechas: "ninguna",
+  filtros: [{ ...filtroCliente(), requerido: true }],
   empresaCentroCosto: false,
   agrupado: false,
   consultar: consultarApi("/api/appweb/reporte-emb-no-asignados-hk", filaSchema),
