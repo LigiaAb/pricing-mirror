@@ -24,7 +24,8 @@ al proyecto completo. Responder siempre en **español**.
 - `src/shared/components/form/fields/async-combobox-input.tsx` contiene el **código real** de `AsyncComboboxInput`,
   idéntico al proyecto (para tipar `onOpenChange` hay stub en `src/shared/components/ui/popover.tsx`). Es la única
   ruta de `src/shared` que **sí** sale en los `diff/` (`RUTAS_CODIGO` de `scripts/guardar-diff.mjs`), junto con
-  `src/shared/components/data-table/data-table-pagination.tsx` (real, del SYNC; en CRLF: `check:biome` revisa cada
+  `src/shared/components/data-table/data-table-pagination.tsx` y `src/shared/lib/excel.ts` (`exportarExcel`; reales,
+  del SYNC; en CRLF: `check:biome` revisa cada
   archivo con su propio final de línea, `--line-ending=crlf|lf`).
   Consulta solo con el listado abierto. Caché de 30 s, pero al abrir vuelve a pedir las opciones si `fetchOptions`
   cambió desde la última consulta; las búsquedas en servidor memoizadas no consultan de nuevo al reabrir. Dibuja

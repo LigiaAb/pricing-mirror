@@ -125,6 +125,15 @@ export async function exportarExcel({
       indiceColumna: number,
       fila: CeldaExcel[],
     ) => string | undefined;
+    /**
+     * Color ARGB de relleno (fondo) de cada celda de datos; `undefined` = sin relleno. Ej. resaltar
+     * las celdas vacías: `(valor) => (valor == null || valor === "" ? "FFFFFF00" : undefined)`.
+     */
+    colorFondoCelda?: (
+      valor: CeldaExcel,
+      indiceColumna: number,
+      fila: CeldaExcel[],
+    ) => string | undefined;
   }>;
 }): Promise<void> {
   const ExcelJS = await import("exceljs");
@@ -307,6 +316,10 @@ export async function exportarExcel({
             colorColumna;
           if (configuracion?.alignFormat) {
             celda.alignment = configuracion.alignFormat;
+          }
+          const fondo = hoja.colorFondoCelda?.(valor, indiceColumna, fila);
+          if (fondo) {
+            celda.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fondo } };
           }
           if (hoja.mostrarCuadricula === true) {
             celda.border = BORDES_CELDA;

@@ -15,6 +15,7 @@ const RUTAS = [
   "src/features/reportes",
   "src/shared/components/form/fields/async-combobox-input.tsx",
   "src/shared/components/data-table/data-table-pagination.tsx",
+  "src/shared/lib/excel.ts",
 ];
 
 // El proyecto real mezcla CRLF y LF por archivo. Cada archivo se revisa con su propio final de
