@@ -1,0 +1,320 @@
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+index 0f67f7c..57a63c0 100644
+--- a/src/features/reportes/ARQUITECTURA.md
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -30,8 +30,8 @@ reportes/
+       index.ts                REPORTES_EMBARQUES
+       reporte-embarques-fcl-transito-gt.ts  EMB-EFCLTGT-01 Embarques FCL en tránsito GT (SQL
+                               fijo en Oracle, sin parámetros: sin fechas, filtros, empresa ni
+-                              CC; `agrupado: false`; `colorVacias: "#FFFF00"`: vacías en
+-                              amarillo en la tabla y en el Excel de `excel: true`)
++                              CC; `agrupado: false`; Excel del detalle con vacíos en amarillo,
++                              `colorFondoCelda` de `descargarExcelReporte`)
+     pricing/
+       index.ts                REPORTES_PRICING
+       reporte-hit-rate.tsx    PRI-HR-01 Hit Rate (filas de report_kpi_cotizaciones para el
+@@ -55,9 +55,8 @@ reportes/
+     pantalla-reporte.tsx      título, filtros y configuración, Consultar, resumen, reporte, descargas
+     personaliza-reporte.tsx   "Personaliza tu reporte" (igual que pricing: Select + NivelesBuilder)
+     contenido-reporte.tsx     tabla por defecto de la sección "Reporte" (`celda` de la columna,
+-                              si la tiene, dibuja la celda; si no, la vacía con `colorVacias`
+-                              de la definición; `valor` sigue para buscar y ordenar)
+-    celda-vacia.tsx           CeldaVacia: la celda vacía con el color de `colorVacias`
++                              si la tiene, dibuja la celda; `valor` sigue para buscar y ordenar)
++    celda-vacia.tsx           celdaResaltandoVacia(valor): la celda vacía en amarillo
+     campos.tsx / panel.tsx    select, select con búsqueda en servidor, fecha, panel y encabezados
+ ```
+ 
+diff --git a/src/features/reportes/GUIA.md b/src/features/reportes/GUIA.md
+index 77e3f11..9c44ec3 100644
+--- a/src/features/reportes/GUIA.md
++++ b/src/features/reportes/GUIA.md
+@@ -272,10 +272,8 @@ consultar, // (E)
+   las sumas del grupo; para porcentajes, que no se suman) y `celda` (solo en pantalla: cómo se
+   dibuja la celda, `(valor, fila) => ReactNode`: recibe el `valor` ya calculado, ej.
+   `celda: (valor) => <Badge>{valor}</Badge>`; buscar, ordenar y descargar siguen con `valor`).
+-
+-**Celdas vacías resaltadas.** Para todo el reporte, una línea en la definición:
+-`colorVacias: "#FFFF00"`. Pinta las celdas vacías (null, "" o espacios) de ese color en la tabla
+-y en el Excel de `descargas: { excel: true }`, sin tocar las columnas (ej. `EMB-EFCLTGT-01`).
++  Atajo: `celda: celdaResaltandoVacia` (`components/celda-vacia.tsx`) pinta de amarillo las
++  vacías (ej. `EMB-EFCLTGT-01`).
+ 
+ En el ejemplo, `finalizada` es `sumable` para contar las finalizadas de cada grupo, y `avance`
+ es `calculada` (finalizadas ÷ cantidad) porque sumar porcentajes da un número sin sentido.
+diff --git a/src/features/reportes/components/celda-vacia.tsx b/src/features/reportes/components/celda-vacia.tsx
+index 7de151d..a822083 100644
+--- a/src/features/reportes/components/celda-vacia.tsx
++++ b/src/features/reportes/components/celda-vacia.tsx
+@@ -1,10 +1,16 @@
+-/** Celda vacía resaltada con `colorVacias` de la definición (tabla por defecto del reporte). */
+-export function CeldaVacia({ color }: { color: string }) {
++import type * as React from "react";
++import { type ValorCelda, valorVacio } from "../lib/definir-reporte";
++
++/**
++ * Celda de la tabla del reporte con el dato, o resaltada en amarillo si está vacía (como en el
++ * Excel con `colorFondoCelda`). Para `celda` de una columna:
++ *
++ *   { id: "booking", label: "Booking", valor: (f) => f.booking, celda: celdaResaltandoVacia }
++ */
++export function celdaResaltandoVacia(valor: ValorCelda): React.ReactNode {
++  if (!valorVacio(valor)) return valor;
+   return (
+-    <span
+-      className="-mx-2 block rounded px-2 text-center text-muted-foreground"
+-      style={{ backgroundColor: color }}
+-    >
++    <span className="-mx-2 block rounded bg-yellow-200 px-2 text-center text-muted-foreground">
+       —
+     </span>
+   );
+diff --git a/src/features/reportes/components/contenido-reporte.tsx b/src/features/reportes/components/contenido-reporte.tsx
+index 9b10187..a854aaa 100644
+--- a/src/features/reportes/components/contenido-reporte.tsx
++++ b/src/features/reportes/components/contenido-reporte.tsx
+@@ -3,18 +3,13 @@
+ import React from "react";
+ import { DataTable } from "@/shared/components/data-table/data-table";
+ import type { ColumnDef } from "@/shared/lib/tanstack-table";
+-import { type ContenidoReporteProps, valorVacio } from "../lib/definir-reporte";
+-import { CeldaVacia } from "./celda-vacia";
++import type { ContenidoReporteProps } from "../lib/definir-reporte";
+ 
+ /** Fila envuelta: la tabla pide objetos y la fila de un reporte puede ser cualquier cosa. */
+ type FilaTabla<TFila> = { fila: TFila };
+ 
+ /** Contenido por defecto de la sección "Reporte": tabla con las columnas del reporte. */
+-export function TablaReporte<TFila>({
+-  filas,
+-  columnas,
+-  colorVacias,
+-}: ContenidoReporteProps<TFila>) {
++export function TablaReporte<TFila>({ filas, columnas }: ContenidoReporteProps<TFila>) {
+   const datos = React.useMemo(() => filas.map((fila) => ({ fila })), [filas]);
+   const columnasTabla = React.useMemo<ColumnDef<FilaTabla<TFila>>[]>(
+     () =>
+@@ -22,16 +17,15 @@ export function TablaReporte<TFila>({
+         id: c.id,
+         header: c.label,
+         accessorFn: (r: FilaTabla<TFila>) => c.valor(r.fila) ?? "",
+-        // Solo cómo se dibuja (`celda` o la vacía con `colorVacias`); buscar y ordenar siguen
+-        // con `valor` (accessorFn).
+-        cell: ({ row }: { row: { original: FilaTabla<TFila> } }) => {
+-          const valor = c.valor(row.original.fila);
+-          if (c.celda) return c.celda(valor, row.original.fila);
+-          if (colorVacias && valorVacio(valor)) return <CeldaVacia color={colorVacias} />;
+-          return valor;
+-        },
++        // `celda`: solo cómo se dibuja; buscar y ordenar siguen con `valor` (accessorFn).
++        ...(c.celda
++          ? {
++              cell: ({ row }: { row: { original: FilaTabla<TFila> } }) =>
++                c.celda?.(c.valor(row.original.fila), row.original.fila),
++            }
++          : {}),
+       })),
+-    [columnas, colorVacias],
++    [columnas],
+   );
+   const numericas = React.useMemo(
+     () =>
+diff --git a/src/features/reportes/components/pantalla-reporte.tsx b/src/features/reportes/components/pantalla-reporte.tsx
+index 2c693c3..7b91853 100644
+--- a/src/features/reportes/components/pantalla-reporte.tsx
++++ b/src/features/reportes/components/pantalla-reporte.tsx
+@@ -369,7 +369,6 @@ export function PantallaReporte({
+             titulo,
+             encabezado: consultada?.encabezado ?? {},
+             detalle: tablaDetalle(filas, definicion.columnas),
+-            colorVacias: definicion.colorVacias,
+           }),
+     );
+   };
+@@ -597,7 +596,6 @@ export function PantallaReporte({
+             <Contenido
+               filas={filas}
+               columnas={definicion.columnas}
+-              colorVacias={definicion.colorVacias}
+               params={consultada.params}
+               encabezado={consultada.encabezado}
+               solicitudPdf={solicitudPdf}
+diff --git a/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts b/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts
+index 40f6270..a02d2ee 100644
+--- a/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts
++++ b/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts
+@@ -1,7 +1,9 @@
+ import { format } from "date-fns";
+ import { z } from "zod";
+ import { consultarApi } from "../../api/consultar-api";
+-import { type ColumnaReporte, definirReporte } from "../../lib/definir-reporte";
++import { celdaResaltandoVacia } from "../../components/celda-vacia";
++import { type ColumnaReporte, definirReporte, valorVacio } from "../../lib/definir-reporte";
++import { descargarExcelReporte, tablaDetalle } from "../../lib/exportar";
+ 
+ /**
+  * EMB-EFCLTGT-01 Embarques FCL en tránsito GT.
+@@ -30,16 +32,50 @@ const fecha = (valor: string | null): string | null => {
+   return dia && !Number.isNaN(dia.getTime()) ? format(dia, "dd/MM/yyyy") : null;
+ };
+ 
++/** Relleno de las celdas vacías en el Excel (amarillo, ARGB). */
++const AMARILLO = "FFFFFF00";
++
++// `celda: celdaResaltandoVacia`: en la tabla, las vacías en amarillo (como en el Excel).
+ const columnas: readonly ColumnaReporte<Fila>[] = [
+-  { id: "coordinacion", label: "Coordinación", valor: (f) => f.coordinacion, buscable: true },
+-  { id: "contenedor", label: "No. contenedor", valor: (f) => f.numero_contenedor, buscable: true },
+-  { id: "booking", label: "Booking", valor: (f) => f.booking, buscable: true },
+-  { id: "orden_compra", label: "Orden de compra", valor: (f) => f.orden_compra, buscable: true },
+-  { id: "pod", label: "POD", valor: (f) => f.pod, buscable: true },
+-  { id: "nave", label: "Transbordo / nave", valor: (f) => f.transbordo_nave, buscable: true },
+-  { id: "etd", label: "ETD", valor: (f) => fecha(f.etd) },
+-  { id: "atd", label: "ATD", valor: (f) => fecha(f.atd) },
+-  { id: "eta", label: "ETA", valor: (f) => fecha(f.eta) },
++  {
++    id: "coordinacion",
++    label: "Coordinación",
++    valor: (f) => f.coordinacion,
++    buscable: true,
++    celda: celdaResaltandoVacia,
++  },
++  {
++    id: "contenedor",
++    label: "No. contenedor",
++    valor: (f) => f.numero_contenedor,
++    buscable: true,
++    celda: celdaResaltandoVacia,
++  },
++  {
++    id: "booking",
++    label: "Booking",
++    valor: (f) => f.booking,
++    buscable: true,
++    celda: celdaResaltandoVacia,
++  },
++  {
++    id: "orden_compra",
++    label: "Orden de compra",
++    valor: (f) => f.orden_compra,
++    buscable: true,
++    celda: celdaResaltandoVacia,
++  },
++  { id: "pod", label: "POD", valor: (f) => f.pod, buscable: true, celda: celdaResaltandoVacia },
++  {
++    id: "nave",
++    label: "Transbordo / nave",
++    valor: (f) => f.transbordo_nave,
++    buscable: true,
++    celda: celdaResaltandoVacia,
++  },
++  { id: "etd", label: "ETD", valor: (f) => fecha(f.etd), celda: celdaResaltandoVacia },
++  { id: "atd", label: "ATD", valor: (f) => fecha(f.atd), celda: celdaResaltandoVacia },
++  { id: "eta", label: "ETA", valor: (f) => fecha(f.eta), celda: celdaResaltandoVacia },
+ ];
+ 
+ export const reporteEmbarquesFclTransitoGt = definirReporte<Fila>({
+@@ -50,6 +86,14 @@ export const reporteEmbarquesFclTransitoGt = definirReporte<Fila>({
+   agrupado: false,
+   consultar: consultarApi("/api/appweb/reporte-emb-fcl-transito-gt", filaSchema),
+   columnas,
+-  colorVacias: "#FFFF00", // vacías en amarillo, en la tabla y en el Excel
+-  descargas: { excel: true },
++  descargas: {
++    // Excel del detalle (el de siempre) con las celdas vacías en amarillo.
++    excel: ({ filas, titulo, encabezado }) =>
++      descargarExcelReporte({
++        titulo,
++        encabezado,
++        detalle: tablaDetalle(filas, columnas),
++        colorFondoCelda: (valor) => (valorVacio(valor) ? AMARILLO : undefined),
++      }),
++  },
+ });
+diff --git a/src/features/reportes/lib/definir-reporte.ts b/src/features/reportes/lib/definir-reporte.ts
+index 4216359..807a531 100644
+--- a/src/features/reportes/lib/definir-reporte.ts
++++ b/src/features/reportes/lib/definir-reporte.ts
+@@ -32,7 +32,7 @@ export interface ColumnaReporte<TFila> {
+    * Opcional, solo pantalla: cómo se DIBUJA la celda en la tabla (badge, color, enlace…). Sin
+    * esto, se ve `valor`. No cambia lo que se busca, ordena ni descarga (eso sigue siendo `valor`).
+    * Recibe el `valor` ya calculado y la fila: `celda: (valor) => <Badge>{valor}</Badge>`.
+-   * Para resaltar las vacías no hace falta: `colorVacias` de la definición.
++   * Atajo: `celda: celdaResaltandoVacia` (`components/celda-vacia.tsx`).
+    */
+   celda?: (valor: ValorCelda, fila: TFila) => React.ReactNode;
+   /** Se puede agrupar por ella en "Personaliza tu reporte" (filas o columnas). */
+@@ -105,8 +105,6 @@ export interface FiltroReporte {
+ export interface ContenidoReporteProps<TFila> {
+   filas: readonly TFila[];
+   columnas: readonly ColumnaReporte<TFila>[];
+-  /** `colorVacias` de la definición: color de las celdas vacías (la tabla por defecto lo usa). */
+-  colorVacias?: string | undefined;
+   params: ParamsReporte;
+   /**
+    * Filtros de la última consulta con nombre (Período, Empresa, Centro de costo y el `label` de
+@@ -158,11 +156,6 @@ export interface DefinicionReporte<TFila> {
+   consultar: (params: ParamsReporte) => Promise<TFila[]>;
+   /** Columnas de la tabla, del PDF y del Excel; también las agrupables y sumables. */
+   columnas: readonly ColumnaReporte<TFila>[];
+-  /**
+-   * Color (hex, ej. `"#FFFF00"`) para resaltar las celdas VACÍAS (`valorVacio`) en la tabla y en
+-   * el Excel del reporte (`descargas: { excel: true }`). Sin esto, no se resaltan.
+-   */
+-  colorVacias?: string;
+   /** Agrupación inicial de "Personaliza tu reporte" (ids de columnas agrupables). */
+   agrupacion?: { filas?: readonly string[]; columna?: string };
+   /**
+diff --git a/src/features/reportes/lib/exportar.ts b/src/features/reportes/lib/exportar.ts
+index 35eb30b..6df2842 100644
+--- a/src/features/reportes/lib/exportar.ts
++++ b/src/features/reportes/lib/exportar.ts
+@@ -5,7 +5,7 @@ import type { TreeNode } from "@/features/pricing/shared";
+ import type { CampoConfig } from "@/shared/components/tabla-double/niveles-builder";
+ import type { useExcelJS } from "@/shared/hooks/use-dynamic-libraries";
+ import { type CeldaExcel, exportarExcel } from "@/shared/lib/excel";
+-import { type ColumnaReporte, type ValorCelda, valorVacio } from "./definir-reporte";
++import type { ColumnaReporte, ValorCelda } from "./definir-reporte";
+ import { agregarHojaReporte, type FilaExcel } from "./excel-reporte";
+ import type { Resumen } from "./resumen-agrupado";
+ 
+@@ -120,13 +120,6 @@ export async function descargarExcelAgrupado(opciones: {
+   );
+ }
+ 
+-/** Color hex de CSS (`#FFFF00` o `#FF0`) → ARGB de Excel (`FFFFFF00`). */
+-export function argbDeHex(hex: string): string {
+-  const limpio = hex.replace("#", "").toUpperCase();
+-  const largo = limpio.length === 3 ? [...limpio].map((c) => c + c).join("") : limpio;
+-  return largo.length === 8 ? largo : `FF${largo}`;
+-}
+-
+ /** Excel del reporte (sin `excel` propio en la definición): el detalle con sus columnas. */
+ export async function descargarExcelReporte(opciones: {
+   titulo: string;
+@@ -134,16 +127,7 @@ export async function descargarExcelReporte(opciones: {
+   detalle: TablaExportable;
+   /** Relleno de cada celda de datos (`colorFondoCelda` de `exportarExcel`). */
+   colorFondoCelda?: (valor: CeldaExcel, indiceColumna: number) => string | undefined;
+-  /** `colorVacias` de la definición (hex): rellena las celdas vacías. */
+-  colorVacias?: string | undefined;
+ }): Promise<void> {
+-  const { colorVacias } = opciones;
+-  const fondoVacias = colorVacias ? argbDeHex(colorVacias) : undefined;
+-  const colorFondoCelda =
+-    opciones.colorFondoCelda ??
+-    (fondoVacias
+-      ? (valor: CeldaExcel) => (valorVacio(valor) ? fondoVacias : undefined)
+-      : undefined);
+   await exportarExcel({
+     nombreArchivo: `${nombreArchivo(opciones.titulo)}.xlsx`,
+     titulo: opciones.titulo,
+@@ -156,7 +140,7 @@ export async function descargarExcelReporte(opciones: {
+         filas: opciones.detalle.filas,
+         mostrarCuadricula: true,
+         autoFiltro: true,
+-        ...(colorFondoCelda ? { colorFondoCelda } : {}),
++        ...(opciones.colorFondoCelda ? { colorFondoCelda: opciones.colorFondoCelda } : {}),
+       },
+     ],
+   });
