@@ -265,10 +265,14 @@ consultar, // (E)
 
 - `id`: clave única; se usa en (G) y en `calculada`.
 - `label`: el encabezado.
-- `valor`: qué se muestra, `(f) => f.campo`.
+- `valor`: el dato, `(f) => f.campo` (texto o número; lo usan la tabla, el buscador, el orden,
+  el Resumen y las descargas).
 - Opcionales: `agrupable` (sale en "Personaliza tu reporte"), `buscable` (el buscador busca en
   ella), `sumable` (se suma en el Resumen agrupado) y `calculada` (en el resumen se calcula con
-  las sumas del grupo; para porcentajes, que no se suman).
+  las sumas del grupo; para porcentajes, que no se suman) y `celda` (solo en pantalla: cómo se
+  dibuja la celda, `(f) => ReactNode`, ej. un badge; buscar, ordenar y descargar siguen con
+  `valor`). Atajo: `celdaResaltandoVacia(valor)` (`components/celda-vacia.tsx`) pinta de
+  amarillo las vacías (ej. `EMB-EFCLTGT-01`).
 
 En el ejemplo, `finalizada` es `sumable` para contar las finalizadas de cada grupo, y `avance`
 es `calculada` (finalizadas ÷ cantidad) porque sumar porcentajes da un número sin sentido.

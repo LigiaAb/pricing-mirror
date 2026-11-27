@@ -54,7 +54,9 @@ reportes/
     vista-reportes.tsx        "Reportes disponibles" (Módulo → Reporte) + reporte elegido
     pantalla-reporte.tsx      título, filtros y configuración, Consultar, resumen, reporte, descargas
     personaliza-reporte.tsx   "Personaliza tu reporte" (igual que pricing: Select + NivelesBuilder)
-    contenido-reporte.tsx     tabla por defecto de la sección "Reporte"
+    contenido-reporte.tsx     tabla por defecto de la sección "Reporte" (`celda` de la columna,
+                              si la tiene, dibuja la celda; `valor` sigue para buscar y ordenar)
+    celda-vacia.tsx           celdaResaltandoVacia(valor): la celda vacía en amarillo
     campos.tsx / panel.tsx    select, select con búsqueda en servidor, fecha, panel y encabezados
 ```
 
