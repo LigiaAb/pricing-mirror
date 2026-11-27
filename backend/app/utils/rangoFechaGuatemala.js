@@ -70,3 +70,32 @@ const rangoFechasGuatemala = (fechaInicio, fechaFin) => {
 
 module.exports.rangoDiaGuatemala = rangoDiaGuatemala;
 module.exports.rangoFechasGuatemala = rangoFechasGuatemala;
+// * fecha/hora actual en Guatemala, sin depender de la zona del servidor (UTC)
+// * para comparar contra columnas datetime guardadas en hora de Guatemala
+// ? ahoraGuatemala().subtract(1, "day").format(FORMATO_SQL) -> "2026-11-26T11:33:25"
+const FORMATO_SQL = "YYYY-MM-DDTHH:mm:ss"; // ISO sin zona: SQL Server lo lee igual con cualquier idioma
+const ahoraGuatemala = () => dayjs().tz(ZONA_HORARIA);
+
+const FECHA_HORA =
+  /^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}:\d{2})(?::(\d{2}))?(?:\.\d{1,7})?)?(?:Z|[+-]\d{2}:?\d{2})?$/i;
+
+// * valida una fecha recibida para una columna datetime en hora de Guatemala
+// * texto -> "YYYY-MM-DDTHH:mm:ss" con la misma hora escrita (la zona se descarta, como SQL Server;
+// * no se convierte porque la API devuelve las fechas con "Z" y el front las reenvia tal cual)
+// * Date valido -> el mismo Date (lo convierte el driver, como hasta ahora)
+// ? ingresa -> "2026-11-27T10:00" | "2026-11-27 10:00:00" | "2026-11-27T10:00:00.000Z"
+// ? retorna -> "2026-11-27T10:00:00"
+// ? texto que no es fecha o fecha imposible (31/02) -> null
+const fechaHoraValida = (valor) => {
+  if (valor instanceof Date) return Number.isNaN(valor.getTime()) ? null : valor;
+  if (typeof valor !== "string") return null;
+  const partes = FECHA_HORA.exec(valor.trim());
+  if (!partes) return null;
+  const texto = `${partes[1]}T${partes[2] || "00:00"}:${partes[3] || "00"}`;
+  const fecha = dayjs(texto);
+  return fecha.isValid() && fecha.format(FORMATO_SQL) === texto ? texto : null;
+};
+
+module.exports.FORMATO_SQL = FORMATO_SQL;
+module.exports.ahoraGuatemala = ahoraGuatemala;
+module.exports.fechaHoraValida = fechaHoraValida;
