@@ -179,7 +179,10 @@ Si el backend responde `success: false`, su mensaje se ve en la sección "Report
 
 Una función `async (params) => Fila[]`. Recibe los parámetros de la pantalla (`fecha_inicio`,
 `fecha_fin`, `cod_empresa`, `cod_cc` y el id de cada filtro; vacíos = no vienen) y devuelve las
-filas. Dentro se puede hacer lo que haga falta:
+filas. Cada endpoint se lee con `parseEnvelope(respuesta, filaSchema, "<endpoint>")`: el tercero es
+el nombre del endpoint (la última parte de la URL, ej. `"lista-actividades2"`) y solo sirve para
+saber qué consulta falló (sale en el error, o en Sentry en producción, si las filas no cumplen
+`filaSchema`). Dentro se puede hacer lo que haga falta:
 
 ```ts
 import { empleadosUsuarios } from "@/features/catalogos";

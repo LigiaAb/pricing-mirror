@@ -224,6 +224,11 @@ const filtroTipoActividad: FiltroReporte = {
   un parámetro fijo, el endpoint espera otros nombres o no filtra algo.
 - Una función propia `async (params) => Fila[]`: para juntar varias consultas o agregar campos.
 
+En una función propia, cada endpoint se lee con `parseEnvelope(respuesta, filaSchema, "<endpoint>")`:
+`respuesta` es lo que devuelve `http.get`, `filaSchema` revisa cada fila y el tercero es el nombre del
+endpoint (la última parte de la URL, ej. `"lista-actividades2"`). Ese nombre solo sirve para saber
+qué consulta falló: sale en el error si las filas no cumplen `filaSchema`.
+
 En el ejemplo es propia porque junta dos consultas (actividades y empleados), filtra lo que el
 endpoint no filtra (fechas, asesor y tipo) y agrega `asesor` y `finalizada` a cada fila.
 

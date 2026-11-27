@@ -15,25 +15,27 @@ import { filtroUsuario } from "../../lib/filtros";
 
 // Una fila tal como la devuelve el endpoint: nombres EXACTOS del JSON, solo los que se usan.
 const filaSchema = z.looseObject({
-  campo_texto: z.string().nullable().catch(""), // CAMBIAR: campos de texto
-  campo_numero: z.coerce.number().catch(0), // CAMBIAR: campos numéricos
+  campo_texto: z.string().nullable().catch(""), // CAMBIAR: nombre EXACTO del campo en el JSON del endpoint (texto)
+  campo_numero: z.coerce.number().catch(0), // CAMBIAR: nombre EXACTO del campo en el JSON del endpoint (número)
 });
 type Fila = z.infer<typeof filaSchema>;
 
 export const reporteCambiar = definirReporte<Fila>({
   // CAMBIAR: nombre de la constante (ej. reporteVentasCliente)
-  nomenclatura: "MOD-XX-01", // CAMBIAR: la NOMENCLATURA del TIPO
-  descripcion: "Subtítulo de la sección Reporte", // CAMBIAR
+  nomenclatura: "MOD-XX-01", // CAMBIAR: NOMENCLATURA del TIPO del reporte (TIPO_TABLA = 'REPORTE'), ej. "PRI-HR-01"
+  descripcion: "Subtítulo de la sección Reporte", // CAMBIAR: texto bajo el título de la sección Reporte
   fechas: "requeridas", // CAMBIAR: "requeridas" | "opcionales" | "ninguna"
   filtros: [
-    filtroUsuario("Usuario", "cod_usuario"), // CAMBIAR: filtros del reporte (sin empresa ni CC)
+    // CAMBIAR: atajos de lib/filtros.ts (sin empresa ni CC); 2º argumento = nombre del parámetro que espera el endpoint
+    filtroUsuario("Usuario", "cod_usuario"),
   ],
-  consultar: consultarApi("/api/appweb/CAMBIAR", filaSchema), // CAMBIAR: endpoint
+  consultar: consultarApi("/api/appweb/CAMBIAR", filaSchema), // CAMBIAR: ruta del endpoint después de /api/appweb/ (ej. "report-icc")
   columnas: [
-    // CAMBIAR: una línea por columna de la tabla
+    // CAMBIAR: una línea por columna. id = único, label = encabezado, valor = campo de la fila;
+    // agrupable / sumable / buscable: ver GUIA.md (F)
     { id: "texto", label: "Texto", valor: (f) => f.campo_texto, agrupable: true, buscable: true },
     { id: "numero", label: "Número", valor: (f) => f.campo_numero, sumable: true },
   ],
   agrupacion: { filas: ["texto"] }, // CAMBIAR u OPCIONAL: agrupación inicial (ids de columnas)
-  descargas: { excel: true }, // OPCIONAL: Excel y/o PDF del detalle (pdf: true)
+  descargas: { excel: true }, // OPCIONAL: excel: true y/o pdf: true (el detalle con las columnas); sin esto, ninguna
 });
