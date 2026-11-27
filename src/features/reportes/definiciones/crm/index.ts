@@ -1,6 +1,7 @@
 import type { Reporte } from "../../lib/definir-reporte";
 import { reporteActividades } from "./reporte-actividades";
 import { reporteGraficasObjetivos } from "./reporte-graficas-objetivos";
+import { reporteIndiceDeCumplimiento } from "./reporte-icc";
 import { reporteObjetivos } from "./reporte-objetivos";
 import { reporteSeguimiento } from "./reporte-seguimiento";
 import { reporteVisitas } from "./reporte-visitas";
@@ -14,4 +15,5 @@ export const REPORTES_CRM: readonly Reporte[] = [
   reporteObjetivos,
   reporteGraficasObjetivos,
   reporteSeguimiento,
+  reporteIndiceDeCumplimiento
 ];
