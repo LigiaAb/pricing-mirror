@@ -4,6 +4,7 @@ const { recuperaAcualizaCorrelativoTabla } = require("../admon/obtienerCorrelati
 const { api_validar_token_larabel } = require("../servicios_externos/rutas_externas");
 const { insertar_actividad_bitacora } = require("./actividades_bitacora");
 const  axios = require("axios");
+const { ahoraGuatemala, fechaHoraValida, FORMATO_SQL } = require("../../utils/rangoFechaGuatemala");
 
 module.exports.getdatos_actividad = async (campos) => {
     const estructuraConsulta =  azureSqlClient({"AC": "ACTIVIDAD"})  
@@ -107,8 +108,7 @@ module.exports.getdatos_actividades_vencidas = async (campos) => {
         estructuraConsulta.where('AC.USUARIO_ID',`${campos.cod_asesor}`)
     }
     
-    const endOfDay = new Date();
-    endOfDay.setDate(endOfDay.getDate() - 1);
+    const endOfDay = ahoraGuatemala().subtract(1, "day").format(FORMATO_SQL);
 
     estructuraConsulta.whereIn('AC.ESTADO_ID', [23, 25, 35, 36])
     estructuraConsulta.where('AC.ACTIVIDAD_FECHA_PROGRAMACION', '<', endOfDay)
@@ -164,8 +164,7 @@ module.exports.getdatos_actividades_en_curso = async (campos) => {
 
     estructuraConsulta.whereIn('AC.ESTADO_ID', [23, 25, 36])
 
-    const endOfDay = new Date();
-    endOfDay.setDate(endOfDay.getDate()-1);
+    const endOfDay = ahoraGuatemala().subtract(1, "day").format(FORMATO_SQL);
     estructuraConsulta.where('AC.ACTIVIDAD_FECHA_PROGRAMACION', '>', endOfDay)
 
     const data = await estructuraConsulta.select(
@@ -292,6 +291,10 @@ module.exports.insertar_actividad = async (campos) => {
         && 'cod_emp' in campos && 'cod_cc' in campos 
         // && "contactos" in campos && 'cod_cliente' in campos
     ){
+        const fechaProgramada = fechaHoraValida(campos.fecha_programada);
+        if (!fechaProgramada) {
+            return {'success' : false, "cod_mensaje" : 1043, 'mensaje' : 'La fecha programada no es válida, verifique'};
+        }
         const  idnuevo = await recuperaAcualizaCorrelativoTabla({'tabla' : 'ACTIVIDAD'});
         if(idnuevo>0){
             try {
@@ -302,7 +305,7 @@ module.exports.insertar_actividad = async (campos) => {
                     "ACTIVIDAD_ASUNTO"              : campos.asunto, 
                     "ACTIVIDAD_DESCRIPCION"         : campos.descripcion, 
                     "TIPO_ID"                       : campos.cod_tipo, 
-                    "ACTIVIDAD_FECHA_PROGRAMACION"  : campos.fecha_programada, 
+                    "ACTIVIDAD_FECHA_PROGRAMACION"  : fechaProgramada, 
                     "ENTIDAD_ID"                    : campos.cod_cliente, 
                     "EMPRESA_ID"                    : campos.cod_emp, 
                     "CENCOS_ID"                     : campos.cod_cc, 
@@ -449,6 +452,10 @@ module.exports.actualizar_actividad = async (campos) => {
         && 'cod_emp' in campos && 'cod_cc' in campos
         // && 'cod_cliente' in campos
     ){
+        const fechaProgramada = fechaHoraValida(campos.fecha_programada);
+        if (!fechaProgramada) {
+            return {'success' : false, "cod_mensaje" : 1043, 'mensaje' : 'La fecha programada no es válida, verifique'};
+        }
         let busqueda = await azureSqlClient("ACTIVIDAD")
         .where("ACTIVIDAD_ID",  campos.cod_actividad)  
 
@@ -460,7 +467,7 @@ module.exports.actualizar_actividad = async (campos) => {
                     "ACTIVIDAD_ASUNTO"              : campos.asunto, 
                     "ACTIVIDAD_DESCRIPCION"         : campos.descripcion, 
                     "TIPO_ID"                       : campos.cod_tipo, 
-                    "ACTIVIDAD_FECHA_PROGRAMACION"  : campos.fecha_programada, 
+                    "ACTIVIDAD_FECHA_PROGRAMACION"  : fechaProgramada, 
                     "ENTIDAD_ID"                    : campos.cod_cliente, 
                     "EMPRESA_ID"                    : campos.cod_emp, 
                     "CENCOS_ID"                     : campos.cod_cc, 
@@ -539,8 +546,7 @@ module.exports.cambiar_estado_actividad = async (campos) => {
 
 module.exports.cerrar_actividades_vencidas = async (campos) => {
 
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
+    const endOfDay = ahoraGuatemala().endOf("day").format(FORMATO_SQL);
 
     const estructuraConsulta =  azureSqlClient("ACTIVIDAD")   
     estructuraConsulta.whereIn('ESTADO_ID', [23, 25, 36])

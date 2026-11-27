@@ -11,6 +11,8 @@
  * - Diff de TEXTO con todas las líneas en LF: no depende de los finales de
  *   línea. aplicar-diff.mjs lo adapta a CRLF o LF según cada archivo destino.
  * - Fecha/hora: la del autor del commit, en hora de Guatemala.
+ * - backend/ (proyecto aparte, backend_cloud): si el commit lo cambia, sale OTRO diff con el mismo
+ *   nombre en diff/backend/, con rutas relativas a la raíz del back (app/..., routes/...).
  *
  * Uso:
  *   node scripts/guardar-diff.mjs            # diff de HEAD
@@ -31,6 +33,8 @@ const RUTAS_CODIGO = [
   "src/shared/components/data-table/data-table-pagination.tsx",
 ];
 const CARPETA_DIFF = "diff";
+const RUTA_BACKEND = "backend";
+const CARPETA_DIFF_BACKEND = join(CARPETA_DIFF, "backend");
 const ZONA_HORARIA = "America/Guatemala";
 
 const args = process.argv.slice(2);
@@ -71,15 +75,16 @@ const slug = asunto
   .slice(0, 60)
   .replace(/-+$/, "");
 
-const archivo = join(CARPETA_DIFF, `${fecha}-${slug || "cambio"}.diff`);
+const nombre = `${fecha}-${slug || "cambio"}.diff`;
 
 /* ---------- Diff de texto, normalizado a LF ---------- */
 // Antes se usaba --binary: exigía que el archivo destino fuera idéntico byte
 // por byte (hash) y fallaba ante cualquier diferencia de CRLF/LF.
-const diff = execFileSync(
+const generarDiff = (rutas, extra = []) => execFileSync(
   "git",
   [
     "diff",
+    ...extra,
     "--no-color",
     "--no-ext-diff",
     "--text",
@@ -90,24 +95,34 @@ const diff = execFileSync(
     `${commit}^`,
     commit,
     "--",
-    ...RUTAS_CODIGO,
+    ...rutas,
     // Los .gitkeep solo existen en el espejo (marcan carpetas vacías).
     ":(exclude,glob)**/.gitkeep",
   ],
   { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 },
 ).replace(/\r\n/g, "\n");
 
-if (!diff.trim()) {
-  console.log(`El commit no cambia nada en ${RUTAS_CODIGO.join(", ")}; no se genera diff.`);
+const guardados = [];
+const guardar = (carpeta, diff) => {
+  if (!diff.trim()) return;
+  const archivo = join(carpeta, nombre);
+  mkdirSync(carpeta, { recursive: true });
+  writeFileSync(archivo, diff);
+  guardados.push(archivo);
+  console.log(`Diff guardado: ${archivo}`);
+};
+
+guardar(CARPETA_DIFF, generarDiff(RUTAS_CODIGO));
+// --relative: rutas sin "backend/", para aplicarlo desde la raíz del proyecto del back.
+guardar(CARPETA_DIFF_BACKEND, generarDiff([RUTA_BACKEND], [`--relative=${RUTA_BACKEND}`]));
+
+if (!guardados.length) {
+  console.log(`El commit no cambia nada en ${[...RUTAS_CODIGO, RUTA_BACKEND].join(", ")}; no se genera diff.`);
   process.exit(0);
 }
 
-mkdirSync(CARPETA_DIFF, { recursive: true });
-writeFileSync(archivo, diff);
-console.log(`Diff guardado: ${archivo}`);
-
 if (amend) {
-  git("add", archivo);
+  git("add", ...guardados);
   git("commit", "--amend", "--no-edit", "--no-verify");
   console.log("Agregado al commit HEAD.");
 }
