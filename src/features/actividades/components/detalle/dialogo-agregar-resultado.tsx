@@ -29,7 +29,6 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { Textarea } from "@/shared/components/ui/textarea";
-import { deInputDateTimeLocal } from "@/shared/lib/date";
 import type { Actividad } from "../../api/actividades";
 import type { ResultadoActividad } from "../../api/resultados";
 
@@ -117,7 +116,9 @@ export function DialogoAgregarResultado({
   const tipo = tipos.find((item) => String(item.cod_tipo_actividad) === tipoId);
 
   const guardar = async () => {
-    const fecha = deInputDateTimeLocal(fechaProgramada);
+    // Hora local de Guatemala sin zona (igual que crear actividad): ACTIVIDAD_FECHA_PROGRAMACION es
+    // datetime y SQL Server ignora la "Z" de un ISO en UTC, así que se guardaba con 6 h de más.
+    const fecha = fechaProgramada ? `${fechaProgramada}:00` : null;
     if (!tipo || !fecha || !descripcion.trim()) return;
 
     const item: ResultadoActividad = {
