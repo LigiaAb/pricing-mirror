@@ -31,9 +31,10 @@ export interface ColumnaReporte<TFila> {
   /**
    * Opcional, solo pantalla: cómo se DIBUJA la celda en la tabla (badge, color, enlace…). Sin
    * esto, se ve `valor`. No cambia lo que se busca, ordena ni descarga (eso sigue siendo `valor`).
-   * Atajo: `celdaResaltandoVacia` (`components/celda-vacia.tsx`).
+   * Recibe el `valor` ya calculado y la fila: `celda: (valor) => <Badge>{valor}</Badge>`.
+   * Para resaltar las vacías no hace falta: `colorVacias` de la definición.
    */
-  celda?: (fila: TFila) => React.ReactNode;
+  celda?: (valor: ValorCelda, fila: TFila) => React.ReactNode;
   /** Se puede agrupar por ella en "Personaliza tu reporte" (filas o columnas). */
   agrupable?: boolean;
   /** Se suma en el "Resumen agrupado" (medida, además de la cantidad de registros). */
@@ -104,6 +105,8 @@ export interface FiltroReporte {
 export interface ContenidoReporteProps<TFila> {
   filas: readonly TFila[];
   columnas: readonly ColumnaReporte<TFila>[];
+  /** `colorVacias` de la definición: color de las celdas vacías (la tabla por defecto lo usa). */
+  colorVacias?: string | undefined;
   params: ParamsReporte;
   /**
    * Filtros de la última consulta con nombre (Período, Empresa, Centro de costo y el `label` de
@@ -155,6 +158,11 @@ export interface DefinicionReporte<TFila> {
   consultar: (params: ParamsReporte) => Promise<TFila[]>;
   /** Columnas de la tabla, del PDF y del Excel; también las agrupables y sumables. */
   columnas: readonly ColumnaReporte<TFila>[];
+  /**
+   * Color (hex, ej. `"#FFFF00"`) para resaltar las celdas VACÍAS (`valorVacio`) en la tabla y en
+   * el Excel del reporte (`descargas: { excel: true }`). Sin esto, no se resaltan.
+   */
+  colorVacias?: string;
   /** Agrupación inicial de "Personaliza tu reporte" (ids de columnas agrupables). */
   agrupacion?: { filas?: readonly string[]; columna?: string };
   /**

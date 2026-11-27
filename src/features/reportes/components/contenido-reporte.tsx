@@ -3,13 +3,18 @@
 import React from "react";
 import { DataTable } from "@/shared/components/data-table/data-table";
 import type { ColumnDef } from "@/shared/lib/tanstack-table";
-import type { ContenidoReporteProps } from "../lib/definir-reporte";
+import { type ContenidoReporteProps, valorVacio } from "../lib/definir-reporte";
+import { CeldaVacia } from "./celda-vacia";
 
 /** Fila envuelta: la tabla pide objetos y la fila de un reporte puede ser cualquier cosa. */
 type FilaTabla<TFila> = { fila: TFila };
 
 /** Contenido por defecto de la sección "Reporte": tabla con las columnas del reporte. */
-export function TablaReporte<TFila>({ filas, columnas }: ContenidoReporteProps<TFila>) {
+export function TablaReporte<TFila>({
+  filas,
+  columnas,
+  colorVacias,
+}: ContenidoReporteProps<TFila>) {
   const datos = React.useMemo(() => filas.map((fila) => ({ fila })), [filas]);
   const columnasTabla = React.useMemo<ColumnDef<FilaTabla<TFila>>[]>(
     () =>
@@ -17,15 +22,16 @@ export function TablaReporte<TFila>({ filas, columnas }: ContenidoReporteProps<T
         id: c.id,
         header: c.label,
         accessorFn: (r: FilaTabla<TFila>) => c.valor(r.fila) ?? "",
-        // `celda`: solo cómo se dibuja; buscar y ordenar siguen con `valor` (accessorFn).
-        ...(c.celda
-          ? {
-              cell: ({ row }: { row: { original: FilaTabla<TFila> } }) =>
-                c.celda?.(row.original.fila),
-            }
-          : {}),
+        // Solo cómo se dibuja (`celda` o la vacía con `colorVacias`); buscar y ordenar siguen
+        // con `valor` (accessorFn).
+        cell: ({ row }: { row: { original: FilaTabla<TFila> } }) => {
+          const valor = c.valor(row.original.fila);
+          if (c.celda) return c.celda(valor, row.original.fila);
+          if (colorVacias && valorVacio(valor)) return <CeldaVacia color={colorVacias} />;
+          return valor;
+        },
       })),
-    [columnas],
+    [columnas, colorVacias],
   );
   const numericas = React.useMemo(
     () =>
