@@ -54,6 +54,33 @@ export function resumirIcc(nombre: string, filas: readonly FilaIcc[]): ResumenIc
   };
 }
 
+/**
+ * Fila de TOTAL a partir de las filas por persona (lo que recibe la vista): suma los conteos y
+ * saca los porcentajes de esas sumas (da lo mismo que `resumirIcc` sobre todas las actividades).
+ */
+export function totalIcc(personas: readonly ResumenIcc[]): ResumenIcc {
+  const suma = {
+    visitas_programadas: 0,
+    visitas_realizadas: 0,
+    llamadas_programadas: 0,
+    llamadas_realizadas: 0,
+    visitas_no_programadas_realizadas: 0,
+    visitas_total: 0,
+    sin_resultado: 0,
+    vencidas: 0,
+  };
+  for (const persona of personas) {
+    for (const campo of Object.keys(suma) as (keyof typeof suma)[]) suma[campo] += persona[campo];
+  }
+  return {
+    nombre: "TOTAL",
+    ...suma,
+    icca: porcentajeIcc(suma.visitas_realizadas, suma.visitas_programadas),
+    iccp: porcentajeIcc(suma.llamadas_realizadas, suma.llamadas_programadas),
+    iccc: porcentajeIcc(suma.visitas_no_programadas_realizadas, suma.visitas_total),
+  };
+}
+
 /** Una fila por usuario (ordenadas por nombre) y la fila de total. */
 export function calcularIcc(filas: readonly FilaIcc[]): {
   personas: ResumenIcc[];

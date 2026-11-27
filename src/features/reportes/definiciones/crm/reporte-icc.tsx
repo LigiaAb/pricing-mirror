@@ -4,18 +4,15 @@ import { tipos } from "@/features/catalogos";
 import { http } from "@/shared/api/client";
 import { parseEnvelope } from "@/shared/api/envelope";
 import type { ComboboxOption } from "@/shared/components/ui/combobox";
-import { type CeldaExcel, exportarExcel } from "@/shared/lib/excel";
 import { zId } from "@/shared/lib/zod-scalars";
 import { VistaIcc } from "../../contenido/crm/icc";
 import { calcularIcc } from "../../lib/crm/reporte-icc";
 import {
   type ContenidoReporteProps,
-  type DescargaReporte,
   definirReporte,
   type FiltroReporte,
   type ParamsReporte,
 } from "../../lib/definir-reporte";
-import { descargarPdf, nombreArchivo } from "../../lib/exportar";
 import { filtroUsuario } from "../../lib/filtros";
 
 const texto = z
@@ -123,56 +120,8 @@ const filtroPropio: FiltroReporte = {
 
 // ── 3. OPCIONAL — Vista propia (← 3) ──
 // En lugar de la tabla (aquí: un texto arriba y la tabla de siempre abajo).
-function ContenidoHitRate({...props
-}: ContenidoReporteProps<Fila>) {
-  const {  params,
-  encabezado,
-  solicitudPdf,
-  onGenerandoPdf,
-  onErrorPdf,} = props
-  return <VistaIcc<Fila> {...props}/>;
-}
-
-// ── 4. OPCIONAL — Excel propio (← 4) ──
-// Sin esto: excel: true (el detalle con las columnas) o ninguno.
-async function excelPropio({ filas, titulo, encabezado }: DescargaReporte<Fila>) {
-  await exportarExcel({
-    nombreArchivo: `${nombreArchivo(titulo)}.xlsx`,
-    titulo,
-    encabezado,
-    hojas: [
-      {
-        nombre: titulo.slice(0, 31),
-        mostrarCuadricula: true,
-        autoFiltro: true,
-        columnas: ["Texto", "Usuario", "Número"], // CAMBIAR
-        filas: filas.map((f): CeldaExcel[] => [
-          f.nombre, // CAMBIAR: una celda por columna, en el mismo orden
-          // Celda con color: { dato, fontColor } (color ARGB)
-          // f.campo_numero < 0 ? { dato: f.campo_numero, fontColor: "FFB30000" } : f.campo_numero,
-        ]),
-      },
-    ],
-  });
-}
-
-// ── 5. OPCIONAL — PDF propio (← 5) ──
-// Con el formato de Reportes de pricing. Sin esto: pdf: true (el detalle) o ninguno.
-function pdfPropio({ filas, titulo, encabezado }: DescargaReporte<Fila>) {
-  return descargarPdf({
-    titulo,
-    header: encabezado,
-    horizontal: true,
-    contenido: [
-      { tipo: "titulo", texto: "Resumen" }, // CAMBIAR: bloques en el orden en que se imprimen
-      { tipo: "texto", texto: `${filas.length} registros` },
-      {
-        tipo: "tabla",
-        columnas: ["Texto", "Usuario", "Número"],
-        filas: filas.map((f) => [f.nombre, ]),
-      },
-    ],
-  });
+function ContenidoHitRate(props: ContenidoReporteProps<Fila>) {
+  return <VistaIcc {...props} />;
 }
 
 // ── La definición: aquí se conecta cada pieza ──
@@ -184,7 +133,7 @@ export const reporteIndiceDeCumplimiento = definirReporte<Fila>({
   filtros: [filtroUsuario("Usuario", "cod_usuario"), filtroPropio], // ← 2
   consultar, // ← 1  (sin pieza 1: consultar: consultarApi("/api/appweb/…", filaSchema))
   Contenido: ContenidoHitRate, // ← 3  (sin pieza 3: borrar la línea)
-  descargas: {  pdf: 'contenido' }, // ← 4 y ← 5  (o excel: true / pdf: true)
+  descargas: { pdf: "contenido" }, // ← 4 y ← 5  (o excel: true / pdf: true)
   columnas: [
     { id: "nombre", label: "Persona", valor: (f) => f.nombre, agrupable: true, buscable: true },
     {

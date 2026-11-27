@@ -71,6 +71,8 @@ const filtroPropio: FiltroReporte = {
 
 // ── 3. OPCIONAL — Vista propia (← 3) ──
 // En lugar de la tabla (aquí: un texto arriba y la tabla de siempre abajo).
+// Con descargas: { pdf: "contenido" } esta vista también genera el PDF y saca los totales que
+// necesite: ver GUIA.md, (I) Contenido ("Cómo funciona el PDF de la vista" y "Totales").
 function VistaPropia(props: ContenidoReporteProps<Fila>) {
   return (
     <div className="space-y-3">

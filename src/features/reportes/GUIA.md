@@ -353,9 +353,29 @@ props del PDF. Para dejar también la tabla de siempre: `TablaReporte`. Con JSX 
 En el ejemplo dibuja una gráfica por asesor con la tabla debajo, y cuando se pulsa PDF
 (`solicitudPdf` cambia) genera el PDF con esa gráfica.
 
+**Cómo funciona el PDF de la vista** (con `pdf: "contenido"` en (H)):
+
+1. Cada clic en el botón PDF de la pantalla sube `solicitudPdf` (1, 2, 3…).
+2. La vista guarda el último valor en un `useRef` y genera el PDF en un `useEffect` solo cuando
+   `solicitudPdf` cambia. Así no se genera al abrir la vista.
+3. `onGenerandoPdf(true)` y luego `onGenerandoPdf(false)`: el botón muestra "Generando PDF...".
+   `onErrorPdf(mensaje)`: el error sale junto al botón (`onErrorPdf(null)` lo limpia). Si el PDF
+   se arma con `usePdfReporte` (el PDF de Reportes de pricing, con gráficas y leyendas), se le
+   pasan al crearlo y el hook los llama solo:
+   `usePdfReporte({ onGenerando: onGenerandoPdf, onError: onErrorPdf })`, y se usa su `generar`.
+4. `header: encabezado`: el encabezado del PDF (Período, Empresa, Centro de costo y cada filtro
+   con su nombre) ya viene armado. No hace falta leer las fechas de `params`.
+
+**Totales en la vista.** La vista recibe en `filas` lo que devuelve `consultar`. Si `consultar`
+ya agrupa (ej. una fila por persona), el total no llega aparte: se saca en la vista sumando
+`filas` con `useMemo` y se usa en la pantalla y en el PDF. Caso real: el ICC
+(`contenido/crm/icc.tsx`, con `totalIcc` de `lib/crm/reporte-icc.ts`). Para pasar `filas` a una
+tabla, no copiarlas (`[...filas]`): cada render sería un arreglo nuevo y la tabla volvería a la
+página 1.
+
 ```tsx
 function VistaAvance(props: ContenidoReporteProps<Fila>) {
-  const { filas, solicitudPdf, onGenerandoPdf, onErrorPdf } = props;
+  const { filas, encabezado, solicitudPdf, onGenerandoPdf, onErrorPdf } = props;
   const grafica = React.useRef<HTMLDivElement>(null);
 
   const porAsesor = React.useMemo(() => {
@@ -377,7 +397,7 @@ function VistaAvance(props: ContenidoReporteProps<Fila>) {
     onErrorPdf(null);
     descargarPdf({
       titulo: "Avance de actividades por asesor",
-      header: {},
+      header: encabezado, // Período, Empresa, Centro de costo y cada filtro, ya armados
       horizontal: true,
       contenido: [
         { tipo: "grafica", elemento: grafica.current },
@@ -392,7 +412,7 @@ function VistaAvance(props: ContenidoReporteProps<Fila>) {
         onErrorPdf(error instanceof Error ? error.message : "No se pudo generar el PDF."),
       )
       .finally(() => onGenerandoPdf(false));
-  }, [solicitudPdf, porAsesor, onGenerandoPdf, onErrorPdf]);
+  }, [solicitudPdf, porAsesor, encabezado, onGenerandoPdf, onErrorPdf]);
 
   return (
     <div className="space-y-4">
@@ -538,7 +558,7 @@ async function excelAvance({ filas, titulo, encabezado }: DescargaReporte<Fila>)
 
 // (I) Vista propia (+ el PDF de (H))
 function VistaAvance(props: ContenidoReporteProps<Fila>) {
-  const { filas, solicitudPdf, onGenerandoPdf, onErrorPdf } = props;
+  const { filas, encabezado, solicitudPdf, onGenerandoPdf, onErrorPdf } = props;
   const grafica = React.useRef<HTMLDivElement>(null);
 
   const porAsesor = React.useMemo(() => {
@@ -560,7 +580,7 @@ function VistaAvance(props: ContenidoReporteProps<Fila>) {
     onErrorPdf(null);
     descargarPdf({
       titulo: "Avance de actividades por asesor",
-      header: {},
+      header: encabezado, // Período, Empresa, Centro de costo y cada filtro, ya armados
       horizontal: true,
       contenido: [
         { tipo: "grafica", elemento: grafica.current },
@@ -575,7 +595,7 @@ function VistaAvance(props: ContenidoReporteProps<Fila>) {
         onErrorPdf(error instanceof Error ? error.message : "No se pudo generar el PDF."),
       )
       .finally(() => onGenerandoPdf(false));
-  }, [solicitudPdf, porAsesor, onGenerandoPdf, onErrorPdf]);
+  }, [solicitudPdf, porAsesor, encabezado, onGenerandoPdf, onErrorPdf]);
 
   return (
     <div className="space-y-4">

@@ -282,6 +282,10 @@ function ContenidoMiReporte(props: ContenidoReporteProps<Fila>) {
 - **Vista de otro módulo**: importar su componente **por su ruta** (ej.
   `@/features/reportes-crm/components/reporte-objetivos-empleado`), no por el `index` del módulo
   (el `index` trae todo el módulo).
+- **Totales**: si `consultar` ya agrupa (ej. una fila por persona), el total no llega aparte: se
+  saca en la vista sumando `filas` con `useMemo` (ej. `totalIcc` en `lib/crm/reporte-icc.ts`).
+  A una tabla se le pasa `filas` sin copiar (`[...filas]` es un arreglo nuevo en cada render y la
+  tabla vuelve a la página 1).
 - **Datos que no son filas** (ej. los objetivos de las gráficas): `consultar` los guarda por
   parámetros y la vista los lee con `params`. Ver `reporte-graficas-objetivos.tsx`
   (`objetivosConsultados`).
@@ -395,7 +399,7 @@ import type { ContenidoReporteProps } from "../../lib/definir-reporte";
 import { descargarPdf } from "../../lib/exportar";
 
 function VistaConPdf(props: ContenidoReporteProps<Fila>) {
-  const { filas, solicitudPdf, onGenerandoPdf, onErrorPdf } = props;
+  const { filas, encabezado, solicitudPdf, onGenerandoPdf, onErrorPdf } = props;
   const ultimaSolicitud = React.useRef(solicitudPdf);
 
   React.useEffect(() => {
@@ -406,20 +410,27 @@ function VistaConPdf(props: ContenidoReporteProps<Fila>) {
     onErrorPdf(null);
     descargarPdf({
       titulo: "Mi reporte",
-      header: {},
+      header: encabezado, // Período, Empresa, Centro de costo y cada filtro, ya armados
       contenido: [{ tipo: "texto", texto: `${filas.length} filas` }],
     })
       .catch((error) =>
         onErrorPdf(error instanceof Error ? error.message : "No se pudo generar el PDF."),
       )
       .finally(() => onGenerandoPdf(false));
-  }, [solicitudPdf, filas, onGenerandoPdf, onErrorPdf]);
+  }, [solicitudPdf, filas, encabezado, onGenerandoPdf, onErrorPdf]);
 
   return <TablaReporte {...props} />;
 }
 
 // en la definición:  Contenido: VistaConPdf,  descargas: { pdf: "contenido" },
 ```
+
+- **`header: encabezado`**: el encabezado del PDF (Período, Empresa, Centro de costo y cada filtro
+  con su nombre) ya viene armado; no hace falta leer las fechas de `params`.
+- **Con `usePdfReporte`** (el PDF de Reportes de pricing, con gráficas y leyendas): se le pasan las
+  props al crearlo, `usePdfReporte({ onGenerando: onGenerandoPdf, onError: onErrorPdf })`, y dentro
+  del `useEffect` se llama su `generar` (el hook avisa "Generando PDF..." y el error solo). Un solo
+  `usePdfReporte` por vista. Caso real: `contenido/crm/icc.tsx`.
 
 Si el PDF lo genera un componente que ya existe y se dispara con un número (como la vista de
 descarga de Hit Rate, prop `descargar`), se le pasan las tres props tal cual: ver
@@ -687,6 +698,7 @@ En `src/features/reportes/definiciones/crm/`:
 | `reporte-actividades.ts`         | `consultar` del usuario de la sesión, PDF propio (calendario), sin empresa/CC |
 | `reporte-objetivos.tsx`          | Parámetros con otros nombres, datos anidados y vista de CRM             |
 | `reporte-graficas-objetivos.tsx` | Varias consultas, datos que no son filas y vista con gráficas           |
+| `reporte-icc.tsx`                | `consultar` que agrupa por persona, vista con gráfica, total y PDF (`pdf: "contenido"`, `usePdfReporte`) |
 
 ## Errores comunes
 
