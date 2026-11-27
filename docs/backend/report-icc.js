@@ -2,7 +2,8 @@
  * BACKEND (no es código del espejo; no sale en los diff/).
  *
  * report_icc: detalle (una fila por actividad) para el Índice de Cumplimiento Comercial
- * (ICC) en los reportes del CRM. El front agrupa por persona y calcula ICCa / ICCp / ICCc.
+ * (ICC) en los reportes del CRM. Cada actividad sale YA CLASIFICADA (banderas 0/1 de abajo): el
+ * front solo suma las banderas por persona (o por lo que se agrupe) y saca los porcentajes.
  *
  * Cómo instalarlo:
  *  1. Copiar desde "INICIO" hasta "FIN" al final del mismo archivo donde está
@@ -13,13 +14,24 @@
  * Filas: actividades cuyo tipo (TIPO.TIPO_DESCRIPCION de ACTIVIDAD.TIPO_ID) está en
  * TIPOS_ICC —por nombre, no por código— y cuya fecha programada cae en el rango.
  *
- * Definiciones del usuario (las aplica el front): Realizada = FINALIZADA; Programada = aún
- * no finalizada. La fecha programada es la que ubica la actividad en el rango.
+ * La fecha programada es la que ubica la actividad en el rango.
  *
- * Banderas por actividad:
- *  - CON_RESULTADO = 1 si tiene al menos una fila en ACTIVIDAD_RESULTADO. Se usa EXISTS:
- *                    una actividad puede tener varios resultados y un JOIN la duplicaría.
- *  - FINALIZADA    = 1 si ACTIVIDAD.ESTADO_ID es el estado finalizado (24).
+ * Banderas por actividad (definiciones del usuario, #194; los días se cuentan en hora de
+ * Guatemala; las anuladas, ESTADO_DESCRIPCION = 'ANULADO', valen 0 en todas menos FINALIZADA y
+ * CON_RESULTADO):
+ *  - CON_RESULTADO           = 1 si tiene al menos una fila en ACTIVIDAD_RESULTADO. Se usa EXISTS:
+ *                              una actividad puede tener varios resultados y un JOIN la duplicaría.
+ *  - FINALIZADA              = 1 si ACTIVIDAD.ESTADO_ID es el estado finalizado (24) = realizada.
+ *  - EN_TOTAL                = 1 si no está anulada (divisor del ICCc).
+ *  - PROGRAMADA              = programada después del día en que se creó.
+ *  - PROGRAMADA_REALIZADA    = PROGRAMADA y FINALIZADA.
+ *  - NO_PROGRAMADA           = programada el mismo día de creación o hasta 15 días antes (más de
+ *                              15 días antes no es ni una ni otra).
+ *  - NO_PROGRAMADA_REALIZADA = NO_PROGRAMADA y FINALIZADA.
+ *  - SIN_RESULTADO           = FINALIZADA y sin resultado.
+ *  - VENCIDA                 = no finalizada, sin resultado y con más de 7 días desde el día
+ *                              programado hasta hoy (si es sábado, tiene hasta el sábado
+ *                              siguiente; el domingo ya está vencida).
  *
  * Fechas: la base las guarda en UTC. El rango se toma en días de Guatemala (UTC-6, sin
  * horario de verano; igual Honduras y El Salvador): una actividad del 31/12 a las 20:57
@@ -36,6 +48,30 @@ const ESTADO_ACTIVIDAD_FINALIZADA = 24;
 
 /** Horas que la hora local (Guatemala, UTC-6) va detrás de UTC: medianoche local = 06:00 UTC. */
 const HORAS_UTC_LOCAL = 6;
+
+/** Días que puede estar programada antes de crearse para contar como no programada. */
+const MAX_DIAS_ATRAS_NO_PROGRAMADA = 15;
+
+/** Días que tiene una actividad abierta para registrar su resultado. */
+const DIAS_PARA_VENCER = 7;
+
+/** Fecha (UTC) en hora de Guatemala, para contar días con DATEDIFF(DAY, ...). */
+const local = (columna) => `DATEADD(HOUR, -${HORAS_UTC_LOCAL}, ${columna})`;
+
+/** Condiciones de las banderas (sin parámetros del usuario: solo constantes de este archivo). */
+const NO_ANULADA = "UPPER(LTRIM(RTRIM(ISNULL(E.ESTADO_DESCRIPCION, '')))) <> 'ANULADO'";
+const FINALIZADA = `A.ESTADO_ID = ${ESTADO_ACTIVIDAD_FINALIZADA}`;
+const SIN_RESULTADO =
+  "NOT EXISTS (SELECT 1 FROM ACTIVIDAD_RESULTADO AR WHERE AR.ACTIVIDAD_ID = A.ACTIVIDAD_ID)";
+/** Días de la creación a la programación (NULL si falta una fecha: la bandera queda en 0). */
+const DIAS_CREACION_A_PROGRAMACION = `DATEDIFF(DAY, ${local("A.ACTIVIDAD_FECHA")}, ${local("A.ACTIVIDAD_FECHA_PROGRAMACION")})`;
+const PROGRAMADA = `${DIAS_CREACION_A_PROGRAMACION} >= 1`;
+const NO_PROGRAMADA = `${DIAS_CREACION_A_PROGRAMACION} BETWEEN -${MAX_DIAS_ATRAS_NO_PROGRAMADA} AND 0`;
+const VENCIDA = `ISNULL(A.ESTADO_ID, 0) <> ${ESTADO_ACTIVIDAD_FINALIZADA} AND ${SIN_RESULTADO} AND DATEDIFF(DAY, ${local("A.ACTIVIDAD_FECHA_PROGRAMACION")}, ${local("GETUTCDATE()")}) > ${DIAS_PARA_VENCER}`;
+
+/** `CASE WHEN <condiciones> THEN 1 ELSE 0 END AS <nombre>`. */
+const bandera = (nombre, ...condiciones) =>
+  azureSqlClient.raw(`CASE WHEN ${condiciones.join(" AND ")} THEN 1 ELSE 0 END AS ${nombre}`);
 
 const validarCamposIcc = (campos) => {
   if (!campos?.fecha_inicio || !campos?.fecha_fin)
@@ -104,6 +140,13 @@ const consultaIcc = (campos) => {
       azureSqlClient.raw("CASE WHEN A.ESTADO_ID = ? THEN 1 ELSE 0 END AS FINALIZADA", [
         ESTADO_ACTIVIDAD_FINALIZADA,
       ]),
+      bandera("EN_TOTAL", NO_ANULADA),
+      bandera("PROGRAMADA", NO_ANULADA, PROGRAMADA),
+      bandera("PROGRAMADA_REALIZADA", NO_ANULADA, PROGRAMADA, FINALIZADA),
+      bandera("NO_PROGRAMADA", NO_ANULADA, NO_PROGRAMADA),
+      bandera("NO_PROGRAMADA_REALIZADA", NO_ANULADA, NO_PROGRAMADA, FINALIZADA),
+      bandera("SIN_RESULTADO", NO_ANULADA, FINALIZADA, SIN_RESULTADO),
+      bandera("VENCIDA", NO_ANULADA, VENCIDA),
     );
 
   const tiene = (campo) => campos[campo] != null && campos[campo] !== "";

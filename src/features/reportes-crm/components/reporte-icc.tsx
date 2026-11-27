@@ -23,8 +23,17 @@ import { calcularIcc, type ResumenIcc } from "../lib/reporte-icc";
 const formatoPorcentaje = (valor: number | null) => (valor == null ? "—" : `${valor.toFixed(2)}%`);
 
 /**
- * Reporte ICC (#194; cálculo en `lib/reporte-icc.ts`): gráfica ICCa/ICCp/ICCc por persona, tabla
- * con total y PDF. `params = null` hasta que se pulsa Filtrar; `encabezado` = filtros con nombre.
+ * Reporte ICC (Índice de Cumplimiento Comercial, #194): gráfica de barras ICCa/ICCp/ICCc por
+ * persona y tabla con porcentajes (programada / no programada / vencida las clasifica el
+ * backend, `report_icc`; las sumas en `lib/reporte-icc.ts`).
+ * - ICCa = visitas programadas realizadas ÷ visitas programadas.
+ * - ICCp = llamadas programadas realizadas ÷ llamadas programadas.
+ * - ICCc = visitas no programadas realizadas ÷ total de visitas.
+ * - Citas sin resultado = visitas finalizadas con `con_resultado = 0`.
+ * - Vencidas = llamadas y visitas abiertas sin resultado más de 7 días. Los filtros los pone
+ * `ReportesCrmClient`; `params = null` hasta que se pulsa Filtrar. El PDF se arma como el de
+ * Hit Rate (`usePdfReporte`): gráfica oculta sin animación + tabla; `encabezado` son los
+ * filtros con nombre (empresa, centro de costo, asesor).
  */
 export function ReporteIcc({
   params,
@@ -201,16 +210,16 @@ const COLUMNAS_ICC: readonly {
   titulo: string;
   porcentaje?: true;
 }[] = [
-  { id: "visitasProgramadas", titulo: "Visitas prog." },
-  { id: "visitasRealizadas", titulo: "Visitas real." },
+  { id: "visitas_programadas", titulo: "Visitas prog." },
+  { id: "visitas_realizadas", titulo: "Visitas real." },
   { id: "icca", titulo: "ICCa", porcentaje: true },
-  { id: "llamadasProgramadas", titulo: "Llamadas prog." },
-  { id: "llamadasRealizadas", titulo: "Llamadas real." },
+  { id: "llamadas_programadas", titulo: "Llamadas prog." },
+  { id: "llamadas_realizadas", titulo: "Llamadas real." },
   { id: "iccp", titulo: "ICCp", porcentaje: true },
-  { id: "visitasNoProgramadasRealizadas", titulo: "Visitas no prog. real." },
-  { id: "visitas", titulo: "Total visitas" },
+  { id: "visitas_no_programadas_realizadas", titulo: "Visitas no prog. real." },
+  { id: "visitas_total", titulo: "Total visitas" },
   { id: "iccc", titulo: "ICCc", porcentaje: true },
-  { id: "sinResultado", titulo: "Citas sin resultado" },
+  { id: "sin_resultado", titulo: "Citas sin resultado" },
   { id: "vencidas", titulo: "Vencidas" },
 ];
 
@@ -237,17 +246,18 @@ function TotalIcc({ total }: Readonly<{ total: ResumenIcc }>) {
     <div className="flex flex-wrap gap-x-6 gap-y-1 border-t bg-muted/50 px-4 py-2 text-sm font-semibold">
       <span>TOTAL</span>
       <span>
-        ICCa: {total.visitasRealizadas}/{total.visitasProgramadas} ({formatoPorcentaje(total.icca)})
+        ICCa: {total.visitas_realizadas}/{total.visitas_programadas} (
+        {formatoPorcentaje(total.icca)})
       </span>
       <span>
-        ICCp: {total.llamadasRealizadas}/{total.llamadasProgramadas} (
+        ICCp: {total.llamadas_realizadas}/{total.llamadas_programadas} (
         {formatoPorcentaje(total.iccp)})
       </span>
       <span>
-        ICCc: {total.visitasNoProgramadasRealizadas}/{total.visitas} (
+        ICCc: {total.visitas_no_programadas_realizadas}/{total.visitas_total} (
         {formatoPorcentaje(total.iccc)})
       </span>
-      <span>Citas sin resultado: {total.sinResultado}</span>
+      <span>Citas sin resultado: {total.sin_resultado}</span>
       <span>Vencidas: {total.vencidas}</span>
     </div>
   );
