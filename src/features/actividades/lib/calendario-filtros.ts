@@ -7,7 +7,6 @@ const ESTADOS_LEGACY = [23, 24];
 export interface FiltrosCalendario {
   estados: Set<number>;
   tipos: Set<number>;
-  codUsuario?: number;
 }
 
 function codigosDesdeUrl(valor: string | null, disponibles: number[], porDefecto: number[]) {
@@ -48,7 +47,6 @@ export function filtrarActividadesCalendario(
 ): Actividad[] {
   return actividades.filter(
     (actividad) =>
-      (filtros.codUsuario ? actividad.cod_asesor === filtros.codUsuario : true) &&
       filtros.estados.has(Number(actividad.cod_estado)) &&
       filtros.tipos.has(Number(actividad.cod_tipo)),
   );

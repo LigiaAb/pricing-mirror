@@ -1,0 +1,443 @@
+diff --git a/src/features/actividades/components/calendario/calendario-actividades.tsx b/src/features/actividades/components/calendario/calendario-actividades.tsx
+index aff154f..4737331 100644
+--- a/src/features/actividades/components/calendario/calendario-actividades.tsx
++++ b/src/features/actividades/components/calendario/calendario-actividades.tsx
+@@ -1,7 +1,7 @@
+ "use client";
+ 
+-import { useQueryClient } from "@tanstack/react-query";
+-import { addDays, addMonths, addWeeks, format, isSameMonth } from "date-fns";
++import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
++import { addDays, addMonths, addWeeks, endOfMonth, format, isSameMonth } from "date-fns";
+ import { Download, Plus, RefreshCcw } from "lucide-react";
+ import Link from "next/link";
+ import { useRouter, useSearchParams } from "next/navigation";
+@@ -18,12 +18,13 @@ import { Loader } from "@/shared/components/ui/loader";
+ import { useAuthStore } from "@/shared/stores/auth-store";
+ import { actividades } from "../../api/actividades";
+ import { useConteoActividades } from "../../api/conteo-actividades";
++import type { TipoUsuario } from "../../lib/actividad-filtros";
+ import {
+   filtrarActividadesCalendario,
+   filtrosCalendarioDesdeUrl,
+   filtrosCalendarioUrl,
+ } from "../../lib/calendario-filtros";
+-import { actividadesDelDia } from "../../lib/calendario-rejilla";
++import { actividadesDelDia, rangoConsultaCalendario } from "../../lib/calendario-rejilla";
+ import { AgendaDia } from "./agenda-dia";
+ import { DialogoExportarActividades } from "./dialogo-exportar-actividades";
+ import { FiltrosCalendario } from "./filtros-calendario";
+@@ -48,7 +49,12 @@ function vistaDesdeUrl(valor: string | null): VistaCalendario {
+ const NOMBRE_OPCION_CALENDARIO = "Calendario";
+ const NOMBRE_ACCION_VER_CXC_FACTURAS = "ver-cxc-facturas";
+ 
+-export function CalendarioActividades() {
++export function CalendarioActividades({
++  usuarioPorDefecto = "asignado",
++}: Readonly<{
++  /** Usuario por el que se consulta al abrir (asignado o creador); el filtro "Ver por" lo cambia. */
++  usuarioPorDefecto?: TipoUsuario;
++}> = {}) {
+   const router = useRouter();
+   const queryClient = useQueryClient();
+   const searchParams = useSearchParams();
+@@ -65,28 +71,46 @@ export function CalendarioActividades() {
+   const contextoHidratado = useContextoOperativoStore((state) => state._hasHydrated);
+   const [dialogoExportar, setDialogoExportar] = useState(false);
+   const [filterByUser, setFilterByUser] = useState(false);
++  const [tipoUsuario, setTipoUsuario] = useState<TipoUsuario>(usuarioPorDefecto);
+   const fecha = fechaDesdeUrl(searchParams.get("fecha"));
+   const vista = vistaDesdeUrl(searchParams.get("vista"));
+   const diaUrl = fechaDesdeUrl(searchParams.get("dia"));
+   const dia = vista === "mes" && !isSameMonth(diaUrl, fecha) ? fecha : diaUrl;
+   const codUsuario = user?.cod_usuario;
++  // Con "ver todo" solo se filtra por usuario si marca "Filtrar para mi usuario".
++  const filtraPorUsuario = !permisosLista.puedeVerTodo || filterByUser;
++  const filtroUsuario = useMemo(
++    () => (filtraPorUsuario ? { cod_usuario: Number(codUsuario), tipo_usuario: tipoUsuario } : {}),
++    [filtraPorUsuario, codUsuario, tipoUsuario],
++  );
++  const { fecha_inicio, fecha_fin } = rangoConsultaCalendario(vista === "dia" ? dia : fecha, vista);
+   const filtrosServidor = useMemo(() => {
+     return {
+-      ...(permisosLista.puedeVerTodo
+-        ? {}
+-        : { cod_asesor: codUsuario, cod_cc: currentCentroCosto?.cod_cc }),
++      ...filtroUsuario,
++      ...(permisosLista.puedeVerTodo ? {} : { cod_cc: currentCentroCosto?.cod_cc }),
++      fecha_inicio,
++      fecha_fin,
+     };
+-  }, [codUsuario, currentCentroCosto?.cod_cc, permisosLista.puedeVerTodo]);
++  }, [
++    filtroUsuario,
++    currentCentroCosto?.cod_cc,
++    permisosLista.puedeVerTodo,
++    fecha_inicio,
++    fecha_fin,
++  ]);
+   const habilitada =
+     authHidratado && contextoHidratado && Boolean(currentCentroCosto) && Boolean(codUsuario);
+-  const consulta = actividades.useLista(filtrosServidor, { enabled: habilitada });
++  // Una consulta por rango visible; mientras llega el nuevo se sigue viendo el anterior.
++  const consulta = useQuery({
++    ...actividades.listaOptions(filtrosServidor),
++    enabled: habilitada,
++    placeholderData: keepPreviousData,
++  });
+   const conteo = useConteoActividades(
+     {
+-      ...((permisosLista.puedeVerTodo && filterByUser) || !permisosLista.puedeVerTodo
+-        ? { cod_usuario: Number(codUsuario) }
+-        : {}),
++      ...filtroUsuario,
+       fecha_inicial: format(fecha, "yyyy-MM-01"),
+-      fecha_final: format(addMonths(fecha, 1), "yyyy-MM-01"),
++      fecha_final: format(endOfMonth(fecha), "yyyy-MM-dd"),
+     },
+     habilitada,
+   );
+@@ -101,25 +125,14 @@ export function CalendarioActividades() {
+   );
+   const tiposActividad = useMemo(() => configuraciones, [configuraciones]);
+   const filtros = useMemo(
+-    () => ({
+-      ...filtrosCalendarioDesdeUrl(
++    () =>
++      filtrosCalendarioDesdeUrl(
+         searchParams.get("estado"),
+         searchParams.get("tipo"),
+         estadosActividad.map((estado) => Number(estado.cod_estado)),
+         tiposActividad.map((tipo) => Number(tipo.cod_tipo_actividad)),
+       ),
+-      ...((permisosLista.puedeVerTodo && filterByUser) || !permisosLista.puedeVerTodo
+-        ? { codUsuario: Number(codUsuario) }
+-        : {}),
+-    }),
+-    [
+-      estadosActividad,
+-      searchParams,
+-      tiposActividad,
+-      codUsuario,
+-      permisosLista.puedeVerTodo,
+-      filterByUser,
+-    ],
++    [estadosActividad, searchParams, tiposActividad],
+   );
+   const actividadesFiltradas = useMemo(
+     () => filtrarActividadesCalendario(consulta.data ?? [], filtros),
+@@ -225,6 +238,8 @@ export function CalendarioActividades() {
+         setFilterByUser={setFilterByUser}
+         filterByUser={filterByUser}
+         puedeVerTodo={permisosLista.puedeVerTodo}
++        tipoUsuario={filtraPorUsuario ? tipoUsuario : null}
++        onCambiarTipoUsuario={setTipoUsuario}
+         estados={estadosActividad}
+         filtros={filtros}
+         onCambiar={cambiarFiltros}
+diff --git a/src/features/actividades/components/calendario/filtros-calendario.tsx b/src/features/actividades/components/calendario/filtros-calendario.tsx
+index 0622c10..db11129 100644
+--- a/src/features/actividades/components/calendario/filtros-calendario.tsx
++++ b/src/features/actividades/components/calendario/filtros-calendario.tsx
+@@ -5,8 +5,16 @@ import type { Dispatch, ReactNode, SetStateAction } from "react";
+ import type { Estado } from "@/features/catalogos";
+ import { Button } from "@/shared/components/ui/button";
+ import { Checkbox } from "@/shared/components/ui/checkbox";
++import {
++  Select,
++  SelectContent,
++  SelectItem,
++  SelectTrigger,
++  SelectValue,
++} from "@/shared/components/ui/select";
+ import { cn } from "@/shared/lib/utils";
+ import type { ConteoActividades } from "../../api/conteo-actividades";
++import { OPCIONES_TIPO_USUARIO, type TipoUsuario } from "../../lib/actividad-filtros";
+ import { iconoActividad } from "../../lib/actividad-iconos";
+ import type { FiltrosCalendario as EstadoFiltrosCalendario } from "../../lib/calendario-filtros";
+ 
+@@ -26,6 +34,9 @@ interface FiltrosCalendarioProps {
+   setFilterByUser: Dispatch<SetStateAction<boolean>>;
+   filterByUser: boolean;
+   puedeVerTodo: boolean;
++  /** `null` = no se filtra por usuario (ver todo sin "Filtrar para mi usuario"). */
++  tipoUsuario: TipoUsuario | null;
++  onCambiarTipoUsuario: (tipoUsuario: TipoUsuario) => void;
+ }
+ 
+ function GrupoFiltros({
+@@ -146,6 +157,8 @@ export function FiltrosCalendario({
+   setFilterByUser,
+   filterByUser,
+   puedeVerTodo,
++  tipoUsuario,
++  onCambiarTipoUsuario,
+ }: Readonly<FiltrosCalendarioProps>) {
+   const tiposUnicos = [...new Map(tipos.map((tipo) => [tipo.cod_tipo_actividad, tipo])).values()];
+   const valores: Set<number> = new Set([...(filterByUser ? [1] : [])]);
+@@ -159,6 +172,26 @@ export function FiltrosCalendario({
+           <SlidersHorizontal aria-hidden="true" className="size-3.5" />
+         </span>
+         <p className="text-sm font-semibold">Filtrar actividades</p>
++        {tipoUsuario && (
++          <div className="ml-auto flex items-center gap-2">
++            <span className="text-xs text-muted-foreground">Ver por</span>
++            <Select
++              value={tipoUsuario}
++              onValueChange={(valor) => onCambiarTipoUsuario(valor as TipoUsuario)}
++            >
++              <SelectTrigger aria-label="Ver por" className="h-8 w-32">
++                <SelectValue />
++              </SelectTrigger>
++              <SelectContent>
++                {OPCIONES_TIPO_USUARIO.map((opcion) => (
++                  <SelectItem key={opcion.value} value={opcion.value}>
++                    {opcion.label}
++                  </SelectItem>
++                ))}
++              </SelectContent>
++            </Select>
++          </div>
++        )}
+       </div>
+       <div className="grid gap-4 xl:grid-cols-[minmax(16rem,0.8fr)_minmax(28rem,1.5fr)] xl:gap-6">
+         <GrupoFiltros
+diff --git a/src/features/actividades/components/lista/filtros-actividades.tsx b/src/features/actividades/components/lista/filtros-actividades.tsx
+index fea0409..a79fd4a 100644
+--- a/src/features/actividades/components/lista/filtros-actividades.tsx
++++ b/src/features/actividades/components/lista/filtros-actividades.tsx
+@@ -9,7 +9,12 @@ import {
+   SelectTrigger,
+   SelectValue,
+ } from "@/shared/components/ui/select";
+-import { type FiltroActividades, TODOS } from "../../lib/actividad-filtros";
++import {
++  type FiltroActividades,
++  OPCIONES_TIPO_USUARIO,
++  type TipoUsuario,
++  TODOS,
++} from "../../lib/actividad-filtros";
+ 
+ interface FiltrosActividadesProps {
+   filtro: FiltroActividades;
+@@ -21,6 +26,7 @@ interface FiltrosActividadesProps {
+   puedeFiltrarContexto: boolean;
+   puedeVerTodo: boolean;
+   mostrarEstado?: boolean;
++  mostrarTipoUsuario?: boolean;
+ }
+ 
+ export function FiltrosActividades({
+@@ -33,6 +39,7 @@ export function FiltrosActividades({
+   puedeFiltrarContexto,
+   puedeVerTodo,
+   mostrarEstado = true,
++  mostrarTipoUsuario = true,
+ }: Readonly<FiltrosActividadesProps>) {
+   const centrosFiltrados = centrosCosto.filter(
+     (centro) => filtro.codEmp === TODOS || String(centro.codEmpresaCc) === filtro.codEmp,
+@@ -70,27 +77,23 @@ export function FiltrosActividades({
+           />
+         </>
+       )}
+-      {puedeVerTodo && (
++      {mostrarTipoUsuario && (
+         <CampoSelect
+-          id="actividad-asesor"
+-          label="Asesor"
+-          value={filtro.codAsesor}
+-          onValueChange={(codAsesor) => onCambiar({ ...filtro, codAsesor })}
+-          opciones={[
+-            { value: TODOS, label: "Todos" },
+-            ...empleados.map((empleado) => ({
+-              value: String(empleado.codUsuario),
+-              label: empleado.nombreCompleto || empleado.usuario || String(empleado.codUsuario),
+-            })),
+-          ]}
++          id="actividad-tipo-usuario"
++          label="Ver por"
++          value={filtro.tipoUsuario}
++          onValueChange={(tipoUsuario) =>
++            onCambiar({ ...filtro, tipoUsuario: tipoUsuario as TipoUsuario })
++          }
++          opciones={OPCIONES_TIPO_USUARIO}
+         />
+       )}
+       {puedeVerTodo && (
+         <CampoSelect
+-          id="actividad-creador"
+-          label="Creador"
+-          value={filtro.codCreador}
+-          onValueChange={(codCreador) => onCambiar({ ...filtro, codCreador })}
++          id="actividad-usuario"
++          label="Usuario"
++          value={filtro.codUsuario}
++          onValueChange={(codUsuario) => onCambiar({ ...filtro, codUsuario })}
+           opciones={[
+             { value: TODOS, label: "Todos" },
+             ...empleados.map((empleado) => ({
+diff --git a/src/features/actividades/components/lista/lista-actividades-client.tsx b/src/features/actividades/components/lista/lista-actividades-client.tsx
+index a1fa4c5..a6b5da0 100644
+--- a/src/features/actividades/components/lista/lista-actividades-client.tsx
++++ b/src/features/actividades/components/lista/lista-actividades-client.tsx
+@@ -12,6 +12,7 @@ import { actividadesSinAsignar, type ResumenAsignacion } from "../../api/activid
+ import {
+   construirFiltrosActividades,
+   type FiltroActividades,
++  type TipoUsuario,
+   TODOS,
+ } from "../../lib/actividad-filtros";
+ import { actividadesColumns } from "./actividades-columns";
+@@ -23,6 +24,8 @@ interface ListaActividadesClientProps {
+   puedeVerTodo?: boolean;
+   puedeAsignar?: boolean;
+   puedeFiltrarContexto?: boolean;
++  /** Usuario por el que se consulta al abrir (asignado o creador); el filtro "Ver por" lo cambia. */
++  usuarioPorDefecto?: TipoUsuario;
+ }
+ 
+ export function ListaActividadesClient({
+@@ -30,6 +33,7 @@ export function ListaActividadesClient({
+   puedeVerTodo = false,
+   puedeAsignar = false,
+   puedeFiltrarContexto = false,
++  usuarioPorDefecto = "asignado",
+ }: Readonly<ListaActividadesClientProps>) {
+   const router = useRouter();
+   const user = useAuthStore((state) => state.user);
+@@ -45,8 +49,8 @@ export function ListaActividadesClient({
+   const filtro: FiltroActividades = filtroElegido ?? {
+     codEmp: currentEmpresa ? String(currentEmpresa.cod_empresa) : TODOS,
+     codCc: currentCentroCosto ? String(currentCentroCosto.cod_cc) : TODOS,
+-    codAsesor: sinAsignar ? TODOS : String(codUsuario ?? TODOS),
+-    codCreador: sinAsignar ? TODOS : String(codUsuario ?? TODOS),
++    tipoUsuario: usuarioPorDefecto,
++    codUsuario: sinAsignar ? TODOS : String(codUsuario ?? TODOS),
+     codEstado: TODOS,
+     fechaInicio: "",
+     fechaFin: "",
+@@ -133,11 +137,7 @@ export function ListaActividadesClient({
+       )}
+       <DataTable
+         key={consulta.data?.map((item) => item.cod_actividad).join(",")}
+-        data={(consulta.data ?? [])?.filter((item) =>
+-          filtrosServidor.cod_creador
+-            ? item.cod_creador === Number(filtrosServidor.cod_creador)
+-            : true,
+-        )}
++        data={consulta.data ?? []}
+         columns={columns}
+         searchKeys={["asunto"]}
+         searchPlaceholder="Buscar actividad..."
+@@ -158,6 +158,7 @@ export function ListaActividadesClient({
+               puedeFiltrarContexto={puedeFiltrarContexto}
+               puedeVerTodo={!sinAsignar && puedeVerTodo}
+               mostrarEstado={!sinAsignar}
++              mostrarTipoUsuario={!sinAsignar}
+             />
+             {sinAsignar && puedeAsignar && (
+               <Button
+diff --git a/src/features/actividades/lib/actividad-filtros.ts b/src/features/actividades/lib/actividad-filtros.ts
+index c09cafd..a8623fd 100644
+--- a/src/features/actividades/lib/actividad-filtros.ts
++++ b/src/features/actividades/lib/actividad-filtros.ts
+@@ -1,10 +1,18 @@
+ export const TODOS = "todos";
+ 
++/** Usuario por el que se consultan las actividades: el asignado (asesor) o el creador. */
++export type TipoUsuario = "asignado" | "creador";
++
++export const OPCIONES_TIPO_USUARIO: { value: TipoUsuario; label: string }[] = [
++  { value: "asignado", label: "Asignado" },
++  { value: "creador", label: "Creador" },
++];
++
+ export interface FiltroActividades {
+   codEmp: string;
+   codCc: string;
+-  codAsesor: string;
+-  codCreador: string;
++  tipoUsuario: TipoUsuario;
++  codUsuario: string;
+   codEstado: string;
+   fechaInicio: string;
+   fechaFin: string;
+@@ -25,14 +33,12 @@ export function construirFiltrosActividades(
+   if (filtro.codEstado !== TODOS) resultado.cod_estado = Number(filtro.codEstado);
+   if (filtro.fechaInicio) resultado.fecha_inicio = filtro.fechaInicio;
+   if (filtro.fechaFin) resultado.fecha_fin = filtro.fechaFin;
+-  if (filtro.codCreador && filtro.codCreador !== TODOS) {
+-    resultado.cod_creador = Number(filtro.codCreador);
+-  }
+ 
+   if (!opciones.sinAsignar) {
+-    const asesor = opciones.puedeVerTodo ? filtro.codAsesor : opciones.codUsuario;
+-    if (asesor !== null && asesor !== TODOS && asesor !== "") {
+-      resultado.cod_asesor = Number(asesor);
++    const usuario = opciones.puedeVerTodo ? filtro.codUsuario : opciones.codUsuario;
++    if (usuario !== null && usuario !== TODOS && usuario !== "") {
++      resultado.cod_usuario = Number(usuario);
++      resultado.tipo_usuario = filtro.tipoUsuario;
+     }
+   }
+ 
+diff --git a/src/features/actividades/lib/calendario-filtros.ts b/src/features/actividades/lib/calendario-filtros.ts
+index 42a9580..62b6dad 100644
+--- a/src/features/actividades/lib/calendario-filtros.ts
++++ b/src/features/actividades/lib/calendario-filtros.ts
+@@ -7,7 +7,6 @@ const ESTADOS_LEGACY = [23, 24];
+ export interface FiltrosCalendario {
+   estados: Set<number>;
+   tipos: Set<number>;
+-  codUsuario?: number;
+ }
+ 
+ function codigosDesdeUrl(valor: string | null, disponibles: number[], porDefecto: number[]) {
+@@ -48,7 +47,6 @@ export function filtrarActividadesCalendario(
+ ): Actividad[] {
+   return actividades.filter(
+     (actividad) =>
+-      (filtros.codUsuario ? actividad.cod_asesor === filtros.codUsuario : true) &&
+       filtros.estados.has(Number(actividad.cod_estado)) &&
+       filtros.tipos.has(Number(actividad.cod_tipo)),
+   );
+diff --git a/src/features/actividades/lib/calendario-rejilla.ts b/src/features/actividades/lib/calendario-rejilla.ts
+index 0dfd088..9fd820a 100644
+--- a/src/features/actividades/lib/calendario-rejilla.ts
++++ b/src/features/actividades/lib/calendario-rejilla.ts
+@@ -1,4 +1,12 @@
+-import { addDays, endOfMonth, endOfWeek, isSameDay, startOfMonth, startOfWeek } from "date-fns";
++import {
++  addDays,
++  endOfMonth,
++  endOfWeek,
++  format,
++  isSameDay,
++  startOfMonth,
++  startOfWeek,
++} from "date-fns";
+ import type { Actividad } from "../api/actividades";
+ 
+ const LUNES = { weekStartsOn: 1 as const };
+@@ -49,6 +57,21 @@ export function agruparActividadesPorTipo(actividades: Actividad[]): Actividades
+ }
+ 
+ /** Matriz lunes-domingo que cubre por completo el mes visible. */
++/**
++ * Días (YYYY-MM-DD, ambos inclusive) que dibuja la vista: semana completa en "semana" y la
++ * rejilla del mes (con los días de las semanas vecinas) en "mes" y "dia". Se consulta solo ese
++ * rango en lugar de todas las actividades.
++ */
++export function rangoConsultaCalendario(
++  fecha: Date,
++  vista: "mes" | "semana" | "dia",
++): { fecha_inicio: string; fecha_fin: string } {
++  const inicio =
++    vista === "semana" ? startOfWeek(fecha, LUNES) : startOfWeek(startOfMonth(fecha), LUNES);
++  const fin = vista === "semana" ? endOfWeek(fecha, LUNES) : endOfWeek(endOfMonth(fecha), LUNES);
++  return { fecha_inicio: format(inicio, "yyyy-MM-dd"), fecha_fin: format(fin, "yyyy-MM-dd") };
++}
++
+ export function crearRejillaMes(fecha: Date, actividades: Actividad[]): DiaCalendario[][] {
+   const inicio = startOfWeek(startOfMonth(fecha), LUNES);
+   const fin = endOfWeek(endOfMonth(fecha), LUNES);
