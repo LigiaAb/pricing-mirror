@@ -1,4 +1,4 @@
-const { lista_reportes_disponibles } = require("../../app/controllers/reportes/reportes");
+const { lista_reportes_disponibles, lista_modulos_reportes } = require("../../app/controllers/reportes/reportes");
 const { reporte_embarques_por_cliente_expo, reporte_embarques_por_cliente_expo_oracle, reporte_embarques_por_cliente_impo_oracle, reporte_embarques_por_cliente_impo, reporte_embarques_por_cliente_tropicargo_oracle, reporte_contenedores, reporte_embarques_por_cliente_azure } = require("../../app/controllers/reportes/reportes_embarques_expo");
 const { reporte_emb_fcl_transito_gt, reporte_emb_no_asignados_hk, reporte_emb_detalle_embarque } = require("../../app/controllers/reportes/reportes_embarques_transito");
 
@@ -6,6 +6,13 @@ module.exports.AppCloudRoutesModuloReportes = (app) => {
     // Consulta de Reports Disponibles
     app.get('/lista-reportes-disponibles', (req, res) => {
         lista_reportes_disponibles(req.query)
+        .then(i => res.apiResponse(i))
+        .catch(e => res.apiResponse(undefined,e.message,404));
+    })
+
+    // Módulos con reportes en la empresa y el CC del contexto
+    app.get('/lista-modulos-reportes', (req, res) => {
+        lista_modulos_reportes(req.query)
         .then(i => res.apiResponse(i))
         .catch(e => res.apiResponse(undefined,e.message,404));
     })

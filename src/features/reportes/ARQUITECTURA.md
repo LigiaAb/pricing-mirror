@@ -6,6 +6,7 @@ la pantalla arma lo demás.
 ```
 reportes/
   api/
+    modulos-reportes.ts       módulos con reportes en la empresa + CC → filtra el select Módulo
     reportes-disponibles.ts   reportes del rol + módulo + empresa + CC → select Reporte
     consultar-api.ts          consultarApi(endpoint, schema, { lista, params, nombres, filtrar }) para `consultar`
   definiciones/                 UNA CARPETA POR MÓDULO
@@ -36,7 +37,7 @@ reportes/
                               en Oracle; fechas opcionales (ETD) y cliente (sin él, 1843);
                               `agrupado: false`; `excel: true`)
       reporte-detalle-embarque.tsx  EMB-DE-03 Detalle de embarque (SQL fijo en Oracle por
-                              `coord_codigo`, filtro `texto`; vista de árbol propia
+                              coordinación, booking o contenedor (filtros `texto`, al menos uno); un árbol por coordinación
                               (`Contenido`); `excel: true` con todas las filas en una hoja)
     pricing/
       index.ts                REPORTES_PRICING
@@ -82,7 +83,8 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
 
 ## Qué arma la pantalla sola
 
-- **Reportes disponibles**: dos selects. **Módulo** (catálogo `modulos`, `listamodulo`) y
+- **Reportes disponibles**: dos selects. **Módulo** (catálogo `modulos`, `listamodulo`, solo los que tienen
+  reportes en la empresa y el CC del contexto: `lista-modulos-reportes`) y
   **Reporte**: `lista-reportes-disponibles` con `cod_usuario`, `cod_modulo`, `cod_empresa` y
   `cod_cc` (contexto operativo); sin módulo no se consulta. `VistaReportes` acepta `codModulo`
   como módulo inicial.

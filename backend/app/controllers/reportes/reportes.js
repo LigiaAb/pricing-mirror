@@ -66,4 +66,38 @@ module.exports.lista_reportes_disponibles = async (campos) => {
   }
 };
 
+/**
+ * lista_modulos_reportes: módulos que tienen reportes en la empresa y el centro de costo (los
+ * del contexto actual). Lo usa la pantalla de Reportes para el select de Módulo.
+ *
+ * Parámetros: cod_empresa (requerido), cod_cc (opcional; sin él no filtra por CC).
+ * Misma regla de REPORTE_X_CC_X_MDULO_X_ROL que lista_reportes_disponibles (NULL = en todos),
+ * con el reporte (TIPO) y la fila activos.
+ *
+ * Respuesta: una fila por módulo, sin repetidos: COD_MODULO = MODULO_ID. Una fila con
+ * COD_MODULO NULL = hay reportes asignados a todos los módulos.
+ */
+module.exports.lista_modulos_reportes = async (campos) => {
+  if (!campos?.cod_empresa)
+    return { success: false, cod_mensaje: 1043, mensaje: "faltan parametros requeridos, verifique" };
+
+  try {
+    const consulta = azureSqlClient({ R: "REPORTE_X_CC_X_MDULO_X_ROL" })
+      .join({ T: "TIPO" }, "T.TIPO_ID", "R.REPORTE_TIPO_ID")
+      .where("T.TIPO_TABLA", "REPORTE")
+      .where("T.ESTADO_ID", ESTADO_TIPO_ACTIVO)
+      .where("R.ESTADO_ID", ESTADO_TIPO_ACTIVO)
+      .where((q) => q.whereNull("R.EMPRESA_ID").orWhere("R.EMPRESA_ID", `${campos.cod_empresa}`))
+      .distinct("R.MODULO_ID AS COD_MODULO")
+      .orderBy("R.MODULO_ID");
+
+    if (campos.cod_cc != null && campos.cod_cc !== "")
+      consulta.where((q) => q.whereNull("R.CENCOS_ID").orWhere("R.CENCOS_ID", `${campos.cod_cc}`));
+
+    return await consulta;
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+};
+
 // ── FIN ──────────────────────────────────────────────────────────────────────
