@@ -13,19 +13,36 @@ const texto = z
 const bandera = z.coerce.number().catch(0);
 
 /**
- * Una actividad (LLAMADA o VISITA) de `report_icc`, con la fecha programada en el rango; solo los
- * campos que usa el cálculo. Fechas en UTC (ISO).
+ * Una actividad (LLAMADA o VISITA) de `report_icc`, con la fecha programada en el rango, ya
+ * clasificada por el backend (banderas 0/1). Keys en minúsculas, como las entrega el cliente
+ * HTTP. Fechas en UTC (ISO).
  */
 export const filaIccSchema = z.looseObject({
+  actividad: zId,
+  asunto: texto,
   fecha_creacion: texto,
   fecha_programacion: texto,
   tipo: texto,
   usuario: zId,
   nombres: texto,
   apellidos: texto,
+  cod_empresa: zId.nullable().optional(),
+  cc: zId.nullable().optional(),
+  cc_nombre: texto,
+  cod_cliente: zId.nullable().optional(),
+  cliente: texto,
+  cod_estado: zId.nullable().optional(),
   estado: texto,
   con_resultado: bandera,
   finalizada: bandera,
+  // Clasificación hecha en el backend (definiciones de #194; ver docs/backend/report-icc.js).
+  en_total: bandera,
+  programada: bandera,
+  programada_realizada: bandera,
+  no_programada: bandera,
+  no_programada_realizada: bandera,
+  sin_resultado: bandera,
+  vencida: bandera,
 });
 
 export type FilaIcc = z.infer<typeof filaIccSchema>;
