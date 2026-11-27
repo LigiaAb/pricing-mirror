@@ -30,11 +30,11 @@ reportes/
     embarques/
       index.ts                REPORTES_EMBARQUES
       reporte-embarques-fcl-transito-gt.ts  EMB-EFCLTGT-01 Embarques FCL en tránsito GT (SQL
-                              fijo en Oracle; fechas opcionales (ETD) y cliente (sin él, 1843);
+                              fijo en Oracle; cliente requerido, sin fechas;
                               sin empresa ni CC; `agrupado: false`; Excel del detalle con vacíos en amarillo,
                               `colorFondoCelda` de `descargarExcelReporte`)
       reporte-embarques-no-asignados-hk.ts  EMB-ENAHK-02 Embarques no asignados a HK (SQL fijo
-                              en Oracle; fechas opcionales (ETD) y cliente (sin él, 1843);
+                              en Oracle; cliente requerido, sin fechas;
                               `agrupado: false`; `excel: true`)
       reporte-detalle-embarque.tsx  EMB-DE-03 Detalle de embarque (SQL fijo en Oracle por
                               coordinación, booking o contenedor (filtros `texto`, al menos uno); un árbol por coordinación

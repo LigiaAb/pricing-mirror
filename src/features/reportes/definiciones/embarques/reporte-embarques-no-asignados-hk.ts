@@ -7,8 +7,8 @@ import { filtroCliente } from "../../lib/filtros";
 /**
  * EMB-ENAHK-02 Embarques no asignados a HK.
  * Endpoint con un SQL fijo en Oracle (`reportes_embarques_transito.js` del back): empresa,
- * departamento y producto van dentro del SQL (sin empresa ni CC). Filtros opcionales: cliente
- * (sin él, el back usa el 1843) y período sobre la ETD. Las fechas llegan como texto local
+ * departamento y producto van dentro del SQL (sin empresa ni CC). Filtro: cliente (requerido),
+ * sin fechas. Las fechas llegan como texto local
  * `YYYY-MM-DDTHH:mm:ss`. Las claves llegan en minúsculas (el cliente HTTP las normaliza), aunque
  * Oracle las devuelva en mayúsculas.
  */
