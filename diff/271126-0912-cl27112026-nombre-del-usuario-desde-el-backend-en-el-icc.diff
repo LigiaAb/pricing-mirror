@@ -1,0 +1,25 @@
+diff --git a/src/features/reportes-crm/api/reporte-icc.ts b/src/features/reportes-crm/api/reporte-icc.ts
+index 11bf2f6..ed3deae 100644
+--- a/src/features/reportes-crm/api/reporte-icc.ts
++++ b/src/features/reportes-crm/api/reporte-icc.ts
+@@ -26,6 +26,7 @@ export const filaIccSchema = z.looseObject({
+   usuario: zId,
+   nombres: texto,
+   apellidos: texto,
++  nombre: texto, // CONCAT(nombres, ' ', apellidos) del backend
+   cod_empresa: zId.nullable().optional(),
+   cc: zId.nullable().optional(),
+   cc_nombre: texto,
+diff --git a/src/features/reportes-crm/lib/reporte-icc.ts b/src/features/reportes-crm/lib/reporte-icc.ts
+index 9613d66..d84e1bc 100644
+--- a/src/features/reportes-crm/lib/reporte-icc.ts
++++ b/src/features/reportes-crm/lib/reporte-icc.ts
+@@ -32,7 +32,7 @@ export function porcentajeIcc(parte: number, total: number): number | null {
+ }
+ 
+ export function nombreUsuario(fila: FilaIcc): string {
+-  return `${fila.nombres} ${fila.apellidos}`.trim() || `Usuario ${fila.usuario}`;
++  return fila.nombre.trim() || `Usuario ${fila.usuario}`;
+ }
+ 
+ /** Suma las banderas de las filas (una persona o todas). */

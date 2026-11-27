@@ -10,6 +10,9 @@
  *     `module.exports.report_kpi_cotizaciones` (usa el mismo `azureSqlClient`).
  *  2. Registrar la ruta `/api/appweb/report-icc` igual que `report_kpi_cotizaciones`
  *     (GET, parámetros por query string).
+ *  3. Índices en la base (sin ellos la consulta recorre las tablas completas y tarda):
+ *       CREATE INDEX IX_ACTIVIDAD_RESULTADO_ACTIVIDAD_ID ON ACTIVIDAD_RESULTADO (ACTIVIDAD_ID);
+ *       CREATE INDEX IX_ACTIVIDAD_FECHA_PROGRAMACION ON ACTIVIDAD (ACTIVIDAD_FECHA_PROGRAMACION);
  *
  * Filas: actividades cuyo tipo (TIPO.TIPO_DESCRIPCION de ACTIVIDAD.TIPO_ID) está en
  * TIPOS_ICC —por nombre, no por código— y cuya fecha programada cae en el rango.
@@ -19,8 +22,9 @@
  * Banderas por actividad (definiciones del usuario, #194; los días se cuentan con DATEDIFF(DAY)
  * sobre las fechas como están en la base; las anuladas, ESTADO_DESCRIPCION = 'ANULADO', valen 0
  * en todas menos FINALIZADA y CON_RESULTADO):
- *  - CON_RESULTADO           = 1 si tiene al menos una fila en ACTIVIDAD_RESULTADO. Se usa EXISTS:
- *                              una actividad puede tener varios resultados y un JOIN la duplicaría.
+ *  - CON_RESULTADO           = 1 si tiene al menos una fila en ACTIVIDAD_RESULTADO. Se une con
+ *                              DISTINCT ACTIVIDAD_ID (R): una actividad puede tener varios
+ *                              resultados y un JOIN directo la duplicaría.
  *  - FINALIZADA              = 1 si ACTIVIDAD.ESTADO_ID es el estado finalizado (24) = realizada.
  *  - EN_TOTAL                = 1 si no está anulada (divisor del ICCc).
  *  - PROGRAMADA              = programada después del día en que se creó.
@@ -60,8 +64,8 @@ const DIAS_PARA_VENCER = 7;
 /** Condiciones de las banderas (sin parámetros del usuario: solo constantes de este archivo). */
 const NO_ANULADA = "UPPER(LTRIM(RTRIM(ISNULL(E.ESTADO_DESCRIPCION, '')))) <> 'ANULADO'";
 const FINALIZADA = `A.ESTADO_ID = ${ESTADO_ACTIVIDAD_FINALIZADA}`;
-const SIN_RESULTADO =
-  "NOT EXISTS (SELECT 1 FROM ACTIVIDAD_RESULTADO AR WHERE AR.ACTIVIDAD_ID = A.ACTIVIDAD_ID)";
+/** R = actividades con resultado (leftJoin en consultaIcc): ACTIVIDAD_RESULTADO se lee una vez. */
+const SIN_RESULTADO = "R.ACTIVIDAD_ID IS NULL";
 /** Días de la creación a la programación (NULL si falta una fecha: la bandera queda en 0). */
 const DIAS_CREACION_A_PROGRAMACION =
   "DATEDIFF(DAY, A.ACTIVIDAD_FECHA, A.ACTIVIDAD_FECHA_PROGRAMACION)";
@@ -104,9 +108,13 @@ const consultaIcc = (campos) => {
     .groupBy("UEP.USUARIO_ID")
     .as("EMP");
 
+  // Actividades con al menos un resultado (una fila por actividad)
+  const conResultado = azureSqlClient("ACTIVIDAD_RESULTADO").distinct("ACTIVIDAD_ID").as("R");
+
   const consulta = azureSqlClient({ A: "ACTIVIDAD" })
     .join({ T: "TIPO" }, "T.TIPO_ID", "A.TIPO_ID")
     .leftJoin(empleado, "EMP.USUARIO_ID", "A.USUARIO_ID")
+    .leftJoin(conResultado, "R.ACTIVIDAD_ID", "A.ACTIVIDAD_ID")
     .leftJoin({ CEN: "CENTRO_COSTO" }, "CEN.CENCOS_ID", "A.CENCOS_ID")
     .leftJoin({ C: "ENTIDAD" }, "C.ENTIDAD_ID", "A.ENTIDAD_ID")
     .leftJoin({ E: "ESTADO" }, "A.ESTADO_ID", "E.ESTADO_ID")
@@ -134,8 +142,9 @@ const consultaIcc = (campos) => {
       "E.ESTADO_DESCRIPCION AS ESTADO",
     )
     .select(
+      azureSqlClient.raw("CONCAT(EMP.NOMBRES, ' ', EMP.APELLIDOS) AS NOMBRE"),
       azureSqlClient.raw(
-        "CASE WHEN EXISTS (SELECT 1 FROM ACTIVIDAD_RESULTADO AR WHERE AR.ACTIVIDAD_ID = A.ACTIVIDAD_ID) THEN 1 ELSE 0 END AS CON_RESULTADO",
+        "CASE WHEN R.ACTIVIDAD_ID IS NOT NULL THEN 1 ELSE 0 END AS CON_RESULTADO",
       ),
       azureSqlClient.raw("CASE WHEN A.ESTADO_ID = ? THEN 1 ELSE 0 END AS FINALIZADA", [
         ESTADO_ACTIVIDAD_FINALIZADA,
