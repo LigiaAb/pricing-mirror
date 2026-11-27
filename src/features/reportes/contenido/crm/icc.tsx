@@ -19,139 +19,20 @@ import type { ResumenIcc } from "../../definiciones/crm/reporte-icc";
 import { totalIcc } from "../../lib/crm/reporte-icc";
 import type { ContenidoReporteProps } from "../../lib/definir-reporte";
 
-// import { type ParamsReporteIcc, useReporteIcc } from "../api/reporte-icc";
-
 const formatoPorcentaje = (valor: number | null) => (valor == null ? "—" : `${valor.toFixed(2)}%`);
 
 /**
- * Reporte ICC (Índice de Cumplimiento Comercial, #194): gráfica de barras ICCa/ICCp/ICCc por
- * persona y tabla con porcentajes (programada / no programada / vencida las clasifica el
- * backend, `report_icc`; las sumas en `lib/reporte-icc.ts`).
+ * Vista del reporte ICC (Índice de Cumplimiento Comercial, #194): gráfica de barras
+ * ICCa/ICCp/ICCc por persona, tabla con TOTAL y PDF. Recibe las filas por persona que arma
+ * `consultar` (definiciones/crm/reporte-icc.tsx); el TOTAL se saca de ellas (`totalIcc`).
  * - ICCa = visitas programadas realizadas ÷ visitas programadas.
  * - ICCp = llamadas programadas realizadas ÷ llamadas programadas.
  * - ICCc = visitas no programadas realizadas ÷ total de visitas.
- * - Citas sin resultado = visitas finalizadas con `con_resultado = 0`.
- * - Vencidas = llamadas y visitas abiertas sin resultado más de 7 días. Los filtros los pone
- * `ReportesCrmClient`; `params = null` hasta que se pulsa Filtrar. El PDF se arma como el de
- * Hit Rate (`usePdfReporte`): gráfica oculta sin animación + tabla; `encabezado` son los
- * filtros con nombre (empresa, centro de costo, asesor).
+ * - Citas sin resultado = visitas finalizadas sin resultado.
+ * - Vencidas = llamadas y visitas abiertas sin resultado más de 7 días.
+ * El PDF (`descargas: { pdf: "contenido" }`) se genera cada vez que se pulsa el botón PDF
+ * (`solicitudPdf` cambia) con `usePdfReporte`: gráfica oculta sin animación + tabla.
  */
-// export function ReporteIcc({
-//   params,
-//   encabezado = {},
-// }: Readonly<{ params: ParamsReporteIcc | null; encabezado?: Record<string, string> | undefined }>) {
-//   const graficaPdf = useRef<HTMLDivElement>(null);
-//   const pdf = usePdfReporte();
-//   const consulta = useReporteIcc(params ?? { fecha_inicio: "", fecha_fin: "" }, params !== null);
-
-//   const filas = consulta.data;
-//   const resumen = useMemo(() => calcularIcc(filas ?? []), [filas]);
-
-//   if (params === null) {
-//     return (
-//       <p className="text-sm text-muted-foreground">
-//         Selecciona las fechas (por fecha programada) y pulsa Filtrar para consultar el ICC.
-//       </p>
-//     );
-//   }
-//   if (consulta.isError) {
-//     return (
-//       <p className="text-sm text-destructive">
-//         Error al consultar el ICC: {consulta.error.message}
-//       </p>
-//     );
-//   }
-//   if (consulta.isLoading || !filas) return <div>Cargando el reporte...</div>;
-
-//   const generarPdf = () => {
-//     const fecha = (valor: string) => valor.split("-").reverse().join("-");
-//     const contenido: BloquePdf[] = [
-//       { tipo: "titulo", texto: "ICCa / ICCp / ICCc por persona" },
-//       { tipo: "grafica", elemento: graficaPdf.current },
-//       {
-//         tipo: "leyenda",
-//         entradas: [
-//           { texto: "ICCa (visitas)", color: COLOR_ICCA },
-//           { texto: "ICCp (llamadas)", color: COLOR_ICCP },
-//           { texto: "ICCc (visitas no programadas)", color: COLOR_ICCC },
-//         ],
-//       },
-//       { tipo: "pagina" },
-//       { tipo: "titulo", texto: "Detalle por persona" },
-//       {
-//         tipo: "tabla",
-//         datos: [...resumen.personas, resumen.total].map((r) =>
-//           Object.fromEntries([
-//             ["Persona", { dato: r.nombre }],
-//             ...COLUMNAS_ICC.map((c) => [c.titulo, { dato: celda(c, r), alignFormat: DERECHA }]),
-//           ]),
-//         ),
-//       },
-//     ];
-//     pdf.generar({
-//       titulo: "ICC — Índice de Cumplimiento Comercial",
-//       archivo: `icc-${format(new Date(), "ddMMyyyyHHmmss")}.pdf`,
-//       horizontal: true,
-//       header: {
-//         Período: `${fecha(params.fecha_inicio)} al ${fecha(params.fecha_fin)}`,
-//         ...encabezado,
-//       },
-//       contenido,
-//     });
-//   };
-
-//   return (
-//     <div className="space-y-4">
-//       <div className="flex flex-wrap items-center justify-end gap-3">
-//         {pdf.error && <p className="text-sm text-destructive">{pdf.error}</p>}
-//         <Button
-//           type="button"
-//           variant="outline"
-//           disabled={pdf.generando || resumen.personas.length === 0}
-//           onClick={generarPdf}
-//         >
-//           {pdf.generando ? (
-//             <Loader2 className="size-4 animate-spin" />
-//           ) : (
-//             <FileDown className="size-4" />
-//           )}
-//           Descargar PDF
-//         </Button>
-//       </div>
-
-//       {resumen.personas.length > 0 && (
-//         <div className="h-96 rounded-lg border p-3">
-//           <GraficaIcc datos={resumen.personas} />
-//         </div>
-//       )}
-
-//       <DataTable
-//         columns={COLUMNAS}
-//         data={resumen.personas}
-//         searchKeys={["nombre"]}
-//         searchPlaceholder="Buscar persona…"
-//         numericColumns={COLUMNAS_ICC.map((c) => c.id)}
-//         emptyMessage="No hay llamadas ni visitas programadas en el rango."
-//         footer={resumen.personas.length > 0 && <TotalIcc total={resumen.total} />}
-//       />
-
-//       <div
-//         aria-hidden="true"
-//         style={{
-//           position: "absolute",
-//           left: "-100000px",
-//           top: 0,
-//           width: "1200px",
-//           height: "420px",
-//           pointerEvents: "none",
-//         }}
-//         ref={graficaPdf}
-//       >
-//         <GraficaIcc datos={resumen.personas} animar={false} />
-//       </div>
-//     </div>
-//   );
-// }
 
 const COLOR_ICCA = "#2563eb";
 const COLOR_ICCP = "#16a34a";
@@ -264,11 +145,6 @@ function TotalIcc({ total }: Readonly<{ total: ResumenIcc }>) {
   );
 }
 
-/**
- * Vista del ICC: gráfica, tabla con TOTAL y PDF. `filas` son las filas por persona que arma
- * `consultar` (definiciones/crm/reporte-icc.tsx); el TOTAL se saca de ellas (`totalIcc`). Con
- * `descargas: { pdf: "contenido" }`, cada clic en PDF sube `solicitudPdf` y aquí se genera.
- */
 export function VistaIcc(props: ContenidoReporteProps<ResumenIcc>) {
   const { filas, encabezado, solicitudPdf, onGenerandoPdf, onErrorPdf } = props;
   const graficaPdf = useRef<HTMLDivElement>(null);
@@ -315,13 +191,12 @@ export function VistaIcc(props: ContenidoReporteProps<ResumenIcc>) {
 
   return (
     <div className="space-y-3">
-      {/* <pre>{JSON.stringify({ props }, null, 2)}</pre> */}
       {filas.length > 0 && (
         <div className="h-96 rounded-lg border p-3">
           <GraficaIcc datos={filas as ResumenIcc[]} />
         </div>
       )}
-      <p className="text-sm">{filas.length} registros</p> {/* CAMBIAR */}
+      <p className="text-sm">{filas.length} registros</p>
       <DataTable
         columns={COLUMNAS}
         data={filas as ResumenIcc[]}
