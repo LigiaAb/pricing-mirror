@@ -1,0 +1,139 @@
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+index e162f20..17c11f9 100644
+--- a/src/features/reportes/ARQUITECTURA.md
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -6,6 +6,7 @@ la pantalla arma lo demás.
+ ```
+ reportes/
+   api/
++    modulos-reportes.ts       módulos con reportes en la empresa + CC → filtra el select Módulo
+     reportes-disponibles.ts   reportes del rol + módulo + empresa + CC → select Reporte
+     consultar-api.ts          consultarApi(endpoint, schema, { lista, params, nombres, filtrar }) para `consultar`
+   definiciones/                 UNA CARPETA POR MÓDULO
+@@ -82,7 +83,8 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
+ 
+ ## Qué arma la pantalla sola
+ 
+-- **Reportes disponibles**: dos selects. **Módulo** (catálogo `modulos`, `listamodulo`) y
++- **Reportes disponibles**: dos selects. **Módulo** (catálogo `modulos`, `listamodulo`, solo los que tienen
++  reportes en la empresa y el CC del contexto: `lista-modulos-reportes`) y
+   **Reporte**: `lista-reportes-disponibles` con `cod_usuario`, `cod_modulo`, `cod_empresa` y
+   `cod_cc` (contexto operativo); sin módulo no se consulta. `VistaReportes` acepta `codModulo`
+   como módulo inicial.
+diff --git a/src/features/reportes/api/modulos-reportes.ts b/src/features/reportes/api/modulos-reportes.ts
+new file mode 100644
+index 0000000..c18363e
+--- /dev/null
++++ b/src/features/reportes/api/modulos-reportes.ts
+@@ -0,0 +1,18 @@
++import { z } from "zod";
++import { createCatalogo } from "@/features/catalogos";
++import { zIdNull } from "@/shared/lib/zod-scalars";
++
++/**
++ * Módulos que tienen reportes en la empresa y el CC (los del contexto actual), para el select
++ * de Módulo. Sale de `REPORTE_X_CC_X_MDULO_X_ROL` + `TIPO` (`lista_modulos_reportes` del back).
++ * `codModulo` null = hay reportes asignados a todos los módulos. Sin empresa no se consulta.
++ */
++const moduloReporteSchema = z.object({ cod_modulo: zIdNull.catch(null) });
++
++export const modulosReportes = createCatalogo({
++  nombre: "lista-modulos-reportes",
++  schema: moduloReporteSchema,
++  endpoints: { lista: "/api/appweb/lista-modulos-reportes" },
++  map: (raw) => ({ codModulo: raw.cod_modulo == null ? null : String(raw.cod_modulo) }),
++  habilitado: (filtros) => filtros.cod_empresa != null,
++});
+diff --git a/src/features/reportes/components/vista-reportes.tsx b/src/features/reportes/components/vista-reportes.tsx
+index f40fcb7..8736cf3 100644
+--- a/src/features/reportes/components/vista-reportes.tsx
++++ b/src/features/reportes/components/vista-reportes.tsx
+@@ -6,6 +6,7 @@ import { modulos } from "@/features/catalogos";
+ import { useContextoOperativoStore } from "@/features/shell";
+ import type { ComboboxOption } from "@/shared/components/ui/combobox";
+ import { useAuthStore } from "@/shared/stores/auth-store";
++import { modulosReportes } from "../api/modulos-reportes";
+ import { reportesDisponibles } from "../api/reportes-disponibles";
+ import { REPORTES } from "../definiciones";
+ import { CampoSelect } from "./campos";
+@@ -13,7 +14,8 @@ import { EncabezadoPanel, MensajeVacio, Panel } from "./panel";
+ import { PantallaReporte } from "./pantalla-reporte";
+ 
+ /**
+- * Pantalla de reportes: primero el módulo (catálogo de módulos) y luego los reportes que el
++ * Pantalla de reportes: primero el módulo (los del catálogo que tienen reportes en la empresa y
++ * el CC del contexto, `modulosReportes`) y luego los reportes que el
+  * rol del usuario puede ver en ese módulo, en la empresa y el CC del contexto. `codModulo` =
+  * módulo elegido al abrir. Cada reporte se configura en `definiciones/` (ver `ARQUITECTURA.md`).
+  */
+@@ -23,6 +25,7 @@ const VistaReportes = ({ codModulo }: Readonly<{ codModulo?: number | undefined
+   const centroCosto = useContextoOperativoStore((s) => s.currentCentroCosto?.cod_cc);
+ 
+   const catalogoModulos = modulos.useLista();
++  const conReportes = modulosReportes.useLista({ cod_empresa: empresa, cod_cc: centroCosto });
+   const [modulo, setModulo] = React.useState(codModulo == null ? "" : String(codModulo));
+   const [elegido, setElegido] = React.useState("");
+ 
+@@ -34,14 +37,14 @@ const VistaReportes = ({ codModulo }: Readonly<{ codModulo?: number | undefined
+     cod_modulo: modulo,
+   });
+ 
+-  const opcionesModulo = React.useMemo<ComboboxOption[]>(
+-    () =>
+-      (catalogoModulos.data ?? []).map((m) => ({
+-        value: String(m.cod_modulo),
+-        label: m.nom_modulo,
+-      })),
+-    [catalogoModulos.data],
+-  );
++  // Solo los módulos con reportes en la empresa y el CC (null = todos los módulos).
++  const opcionesModulo = React.useMemo<ComboboxOption[]>(() => {
++    const disponiblesModulo = (conReportes.data ?? []).map((m) => m.codModulo);
++    const todos = disponiblesModulo.includes(null);
++    return (catalogoModulos.data ?? [])
++      .filter((m) => todos || disponiblesModulo.includes(String(m.cod_modulo)))
++      .map((m) => ({ value: String(m.cod_modulo), label: m.nom_modulo }));
++  }, [catalogoModulos.data, conReportes.data]);
+   const reportesModulo = React.useMemo(
+     () => (modulo ? (disponibles.data ?? []) : []),
+     [modulo, disponibles.data],
+@@ -54,6 +57,13 @@ const VistaReportes = ({ codModulo }: Readonly<{ codModulo?: number | undefined
+   const disponible = reportesModulo.find((r) => r.nomenclatura === elegido);
+   const definicion = REPORTES.find((r) => r.nomenclatura.toUpperCase() === elegido);
+ 
++  // Si al cambiar de empresa o CC el módulo ya no tiene reportes, se quita.
++  React.useEffect(() => {
++    if (modulo && catalogoModulos.data && conReportes.data) {
++      if (!opcionesModulo.some((o) => o.value === modulo)) setModulo("");
++    }
++  }, [modulo, catalogoModulos.data, conReportes.data, opcionesModulo]);
++
+   // Si al cambiar de CC o de módulo el reporte deja de estar disponible, se quita.
+   React.useEffect(() => {
+     if (elegido && (!modulo || (disponibles.data && !disponible))) setElegido("");
+@@ -74,7 +84,7 @@ const VistaReportes = ({ codModulo }: Readonly<{ codModulo?: number | undefined
+             value={modulo}
+             onChange={setModulo}
+             opciones={opcionesModulo}
+-            cargando={catalogoModulos.isLoading}
++            cargando={catalogoModulos.isLoading || conReportes.isLoading}
+             placeholder="Seleccione un módulo"
+           />
+           <CampoSelect
+@@ -86,6 +96,16 @@ const VistaReportes = ({ codModulo }: Readonly<{ codModulo?: number | undefined
+             cargando={Boolean(modulo) && disponibles.isLoading}
+             placeholder={modulo ? "Seleccione una opción" : "Seleccione primero el módulo"}
+           />
++          {conReportes.isError ? (
++            <p role="alert" className="text-sm text-destructive md:col-span-2">
++              No se pudieron cargar los módulos: {conReportes.error.message}
++            </p>
++          ) : null}
++          {conReportes.data?.length === 0 ? (
++            <p className="text-sm text-muted-foreground md:col-span-2">
++              No hay reportes asignados en esta empresa y centro de costo.
++            </p>
++          ) : null}
+           {disponibles.isError ? (
+             <p role="alert" className="text-sm text-destructive md:col-span-2">
+               No se pudieron cargar los reportes: {disponibles.error.message}
