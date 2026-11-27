@@ -1,7 +1,8 @@
 const dayjs = require("dayjs");
 
 /**
- * Reportes de embarques del cliente 1843 con consulta fija en Oracle (sin parámetros):
+ * Reportes de embarques con consulta fija en Oracle. Parámetros opcionales: `cod_cliente`
+ * (ENTIDAD_ID de Azure; sin él, el cliente 1843) y `fecha_inicio` / `fecha_fin` (ETD):
  * - EMB-EFCLTGT-01 Embarques FCL en tránsito GT: coordinaciones FCL de importación sin ATA, con
  *   contenedor, booking, orden de compra, POD, nave y fechas ETD / ATD / ETA.
  * - EMB-ENAHK-02 Embarques no asignados a HK: coordinaciones de importación (producto 13) sin
@@ -14,6 +15,42 @@ const FECHAS = ["ETD", "ATD", "ETA"];
 /** Columnas fecha de EMB-ENAHK-02. */
 const FECHAS_NO_ASIGNADOS_HK = ["ETD", "ATD", "ETA", "ATA"];
 
+/** VICLI_CODIGO cuando no viene cliente en el filtro. */
+const CLIENTE_POR_DEFECTO = "1843";
+
+/**
+ * ENTIDAD_ID de Azure (`cod_cliente` del filtro) → código del cliente en Oracle (COD_CROPA,
+ * identificación 12 de ENTIDAD_IDENTIFICACION); sin cliente, `CLIENTE_POR_DEFECTO`.
+ */
+const codigoClienteOracle = async (codCliente) => {
+  if (!codCliente) return CLIENTE_POR_DEFECTO;
+  const fila = await azureSqlClient('ENTIDAD_IDENTIFICACION')
+    .where('ENTIDAD_ID', codCliente)
+    .where('IDENTIFICACION_ID', 12) // COD_CROPA
+    .first('ENTIDADIDENTIFICACIO_NUMERO as COD_CROPA');
+  const codigo = String(fila?.COD_CROPA ?? '').trim();
+  if (!codigo) throw new Error('No se ha podido localizar el cliente');
+  return codigo;
+};
+
+/** Fecha del filtro: `YYYY-MM-DD` o vacía; otra cosa → error. */
+const fechaFiltro = (valor) => {
+  if (!valor) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) throw new Error(`Fecha inválida: ${valor}`);
+  return valor;
+};
+
+/**
+ * Período del filtro sobre la ETD (`.modify(filtrarPorEtd, campos)`): desde el día inicial y
+ * antes del día siguiente al final (incluye todo el último día); cada una es opcional.
+ */
+function filtrarPorEtd(consulta, campos) {
+  const inicio = fechaFiltro(campos?.fecha_inicio);
+  const fin = fechaFiltro(campos?.fecha_fin);
+  if (inicio) consulta.where('CO.COORD_ETD', '>=', oracleClient.raw("TO_DATE(?, 'YYYY-MM-DD')", [inicio]));
+  if (fin) consulta.where('CO.COORD_ETD', '<', oracleClient.raw("TO_DATE(?, 'YYYY-MM-DD') + 1", [fin]));
+}
+
 /**
  * DATE de Oracle → texto `YYYY-MM-DDTHH:mm:ss` con la misma hora que leyó el driver, sin pasarla
  * a UTC (con `Date` el JSON la mandaría con "Z" y el navegador la correría).
@@ -22,7 +59,8 @@ const textoFecha = (valor) =>
   valor instanceof Date ? dayjs(valor).format("YYYY-MM-DDTHH:mm:ss") : (valor ?? null);
 
 /** Consulta el reporte en Oracle y devuelve sus filas, con las fechas como texto local. */
-const consultarEmbFclTransitoGt = async () => {
+const consultarEmbFclTransitoGt = async (campos) => {
+  const cliente = await codigoClienteOracle(campos?.cod_cliente);
   const resultado = await oracleClient('CROPA.COORDINACION as CO')
   // .withSchema('CROPA')
   .select([
@@ -82,11 +120,12 @@ const consultarEmbFclTransitoGt = async () => {
   .where({
     'CO.EMP_CODIGO': 2,
     'CO.DEPORG_CODIGO': 'IMP',
-    'CO.VICLI_CODIGO': '1843',
+    'CO.VICLI_CODIGO': cliente,
     'CO.PRODPAN_CODIGO': 7,
   })
   .whereNotIn('CO.COORD_ESTADO', [9, 5, 3, 70])
   .whereNull('CO.COORD_ATA')
+  .modify(filtrarPorEtd, campos)
   .orderBy([
     // 'CS.CORRELATIVO',
     'CT.COORD_TRAS_CORR',
@@ -103,7 +142,8 @@ const consultarEmbFclTransitoGt = async () => {
 };
 
 /** EMB-ENAHK-02: consulta en Oracle y devuelve sus filas, con las fechas como texto local. */
-const consultarEmbNoAsignadosHk = async () => {
+const consultarEmbNoAsignadosHk = async (campos) => {
+  const cliente = await codigoClienteOracle(campos?.cod_cliente);
   const filas = await oracleClient('CROPA.COORDINACION as CO')
     .select([
       'CO.COORD_CODIGO as COORDINACION',
@@ -119,10 +159,11 @@ const consultarEmbNoAsignadosHk = async () => {
     .where({
       'CO.EMP_CODIGO': 2,
       'CO.DEPORG_CODIGO': 'IMP',
-      'CO.VICLI_CODIGO': '1843',
+      'CO.VICLI_CODIGO': cliente,
       'CO.PRODPAN_CODIGO': 13,
     })
-    .whereNull('CO.COORD_REL_CODIGO'); // no asignados
+    .whereNull('CO.COORD_REL_CODIGO') // no asignados
+    .modify(filtrarPorEtd, campos);
 
   return filas.map((fila) => {
     const copia = { ...fila };
@@ -131,17 +172,17 @@ const consultarEmbNoAsignadosHk = async () => {
   });
 };
 
-module.exports.reporte_emb_no_asignados_hk = async () => {
+module.exports.reporte_emb_no_asignados_hk = async (campos) => {
   try {
-    return await consultarEmbNoAsignadosHk();
+    return await consultarEmbNoAsignadosHk(campos);
   } catch (error) {
     return { success: false, error: error.toString() };
   }
 };
 
-module.exports.reporte_emb_fcl_transito_gt = async () => {
+module.exports.reporte_emb_fcl_transito_gt = async (campos) => {
   try {
-    return await consultarEmbFclTransitoGt();
+    return await consultarEmbFclTransitoGt(campos);
   } catch (error) {
     return { success: false, error: error.toString() };
   }
