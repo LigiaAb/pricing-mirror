@@ -26,6 +26,11 @@ reportes/
                               (sin fechas; vista de CRM con serie semanal y medidores)
       reporte-seguimiento.ts  CRM-S-06 Seguimiento (historial de seguimientos del cliente;
                               cliente `requerido`, sin fechas)
+    embarques/
+      index.ts                REPORTES_EMBARQUES
+      reporte-embarques-fcl-transito-gt.ts  EMB-EFCLTGT-01 Embarques FCL en tránsito GT (SQL
+                              fijo en Oracle, sin parámetros: sin fechas, filtros, empresa ni
+                              CC; `agrupado: false`; Excel con vacíos en amarillo)
     pricing/
       index.ts                REPORTES_PRICING
       reporte-hit-rate.tsx    PRI-HR-01 Hit Rate (filas de report_kpi_cotizaciones para el
@@ -44,6 +49,8 @@ reportes/
     resumen-agrupado.ts       tabla dinámica genérica (calcularResumen → árbol de TablaDouble)
     exportar.ts               Excel agrupado (resumen) y PDF/Excel genéricos del reporte (detalle)
     excel-reporte.ts          COPIA del generador de Excel de Reportes de pricing (Excel agrupado)
+    excel-vacios.ts           excelResaltandoVacios(columnas): Excel del detalle con ese formato
+                              y las celdas vacías en amarillo (descarga `excel` de un reporte)
   components/
     vista-reportes.tsx        "Reportes disponibles" (Módulo → Reporte) + reporte elegido
     pantalla-reporte.tsx      título, filtros y configuración, Consultar, resumen, reporte, descargas
