@@ -55,8 +55,14 @@ const MAX_DIAS_ATRAS_NO_PROGRAMADA = 15;
 /** Días que tiene una actividad abierta para registrar su resultado. */
 const DIAS_PARA_VENCER = 7;
 
-/** Fecha (UTC) en hora de Guatemala, para contar días con DATEDIFF(DAY, ...). */
-const local = (columna) => `DATEADD(HOUR, -${HORAS_UTC_LOCAL}, ${columna})`;
+/**
+ * Fecha (UTC) en hora de Guatemala, para contar días con DATEDIFF(DAY, ...). TRY_CONVERT: si un
+ * valor no se puede convertir a fecha, NULL (la bandera queda en 0) en lugar de error
+ * ("Conversion failed when converting date and/or time from character string"); 127 = ISO 8601
+ * con "Z".
+ */
+const local = (columna) =>
+  `DATEADD(HOUR, -${HORAS_UTC_LOCAL}, COALESCE(TRY_CONVERT(datetime2, ${columna}), TRY_CONVERT(datetime2, ${columna}, 127)))`;
 
 /** Condiciones de las banderas (sin parámetros del usuario: solo constantes de este archivo). */
 const NO_ANULADA = "UPPER(LTRIM(RTRIM(ISNULL(E.ESTADO_DESCRIPCION, '')))) <> 'ANULADO'";
@@ -67,7 +73,7 @@ const SIN_RESULTADO =
 const DIAS_CREACION_A_PROGRAMACION = `DATEDIFF(DAY, ${local("A.ACTIVIDAD_FECHA")}, ${local("A.ACTIVIDAD_FECHA_PROGRAMACION")})`;
 const PROGRAMADA = `${DIAS_CREACION_A_PROGRAMACION} >= 1`;
 const NO_PROGRAMADA = `${DIAS_CREACION_A_PROGRAMACION} BETWEEN -${MAX_DIAS_ATRAS_NO_PROGRAMADA} AND 0`;
-const VENCIDA = `ISNULL(A.ESTADO_ID, 0) <> ${ESTADO_ACTIVIDAD_FINALIZADA} AND ${SIN_RESULTADO} AND DATEDIFF(DAY, ${local("A.ACTIVIDAD_FECHA_PROGRAMACION")}, ${local("GETUTCDATE()")}) > ${DIAS_PARA_VENCER}`;
+const VENCIDA = `ISNULL(A.ESTADO_ID, 0) <> ${ESTADO_ACTIVIDAD_FINALIZADA} AND ${SIN_RESULTADO} AND DATEDIFF(DAY, ${local("A.ACTIVIDAD_FECHA_PROGRAMACION")}, DATEADD(HOUR, -${HORAS_UTC_LOCAL}, GETUTCDATE())) > ${DIAS_PARA_VENCER}`;
 
 /** `CASE WHEN <condiciones> THEN 1 ELSE 0 END AS <nombre>`. */
 const bandera = (nombre, ...condiciones) =>
