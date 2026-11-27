@@ -4,13 +4,15 @@ import { consultarApi } from "../../api/consultar-api";
 import { celdaResaltandoVacia } from "../../components/celda-vacia";
 import { type ColumnaReporte, definirReporte, valorVacio } from "../../lib/definir-reporte";
 import { descargarExcelReporte, tablaDetalle } from "../../lib/exportar";
+import { filtroCliente } from "../../lib/filtros";
 
 /**
  * EMB-EFCLTGT-01 Embarques FCL en tránsito GT.
- * Endpoint con un SQL fijo en Oracle (`reportes_embarques_transito.js` del back): no recibe
- * parámetros (empresa, departamento y cliente van dentro del SQL), por eso no lleva fechas,
- * filtros, empresa ni CC. Las fechas llegan como texto local `YYYY-MM-DDTHH:mm:ss`. Las claves
- * llegan en minúsculas (el cliente HTTP las normaliza), aunque Oracle las devuelva en mayúsculas.
+ * Endpoint con un SQL fijo en Oracle (`reportes_embarques_transito.js` del back): empresa y
+ * departamento van dentro del SQL (sin empresa ni CC). Filtros opcionales: cliente (sin él, el
+ * back usa el 1843) y período sobre la ETD. Las fechas llegan como texto local
+ * `YYYY-MM-DDTHH:mm:ss`. Las claves llegan en minúsculas (el cliente HTTP las normaliza), aunque
+ * Oracle las devuelva en mayúsculas.
  */
 const texto = z.string().nullable().catch(null);
 const filaSchema = z.looseObject({
@@ -81,7 +83,8 @@ const columnas: readonly ColumnaReporte<Fila>[] = [
 export const reporteEmbarquesFclTransitoGt = definirReporte<Fila>({
   nomenclatura: "EMB-EFCLTGT-01",
   descripcion: "Embarques FCL de importación en tránsito (sin ATA)",
-  fechas: "ninguna",
+  fechas: "opcionales",
+  filtros: [filtroCliente()],
   empresaCentroCosto: false,
   agrupado: false,
   consultar: consultarApi("/api/appweb/reporte-emb-fcl-transito-gt", filaSchema),

@@ -1,0 +1,89 @@
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+index e9a680a..add7817 100644
+--- a/src/features/reportes/ARQUITECTURA.md
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -29,11 +29,12 @@ reportes/
+     embarques/
+       index.ts                REPORTES_EMBARQUES
+       reporte-embarques-fcl-transito-gt.ts  EMB-EFCLTGT-01 Embarques FCL en tránsito GT (SQL
+-                              fijo en Oracle, sin parámetros: sin fechas, filtros, empresa ni
+-                              CC; `agrupado: false`; Excel del detalle con vacíos en amarillo,
++                              fijo en Oracle; fechas opcionales (ETD) y cliente (sin él, 1843);
++                              sin empresa ni CC; `agrupado: false`; Excel del detalle con vacíos en amarillo,
+                               `colorFondoCelda` de `descargarExcelReporte`)
+       reporte-embarques-no-asignados-hk.ts  EMB-ENAHK-02 Embarques no asignados a HK (SQL fijo
+-                              en Oracle, sin parámetros; `agrupado: false`; `excel: true`)
++                              en Oracle; fechas opcionales (ETD) y cliente (sin él, 1843);
++                              `agrupado: false`; `excel: true`)
+     pricing/
+       index.ts                REPORTES_PRICING
+       reporte-hit-rate.tsx    PRI-HR-01 Hit Rate (filas de report_kpi_cotizaciones para el
+diff --git a/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts b/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts
+index a02d2ee..8dadc4e 100644
+--- a/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts
++++ b/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts
+@@ -4,13 +4,15 @@ import { consultarApi } from "../../api/consultar-api";
+ import { celdaResaltandoVacia } from "../../components/celda-vacia";
+ import { type ColumnaReporte, definirReporte, valorVacio } from "../../lib/definir-reporte";
+ import { descargarExcelReporte, tablaDetalle } from "../../lib/exportar";
++import { filtroCliente } from "../../lib/filtros";
+ 
+ /**
+  * EMB-EFCLTGT-01 Embarques FCL en tránsito GT.
+- * Endpoint con un SQL fijo en Oracle (`reportes_embarques_transito.js` del back): no recibe
+- * parámetros (empresa, departamento y cliente van dentro del SQL), por eso no lleva fechas,
+- * filtros, empresa ni CC. Las fechas llegan como texto local `YYYY-MM-DDTHH:mm:ss`. Las claves
+- * llegan en minúsculas (el cliente HTTP las normaliza), aunque Oracle las devuelva en mayúsculas.
++ * Endpoint con un SQL fijo en Oracle (`reportes_embarques_transito.js` del back): empresa y
++ * departamento van dentro del SQL (sin empresa ni CC). Filtros opcionales: cliente (sin él, el
++ * back usa el 1843) y período sobre la ETD. Las fechas llegan como texto local
++ * `YYYY-MM-DDTHH:mm:ss`. Las claves llegan en minúsculas (el cliente HTTP las normaliza), aunque
++ * Oracle las devuelva en mayúsculas.
+  */
+ const texto = z.string().nullable().catch(null);
+ const filaSchema = z.looseObject({
+@@ -81,7 +83,8 @@ const columnas: readonly ColumnaReporte<Fila>[] = [
+ export const reporteEmbarquesFclTransitoGt = definirReporte<Fila>({
+   nomenclatura: "EMB-EFCLTGT-01",
+   descripcion: "Embarques FCL de importación en tránsito (sin ATA)",
+-  fechas: "ninguna",
++  fechas: "opcionales",
++  filtros: [filtroCliente()],
+   empresaCentroCosto: false,
+   agrupado: false,
+   consultar: consultarApi("/api/appweb/reporte-emb-fcl-transito-gt", filaSchema),
+diff --git a/src/features/reportes/definiciones/embarques/reporte-embarques-no-asignados-hk.ts b/src/features/reportes/definiciones/embarques/reporte-embarques-no-asignados-hk.ts
+index b91e668..c946571 100644
+--- a/src/features/reportes/definiciones/embarques/reporte-embarques-no-asignados-hk.ts
++++ b/src/features/reportes/definiciones/embarques/reporte-embarques-no-asignados-hk.ts
+@@ -2,14 +2,15 @@ import { format } from "date-fns";
+ import { z } from "zod";
+ import { consultarApi } from "../../api/consultar-api";
+ import { type ColumnaReporte, definirReporte } from "../../lib/definir-reporte";
++import { filtroCliente } from "../../lib/filtros";
+ 
+ /**
+  * EMB-ENAHK-02 Embarques no asignados a HK.
+- * Endpoint con un SQL fijo en Oracle (`reportes_embarques_transito.js` del back): no recibe
+- * parámetros (empresa, departamento, cliente y producto van dentro del SQL), por eso no lleva
+- * fechas, filtros, empresa ni CC. Las fechas llegan como texto local `YYYY-MM-DDTHH:mm:ss`. Las
+- * claves llegan en minúsculas (el cliente HTTP las normaliza), aunque Oracle las devuelva en
+- * mayúsculas.
++ * Endpoint con un SQL fijo en Oracle (`reportes_embarques_transito.js` del back): empresa,
++ * departamento y producto van dentro del SQL (sin empresa ni CC). Filtros opcionales: cliente
++ * (sin él, el back usa el 1843) y período sobre la ETD. Las fechas llegan como texto local
++ * `YYYY-MM-DDTHH:mm:ss`. Las claves llegan en minúsculas (el cliente HTTP las normaliza), aunque
++ * Oracle las devuelva en mayúsculas.
+  */
+ const texto = z.string().nullable().catch(null);
+ const filaSchema = z.looseObject({
+@@ -49,7 +50,8 @@ const columnas: readonly ColumnaReporte<Fila>[] = [
+ export const reporteEmbarquesNoAsignadosHk = definirReporte<Fila>({
+   nomenclatura: "EMB-ENAHK-02",
+   descripcion: "Embarques de importación no asignados a HK (sin coordinación relacionada)",
+-  fechas: "ninguna",
++  fechas: "opcionales",
++  filtros: [filtroCliente()],
+   empresaCentroCosto: false,
+   agrupado: false,
+   consultar: consultarApi("/api/appweb/reporte-emb-no-asignados-hk", filaSchema),

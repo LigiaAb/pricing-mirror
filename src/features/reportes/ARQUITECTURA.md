@@ -29,11 +29,12 @@ reportes/
     embarques/
       index.ts                REPORTES_EMBARQUES
       reporte-embarques-fcl-transito-gt.ts  EMB-EFCLTGT-01 Embarques FCL en tránsito GT (SQL
-                              fijo en Oracle, sin parámetros: sin fechas, filtros, empresa ni
-                              CC; `agrupado: false`; Excel del detalle con vacíos en amarillo,
+                              fijo en Oracle; fechas opcionales (ETD) y cliente (sin él, 1843);
+                              sin empresa ni CC; `agrupado: false`; Excel del detalle con vacíos en amarillo,
                               `colorFondoCelda` de `descargarExcelReporte`)
       reporte-embarques-no-asignados-hk.ts  EMB-ENAHK-02 Embarques no asignados a HK (SQL fijo
-                              en Oracle, sin parámetros; `agrupado: false`; `excel: true`)
+                              en Oracle; fechas opcionales (ETD) y cliente (sin él, 1843);
+                              `agrupado: false`; `excel: true`)
     pricing/
       index.ts                REPORTES_PRICING
       reporte-hit-rate.tsx    PRI-HR-01 Hit Rate (filas de report_kpi_cotizaciones para el
