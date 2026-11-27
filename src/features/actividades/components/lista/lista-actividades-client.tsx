@@ -1,5 +1,6 @@
 "use client";
 
+import { format, subMonths } from "date-fns";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { centrosCosto, empleadosUsuarios, empresas, estados } from "@/features/catalogos";
@@ -52,7 +53,8 @@ export function ListaActividadesClient({
     tipoUsuario: usuarioPorDefecto,
     codUsuario: sinAsignar ? TODOS : String(codUsuario ?? TODOS),
     codEstado: TODOS,
-    fechaInicio: "",
+    // Por defecto los últimos 3 meses (y lo programado después) para no traer todo el historial.
+    fechaInicio: sinAsignar ? "" : format(subMonths(new Date(), 3), "yyyy-MM-dd"),
     fechaFin: "",
   };
   const filtrosServidor = useMemo(
