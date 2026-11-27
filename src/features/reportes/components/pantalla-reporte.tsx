@@ -369,6 +369,7 @@ export function PantallaReporte({
             titulo,
             encabezado: consultada?.encabezado ?? {},
             detalle: tablaDetalle(filas, definicion.columnas),
+            colorVacias: definicion.colorVacias,
           }),
     );
   };
@@ -596,6 +597,7 @@ export function PantallaReporte({
             <Contenido
               filas={filas}
               columnas={definicion.columnas}
+              colorVacias={definicion.colorVacias}
               params={consultada.params}
               encabezado={consultada.encabezado}
               solicitudPdf={solicitudPdf}

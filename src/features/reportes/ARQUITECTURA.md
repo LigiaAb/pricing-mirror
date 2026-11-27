@@ -30,8 +30,8 @@ reportes/
       index.ts                REPORTES_EMBARQUES
       reporte-embarques-fcl-transito-gt.ts  EMB-EFCLTGT-01 Embarques FCL en tránsito GT (SQL
                               fijo en Oracle, sin parámetros: sin fechas, filtros, empresa ni
-                              CC; `agrupado: false`; Excel del detalle con vacíos en amarillo,
-                              `colorFondoCelda` de `descargarExcelReporte`)
+                              CC; `agrupado: false`; `colorVacias: "#FFFF00"`: vacías en
+                              amarillo en la tabla y en el Excel de `excel: true`)
     pricing/
       index.ts                REPORTES_PRICING
       reporte-hit-rate.tsx    PRI-HR-01 Hit Rate (filas de report_kpi_cotizaciones para el
@@ -55,8 +55,9 @@ reportes/
     pantalla-reporte.tsx      título, filtros y configuración, Consultar, resumen, reporte, descargas
     personaliza-reporte.tsx   "Personaliza tu reporte" (igual que pricing: Select + NivelesBuilder)
     contenido-reporte.tsx     tabla por defecto de la sección "Reporte" (`celda` de la columna,
-                              si la tiene, dibuja la celda; `valor` sigue para buscar y ordenar)
-    celda-vacia.tsx           celdaResaltandoVacia(valor): la celda vacía en amarillo
+                              si la tiene, dibuja la celda; si no, la vacía con `colorVacias`
+                              de la definición; `valor` sigue para buscar y ordenar)
+    celda-vacia.tsx           CeldaVacia: la celda vacía con el color de `colorVacias`
     campos.tsx / panel.tsx    select, select con búsqueda en servidor, fecha, panel y encabezados
 ```
 
