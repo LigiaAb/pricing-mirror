@@ -62,7 +62,7 @@ const textoFecha = (valor) =>
 /** Consulta el reporte en Oracle y devuelve sus filas, con las fechas como texto local. */
 const consultarEmbFclTransitoGt = async (campos) => {
   const cliente = await codigoClienteOracle(campos?.cod_cliente);
-  const resultado = await oracleClient('CROPA.COORDINACION as CO')
+  const resultado = await oracleClient('COORDINACION as CO')
   // .withSchema('CROPA')
   .select([
     'CO.COORD_CODIGO as COORDINACION',
@@ -77,40 +77,40 @@ const consultarEmbFclTransitoGt = async (campos) => {
     'CO.COORD_ETA as ETA',
   ])
   /*
-  .leftJoin('CROPA.COORDINACION_SEGUIMIENTO as CS', function () {
+  .leftJoin('COORDINACION_SEGUIMIENTO as CS', function () {
     this.on('CO.EMP_CODIGO', '=', 'CS.EMP_CODIGO')
       .andOn('CO.DEPORG_CODIGO', '=', 'CS.DEPORG_CODIGO')
       .andOn('CO.COORD_CODIGO', '=', 'CS.COORD_CODIGO')
       .andOn('CO.SEGUIMIENTO', '=', 'CS.SEGUIMIENTO');
   })
   */
-  .leftJoin('CROPA.COORDINACION_CONTENEDOR as CC', function () {
+  .leftJoin('COORDINACION_CONTENEDOR as CC', function () {
     this.on('CC.EMP_CODIGO', '=', 'CO.EMP_CODIGO')
       .andOn('CC.DEPORG_CODIGO', '=', 'CO.DEPORG_CODIGO')
       .andOn('CC.SEGUIMIENTO', '=', 'CO.SEGUIMIENTO')
       .andOn('CC.COORD_CODIGO', '=', 'CO.COORD_CODIGO');
   })
-  .leftJoin('CROPA.PAIS_FILE as PF', 'CO.PAISFIL_CODIGO_COORD', 'PF.PAISFIL_CODIGO')
-  .leftJoin('CROPA.COORDINACION_TRASBORDO as CT', function () {
+  .leftJoin('PAIS_FILE as PF', 'CO.PAISFIL_CODIGO_COORD', 'PF.PAISFIL_CODIGO')
+  .leftJoin('COORDINACION_TRASBORDO as CT', function () {
     this.on('CO.EMP_CODIGO', '=', 'CT.EMP_CODIGO')
       .andOn('CO.DEPORG_CODIGO', '=', 'CT.DEPORG_CODIGO')
       .andOn('CO.COORD_CODIGO', '=', 'CT.COORD_CODIGO')
       .andOn('CO.SEGUIMIENTO', '=', 'CT.SEGUIMIENTO');
   })
-  .leftJoin('CROPA.MASTER as MA', function () {
+  .leftJoin('MASTER as MA', function () {
     this.on('MA.EMP_CODIGO', '=', 'CO.EMP_CODIGO')
       .andOn('MA.DEPORG_CODIGO', '=', 'CO.DEPORG_CODIGO')
       .andOnVal('MA.MAST_ESTADO', '<>', 99)
       .andOn(oracleClient.raw('TRIM(MA.MASTMAN) = TRIM(CO.COORD_MAWORI)'));
   })
-  .leftJoin('CROPA.GUIA as GU', function () {
+  .leftJoin('GUIA as GU', function () {
     this.on('GU.EMP_CODIGO', '=', 'MA.EMP_CODIGO')
       .andOn('GU.DEPORG_CODIGO', '=', 'MA.DEPORG_CODIGO')
       .andOn('GU.TIPDOC_CODIGO', '=', 'MA.TIPDOC_CODIGO')
       .andOn('GU.MASTANIO', '=', 'MA.MASTANIO')
       .andOn('GU.MASTCORR', '=', 'MA.MASTCORR');
   })
-  .leftJoin('CROPA.MASTREGCONT as MT', function () {
+  .leftJoin('MASTREGCONT as MT', function () {
     this.on('MT.EMP_CODIGO', '=', 'GU.EMP_CODIGO')
       .andOn('MT.DEPORG_CODIGO', '=', 'GU.DEPORG_CODIGO')
       .andOn('MT.TIPDOC_CODIGO', '=', 'GU.TIPDOC_CODIGO')
@@ -145,7 +145,7 @@ const consultarEmbFclTransitoGt = async (campos) => {
 /** EMB-ENAHK-02: consulta en Oracle y devuelve sus filas, con las fechas como texto local. */
 const consultarEmbNoAsignadosHk = async (campos) => {
   const cliente = await codigoClienteOracle(campos?.cod_cliente);
-  const filas = await oracleClient('CROPA.COORDINACION as CO')
+  const filas = await oracleClient('COORDINACION as CO')
     .select([
       'CO.COORD_CODIGO as COORDINACION',
       oracleClient.raw('TRIM(CO.COORD_HAWBBLCP) AS DOC_EMBARQUE'),
