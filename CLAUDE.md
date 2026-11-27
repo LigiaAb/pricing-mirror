@@ -16,7 +16,7 @@ al proyecto completo. Responder siempre en **español**.
 | `src/features/objetivos/**`                  | STUB: copia del catálogo `objetivos` (Hit Rate)       | **No**                           |
 | `src/types/stubs-modulos.d.ts`               | Todo lo demás de `@/shared` / `@/features` como `any` | **No**                           |
 | `tsconfig.json`                              | Copia exacta del proyecto real                        | No (ya existe allá)              |
-| `backend/**`                                 | Copia **parcial** del backend real (Node.js, JS sin TS: `routes/`, `app/controllers/`, `middlewares/`, `utils/`), SYNC del 27/11/2026. **Solo referencia** | **No**: no sale en los `diff/` |
+| `backend/**`                                 | Copia **parcial** del backend real (Node.js, JS sin TS: `routes/`, `app/controllers/`, `middlewares/`, `utils/`), SYNC del 27/11/2026. **Código real**: raíz = raíz de `backend_cloud` | **Sí**, al proyecto del back, con sus diffs en `diff/backend/` |
 
 - `src/features/catalogos/api/create-catalogo.ts` contiene el **código real** de `createCatalogo` del proyecto; todo
   `catalogos/api/` es real y `catalogos/index.ts` es el real salvo los hooks (`./hooks/...` no existen en el espejo;
@@ -36,11 +36,14 @@ al proyecto completo. Responder siempre en **español**.
   - Búsqueda en el servidor → `AsyncComboboxInput` (en pricing: Entidad en Tarifas y Cliente en Cotización).
 - Si un cambio necesita un tipo de `@/shared` que no está en los stubs, se agrega al stub (solo tipos) y se avisa.
 - Nunca cambiar lógica dentro de los stubs para "hacer pasar" algo.
-- **Backend (`backend/`)**: copia parcial del back real (repo aparte, Node.js en JS). Se lee para confirmar
-  endpoints (`routes/`), payloads, validaciones y SQL (`app/controllers/`) antes de tocar el front; no se modifica
-  ni entra en `RUTAS_CODIGO`, `tsc` (solo incluye `.ts`) ni Biome. Archivos en CRLF (uno en LF): si un SYNC lo
-  actualiza, conservar el final de línea. Cambios sugeridos al back: como antes, en `docs/backend/` (archivo con
-  "Cómo instalarlo"), y se avisa en la respuesta que no salen en diff.
+- **Backend (`backend/`)**: copia parcial del back real (proyecto aparte, `backend_cloud`, Node.js en JS, pnpm).
+  `backend/` = raíz de `backend_cloud` (`app/`, `routes/`). **Se modifica directamente** (cambios puntuales, como en
+  el front) y sus cambios salen en **`diff/backend/`**, separados de los del front: `diff:guardar` genera ahí un
+  diff con el mismo nombre y rutas relativas a esa raíz (`app/...`), que se aplica desde la raíz del back con el
+  mismo `aplicar-diff.mjs`. Fuera de `tsc` (solo incluye `.ts`) y Biome; verificar con `node --check` y una prueba
+  rápida con node si cambia lógica. Casi todo está en **CRLF**: conservarlo (`check:finales`). Lo que no está en
+  el espejo (p. ej. `app/config/`, conexión a la base) se pide a la usuaria. `docs/backend/` queda solo para
+  archivos que aún no están en `backend/`.
 - **Embarques: se trabaja únicamente en `src/features/embarques/v2/`.** Lo demás de `src/features/embarques/`
   (`api/`, `components/`, `hooks/`, `lib/`, `index.ts`) es el módulo actual y sirve **solo como referencia** de la
   estructura existente: se lee para seguir sus patrones, pero no se modifica, no se corrigen sus errores de `tsc`
@@ -102,7 +105,8 @@ Al editar, **conservar el final de línea que ya tiene el archivo** (no converti
 destino y lo deja como estaba (funciona con cualquier `core.autocrlf`). **Nunca** indicar `git apply`, `patch`
 ni copiar carpetas como alternativa.
 
-**Comando (siempre con este formato)**, desde la raíz del proyecto real, con rutas al espejo:
+**Comando (siempre con este formato)**, desde la raíz del proyecto real, con rutas al espejo
+(diffs de `diff/backend/`: igual, pero desde la raíz de `backend_cloud` y con `<espejo>/diff/backend/<archivo>.diff`):
 
 ```bash
 node <espejo>/scripts/aplicar-diff.mjs <espejo>/diff/<archivo>.diff --check
@@ -123,9 +127,10 @@ node <espejo>/scripts/aplicar-diff.mjs <espejo>/diff/<archivo>.diff
 
 1. Tras aceptar el PR: `git pull` del espejo en `main`.
 2. Lista numerada de diffs **en el orden de aplicación**, con el nombre completo del archivo, y para cada uno
-   el par de comandos de arriba (`--check` y aplicar) en bloques `bash` separados.
+   el par de comandos de arriba (`--check` y aplicar) en bloques `bash` separados. Si hay diffs del back, van en
+   una lista aparte ("En el proyecto del back (`backend_cloud`)"), después de los del front.
 3. Diffs que **no** se aplican (reemplazados, `obsoletos/`, ya aplicados) y por qué.
-4. Si no hubo cambios en `src/features`: decirlo ("no hay diff que aplicar").
+4. Si no hubo cambios en `src/features` ni en `backend/`: decirlo ("no hay diff que aplicar").
 
 ## Flujo de trabajo
 
@@ -152,9 +157,9 @@ no lo ha aplicado.
 2. `npm run check:nuevos` antes de cada commit.
 3. Verificación proporcional al cambio: cambio chico → solo `check:nuevos`; cambio de lógica → además una prueba
    rápida en ejecución (esbuild + node) comparando contra el comportamiento anterior.
-4. **Después de cada commit que cambie `src/features/pricing`, `src/features/embarques`, `src/features/actividades`, `src/features/reportes-crm` o `src/features/reportes`: `npm run diff:guardar`.** Genera
+4. **Después de cada commit que cambie `src/features/pricing`, `src/features/embarques`, `src/features/actividades`, `src/features/reportes-crm`, `src/features/reportes` o `backend/`: `npm run diff:guardar`.** Genera
    `diff/[DDMMYY-HHmm]-[nombre-del-commit].diff` (hora de Guatemala, solo `RUTAS_CODIGO` de `scripts/guardar-diff.mjs`, texto en LF)
-   y lo agrega al mismo commit (amend). Hacerlo antes del push.
+   (y `diff/backend/[mismo nombre].diff` si el commit toca `backend/`) y lo agrega al mismo commit (amend). Hacerlo antes del push.
 5. El usuario lo aplica con `scripts/aplicar-diff.mjs`, siguiendo *Aplicar diffs* (formato fijo del comando
    y del bloque de cierre).
 6. Actualizar el `ARQUITECTURA.md` del submódulo si cambia dónde vive algo.

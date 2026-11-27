@@ -15,6 +15,9 @@
  *   al revés) o porque YA ES IGUAL AL ESPEJO (ej. se copió la carpeta); si todo
  *   el diff está en ese caso, no hay nada que hacer y termina sin error.
  *
+ * Diffs del back (diff/backend/): se aplican desde la raíz del proyecto del back (backend_cloud);
+ * el espejo de comparación es <espejo>/backend/.
+ *
  * Uso (desde la raíz del proyecto real):
  *   node <ruta-al-espejo>/scripts/aplicar-diff.mjs <ruta-al-espejo>/diff/<archivo>.diff
  *   node ... --check    # solo verifica, no aplica
@@ -22,7 +25,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 
 const args = process.argv.slice(2);
 const soloCheck = args.includes("--check");
@@ -41,8 +44,12 @@ if (!existsSync(rutaDiff)) {
 
 const original = readFileSync(rutaDiff, "utf8").replace(/\r\n/g, "\n");
 
-/** Raíz del espejo: el diff vive en <espejo>/diff/. */
-const raizEspejo = resolve(dirname(rutaDiff), "..");
+/** Raíz del espejo: el diff vive en <espejo>/diff/ (front) o <espejo>/diff/backend/ (back). */
+const carpetaDiff = dirname(resolve(rutaDiff));
+const raizEspejo =
+  basename(carpetaDiff) === "backend"
+    ? resolve(carpetaDiff, "..", "..", "backend")
+    : resolve(carpetaDiff, "..");
 
 /* ---------- Separar el diff por archivo ---------- */
 const secciones = original.split(/^(?=diff --git )/m).filter((s) => s.trim());
