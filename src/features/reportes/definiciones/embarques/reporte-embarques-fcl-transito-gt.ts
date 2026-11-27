@@ -35,23 +35,48 @@ const fecha = (valor: string | null): string | null => {
 /** Relleno de las celdas vacías en el Excel (amarillo, ARGB). */
 const AMARILLO = "FFFFFF00";
 
-const columnasBase: readonly ColumnaReporte<Fila>[] = [
-  { id: "coordinacion", label: "Coordinación", valor: (f) => f.coordinacion, buscable: true },
-  { id: "contenedor", label: "No. contenedor", valor: (f) => f.numero_contenedor, buscable: true },
-  { id: "booking", label: "Booking", valor: (f) => f.booking, buscable: true },
-  { id: "orden_compra", label: "Orden de compra", valor: (f) => f.orden_compra, buscable: true },
-  { id: "pod", label: "POD", valor: (f) => f.pod, buscable: true },
-  { id: "nave", label: "Transbordo / nave", valor: (f) => f.transbordo_nave, buscable: true },
-  { id: "etd", label: "ETD", valor: (f) => fecha(f.etd) },
-  { id: "atd", label: "ATD", valor: (f) => fecha(f.atd) },
-  { id: "eta", label: "ETA", valor: (f) => fecha(f.eta) },
+// `celda: celdaResaltandoVacia`: en la tabla, las vacías en amarillo (como en el Excel).
+const columnas: readonly ColumnaReporte<Fila>[] = [
+  {
+    id: "coordinacion",
+    label: "Coordinación",
+    valor: (f) => f.coordinacion,
+    buscable: true,
+    celda: celdaResaltandoVacia,
+  },
+  {
+    id: "contenedor",
+    label: "No. contenedor",
+    valor: (f) => f.numero_contenedor,
+    buscable: true,
+    celda: celdaResaltandoVacia,
+  },
+  {
+    id: "booking",
+    label: "Booking",
+    valor: (f) => f.booking,
+    buscable: true,
+    celda: celdaResaltandoVacia,
+  },
+  {
+    id: "orden_compra",
+    label: "Orden de compra",
+    valor: (f) => f.orden_compra,
+    buscable: true,
+    celda: celdaResaltandoVacia,
+  },
+  { id: "pod", label: "POD", valor: (f) => f.pod, buscable: true, celda: celdaResaltandoVacia },
+  {
+    id: "nave",
+    label: "Transbordo / nave",
+    valor: (f) => f.transbordo_nave,
+    buscable: true,
+    celda: celdaResaltandoVacia,
+  },
+  { id: "etd", label: "ETD", valor: (f) => fecha(f.etd), celda: celdaResaltandoVacia },
+  { id: "atd", label: "ATD", valor: (f) => fecha(f.atd), celda: celdaResaltandoVacia },
+  { id: "eta", label: "ETA", valor: (f) => fecha(f.eta), celda: celdaResaltandoVacia },
 ];
-
-// En la tabla, las celdas vacías también se ven en amarillo (como en el Excel).
-const columnas = columnasBase.map((c) => ({
-  ...c,
-  celda: (f: Fila) => celdaResaltandoVacia(c.valor(f)),
-}));
 
 export const reporteEmbarquesFclTransitoGt = definirReporte<Fila>({
   nomenclatura: "EMB-EFCLTGT-01",

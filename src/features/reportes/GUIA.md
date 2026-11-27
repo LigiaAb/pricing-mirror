@@ -270,9 +270,10 @@ consultar, // (E)
 - Opcionales: `agrupable` (sale en "Personaliza tu reporte"), `buscable` (el buscador busca en
   ella), `sumable` (se suma en el Resumen agrupado) y `calculada` (en el resumen se calcula con
   las sumas del grupo; para porcentajes, que no se suman) y `celda` (solo en pantalla: cómo se
-  dibuja la celda, `(f) => ReactNode`, ej. un badge; buscar, ordenar y descargar siguen con
-  `valor`). Atajo: `celdaResaltandoVacia(valor)` (`components/celda-vacia.tsx`) pinta de
-  amarillo las vacías (ej. `EMB-EFCLTGT-01`).
+  dibuja la celda, `(valor, fila) => ReactNode`: recibe el `valor` ya calculado, ej.
+  `celda: (valor) => <Badge>{valor}</Badge>`; buscar, ordenar y descargar siguen con `valor`).
+  Atajo: `celda: celdaResaltandoVacia` (`components/celda-vacia.tsx`) pinta de amarillo las
+  vacías (ej. `EMB-EFCLTGT-01`).
 
 En el ejemplo, `finalizada` es `sumable` para contar las finalizadas de cada grupo, y `avance`
 es `calculada` (finalizadas ÷ cantidad) porque sumar porcentajes da un número sin sentido.

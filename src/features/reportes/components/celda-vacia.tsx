@@ -5,7 +5,7 @@ import { type ValorCelda, valorVacio } from "../lib/definir-reporte";
  * Celda de la tabla del reporte con el dato, o resaltada en amarillo si está vacía (como en el
  * Excel con `colorFondoCelda`). Para `celda` de una columna:
  *
- *   { id: "booking", label: "Booking", valor: (f) => f.booking, celda: (f) => celdaResaltandoVacia(f.booking) }
+ *   { id: "booking", label: "Booking", valor: (f) => f.booking, celda: celdaResaltandoVacia }
  */
 export function celdaResaltandoVacia(valor: ValorCelda): React.ReactNode {
   if (!valorVacio(valor)) return valor;

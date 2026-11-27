@@ -21,7 +21,7 @@ export function TablaReporte<TFila>({ filas, columnas }: ContenidoReporteProps<T
         ...(c.celda
           ? {
               cell: ({ row }: { row: { original: FilaTabla<TFila> } }) =>
-                c.celda?.(row.original.fila),
+                c.celda?.(c.valor(row.original.fila), row.original.fila),
             }
           : {}),
       })),

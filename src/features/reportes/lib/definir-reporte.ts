@@ -31,9 +31,10 @@ export interface ColumnaReporte<TFila> {
   /**
    * Opcional, solo pantalla: cómo se DIBUJA la celda en la tabla (badge, color, enlace…). Sin
    * esto, se ve `valor`. No cambia lo que se busca, ordena ni descarga (eso sigue siendo `valor`).
-   * Atajo: `celdaResaltandoVacia` (`components/celda-vacia.tsx`).
+   * Recibe el `valor` ya calculado y la fila: `celda: (valor) => <Badge>{valor}</Badge>`.
+   * Atajo: `celda: celdaResaltandoVacia` (`components/celda-vacia.tsx`).
    */
-  celda?: (fila: TFila) => React.ReactNode;
+  celda?: (valor: ValorCelda, fila: TFila) => React.ReactNode;
   /** Se puede agrupar por ella en "Personaliza tu reporte" (filas o columnas). */
   agrupable?: boolean;
   /** Se suma en el "Resumen agrupado" (medida, además de la cantidad de registros). */

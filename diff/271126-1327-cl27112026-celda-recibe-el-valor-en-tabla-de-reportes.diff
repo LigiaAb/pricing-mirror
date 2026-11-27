@@ -1,0 +1,131 @@
+diff --git a/src/features/reportes/GUIA.md b/src/features/reportes/GUIA.md
+index c563c2f..9c44ec3 100644
+--- a/src/features/reportes/GUIA.md
++++ b/src/features/reportes/GUIA.md
+@@ -270,9 +270,10 @@ consultar, // (E)
+ - Opcionales: `agrupable` (sale en "Personaliza tu reporte"), `buscable` (el buscador busca en
+   ella), `sumable` (se suma en el Resumen agrupado) y `calculada` (en el resumen se calcula con
+   las sumas del grupo; para porcentajes, que no se suman) y `celda` (solo en pantalla: cómo se
+-  dibuja la celda, `(f) => ReactNode`, ej. un badge; buscar, ordenar y descargar siguen con
+-  `valor`). Atajo: `celdaResaltandoVacia(valor)` (`components/celda-vacia.tsx`) pinta de
+-  amarillo las vacías (ej. `EMB-EFCLTGT-01`).
++  dibuja la celda, `(valor, fila) => ReactNode`: recibe el `valor` ya calculado, ej.
++  `celda: (valor) => <Badge>{valor}</Badge>`; buscar, ordenar y descargar siguen con `valor`).
++  Atajo: `celda: celdaResaltandoVacia` (`components/celda-vacia.tsx`) pinta de amarillo las
++  vacías (ej. `EMB-EFCLTGT-01`).
+ 
+ En el ejemplo, `finalizada` es `sumable` para contar las finalizadas de cada grupo, y `avance`
+ es `calculada` (finalizadas ÷ cantidad) porque sumar porcentajes da un número sin sentido.
+diff --git a/src/features/reportes/components/celda-vacia.tsx b/src/features/reportes/components/celda-vacia.tsx
+index b37a0e7..a822083 100644
+--- a/src/features/reportes/components/celda-vacia.tsx
++++ b/src/features/reportes/components/celda-vacia.tsx
+@@ -5,7 +5,7 @@ import { type ValorCelda, valorVacio } from "../lib/definir-reporte";
+  * Celda de la tabla del reporte con el dato, o resaltada en amarillo si está vacía (como en el
+  * Excel con `colorFondoCelda`). Para `celda` de una columna:
+  *
+- *   { id: "booking", label: "Booking", valor: (f) => f.booking, celda: (f) => celdaResaltandoVacia(f.booking) }
++ *   { id: "booking", label: "Booking", valor: (f) => f.booking, celda: celdaResaltandoVacia }
+  */
+ export function celdaResaltandoVacia(valor: ValorCelda): React.ReactNode {
+   if (!valorVacio(valor)) return valor;
+diff --git a/src/features/reportes/components/contenido-reporte.tsx b/src/features/reportes/components/contenido-reporte.tsx
+index cf18501..a854aaa 100644
+--- a/src/features/reportes/components/contenido-reporte.tsx
++++ b/src/features/reportes/components/contenido-reporte.tsx
+@@ -21,7 +21,7 @@ export function TablaReporte<TFila>({ filas, columnas }: ContenidoReporteProps<T
+         ...(c.celda
+           ? {
+               cell: ({ row }: { row: { original: FilaTabla<TFila> } }) =>
+-                c.celda?.(row.original.fila),
++                c.celda?.(c.valor(row.original.fila), row.original.fila),
+             }
+           : {}),
+       })),
+diff --git a/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts b/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts
+index 6664a1b..a02d2ee 100644
+--- a/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts
++++ b/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts
+@@ -35,24 +35,49 @@ const fecha = (valor: string | null): string | null => {
+ /** Relleno de las celdas vacías en el Excel (amarillo, ARGB). */
+ const AMARILLO = "FFFFFF00";
+ 
+-const columnasBase: readonly ColumnaReporte<Fila>[] = [
+-  { id: "coordinacion", label: "Coordinación", valor: (f) => f.coordinacion, buscable: true },
+-  { id: "contenedor", label: "No. contenedor", valor: (f) => f.numero_contenedor, buscable: true },
+-  { id: "booking", label: "Booking", valor: (f) => f.booking, buscable: true },
+-  { id: "orden_compra", label: "Orden de compra", valor: (f) => f.orden_compra, buscable: true },
+-  { id: "pod", label: "POD", valor: (f) => f.pod, buscable: true },
+-  { id: "nave", label: "Transbordo / nave", valor: (f) => f.transbordo_nave, buscable: true },
+-  { id: "etd", label: "ETD", valor: (f) => fecha(f.etd) },
+-  { id: "atd", label: "ATD", valor: (f) => fecha(f.atd) },
+-  { id: "eta", label: "ETA", valor: (f) => fecha(f.eta) },
++// `celda: celdaResaltandoVacia`: en la tabla, las vacías en amarillo (como en el Excel).
++const columnas: readonly ColumnaReporte<Fila>[] = [
++  {
++    id: "coordinacion",
++    label: "Coordinación",
++    valor: (f) => f.coordinacion,
++    buscable: true,
++    celda: celdaResaltandoVacia,
++  },
++  {
++    id: "contenedor",
++    label: "No. contenedor",
++    valor: (f) => f.numero_contenedor,
++    buscable: true,
++    celda: celdaResaltandoVacia,
++  },
++  {
++    id: "booking",
++    label: "Booking",
++    valor: (f) => f.booking,
++    buscable: true,
++    celda: celdaResaltandoVacia,
++  },
++  {
++    id: "orden_compra",
++    label: "Orden de compra",
++    valor: (f) => f.orden_compra,
++    buscable: true,
++    celda: celdaResaltandoVacia,
++  },
++  { id: "pod", label: "POD", valor: (f) => f.pod, buscable: true, celda: celdaResaltandoVacia },
++  {
++    id: "nave",
++    label: "Transbordo / nave",
++    valor: (f) => f.transbordo_nave,
++    buscable: true,
++    celda: celdaResaltandoVacia,
++  },
++  { id: "etd", label: "ETD", valor: (f) => fecha(f.etd), celda: celdaResaltandoVacia },
++  { id: "atd", label: "ATD", valor: (f) => fecha(f.atd), celda: celdaResaltandoVacia },
++  { id: "eta", label: "ETA", valor: (f) => fecha(f.eta), celda: celdaResaltandoVacia },
+ ];
+ 
+-// En la tabla, las celdas vacías también se ven en amarillo (como en el Excel).
+-const columnas = columnasBase.map((c) => ({
+-  ...c,
+-  celda: (f: Fila) => celdaResaltandoVacia(c.valor(f)),
+-}));
+-
+ export const reporteEmbarquesFclTransitoGt = definirReporte<Fila>({
+   nomenclatura: "EMB-EFCLTGT-01",
+   descripcion: "Embarques FCL de importación en tránsito (sin ATA)",
+diff --git a/src/features/reportes/lib/definir-reporte.ts b/src/features/reportes/lib/definir-reporte.ts
+index 06c3cc5..807a531 100644
+--- a/src/features/reportes/lib/definir-reporte.ts
++++ b/src/features/reportes/lib/definir-reporte.ts
+@@ -31,9 +31,10 @@ export interface ColumnaReporte<TFila> {
+   /**
+    * Opcional, solo pantalla: cómo se DIBUJA la celda en la tabla (badge, color, enlace…). Sin
+    * esto, se ve `valor`. No cambia lo que se busca, ordena ni descarga (eso sigue siendo `valor`).
+-   * Atajo: `celdaResaltandoVacia` (`components/celda-vacia.tsx`).
++   * Recibe el `valor` ya calculado y la fila: `celda: (valor) => <Badge>{valor}</Badge>`.
++   * Atajo: `celda: celdaResaltandoVacia` (`components/celda-vacia.tsx`).
+    */
+-  celda?: (fila: TFila) => React.ReactNode;
++  celda?: (valor: ValorCelda, fila: TFila) => React.ReactNode;
+   /** Se puede agrupar por ella en "Personaliza tu reporte" (filas o columnas). */
+   agrupable?: boolean;
+   /** Se suma en el "Resumen agrupado" (medida, además de la cantidad de registros). */
