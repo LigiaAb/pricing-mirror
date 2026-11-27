@@ -12,7 +12,8 @@ import {
 /**
  * EMB-DE-03 Detalle de embarque.
  * Endpoint con el SQL fijo en Oracle (`reportes_embarques_transito.js` del back), sin cambios:
- * solo recibe `coord_codigo` (filtro de texto, obligatorio). El SQL une coordinación,
+ * solo recibe los filtros de texto `coord_codigo`, `booking` y `contenedor` (al menos uno; lo
+ * valida el back). Pueden coincidir varias coordinaciones: un árbol por cada una. El SQL une coordinación,
  * seguimientos, transbordos, contenedores y subcoordinaciones en una sola lista, así que cada
  * dato se repite en varias filas: la vista (`DetalleEmbarque`) las separa en un árbol (ficha
  * de la coordinación y una rama por sección, sin repetidos) y el Excel lleva todas las filas
@@ -192,10 +193,27 @@ function Rama({
   );
 }
 
-/** Vista de árbol: ficha de la coordinación y una rama por sección, sin repetidos. */
+/** Vista de árbol: un árbol por coordinación (booking o contenedor pueden traer varias). */
 function DetalleEmbarque({ filas }: Readonly<ContenidoReporteProps<Fila>>) {
+  if (!filas.length) return <MensajeVacio>No se encontró la coordinación.</MensajeVacio>;
+  const porCoordinacion = new Map<string, Fila[]>();
+  for (const fila of filas) {
+    const clave = fila.coord_codigo ?? "";
+    porCoordinacion.set(clave, [...(porCoordinacion.get(clave) ?? []), fila]);
+  }
+  return (
+    <div className="space-y-8">
+      {[...porCoordinacion].map(([coordinacion, filasCoordinacion]) => (
+        <ArbolCoordinacion key={coordinacion} filas={filasCoordinacion} />
+      ))}
+    </div>
+  );
+}
+
+/** Árbol de una coordinación: su ficha y una rama por sección, sin repetidos. */
+function ArbolCoordinacion({ filas }: Readonly<{ filas: readonly Fila[] }>) {
   const co = filas[0];
-  if (!co) return <MensajeVacio>No se encontró la coordinación.</MensajeVacio>;
+  if (!co) return null;
   const transbordos = unicos(filas, (f) => f.transbordo_correlativo).sort(
     ([a], [b]) => Number(a) - Number(b),
   );
@@ -312,7 +330,11 @@ export const reporteDetalleEmbarque = definirReporte<Fila>({
   nomenclatura: "EMB-DE-03",
   descripcion: "Detalle de la coordinación: itinerario, seguimientos, contenedores y más",
   fechas: "ninguna",
-  filtros: [{ id: "coord_codigo", label: "Coordinación", texto: true, requerido: true }],
+  filtros: [
+    { id: "coord_codigo", label: "Coordinación", texto: true },
+    { id: "booking", label: "Booking", texto: true },
+    { id: "contenedor", label: "Contenedor", texto: true },
+  ],
   empresaCentroCosto: false,
   agrupado: false,
   consultar: consultarApi("/api/appweb/reporte-emb-detalle-embarque", filaSchema),

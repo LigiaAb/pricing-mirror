@@ -36,7 +36,7 @@ reportes/
                               en Oracle; fechas opcionales (ETD) y cliente (sin él, 1843);
                               `agrupado: false`; `excel: true`)
       reporte-detalle-embarque.tsx  EMB-DE-03 Detalle de embarque (SQL fijo en Oracle por
-                              `coord_codigo`, filtro `texto`; vista de árbol propia
+                              coordinación, booking o contenedor (filtros `texto`, al menos uno); un árbol por coordinación
                               (`Contenido`); `excel: true` con todas las filas en una hoja)
     pricing/
       index.ts                REPORTES_PRICING

@@ -1,0 +1,55 @@
+diff --git a/app/controllers/reportes/reportes_embarques_transito.js b/app/controllers/reportes/reportes_embarques_transito.js
+index 9e99f1e..6b32671 100644
+--- a/app/controllers/reportes/reportes_embarques_transito.js
++++ b/app/controllers/reportes/reportes_embarques_transito.js
+@@ -190,13 +190,21 @@ module.exports.reporte_emb_fcl_transito_gt = async (campos) => {
+ };
+ 
+ /**
+- * EMB-DE-03: consulta en Oracle la coordinación del filtro (`coord_codigo`, solo dígitos) con
+- * sus seguimientos, transbordos, contenedores y subcoordinaciones, y devuelve sus filas con todas
+- * las fechas como texto local. Misma consulta que el SQL entregado, con el query builder.
++ * EMB-DE-03: consulta en Oracle las coordinaciones de los filtros con sus seguimientos,
++ * transbordos, contenedores y subcoordinaciones, y devuelve sus filas con todas las fechas como
++ * texto local. Misma consulta que el SQL entregado, con el query builder; los filtros
++ * (`filtrarDetalleEmbarque`) reemplazan el número de coordinación fijo.
+  */
+ const consultarDetalleEmbarque = async (campos) => {
+   const coordinacion = String(campos?.coord_codigo ?? '').trim();
+-  if (!/^\d+$/.test(coordinacion)) throw new Error('Ingrese un número de coordinación válido');
++  const booking = String(campos?.booking ?? '').trim();
++  const contenedor = String(campos?.contenedor ?? '').trim();
++  if (!coordinacion && !booking && !contenedor) {
++    throw new Error('Ingrese la coordinación, el booking o el contenedor');
++  }
++  if (coordinacion && !/^\d+$/.test(coordinacion)) {
++    throw new Error('Ingrese un número de coordinación válido');
++  }
+ 
+   const filas = await oracleClient('COORDINACION as CO')
+     .select([
+@@ -275,7 +283,23 @@ const consultarDetalleEmbarque = async (campos) => {
+     .where({
+       'CO.EMP_CODIGO': 2,
+       'CO.DEPORG_CODIGO': 'IMP',
+-      'CO.COORD_CODIGO': Number(coordinacion),
++    })
++    .modify((consulta) => {
++      if (coordinacion) consulta.where('CO.COORD_CODIGO', Number(coordinacion));
++      // Booking y contenedor: sin distinguir mayúsculas ni espacios al inicio o al final.
++      if (booking) consulta.whereRaw('UPPER(TRIM(CO.BOOKING)) = UPPER(?)', [booking]);
++      // Coordinaciones que tienen el contenedor (sin quitar sus otros contenedores de la lista).
++      if (contenedor) {
++        consulta.whereExists(function () {
++          this.select(oracleClient.raw('1'))
++            .from('COORDINACION_CONTENEDOR as FC')
++            .whereRaw('FC.EMP_CODIGO = CO.EMP_CODIGO')
++            .whereRaw('FC.DEPORG_CODIGO = CO.DEPORG_CODIGO')
++            .whereRaw('FC.SEGUIMIENTO = CO.SEGUIMIENTO')
++            .whereRaw('FC.COORD_CODIGO = CO.COORD_CODIGO')
++            .whereRaw('UPPER(TRIM(FC.COORDCONT_NUMCONT)) = UPPER(?)', [contenedor]);
++        });
++      }
+     })
+     .orderBy(['CS.CORRELATIVO', 'CT.COORD_TRAS_CORR']);
+ 
