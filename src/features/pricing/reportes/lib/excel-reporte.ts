@@ -35,6 +35,11 @@ export type ReporteExcel = {
   anchos?: Array<number | undefined>;
   /** Formato numérico de Excel por columna (ej. "#,##0", '0.00"%"'). */
   formatos?: Array<string | undefined>;
+  /**
+   * Color ARGB de relleno de cada celda de la tabla; `undefined` = sin relleno. Ej. las vacías en
+   * amarillo: `(valor) => (valor == null || valor === "" ? "FFFFFF00" : undefined)`.
+   */
+  colorFondoCelda?: (valor: string | number | null, indiceColumna: number) => string | undefined;
 };
 
 const BORDE = { style: "thin" as const, color: { argb: NEGRO } };
@@ -148,6 +153,8 @@ export async function agregarHojaReporte(
       celda.border = BORDES;
       const formato = opciones.formatos?.[i];
       if (formato) celda.numFmt = formato;
+      const fondo = opciones.colorFondoCelda?.(valor, i);
+      if (fondo) celda.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fondo } };
       celda.alignment = {
         vertical: "top",
         horizontal: typeof valor === "number" ? "right" : "left",

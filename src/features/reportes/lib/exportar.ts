@@ -4,9 +4,8 @@ import type { ReportePdf } from "@/features/pricing/reportes/lib/pdf-reporte";
 import type { TreeNode } from "@/features/pricing/shared";
 import type { CampoConfig } from "@/shared/components/tabla-double/niveles-builder";
 import type { useExcelJS } from "@/shared/hooks/use-dynamic-libraries";
-import { type CeldaExcel, exportarExcel } from "@/shared/lib/excel";
 import type { ColumnaReporte, ValorCelda } from "./definir-reporte";
-import { agregarHojaReporte, type FilaExcel } from "./excel-reporte";
+import { agregarHojaReporte, type FilaExcel, type ReporteExcel } from "./excel-reporte";
 import type { Resumen } from "./resumen-agrupado";
 
 /**
@@ -120,30 +119,40 @@ export async function descargarExcelAgrupado(opciones: {
   );
 }
 
-/** Excel del reporte (sin `excel` propio en la definición): el detalle con sus columnas. */
+/**
+ * Excel del reporte (`excel: true`): el detalle con sus columnas, con el MISMO generador que el
+ * "Excel agrupado" (`agregarHojaReporte`, el de Reportes de pricing: logo, título, encabezado y
+ * tabla con encabezado gris); la diferencia es que este no agrupa. `colorFondoCelda` (opcional)
+ * rellena celdas (ej. las vacías en amarillo).
+ */
 export async function descargarExcelReporte(opciones: {
   titulo: string;
   encabezado: Record<string, string>;
   detalle: TablaExportable;
-  /** Relleno de cada celda de datos (`colorFondoCelda` de `exportarExcel`). */
-  colorFondoCelda?: (valor: CeldaExcel, indiceColumna: number) => string | undefined;
+  colorFondoCelda?: ReporteExcel["colorFondoCelda"];
 }): Promise<void> {
-  await exportarExcel({
-    nombreArchivo: `${nombreArchivo(opciones.titulo)}.xlsx`,
+  if (opciones.detalle.filas.length === 0) throw new Error("No hay datos para exportar a Excel.");
+  const ExcelJS = await import("exceljs");
+  const libro = new ExcelJS.Workbook();
+  await agregarHojaReporte(libro, {
     titulo: opciones.titulo,
-    encabezado: opciones.encabezado,
-    hojas: [
-      {
-        // Excel admite 31 caracteres en el nombre de la hoja.
-        nombre: opciones.titulo.slice(0, 31),
-        columnas: opciones.detalle.columnas,
-        filas: opciones.detalle.filas,
-        mostrarCuadricula: true,
-        autoFiltro: true,
-        ...(opciones.colorFondoCelda ? { colorFondoCelda: opciones.colorFondoCelda } : {}),
-      },
-    ],
+    hoja: opciones.titulo,
+    header: opciones.encabezado,
+    columnas: opciones.detalle.columnas,
+    filas: opciones.detalle.filas.map((celdas) => ({ celdas })),
+    ...(opciones.colorFondoCelda ? { colorFondoCelda: opciones.colorFondoCelda } : {}),
   });
+  const buffer = await libro.xlsx.writeBuffer();
+  const url = URL.createObjectURL(
+    new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    }),
+  );
+  const enlace = document.createElement("a");
+  enlace.href = url;
+  enlace.download = `${nombreArchivo(opciones.titulo)}.xlsx`;
+  enlace.click();
+  URL.revokeObjectURL(url);
 }
 
 /** Bloques del PDF del reporte: el detalle con sus columnas. */

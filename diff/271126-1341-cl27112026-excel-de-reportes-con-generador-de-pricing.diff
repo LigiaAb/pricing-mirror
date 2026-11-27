@@ -1,0 +1,178 @@
+diff --git a/src/features/pricing/reportes/lib/excel-reporte.ts b/src/features/pricing/reportes/lib/excel-reporte.ts
+index ac311d2..2205f41 100644
+--- a/src/features/pricing/reportes/lib/excel-reporte.ts
++++ b/src/features/pricing/reportes/lib/excel-reporte.ts
+@@ -35,6 +35,11 @@ export type ReporteExcel = {
+   anchos?: Array<number | undefined>;
+   /** Formato numérico de Excel por columna (ej. "#,##0", '0.00"%"'). */
+   formatos?: Array<string | undefined>;
++  /**
++   * Color ARGB de relleno de cada celda de la tabla; `undefined` = sin relleno. Ej. las vacías en
++   * amarillo: `(valor) => (valor == null || valor === "" ? "FFFFFF00" : undefined)`.
++   */
++  colorFondoCelda?: (valor: string | number | null, indiceColumna: number) => string | undefined;
+ };
+ 
+ const BORDE = { style: "thin" as const, color: { argb: NEGRO } };
+@@ -148,6 +153,8 @@ export async function agregarHojaReporte(
+       celda.border = BORDES;
+       const formato = opciones.formatos?.[i];
+       if (formato) celda.numFmt = formato;
++      const fondo = opciones.colorFondoCelda?.(valor, i);
++      if (fondo) celda.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fondo } };
+       celda.alignment = {
+         vertical: "top",
+         horizontal: typeof valor === "number" ? "right" : "left",
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+index 57a63c0..715bb4a 100644
+--- a/src/features/reportes/ARQUITECTURA.md
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -49,7 +49,8 @@ reportes/
+                               FILTROS_EMPRESA_CC (filtroEmpresa + filtroCentroCosto, los pone la pantalla)
+     resumen-agrupado.ts       tabla dinámica genérica (calcularResumen → árbol de TablaDouble)
+     exportar.ts               Excel agrupado (resumen) y PDF/Excel genéricos del reporte (detalle)
+-    excel-reporte.ts          COPIA del generador de Excel de Reportes de pricing (Excel agrupado)
++    excel-reporte.ts          COPIA del generador de Excel de Reportes de pricing (Excel agrupado
++                              y Excel del reporte, `excel: true`; `colorFondoCelda` rellena celdas)
+   components/
+     vista-reportes.tsx        "Reportes disponibles" (Módulo → Reporte) + reporte elegido
+     pantalla-reporte.tsx      título, filtros y configuración, Consultar, resumen, reporte, descargas
+@@ -105,7 +106,8 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
+     negrita y `#,##0`.
+   - **Excel / PDF del reporte** (opcionales, `descargas: { excel, pdf }` de la definición; en
+     CRM unos tienen Excel, otros PDF y otros ambos): `true` = el detalle con las columnas
+-    (Excel con `exportarExcel` de `@/shared/lib/excel`; PDF con `usePdfReporte` de
++    (Excel con el **mismo generador que el Excel agrupado**, `agregarHojaReporte`, sin agrupar:
++    `descargarExcelReporte`, con `colorFondoCelda` opcional para rellenar celdas; PDF con `usePdfReporte` de
+     `@/features/pricing/reportes`); una función = formato propio, que recibe `{ filas, titulo,
+     encabezado, params }` (ej. `excelActividades` en `crm/reporte-visitas-historico.ts`, el Excel de
+     Reportes CRM). Sin la clave, no hay botón.
+diff --git a/src/features/reportes/lib/excel-reporte.ts b/src/features/reportes/lib/excel-reporte.ts
+index 8d8f792..0f9cb2f 100644
+--- a/src/features/reportes/lib/excel-reporte.ts
++++ b/src/features/reportes/lib/excel-reporte.ts
+@@ -40,6 +40,11 @@ export type ReporteExcel = {
+   anchos?: Array<number | undefined>;
+   /** Formato numérico de Excel por columna (ej. "#,##0", '0.00"%"'). */
+   formatos?: Array<string | undefined>;
++  /**
++   * Color ARGB de relleno de cada celda de la tabla; `undefined` = sin relleno. Ej. las vacías en
++   * amarillo: `(valor) => (valor == null || valor === "" ? "FFFFFF00" : undefined)`.
++   */
++  colorFondoCelda?: (valor: string | number | null, indiceColumna: number) => string | undefined;
+ };
+ 
+ const BORDE = { style: "thin" as const, color: { argb: NEGRO } };
+@@ -153,6 +158,8 @@ export async function agregarHojaReporte(
+       celda.border = BORDES;
+       const formato = opciones.formatos?.[i];
+       if (formato) celda.numFmt = formato;
++      const fondo = opciones.colorFondoCelda?.(valor, i);
++      if (fondo) celda.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fondo } };
+       celda.alignment = {
+         vertical: "top",
+         horizontal: typeof valor === "number" ? "right" : "left",
+diff --git a/src/features/reportes/lib/exportar.ts b/src/features/reportes/lib/exportar.ts
+index 6df2842..2a329af 100644
+--- a/src/features/reportes/lib/exportar.ts
++++ b/src/features/reportes/lib/exportar.ts
+@@ -4,9 +4,8 @@ import type { ReportePdf } from "@/features/pricing/reportes/lib/pdf-reporte";
+ import type { TreeNode } from "@/features/pricing/shared";
+ import type { CampoConfig } from "@/shared/components/tabla-double/niveles-builder";
+ import type { useExcelJS } from "@/shared/hooks/use-dynamic-libraries";
+-import { type CeldaExcel, exportarExcel } from "@/shared/lib/excel";
+ import type { ColumnaReporte, ValorCelda } from "./definir-reporte";
+-import { agregarHojaReporte, type FilaExcel } from "./excel-reporte";
++import { agregarHojaReporte, type FilaExcel, type ReporteExcel } from "./excel-reporte";
+ import type { Resumen } from "./resumen-agrupado";
+ 
+ /**
+@@ -120,30 +119,40 @@ export async function descargarExcelAgrupado(opciones: {
+   );
+ }
+ 
+-/** Excel del reporte (sin `excel` propio en la definición): el detalle con sus columnas. */
++/**
++ * Excel del reporte (`excel: true`): el detalle con sus columnas, con el MISMO generador que el
++ * "Excel agrupado" (`agregarHojaReporte`, el de Reportes de pricing: logo, título, encabezado y
++ * tabla con encabezado gris); la diferencia es que este no agrupa. `colorFondoCelda` (opcional)
++ * rellena celdas (ej. las vacías en amarillo).
++ */
+ export async function descargarExcelReporte(opciones: {
+   titulo: string;
+   encabezado: Record<string, string>;
+   detalle: TablaExportable;
+-  /** Relleno de cada celda de datos (`colorFondoCelda` de `exportarExcel`). */
+-  colorFondoCelda?: (valor: CeldaExcel, indiceColumna: number) => string | undefined;
++  colorFondoCelda?: ReporteExcel["colorFondoCelda"];
+ }): Promise<void> {
+-  await exportarExcel({
+-    nombreArchivo: `${nombreArchivo(opciones.titulo)}.xlsx`,
++  if (opciones.detalle.filas.length === 0) throw new Error("No hay datos para exportar a Excel.");
++  const ExcelJS = await import("exceljs");
++  const libro = new ExcelJS.Workbook();
++  await agregarHojaReporte(libro, {
+     titulo: opciones.titulo,
+-    encabezado: opciones.encabezado,
+-    hojas: [
+-      {
+-        // Excel admite 31 caracteres en el nombre de la hoja.
+-        nombre: opciones.titulo.slice(0, 31),
+-        columnas: opciones.detalle.columnas,
+-        filas: opciones.detalle.filas,
+-        mostrarCuadricula: true,
+-        autoFiltro: true,
+-        ...(opciones.colorFondoCelda ? { colorFondoCelda: opciones.colorFondoCelda } : {}),
+-      },
+-    ],
++    hoja: opciones.titulo,
++    header: opciones.encabezado,
++    columnas: opciones.detalle.columnas,
++    filas: opciones.detalle.filas.map((celdas) => ({ celdas })),
++    ...(opciones.colorFondoCelda ? { colorFondoCelda: opciones.colorFondoCelda } : {}),
+   });
++  const buffer = await libro.xlsx.writeBuffer();
++  const url = URL.createObjectURL(
++    new Blob([buffer], {
++      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
++    }),
++  );
++  const enlace = document.createElement("a");
++  enlace.href = url;
++  enlace.download = `${nombreArchivo(opciones.titulo)}.xlsx`;
++  enlace.click();
++  URL.revokeObjectURL(url);
+ }
+ 
+ /** Bloques del PDF del reporte: el detalle con sus columnas. */
+diff --git a/src/shared/lib/excel.ts b/src/shared/lib/excel.ts
+index 3dd5b52..37801f9 100644
+--- a/src/shared/lib/excel.ts
++++ b/src/shared/lib/excel.ts
+@@ -125,15 +125,6 @@ export async function exportarExcel({
+       indiceColumna: number,
+       fila: CeldaExcel[],
+     ) => string | undefined;
+-    /**
+-     * Color ARGB de relleno (fondo) de cada celda de datos; `undefined` = sin relleno. Ej. resaltar
+-     * las celdas vacías: `(valor) => (valor == null || valor === "" ? "FFFFFF00" : undefined)`.
+-     */
+-    colorFondoCelda?: (
+-      valor: CeldaExcel,
+-      indiceColumna: number,
+-      fila: CeldaExcel[],
+-    ) => string | undefined;
+   }>;
+ }): Promise<void> {
+   const ExcelJS = await import("exceljs");
+@@ -317,10 +308,6 @@ export async function exportarExcel({
+           if (configuracion?.alignFormat) {
+             celda.alignment = configuracion.alignFormat;
+           }
+-          const fondo = hoja.colorFondoCelda?.(valor, indiceColumna, fila);
+-          if (fondo) {
+-            celda.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fondo } };
+-          }
+           if (hoja.mostrarCuadricula === true) {
+             celda.border = BORDES_CELDA;
+           }
