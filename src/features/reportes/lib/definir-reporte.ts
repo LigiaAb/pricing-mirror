@@ -100,6 +100,8 @@ export interface FiltroReporte {
   multiple?: boolean;
   /** Obligatorio (ej. Tipo de asignación en Objetivos): sin valor no se puede consultar. */
   requerido?: boolean;
+  /** Campo de texto libre en lugar de select (ej. número de coordinación): sin opciones. */
+  texto?: boolean;
 }
 
 export interface ContenidoReporteProps<TFila> {

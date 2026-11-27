@@ -163,6 +163,40 @@ export function CampoMultiSelect({
   );
 }
 
+/** Texto libre con etiqueta y "x" para limpiar ("" = sin valor). */
+export function CampoTexto({
+  id,
+  label,
+  value,
+  onChange,
+  limpiable = true,
+}: Readonly<{
+  id: string;
+  label: string;
+  value: string;
+  onChange: (valor: string) => void;
+  limpiable?: boolean;
+}>) {
+  const conX = limpiable && value !== "";
+  return (
+    <Field className="gap-1">
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <div className="relative">
+        <input
+          id={id}
+          type="text"
+          className={cn("h-9 w-full rounded-md border bg-card px-2 text-sm", conX && "pr-9")}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        {conX ? (
+          <BotonLimpiar label={label} onClick={() => onChange("")} className="right-3" />
+        ) : null}
+      </div>
+    </Field>
+  );
+}
+
 /** Fecha con el input nativo (`yyyy-MM-dd`) y "x" si no es requerida. */
 export function CampoFecha({
   id,

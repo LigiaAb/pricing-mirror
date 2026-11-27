@@ -7,6 +7,7 @@ const dayjs = require("dayjs");
  *   contenedor, booking, orden de compra, POD, nave y fechas ETD / ATD / ETA.
  * - EMB-ENAHK-02 Embarques no asignados a HK: coordinaciones de importación (producto 13) sin
  *   coordinación relacionada, con documento de embarque, proveedor, orden de compra y fechas.
+ * - EMB-DE-03 Detalle de embarque: solo `coord_codigo` (al final del archivo).
  */
 
 /** Columnas fecha de la consulta. */
@@ -183,6 +184,135 @@ module.exports.reporte_emb_no_asignados_hk = async (campos) => {
 module.exports.reporte_emb_fcl_transito_gt = async (campos) => {
   try {
     return await consultarEmbFclTransitoGt(campos);
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+};
+
+/**
+ * EMB-DE-03 Detalle de embarque: SQL entregado tal cual (no se modifica). Solo el número de la
+ * coordinación pasa a parámetro (`?` = `coord_codigo` del filtro) y se quita el `;` final
+ * (Oracle no lo acepta al ejecutarlo).
+ */
+const SQL_DETALLE_EMBARQUE = `SELECT
+    /* =====================================
+       COORDINACION - EMBARQUE
+       ===================================== */
+    CO.COORD_CODIGO,   --CODIGO INTERNO
+    TRIM(CO.COORD_CONSIGNATARIO) AS CONSIGNATARIO,
+    TRIM(CO.COORD_HAWBBLCP) AS HOUSE_BL,
+    TRIM(CO.COORD_MAWORI) AS MASTER_BL,
+    TRIM(CO.BOOKING) AS BOOKING,
+    TRIM(CO.COORD_OCOMPRA) AS ORDEN_COMPRA,
+    TRIM(CO.COORD_CARRIER) AS CARRIER,
+    TRIM(CO.NAVE) AS MASTER_BUQUE,
+    --TRIM(MA.MASTVIAJE) AS MASTER_VIAJE,               --QUITAR *************************
+    TRIM(CO.PAISFIL_CODIGO_COORD) AS PAIS_COORDINACION, -- PAIS DE ORIGEN CODIGO
+    --PF.PAISFIL_NOMBRE AS POD,                           -- PAIS DE ORIGEN NOMBRE    QUITAR *******************
+    TRIM(CO.CIUDFIL_CODIGO_ORI) AS CIUDAD_ORIGEN,       -- CIUDAD DE ORIGEN
+    TRIM(CO.PUERTO_CODIGO_ORI) AS PUERTO_ORIGEN,        -- PUERTO DE ORIGEN
+    TRIM(CO.PAISFIL_CODIGO_DES) AS PAIS_DESTINO,        -- PAIS DESTINO CODIGO
+    --PD.PAISFIL_NOMBRE AS PAIS_DESTINO,                  -- PAIS DESTINO NOMBRE
+    TRIM(CO.CIUDFIL_CODIGO_DES) AS CIUDAD_DESTINO,      -- CIUDAD DESTINO       QUITAR **************
+    TRIM(CO.COORD_DESTINO_FINAL) AS PUERTO_DESTINO ,     -- PUETO DESTINO
+    CO.COORD_ETD AS ETD,    --FECHA ESTIMADA DE SALIDA
+    CO.COORD_ATD AS ATD,    --FECHA DE SALIDA
+    CO.COORD_ETA AS ETA,    --FECHA ESTIMADA DE LLEGADA
+    CO.COORD_ATA AS ATA,    --FECHA DE LLEGADA   
+    /* =====================================
+       SEGUIMIENTOS
+       ===================================== */
+     CS.CORRELATIVO AS SEGUIMIENTO_CORRELATIVO,                 --ID SEGUIMIENTO
+     TRIM(CS.COORD_COMENTARIOS) AS SEGUIMIENTO_COMENTARIO,      -- SEGUMIENTO
+     CS.COORD_FECCREACION AS SEGUIMIENTO_FECHA,                 --FECHA DE SEGUIMIENTO
+     TRIM(CS.AUSRID) AS SEGUIMIENTO_USUARIO,                    --USUARIO
+     TRIM(CS.COORD_INSTCONT_TIPO) AS SEGUIMIENTO_TIPO,          --FILTRAR UNICAMENTE DE "CLIENTE"
+    /* =====================================
+       TRANSBORDOS
+       ===================================== */
+    CT.COORD_TRAS_CORR AS TRANSBORDO_CORRELATIVO,              --ID TRANSBORDO
+    CT.COORD_TRAS_FECHA AS TRANSBORDO_FECHA,                   --REGISTRO DE TRANSBORDO FECHA|
+    TRIM(CT.NAVE) AS TRANSBORDO_VESSEL,                        --BARCO DE TRANSBORDO                    
+    TRIM(CT.CIUDAD_SALIDA) AS TRANSBORDO_CIUDAD_SALIDA,         -- CIUDAD DE SALIDA
+    TRIM(CT.VIAJE) AS TRANSBORDO_VIAJE,                         --VIAJE TRANSBORDO
+    CT.COORD_TRAS_ETA AS TRANSBORDO_ETA,            --FECHA ESTIMADA DE LLEGADA A TRANSBORDO
+    CT.COORD_TRAS_ATA AS TRANSBORDO_ATA,            --FECHA LLEGADA A TRANSBORDO
+    CT.COORD_TRAS_ETD AS TRANSBORDO_ETD,            --FECHA ESTIMADA DE SALIDA DE TRANSBORDO
+    CT.COORD_TRAS_ATD AS TRANSBORDO_ATD,            --FECHA SALIDA DE TRANSBORDO
+    CT.COORD_ETA,                                   -----****NUEVO **** NUEVA ETA 
+    CT.COORD_TRAS_TIPO  AS TRANSBORDO_ITINERARIO,    -----****NUEVO **** TIPO DE REGISTRO ITINERIARIO O TRANSBORDO
+    /* =====================================
+       CONTENEDORES
+       ===================================== */
+   TRIM(cc.coordcont_numcont) AS NUMERO_CONTENEDOR,    -----****NUEVO **** LISTA DE CONTENDORES
+   /** =====================================
+       SUBCOORDINACIONES
+       ===================================== */
+        CO2.COORD_CODIGO COORDINACION,
+        TRIM(CO2.COORD_HAWBBLCP) AS DOC_EMBARQUE,
+        sh.shipper_nombre as PROVEEDOR_ORIGEN,
+        TRIM(CO2.COORD_OCOMPRA) AS ORDEN_COMPRA,
+ 
+        CO2.COORD_ETD AS ETD,
+        CO2.COORD_ATD AS ATD,
+        CO2.COORD_ETA AS ETA,
+        CO2.COORD_ATA AS ATA,
+        CO2.COORD_REL_CODIGO
+FROM COORDINACION CO
+/* =====================================
+   SEGUIMIENTOS
+   ===================================== */
+LEFT JOIN PAIS_FILE PF
+    ON CO.COORD_DESTINO_FINAL = PF.PAISFIL_CODIGO
+LEFT JOIN PAIS_FILE PD
+    ON CO.PAISFIL_CODIGO_DES = PF.PAISFIL_CODIGO
+LEFT JOIN COORDINACION_SEGUIMIENTO CS
+    ON CO.EMP_CODIGO = CS.EMP_CODIGO
+    AND CO.DEPORG_CODIGO = CS.DEPORG_CODIGO
+    AND CO.COORD_CODIGO = CS.COORD_CODIGO
+    AND CO.SEGUIMIENTO = CS.SEGUIMIENTO
+/* =====================================
+   TRANSBORDOS
+   ===================================== */
+LEFT JOIN COORDINACION_TRASBORDO CT
+    ON CO.EMP_CODIGO = CT.EMP_CODIGO
+    AND CO.DEPORG_CODIGO = CT.DEPORG_CODIGO
+    AND CO.COORD_CODIGO = CT.COORD_CODIGO
+    AND CO.SEGUIMIENTO = CT.SEGUIMIENTO
+/* =====================================
+   CONTENEDORES
+   ===================================== */    /****NUEVO *******************/
+LEFT JOIN COORDINACION_CONTENEDOR CC
+    ON cc.emp_codigo = CO.EMP_CODIGO AND
+       cc.deporg_codigo = CO.DEPORG_CODIGO AND
+       cc.seguimiento = CO.SEGUIMIENTO AND
+       cc.coord_codigo = CO.COORD_CODIGO
+   /** =====================================
+       SUBCOORDINACIONES
+       ===================================== NUEVO******* */
+LEFT JOIN COORDINACION CO2 ON CO2.COORD_CODIGO = CO.COORD_CODIGO        
+LEFT JOIN SHIPPER SH ON CO.COORD_SHIPPER = sh.shipper_codigo    
+WHERE CO.EMP_CODIGO = 2
+  AND CO.DEPORG_CODIGO = 'IMP'
+  AND CO.COORD_CODIGO = ?
+ORDER BY
+    CS.CORRELATIVO,
+    CT.COORD_TRAS_CORR`;
+
+/** EMB-DE-03: filas del SQL de la coordinación, con todas las fechas como texto local. */
+const consultarDetalleEmbarque = async (campos) => {
+  const coordinacion = String(campos?.coord_codigo ?? '').trim();
+  if (!/^\d+$/.test(coordinacion)) throw new Error('Ingrese un número de coordinación válido');
+  const resultado = await oracleClient.raw(SQL_DETALLE_EMBARQUE, [Number(coordinacion)]);
+  const filas = Array.isArray(resultado) ? resultado : (resultado?.rows ?? []);
+  return filas.map((fila) =>
+    Object.fromEntries(Object.entries(fila).map(([campo, valor]) => [campo, textoFecha(valor)])),
+  );
+};
+
+module.exports.reporte_emb_detalle_embarque = async (campos) => {
+  try {
+    return await consultarDetalleEmbarque(campos);
   } catch (error) {
     return { success: false, error: error.toString() };
   }

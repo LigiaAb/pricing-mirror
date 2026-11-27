@@ -35,6 +35,9 @@ reportes/
       reporte-embarques-no-asignados-hk.ts  EMB-ENAHK-02 Embarques no asignados a HK (SQL fijo
                               en Oracle; fechas opcionales (ETD) y cliente (sin él, 1843);
                               `agrupado: false`; `excel: true`)
+      reporte-detalle-embarque.tsx  EMB-DE-03 Detalle de embarque (SQL fijo en Oracle por
+                              `coord_codigo`, filtro `texto`; vista de árbol propia
+                              (`Contenido`); `excel: true` con todas las filas en una hoja)
     pricing/
       index.ts                REPORTES_PRICING
       reporte-hit-rate.tsx    PRI-HR-01 Hit Rate (filas de report_kpi_cotizaciones para el
