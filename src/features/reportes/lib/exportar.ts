@@ -5,7 +5,7 @@ import type { TreeNode } from "@/features/pricing/shared";
 import type { CampoConfig } from "@/shared/components/tabla-double/niveles-builder";
 import type { useExcelJS } from "@/shared/hooks/use-dynamic-libraries";
 import { type CeldaExcel, exportarExcel } from "@/shared/lib/excel";
-import { type ColumnaReporte, type ValorCelda, valorVacio } from "./definir-reporte";
+import type { ColumnaReporte, ValorCelda } from "./definir-reporte";
 import { agregarHojaReporte, type FilaExcel } from "./excel-reporte";
 import type { Resumen } from "./resumen-agrupado";
 
@@ -120,13 +120,6 @@ export async function descargarExcelAgrupado(opciones: {
   );
 }
 
-/** Color hex de CSS (`#FFFF00` o `#FF0`) → ARGB de Excel (`FFFFFF00`). */
-export function argbDeHex(hex: string): string {
-  const limpio = hex.replace("#", "").toUpperCase();
-  const largo = limpio.length === 3 ? [...limpio].map((c) => c + c).join("") : limpio;
-  return largo.length === 8 ? largo : `FF${largo}`;
-}
-
 /** Excel del reporte (sin `excel` propio en la definición): el detalle con sus columnas. */
 export async function descargarExcelReporte(opciones: {
   titulo: string;
@@ -134,16 +127,7 @@ export async function descargarExcelReporte(opciones: {
   detalle: TablaExportable;
   /** Relleno de cada celda de datos (`colorFondoCelda` de `exportarExcel`). */
   colorFondoCelda?: (valor: CeldaExcel, indiceColumna: number) => string | undefined;
-  /** `colorVacias` de la definición (hex): rellena las celdas vacías. */
-  colorVacias?: string | undefined;
 }): Promise<void> {
-  const { colorVacias } = opciones;
-  const fondoVacias = colorVacias ? argbDeHex(colorVacias) : undefined;
-  const colorFondoCelda =
-    opciones.colorFondoCelda ??
-    (fondoVacias
-      ? (valor: CeldaExcel) => (valorVacio(valor) ? fondoVacias : undefined)
-      : undefined);
   await exportarExcel({
     nombreArchivo: `${nombreArchivo(opciones.titulo)}.xlsx`,
     titulo: opciones.titulo,
@@ -156,7 +140,7 @@ export async function descargarExcelReporte(opciones: {
         filas: opciones.detalle.filas,
         mostrarCuadricula: true,
         autoFiltro: true,
-        ...(colorFondoCelda ? { colorFondoCelda } : {}),
+        ...(opciones.colorFondoCelda ? { colorFondoCelda: opciones.colorFondoCelda } : {}),
       },
     ],
   });
