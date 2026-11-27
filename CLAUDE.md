@@ -16,6 +16,7 @@ al proyecto completo. Responder siempre en **español**.
 | `src/features/objetivos/**`                  | STUB: copia del catálogo `objetivos` (Hit Rate)       | **No**                           |
 | `src/types/stubs-modulos.d.ts`               | Todo lo demás de `@/shared` / `@/features` como `any` | **No**                           |
 | `tsconfig.json`                              | Copia exacta del proyecto real                        | No (ya existe allá)              |
+| `backend/**`                                 | Copia **parcial** del backend real (Node.js, JS sin TS: `routes/`, `app/controllers/`, `middlewares/`, `utils/`), SYNC del 27/11/2026. **Solo referencia** | **No**: no sale en los `diff/` |
 
 - `src/features/catalogos/api/create-catalogo.ts` contiene el **código real** de `createCatalogo` del proyecto; todo
   `catalogos/api/` es real y `catalogos/index.ts` es el real salvo los hooks (`./hooks/...` no existen en el espejo;
@@ -35,6 +36,11 @@ al proyecto completo. Responder siempre en **español**.
   - Búsqueda en el servidor → `AsyncComboboxInput` (en pricing: Entidad en Tarifas y Cliente en Cotización).
 - Si un cambio necesita un tipo de `@/shared` que no está en los stubs, se agrega al stub (solo tipos) y se avisa.
 - Nunca cambiar lógica dentro de los stubs para "hacer pasar" algo.
+- **Backend (`backend/`)**: copia parcial del back real (repo aparte, Node.js en JS). Se lee para confirmar
+  endpoints (`routes/`), payloads, validaciones y SQL (`app/controllers/`) antes de tocar el front; no se modifica
+  ni entra en `RUTAS_CODIGO`, `tsc` (solo incluye `.ts`) ni Biome. Archivos en CRLF (uno en LF): si un SYNC lo
+  actualiza, conservar el final de línea. Cambios sugeridos al back: como antes, en `docs/backend/` (archivo con
+  "Cómo instalarlo"), y se avisa en la respuesta que no salen en diff.
 - **Embarques: se trabaja únicamente en `src/features/embarques/v2/`.** Lo demás de `src/features/embarques/`
   (`api/`, `components/`, `hooks/`, `lib/`, `index.ts`) es el módulo actual y sirve **solo como referencia** de la
   estructura existente: se lee para seguir sus patrones, pero no se modifica, no se corrigen sus errores de `tsc`
