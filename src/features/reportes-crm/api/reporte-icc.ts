@@ -26,6 +26,7 @@ export const filaIccSchema = z.looseObject({
   usuario: zId,
   nombres: texto,
   apellidos: texto,
+  nombre: texto, // CONCAT(nombres, ' ', apellidos) del backend
   cod_empresa: zId.nullable().optional(),
   cc: zId.nullable().optional(),
   cc_nombre: texto,

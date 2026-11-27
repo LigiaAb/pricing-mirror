@@ -134,6 +134,7 @@ const consultaIcc = (campos) => {
       "E.ESTADO_DESCRIPCION AS ESTADO",
     )
     .select(
+      azureSqlClient.raw("CONCAT(EMP.NOMBRES, ' ', EMP.APELLIDOS) AS NOMBRE"),
       azureSqlClient.raw(
         "CASE WHEN EXISTS (SELECT 1 FROM ACTIVIDAD_RESULTADO AR WHERE AR.ACTIVIDAD_ID = A.ACTIVIDAD_ID) THEN 1 ELSE 0 END AS CON_RESULTADO",
       ),

@@ -32,7 +32,7 @@ export function porcentajeIcc(parte: number, total: number): number | null {
 }
 
 export function nombreUsuario(fila: FilaIcc): string {
-  return `${fila.nombres} ${fila.apellidos}`.trim() || `Usuario ${fila.usuario}`;
+  return fila.nombre.trim() || `Usuario ${fila.usuario}`;
 }
 
 /** Suma las banderas de las filas (una persona o todas). */
