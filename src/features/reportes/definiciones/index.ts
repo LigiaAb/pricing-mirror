@@ -1,5 +1,6 @@
 import type { Reporte } from "../lib/definir-reporte";
 import { REPORTES_CRM } from "./crm";
+import { REPORTES_EMBARQUES } from "./embarques";
 import { REPORTES_PRICING } from "./pricing";
 
 /**
@@ -11,4 +12,8 @@ import { REPORTES_PRICING } from "./pricing";
  * suma aquí. Solo se muestran los que la API de reportes disponibles devuelve para el rol y
  * el CC del usuario (se unen por `nomenclatura`).
  */
-export const REPORTES: readonly Reporte[] = [...REPORTES_CRM, ...REPORTES_PRICING];
+export const REPORTES: readonly Reporte[] = [
+  ...REPORTES_CRM,
+  ...REPORTES_PRICING,
+  ...REPORTES_EMBARQUES,
+];

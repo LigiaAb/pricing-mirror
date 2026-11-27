@@ -1,0 +1,187 @@
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+index bda1528..d1613a6 100644
+--- a/src/features/reportes/ARQUITECTURA.md
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -26,6 +26,11 @@ reportes/
+                               (sin fechas; vista de CRM con serie semanal y medidores)
+       reporte-seguimiento.ts  CRM-S-06 Seguimiento (historial de seguimientos del cliente;
+                               cliente `requerido`, sin fechas)
++    embarques/
++      index.ts                REPORTES_EMBARQUES
++      reporte-embarques-fcl-transito-gt.ts  EMB-EFCLTGT-01 Embarques FCL en tránsito GT (SQL
++                              fijo en Oracle, sin parámetros: sin fechas, filtros, empresa ni
++                              CC; `agrupado: false`; Excel con vacíos en amarillo)
+     pricing/
+       index.ts                REPORTES_PRICING
+       reporte-hit-rate.tsx    PRI-HR-01 Hit Rate (filas de report_kpi_cotizaciones para el
+@@ -44,6 +49,8 @@ reportes/
+     resumen-agrupado.ts       tabla dinámica genérica (calcularResumen → árbol de TablaDouble)
+     exportar.ts               Excel agrupado (resumen) y PDF/Excel genéricos del reporte (detalle)
+     excel-reporte.ts          COPIA del generador de Excel de Reportes de pricing (Excel agrupado)
++    excel-vacios.ts           excelResaltandoVacios(columnas): Excel del detalle con ese formato
++                              y las celdas vacías en amarillo (descarga `excel` de un reporte)
+   components/
+     vista-reportes.tsx        "Reportes disponibles" (Módulo → Reporte) + reporte elegido
+     pantalla-reporte.tsx      título, filtros y configuración, Consultar, resumen, reporte, descargas
+diff --git a/src/features/reportes/GUIA.md b/src/features/reportes/GUIA.md
+index 4b6af55..bdc9142 100644
+--- a/src/features/reportes/GUIA.md
++++ b/src/features/reportes/GUIA.md
+@@ -309,6 +309,8 @@ agrupacion: { filas: ["asesor"], columna: "tipo" }, // (G)
+ - una función `async ({ filas, titulo, encabezado, params }) => void`: arma el archivo a tu
+   manera (colores, otras columnas, varias hojas). Ver
+   [Excel propio](DOCUMENTACION.md#excel-propio) y [PDF propio](DOCUMENTACION.md#pdf-propio).
++  Atajo en `excel`: `excelResaltandoVacios(columnas)` (`lib/excel-vacios.ts`): el detalle con el
++  formato de los reportes y las celdas vacías en amarillo (ej. `EMB-EFCLTGT-01`).
+ - solo en `pdf`, `"contenido"`: al pulsar PDF, la vista (I) genera el PDF. Sirve cuando el PDF
+   tiene que llevar algo que solo existe en la vista, como una gráfica.
+ 
+diff --git a/src/features/reportes/definiciones/embarques/index.ts b/src/features/reportes/definiciones/embarques/index.ts
+new file mode 100644
+index 0000000..d93af57
+--- /dev/null
++++ b/src/features/reportes/definiciones/embarques/index.ts
+@@ -0,0 +1,5 @@
++import type { Reporte } from "../../lib/definir-reporte";
++import { reporteEmbarquesFclTransitoGt } from "./reporte-embarques-fcl-transito-gt";
++
++/** Reportes del módulo Embarques (nomenclatura `EMB-…`), en orden de correlativo. */
++export const REPORTES_EMBARQUES: readonly Reporte[] = [reporteEmbarquesFclTransitoGt];
+diff --git a/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts b/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts
+new file mode 100644
+index 0000000..e6dda6a
+--- /dev/null
++++ b/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts
+@@ -0,0 +1,54 @@
++import { format } from "date-fns";
++import { z } from "zod";
++import { consultarApi } from "../../api/consultar-api";
++import { type ColumnaReporte, definirReporte } from "../../lib/definir-reporte";
++import { excelResaltandoVacios } from "../../lib/excel-vacios";
++
++/**
++ * EMB-EFCLTGT-01 Embarques FCL en tránsito GT.
++ * Endpoint con un SQL fijo en Oracle (`reportes_embarques_transito.js` del back): no recibe
++ * parámetros (empresa, departamento y cliente van dentro del SQL), por eso no lleva fechas,
++ * filtros, empresa ni CC. Las fechas llegan como texto local `YYYY-MM-DDTHH:mm:ss`.
++ */
++const texto = z.string().nullable().catch(null);
++const filaSchema = z.looseObject({
++  COORDINACION: z.coerce.string().nullable().catch(null),
++  NUMERO_CONTENEDOR: texto,
++  BOOKING: texto,
++  ORDEN_COMPRA: texto,
++  POD: texto,
++  TRANSBORDO_NAVE: texto,
++  ETD: texto,
++  ATD: texto,
++  ETA: texto,
++});
++type Fila = z.infer<typeof filaSchema>;
++
++/** `YYYY-MM-DDTHH:mm:ss` (hora local) → `dd/MM/yyyy`; vacía o inválida → null. */
++const fecha = (valor: string | null): string | null => {
++  const dia = valor ? new Date(valor) : null;
++  return dia && !Number.isNaN(dia.getTime()) ? format(dia, "dd/MM/yyyy") : null;
++};
++
++const columnas: readonly ColumnaReporte<Fila>[] = [
++  { id: "coordinacion", label: "Coordinación", valor: (f) => f.COORDINACION, buscable: true },
++  { id: "contenedor", label: "No. contenedor", valor: (f) => f.NUMERO_CONTENEDOR, buscable: true },
++  { id: "booking", label: "Booking", valor: (f) => f.BOOKING, buscable: true },
++  { id: "orden_compra", label: "Orden de compra", valor: (f) => f.ORDEN_COMPRA, buscable: true },
++  { id: "pod", label: "POD", valor: (f) => f.POD, buscable: true },
++  { id: "nave", label: "Transbordo / nave", valor: (f) => f.TRANSBORDO_NAVE, buscable: true },
++  { id: "etd", label: "ETD", valor: (f) => fecha(f.ETD) },
++  { id: "atd", label: "ATD", valor: (f) => fecha(f.ATD) },
++  { id: "eta", label: "ETA", valor: (f) => fecha(f.ETA) },
++];
++
++export const reporteEmbarquesFclTransitoGt = definirReporte<Fila>({
++  nomenclatura: "EMB-EFCLTGT-01",
++  descripcion: "Embarques FCL de importación en tránsito (sin ATA)",
++  fechas: "ninguna",
++  empresaCentroCosto: false,
++  agrupado: false,
++  consultar: consultarApi("/api/appweb/reporte-emb-fcl-transito-gt", filaSchema),
++  columnas,
++  descargas: { excel: excelResaltandoVacios(columnas) },
++});
+diff --git a/src/features/reportes/definiciones/index.ts b/src/features/reportes/definiciones/index.ts
+index 33b19b2..d3779e7 100644
+--- a/src/features/reportes/definiciones/index.ts
++++ b/src/features/reportes/definiciones/index.ts
+@@ -1,5 +1,6 @@
+ import type { Reporte } from "../lib/definir-reporte";
+ import { REPORTES_CRM } from "./crm";
++import { REPORTES_EMBARQUES } from "./embarques";
+ import { REPORTES_PRICING } from "./pricing";
+ 
+ /**
+@@ -11,4 +12,8 @@ import { REPORTES_PRICING } from "./pricing";
+  * suma aquí. Solo se muestran los que la API de reportes disponibles devuelve para el rol y
+  * el CC del usuario (se unen por `nomenclatura`).
+  */
+-export const REPORTES: readonly Reporte[] = [...REPORTES_CRM, ...REPORTES_PRICING];
++export const REPORTES: readonly Reporte[] = [
++  ...REPORTES_CRM,
++  ...REPORTES_PRICING,
++  ...REPORTES_EMBARQUES,
++];
+diff --git a/src/features/reportes/lib/excel-vacios.ts b/src/features/reportes/lib/excel-vacios.ts
+new file mode 100644
+index 0000000..8aa4ca4
+--- /dev/null
++++ b/src/features/reportes/lib/excel-vacios.ts
+@@ -0,0 +1,51 @@
++import type { ColumnaReporte, DescargaReporte } from "./definir-reporte";
++import { agregarHojaReporte } from "./excel-reporte";
++import { nombreArchivo } from "./exportar";
++
++/** Relleno de las celdas vacías (amarillo, ARGB). */
++const AMARILLO = "FFFFFF00";
++
++const estaVacia = (valor: unknown) =>
++  valor === null || valor === undefined || (typeof valor === "string" && valor.trim() === "");
++
++/**
++ * Descarga `excel` de un reporte: el detalle con sus columnas, con el formato de los reportes
++ * (`agregarHojaReporte`: logo, título, encabezado y cuadrícula) y cada celda vacía de la tabla
++ * en amarillo, para ver de un vistazo los datos que faltan.
++ *
++ *   descargas: { excel: excelResaltandoVacios(columnas) }
++ */
++export function excelResaltandoVacios<TFila>(columnas: readonly ColumnaReporte<TFila>[]) {
++  return async ({ filas, titulo, encabezado }: DescargaReporte<TFila>): Promise<void> => {
++    if (filas.length === 0) throw new Error("No hay datos para exportar a Excel.");
++    const ExcelJS = await import("exceljs");
++    const libro = new ExcelJS.Workbook();
++    const hoja = await agregarHojaReporte(libro, {
++      titulo,
++      hoja: titulo,
++      header: encabezado,
++      columnas: columnas.map((c) => c.label),
++      filas: filas.map((fila) => ({ celdas: columnas.map((c) => c.valor(fila)) })),
++    });
++    // La tabla son las últimas filas de la hoja; empieza en la columna 2 (la 1 es margen).
++    const ultima = hoja.rowCount;
++    for (let numero = ultima - filas.length + 1; numero <= ultima; numero++) {
++      const fila = hoja.getRow(numero);
++      for (let columna = 2; columna < columnas.length + 2; columna++) {
++        const celda = fila.getCell(columna);
++        if (estaVacia(celda.value)) {
++          celda.fill = { type: "pattern", pattern: "solid", fgColor: { argb: AMARILLO } };
++        }
++      }
++    }
++    const blob = new Blob([await libro.xlsx.writeBuffer()], {
++      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
++    });
++    const url = URL.createObjectURL(blob);
++    const enlace = document.createElement("a");
++    enlace.href = url;
++    enlace.download = `${nombreArchivo(titulo)}.xlsx`;
++    enlace.click();
++    URL.revokeObjectURL(url);
++  };
++}

@@ -12,7 +12,8 @@ archivo) está en `ARQUITECTURA.md`; aquí solo lo que hay que hacer. La explica
 >   `empresaCentroCosto: false`.
 > - **Fechas**: no son un filtro; se configuran con `fechas` ([Fechas](DOCUMENTACION.md#fechas-c)).
 > - **Botón Consultar, "Personaliza tu reporte", "Resumen agrupado" y "Excel agrupado"**: salen
->   solos para todos los reportes.
+>   solos para todos los reportes. Un reporte sin vista agrupada (solo la tabla y sus descargas)
+>   lleva `agrupado: false`: no salen "Personaliza tu reporte", el Resumen ni el "Excel agrupado".
 
 ## Checklist
 
@@ -308,6 +309,8 @@ agrupacion: { filas: ["asesor"], columna: "tipo" }, // (G)
 - una función `async ({ filas, titulo, encabezado, params }) => void`: arma el archivo a tu
   manera (colores, otras columnas, varias hojas). Ver
   [Excel propio](DOCUMENTACION.md#excel-propio) y [PDF propio](DOCUMENTACION.md#pdf-propio).
+  Atajo en `excel`: `excelResaltandoVacios(columnas)` (`lib/excel-vacios.ts`): el detalle con el
+  formato de los reportes y las celdas vacías en amarillo (ej. `EMB-EFCLTGT-01`).
 - solo en `pdf`, `"contenido"`: al pulsar PDF, la vista (I) genera el PDF. Sirve cuando el PDF
   tiene que llevar algo que solo existe en la vista, como una gráfica.
 

@@ -26,6 +26,11 @@ reportes/
                               (sin fechas; vista de CRM con serie semanal y medidores)
       reporte-seguimiento.ts  CRM-S-06 Seguimiento (historial de seguimientos del cliente;
                               cliente `requerido`, sin fechas)
+    embarques/
+      index.ts                REPORTES_EMBARQUES
+      reporte-embarques-fcl-transito-gt.ts  EMB-EFCLTGT-01 Embarques FCL en tránsito GT (SQL
+                              fijo en Oracle, sin parámetros: sin fechas, filtros, empresa ni
+                              CC; `agrupado: false`; Excel con vacíos en amarillo)
     pricing/
       index.ts                REPORTES_PRICING
       reporte-hit-rate.tsx    PRI-HR-01 Hit Rate (filas de report_kpi_cotizaciones para el
@@ -44,6 +49,8 @@ reportes/
     resumen-agrupado.ts       tabla dinámica genérica (calcularResumen → árbol de TablaDouble)
     exportar.ts               Excel agrupado (resumen) y PDF/Excel genéricos del reporte (detalle)
     excel-reporte.ts          COPIA del generador de Excel de Reportes de pricing (Excel agrupado)
+    excel-vacios.ts           excelResaltandoVacios(columnas): Excel del detalle con ese formato
+                              y las celdas vacías en amarillo (descarga `excel` de un reporte)
   components/
     vista-reportes.tsx        "Reportes disponibles" (Módulo → Reporte) + reporte elegido
     pantalla-reporte.tsx      título, filtros y configuración, Consultar, resumen, reporte, descargas
@@ -75,6 +82,8 @@ configurado. Si está en el registro pero la API no lo devuelve, no se muestra (
 - **Filtros y configuración**: fechas (mes actual), "Personaliza tu reporte" (igual que pricing:
   campo de columnas y niveles con `NivelesBuilder`) y "Filtros" con los botones al final:
   **Consultar**, las descargas del reporte que tenga (**PDF**, **Excel**) y **Excel agrupado**.
+  Un reporte con `agrupado: false` no tiene vista agrupada: sin "Personaliza tu reporte", sin
+  **Resumen agrupado** y sin **Excel agrupado** (solo Filtros, la tabla y sus descargas).
 - **Empresa y Centro de costo**: los pone la pantalla en Filtros (no cada reporte), igual que
   Tarifas y Cotizaciones: con la acción "Filtrar Empresa Centro Costo" de la opción **"Reportes"**
   se muestran (arrancan en el contexto) y mandan en la consulta; sin el permiso no se muestran y
