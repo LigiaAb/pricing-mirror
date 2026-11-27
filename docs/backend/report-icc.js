@@ -35,7 +35,9 @@
  *
  * Fechas: ACTIVIDAD_FECHA y ACTIVIDAD_FECHA_PROGRAMACION son datetime. El rango se filtra igual
  * que report_kpi_cotizaciones (Hit Rate): desde CONVERT(date, fecha_inicio, 23) hasta antes del
- * día siguiente a fecha_fin.
+ * día siguiente a fecha_fin. Las dos fechas se toman como hora de Guatemala (sin restar horas);
+ * pendiente revisar en el CRM y en la API cómo se guarda cada una. "Hoy" (VENCIDA) sí se pasa a
+ * hora de Guatemala: GETDATE() en Azure SQL da la hora UTC.
  */
 
 // ── INICIO ───────────────────────────────────────────────────────────────────
@@ -46,7 +48,7 @@ const TIPOS_ICC = ["LLAMADA", "VISITA"];
 /** ESTADO_ID de actividad finalizada (el mismo que usa el front al crear actividades). */
 const ESTADO_ACTIVIDAD_FINALIZADA = 24;
 
-/** Horas que la hora local (Guatemala, UTC-6) va detrás de UTC: medianoche local = 06:00 UTC. */
+/** Horas que la hora de Guatemala (UTC-6) va detrás de UTC: para sacar "hoy" en VENCIDA. */
 const HORAS_UTC_LOCAL = 6;
 
 /** Días que puede estar programada antes de crearse para contar como no programada. */
@@ -65,7 +67,7 @@ const DIAS_CREACION_A_PROGRAMACION =
   "DATEDIFF(DAY, A.ACTIVIDAD_FECHA, A.ACTIVIDAD_FECHA_PROGRAMACION)";
 const PROGRAMADA = `${DIAS_CREACION_A_PROGRAMACION} >= 1`;
 const NO_PROGRAMADA = `${DIAS_CREACION_A_PROGRAMACION} BETWEEN -${MAX_DIAS_ATRAS_NO_PROGRAMADA} AND 0`;
-const VENCIDA = `ISNULL(A.ESTADO_ID, 0) <> ${ESTADO_ACTIVIDAD_FINALIZADA} AND ${SIN_RESULTADO} AND DATEDIFF(DAY, A.ACTIVIDAD_FECHA_PROGRAMACION, GETDATE()) > ${DIAS_PARA_VENCER}`;
+const VENCIDA = `ISNULL(A.ESTADO_ID, 0) <> ${ESTADO_ACTIVIDAD_FINALIZADA} AND ${SIN_RESULTADO} AND DATEDIFF(DAY, A.ACTIVIDAD_FECHA_PROGRAMACION, DATEADD(HOUR, -${HORAS_UTC_LOCAL}, GETUTCDATE())) > ${DIAS_PARA_VENCER}`;
 
 /** `CASE WHEN <condiciones> THEN 1 ELSE 0 END AS <nombre>`. */
 const bandera = (nombre, ...condiciones) =>
