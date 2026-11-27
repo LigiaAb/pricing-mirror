@@ -7,7 +7,7 @@
  * en el proyecto real con scripts/aplicar-diff.mjs (ver ese archivo).
  *
  * - Solo incluye RUTAS_CODIGO (los stubs nunca salen del mirror). De src/shared solo salen
- *   async-combobox-input.tsx y data-table-pagination.tsx, código real del proyecto.
+ *   async-combobox-input.tsx, data-table-pagination.tsx y lib/excel.ts, código real del proyecto.
  * - Diff de TEXTO con todas las líneas en LF: no depende de los finales de
  *   línea. aplicar-diff.mjs lo adapta a CRLF o LF según cada archivo destino.
  * - Fecha/hora: la del autor del commit, en hora de Guatemala.
@@ -31,6 +31,7 @@ const RUTAS_CODIGO = [
   "src/features/reportes",
   "src/shared/components/form/fields/async-combobox-input.tsx",
   "src/shared/components/data-table/data-table-pagination.tsx",
+  "src/shared/lib/excel.ts",
 ];
 const CARPETA_DIFF = "diff";
 const RUTA_BACKEND = "backend";

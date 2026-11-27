@@ -4,7 +4,7 @@ import type { ReportePdf } from "@/features/pricing/reportes/lib/pdf-reporte";
 import type { TreeNode } from "@/features/pricing/shared";
 import type { CampoConfig } from "@/shared/components/tabla-double/niveles-builder";
 import type { useExcelJS } from "@/shared/hooks/use-dynamic-libraries";
-import { exportarExcel } from "@/shared/lib/excel";
+import { type CeldaExcel, exportarExcel } from "@/shared/lib/excel";
 import type { ColumnaReporte, ValorCelda } from "./definir-reporte";
 import { agregarHojaReporte, type FilaExcel } from "./excel-reporte";
 import type { Resumen } from "./resumen-agrupado";
@@ -125,6 +125,8 @@ export async function descargarExcelReporte(opciones: {
   titulo: string;
   encabezado: Record<string, string>;
   detalle: TablaExportable;
+  /** Relleno de cada celda de datos (`colorFondoCelda` de `exportarExcel`). */
+  colorFondoCelda?: (valor: CeldaExcel, indiceColumna: number) => string | undefined;
 }): Promise<void> {
   await exportarExcel({
     nombreArchivo: `${nombreArchivo(opciones.titulo)}.xlsx`,
@@ -138,6 +140,7 @@ export async function descargarExcelReporte(opciones: {
         filas: opciones.detalle.filas,
         mostrarCuadricula: true,
         autoFiltro: true,
+        ...(opciones.colorFondoCelda ? { colorFondoCelda: opciones.colorFondoCelda } : {}),
       },
     ],
   });

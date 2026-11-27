@@ -17,6 +17,13 @@ export function TablaReporte<TFila>({ filas, columnas }: ContenidoReporteProps<T
         id: c.id,
         header: c.label,
         accessorFn: (r: FilaTabla<TFila>) => c.valor(r.fila) ?? "",
+        // `celda`: solo cómo se dibuja; buscar y ordenar siguen con `valor` (accessorFn).
+        ...(c.celda
+          ? {
+              cell: ({ row }: { row: { original: FilaTabla<TFila> } }) =>
+                c.celda?.(row.original.fila),
+            }
+          : {}),
       })),
     [columnas],
   );

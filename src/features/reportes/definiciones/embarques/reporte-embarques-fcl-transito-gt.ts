@@ -1,8 +1,9 @@
 import { format } from "date-fns";
 import { z } from "zod";
 import { consultarApi } from "../../api/consultar-api";
-import { type ColumnaReporte, definirReporte } from "../../lib/definir-reporte";
-import { excelResaltandoVacios } from "../../lib/excel-vacios";
+import { celdaResaltandoVacia } from "../../components/celda-vacia";
+import { type ColumnaReporte, definirReporte, valorVacio } from "../../lib/definir-reporte";
+import { descargarExcelReporte, tablaDetalle } from "../../lib/exportar";
 
 /**
  * EMB-EFCLTGT-01 Embarques FCL en tránsito GT.
@@ -31,7 +32,10 @@ const fecha = (valor: string | null): string | null => {
   return dia && !Number.isNaN(dia.getTime()) ? format(dia, "dd/MM/yyyy") : null;
 };
 
-const columnas: readonly ColumnaReporte<Fila>[] = [
+/** Relleno de las celdas vacías en el Excel (amarillo, ARGB). */
+const AMARILLO = "FFFFFF00";
+
+const columnasBase: readonly ColumnaReporte<Fila>[] = [
   { id: "coordinacion", label: "Coordinación", valor: (f) => f.coordinacion, buscable: true },
   { id: "contenedor", label: "No. contenedor", valor: (f) => f.numero_contenedor, buscable: true },
   { id: "booking", label: "Booking", valor: (f) => f.booking, buscable: true },
@@ -43,6 +47,12 @@ const columnas: readonly ColumnaReporte<Fila>[] = [
   { id: "eta", label: "ETA", valor: (f) => fecha(f.eta) },
 ];
 
+// En la tabla, las celdas vacías también se ven en amarillo (como en el Excel).
+const columnas = columnasBase.map((c) => ({
+  ...c,
+  celda: (f: Fila) => celdaResaltandoVacia(c.valor(f)),
+}));
+
 export const reporteEmbarquesFclTransitoGt = definirReporte<Fila>({
   nomenclatura: "EMB-EFCLTGT-01",
   descripcion: "Embarques FCL de importación en tránsito (sin ATA)",
@@ -51,5 +61,14 @@ export const reporteEmbarquesFclTransitoGt = definirReporte<Fila>({
   agrupado: false,
   consultar: consultarApi("/api/appweb/reporte-emb-fcl-transito-gt", filaSchema),
   columnas,
-  descargas: { excel: excelResaltandoVacios(columnas) },
+  descargas: {
+    // Excel del detalle (el de siempre) con las celdas vacías en amarillo.
+    excel: ({ filas, titulo, encabezado }) =>
+      descargarExcelReporte({
+        titulo,
+        encabezado,
+        detalle: tablaDetalle(filas, columnas),
+        colorFondoCelda: (valor) => (valorVacio(valor) ? AMARILLO : undefined),
+      }),
+  },
 });

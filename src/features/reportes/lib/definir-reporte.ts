@@ -23,8 +23,17 @@ export interface ColumnaReporte<TFila> {
   id: string;
   /** Encabezado en pantalla, PDF y Excel. */
   label: string;
-  /** Valor de la celda para una fila. */
+  /**
+   * Valor de la celda para una fila: el dato (texto o número) que usan el Excel, el PDF, el
+   * Resumen agrupado y el buscador y el orden de la tabla.
+   */
   valor: (fila: TFila) => ValorCelda;
+  /**
+   * Opcional, solo pantalla: cómo se DIBUJA la celda en la tabla (badge, color, enlace…). Sin
+   * esto, se ve `valor`. No cambia lo que se busca, ordena ni descarga (eso sigue siendo `valor`).
+   * Atajo: `celdaResaltandoVacia` (`components/celda-vacia.tsx`).
+   */
+  celda?: (fila: TFila) => React.ReactNode;
   /** Se puede agrupar por ella en "Personaliza tu reporte" (filas o columnas). */
   agrupable?: boolean;
   /** Se suma en el "Resumen agrupado" (medida, además de la cantidad de registros). */
@@ -56,6 +65,10 @@ export function fechaEnRango(fecha: string | null | undefined, params: ParamsRep
   const hasta = fin ? new Date(`${fin}T23:59:59.999`).getTime() : Number.POSITIVE_INFINITY;
   return valor >= desde && valor <= hasta;
 }
+
+/** El valor de una celda está vacío: `null`, `undefined` o texto en blanco. */
+export const valorVacio = (valor: unknown): boolean =>
+  valor === null || valor === undefined || (typeof valor === "string" && valor.trim() === "");
 
 /** Porcentaje con 2 decimales (ej. `porcentaje(5, 20)` = 25); `null` si `total` es 0. */
 export const porcentaje = (parte: number | undefined, total: number | undefined): number | null =>

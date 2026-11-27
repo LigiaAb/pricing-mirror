@@ -1,0 +1,198 @@
+diff --git a/src/features/reportes/ARQUITECTURA.md b/src/features/reportes/ARQUITECTURA.md
+index d1613a6..60336c5 100644
+--- a/src/features/reportes/ARQUITECTURA.md
++++ b/src/features/reportes/ARQUITECTURA.md
+@@ -30,7 +30,8 @@ reportes/
+       index.ts                REPORTES_EMBARQUES
+       reporte-embarques-fcl-transito-gt.ts  EMB-EFCLTGT-01 Embarques FCL en tránsito GT (SQL
+                               fijo en Oracle, sin parámetros: sin fechas, filtros, empresa ni
+-                              CC; `agrupado: false`; Excel con vacíos en amarillo)
++                              CC; `agrupado: false`; Excel del detalle con vacíos en amarillo,
++                              `colorFondoCelda` de `descargarExcelReporte`)
+     pricing/
+       index.ts                REPORTES_PRICING
+       reporte-hit-rate.tsx    PRI-HR-01 Hit Rate (filas de report_kpi_cotizaciones para el
+@@ -49,8 +50,6 @@ reportes/
+     resumen-agrupado.ts       tabla dinámica genérica (calcularResumen → árbol de TablaDouble)
+     exportar.ts               Excel agrupado (resumen) y PDF/Excel genéricos del reporte (detalle)
+     excel-reporte.ts          COPIA del generador de Excel de Reportes de pricing (Excel agrupado)
+-    excel-vacios.ts           excelResaltandoVacios(columnas): Excel del detalle con ese formato
+-                              y las celdas vacías en amarillo (descarga `excel` de un reporte)
+   components/
+     vista-reportes.tsx        "Reportes disponibles" (Módulo → Reporte) + reporte elegido
+     pantalla-reporte.tsx      título, filtros y configuración, Consultar, resumen, reporte, descargas
+diff --git a/src/features/reportes/GUIA.md b/src/features/reportes/GUIA.md
+index bdc9142..4853598 100644
+--- a/src/features/reportes/GUIA.md
++++ b/src/features/reportes/GUIA.md
+@@ -309,8 +309,9 @@ agrupacion: { filas: ["asesor"], columna: "tipo" }, // (G)
+ - una función `async ({ filas, titulo, encabezado, params }) => void`: arma el archivo a tu
+   manera (colores, otras columnas, varias hojas). Ver
+   [Excel propio](DOCUMENTACION.md#excel-propio) y [PDF propio](DOCUMENTACION.md#pdf-propio).
+-  Atajo en `excel`: `excelResaltandoVacios(columnas)` (`lib/excel-vacios.ts`): el detalle con el
+-  formato de los reportes y las celdas vacías en amarillo (ej. `EMB-EFCLTGT-01`).
++  Para rellenar celdas con un color (ej. las vacías en amarillo, `EMB-EFCLTGT-01`):
++  `descargarExcelReporte({ titulo, encabezado, detalle: tablaDetalle(filas, columnas),
++  colorFondoCelda })` (`lib/exportar.ts`, el mismo Excel de `excel: true`).
+ - solo en `pdf`, `"contenido"`: al pulsar PDF, la vista (I) genera el PDF. Sirve cuando el PDF
+   tiene que llevar algo que solo existe en la vista, como una gráfica.
+ 
+diff --git a/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts b/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts
+index 9fda637..3389966 100644
+--- a/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts
++++ b/src/features/reportes/definiciones/embarques/reporte-embarques-fcl-transito-gt.ts
+@@ -2,7 +2,7 @@ import { format } from "date-fns";
+ import { z } from "zod";
+ import { consultarApi } from "../../api/consultar-api";
+ import { type ColumnaReporte, definirReporte } from "../../lib/definir-reporte";
+-import { excelResaltandoVacios } from "../../lib/excel-vacios";
++import { descargarExcelReporte, tablaDetalle } from "../../lib/exportar";
+ 
+ /**
+  * EMB-EFCLTGT-01 Embarques FCL en tránsito GT.
+@@ -31,6 +31,11 @@ const fecha = (valor: string | null): string | null => {
+   return dia && !Number.isNaN(dia.getTime()) ? format(dia, "dd/MM/yyyy") : null;
+ };
+ 
++/** Relleno de las celdas vacías en el Excel (amarillo, ARGB). */
++const AMARILLO = "FFFFFF00";
++const estaVacia = (valor: unknown) =>
++  valor === null || valor === undefined || (typeof valor === "string" && valor.trim() === "");
++
+ const columnas: readonly ColumnaReporte<Fila>[] = [
+   { id: "coordinacion", label: "Coordinación", valor: (f) => f.coordinacion, buscable: true },
+   { id: "contenedor", label: "No. contenedor", valor: (f) => f.numero_contenedor, buscable: true },
+@@ -51,5 +56,14 @@ export const reporteEmbarquesFclTransitoGt = definirReporte<Fila>({
+   agrupado: false,
+   consultar: consultarApi("/api/appweb/reporte-emb-fcl-transito-gt", filaSchema),
+   columnas,
+-  descargas: { excel: excelResaltandoVacios(columnas) },
++  descargas: {
++    // Excel del detalle (el de siempre) con las celdas vacías en amarillo.
++    excel: ({ filas, titulo, encabezado }) =>
++      descargarExcelReporte({
++        titulo,
++        encabezado,
++        detalle: tablaDetalle(filas, columnas),
++        colorFondoCelda: (valor) => (estaVacia(valor) ? AMARILLO : undefined),
++      }),
++  },
+ });
+diff --git a/src/features/reportes/lib/excel-vacios.ts b/src/features/reportes/lib/excel-vacios.ts
+deleted file mode 100644
+index 8aa4ca4..0000000
+--- a/src/features/reportes/lib/excel-vacios.ts
++++ /dev/null
+@@ -1,51 +0,0 @@
+-import type { ColumnaReporte, DescargaReporte } from "./definir-reporte";
+-import { agregarHojaReporte } from "./excel-reporte";
+-import { nombreArchivo } from "./exportar";
+-
+-/** Relleno de las celdas vacías (amarillo, ARGB). */
+-const AMARILLO = "FFFFFF00";
+-
+-const estaVacia = (valor: unknown) =>
+-  valor === null || valor === undefined || (typeof valor === "string" && valor.trim() === "");
+-
+-/**
+- * Descarga `excel` de un reporte: el detalle con sus columnas, con el formato de los reportes
+- * (`agregarHojaReporte`: logo, título, encabezado y cuadrícula) y cada celda vacía de la tabla
+- * en amarillo, para ver de un vistazo los datos que faltan.
+- *
+- *   descargas: { excel: excelResaltandoVacios(columnas) }
+- */
+-export function excelResaltandoVacios<TFila>(columnas: readonly ColumnaReporte<TFila>[]) {
+-  return async ({ filas, titulo, encabezado }: DescargaReporte<TFila>): Promise<void> => {
+-    if (filas.length === 0) throw new Error("No hay datos para exportar a Excel.");
+-    const ExcelJS = await import("exceljs");
+-    const libro = new ExcelJS.Workbook();
+-    const hoja = await agregarHojaReporte(libro, {
+-      titulo,
+-      hoja: titulo,
+-      header: encabezado,
+-      columnas: columnas.map((c) => c.label),
+-      filas: filas.map((fila) => ({ celdas: columnas.map((c) => c.valor(fila)) })),
+-    });
+-    // La tabla son las últimas filas de la hoja; empieza en la columna 2 (la 1 es margen).
+-    const ultima = hoja.rowCount;
+-    for (let numero = ultima - filas.length + 1; numero <= ultima; numero++) {
+-      const fila = hoja.getRow(numero);
+-      for (let columna = 2; columna < columnas.length + 2; columna++) {
+-        const celda = fila.getCell(columna);
+-        if (estaVacia(celda.value)) {
+-          celda.fill = { type: "pattern", pattern: "solid", fgColor: { argb: AMARILLO } };
+-        }
+-      }
+-    }
+-    const blob = new Blob([await libro.xlsx.writeBuffer()], {
+-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+-    });
+-    const url = URL.createObjectURL(blob);
+-    const enlace = document.createElement("a");
+-    enlace.href = url;
+-    enlace.download = `${nombreArchivo(titulo)}.xlsx`;
+-    enlace.click();
+-    URL.revokeObjectURL(url);
+-  };
+-}
+diff --git a/src/features/reportes/lib/exportar.ts b/src/features/reportes/lib/exportar.ts
+index 69611fd..6df2842 100644
+--- a/src/features/reportes/lib/exportar.ts
++++ b/src/features/reportes/lib/exportar.ts
+@@ -4,7 +4,7 @@ import type { ReportePdf } from "@/features/pricing/reportes/lib/pdf-reporte";
+ import type { TreeNode } from "@/features/pricing/shared";
+ import type { CampoConfig } from "@/shared/components/tabla-double/niveles-builder";
+ import type { useExcelJS } from "@/shared/hooks/use-dynamic-libraries";
+-import { exportarExcel } from "@/shared/lib/excel";
++import { type CeldaExcel, exportarExcel } from "@/shared/lib/excel";
+ import type { ColumnaReporte, ValorCelda } from "./definir-reporte";
+ import { agregarHojaReporte, type FilaExcel } from "./excel-reporte";
+ import type { Resumen } from "./resumen-agrupado";
+@@ -125,6 +125,8 @@ export async function descargarExcelReporte(opciones: {
+   titulo: string;
+   encabezado: Record<string, string>;
+   detalle: TablaExportable;
++  /** Relleno de cada celda de datos (`colorFondoCelda` de `exportarExcel`). */
++  colorFondoCelda?: (valor: CeldaExcel, indiceColumna: number) => string | undefined;
+ }): Promise<void> {
+   await exportarExcel({
+     nombreArchivo: `${nombreArchivo(opciones.titulo)}.xlsx`,
+@@ -138,6 +140,7 @@ export async function descargarExcelReporte(opciones: {
+         filas: opciones.detalle.filas,
+         mostrarCuadricula: true,
+         autoFiltro: true,
++        ...(opciones.colorFondoCelda ? { colorFondoCelda: opciones.colorFondoCelda } : {}),
+       },
+     ],
+   });
+diff --git a/src/shared/lib/excel.ts b/src/shared/lib/excel.ts
+index 37801f9..3dd5b52 100644
+--- a/src/shared/lib/excel.ts
++++ b/src/shared/lib/excel.ts
+@@ -125,6 +125,15 @@ export async function exportarExcel({
+       indiceColumna: number,
+       fila: CeldaExcel[],
+     ) => string | undefined;
++    /**
++     * Color ARGB de relleno (fondo) de cada celda de datos; `undefined` = sin relleno. Ej. resaltar
++     * las celdas vacías: `(valor) => (valor == null || valor === "" ? "FFFFFF00" : undefined)`.
++     */
++    colorFondoCelda?: (
++      valor: CeldaExcel,
++      indiceColumna: number,
++      fila: CeldaExcel[],
++    ) => string | undefined;
+   }>;
+ }): Promise<void> {
+   const ExcelJS = await import("exceljs");
+@@ -308,6 +317,10 @@ export async function exportarExcel({
+           if (configuracion?.alignFormat) {
+             celda.alignment = configuracion.alignFormat;
+           }
++          const fondo = hoja.colorFondoCelda?.(valor, indiceColumna, fila);
++          if (fondo) {
++            celda.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fondo } };
++          }
+           if (hoja.mostrarCuadricula === true) {
+             celda.border = BORDES_CELDA;
+           }
